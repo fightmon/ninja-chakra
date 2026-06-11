@@ -457,7 +457,7 @@ class GameScene extends Phaser.Scene{
   init(data){ this.presetTeam=(data&&data.team)?data.team:null; this.dungeonId=(data&&data.dungeonId)||'prologue'; this.dungeon=DUNGEONS[this.dungeonId]||DUNGEONS.prologue; }
 
   create(){
-    this.cells=[]; this.boxLabels=[]; this.trayIcons=[]; this.teamCards=[]; this.drag=null; this.enemies=[];
+    this.cells=[]; this.boxLabels=[]; this.trayIcons=[]; this.trayTweens=[]; this.teamCards=[]; this.drag=null; this.enemies=[];
 
     // 戰鬥場景背景(滿版,最底層)
     const bg=this.bgGfx=this.add.graphics();
@@ -614,12 +614,20 @@ class GameScene extends Phaser.Scene{
       case 'wind':{const m0=this.morale;this.morale=5;if(this.morale!==m0)this.moraleFX(5,true);break;}   // 鬥志衝極
     }
     this.updateAll();this.renderCharges();}
-  renderTray(){this.trayIcons.forEach(g=>g.destroy()); this.trayIcons=[];
+  renderTray(){
+    if(this.trayTweens)this.trayTweens.forEach(t=>t.remove()); this.trayTweens=[];   // 先收掉舊脈動 tween 再銷毀(避免懸空)
+    this.trayIcons.forEach(g=>g.destroy()); this.trayIcons=[];
+    // 特殊工具塊:亮色脈動光暈邊框 + 功能漢字(填/消/搬)→ 一眼看出是特殊塊
+    const SP={water:{c:0x62b8f0,glow:0x8fd6ff,label:'填'},wind:{c:0x6ad06a,glow:0xb6ffae,label:'消'},earth:{c:0xd49a4a,glow:0xffc24a,label:'搬'}};
     this.tray.forEach((p,i)=>{if(p.used)return;
       let maxr=0,maxc=0;p.c.forEach(([r,c])=>{maxr=Math.max(maxr,r);maxc=Math.max(maxc,c);});
       const s=(maxr>=4||maxc>=4)?11:24, pw=(maxc+1)*s, ph=(maxr+1)*s;   // 大塊(如9×9)縮小顯示
-      const children=p.c.map(([dr,dc])=>this.add.rectangle(dc*s-pw/2, dr*s-ph/2, s-3, s-3, p.kind==='water'?0x62b8f0:p.kind==='wind'?0x6ad06a:p.kind==='earth'?0xd49a4a:NEUTRAL_FILL).setOrigin(0));
-      this.trayIcons.push(this.add.container(this.traySlots[i],TRAY_Y,children));});
+      const sp=SP[p.kind], cont=this.add.container(this.traySlots[i],TRAY_Y,[]);
+      if(sp){const glow=this.add.rectangle(0,0,pw+13,ph+13,0,0).setStrokeStyle(3,sp.glow,1); cont.add(glow);   // 脈動光暈
+        this.trayTweens.push(this.tweens.add({targets:glow,alpha:{from:0.3,to:1},scaleX:{from:0.9,to:1.06},scaleY:{from:0.9,to:1.06},duration:600,yoyo:true,repeat:-1,ease:'Sine.inOut'}));}
+      p.c.forEach(([dr,dc])=>cont.add(this.add.rectangle(dc*s-pw/2, dr*s-ph/2, s-3, s-3, sp?sp.c:NEUTRAL_FILL).setOrigin(0).setStrokeStyle(sp?1:0, 0xffffff, sp?0.5:0)));
+      if(sp)cont.add(this.add.text(0,0,sp.label,{fontFamily:EMOJIFONT,fontSize:(s>=24?'17px':'10px'),color:'#ffffff',fontStyle:'bold'}).setOrigin(0.5).setStroke('#1a1208',4));   // 功能漢字
+      this.trayIcons.push(cont);});
   }
 
   /* 拖曳放塊 */
