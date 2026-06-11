@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="zh-TW" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>忍塊查克拉 · 開發日誌</title>
+<meta name="description" content="忍塊查克拉是一款把 Woodoku 方塊消除縫進轉珠 RPG 的卡片收集遊戲。這裡是它的開發日誌：機制設計、踩坑心得、用 CSS 動畫演給你看的碎念。">
+<style>
+*,*::before,*::after{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{
+  background:linear-gradient(180deg,#080c1a 0%,#0d1333 40%,#111a40 100%);
+  background-attachment:fixed;min-height:100vh;color:#e8ecf4;
+  font-family:"Noto Sans TC","PingFang TC","Microsoft JhengHei",system-ui,-apple-system,sans-serif;
+  -webkit-font-smoothing:antialiased;
+}
+.wrap{max-width:720px;margin:0 auto;padding:clamp(40px,7vw,80px) 18px 80px}
+.hero{text-align:center;margin-bottom:48px}
+.logo{font-size:clamp(30px,6vw,46px);font-weight:800;letter-spacing:-1px;margin:0 0 12px;
+  background:linear-gradient(120deg,#ffd56a,#ff7a4a 60%,#5B86FF);-webkit-background-clip:text;background-clip:text;color:transparent}
+.tagline{font-size:clamp(14px,2.6vw,17px);color:#8a93ad;margin:0;line-height:1.6}
+.kw{display:inline-flex;flex-wrap:wrap;gap:6px;justify-content:center;margin-top:18px}
+.kw span{font-size:12px;color:#aeb6cc;background:rgba(100,120,180,.1);border:1px solid rgba(100,120,180,.18);border-radius:999px;padding:3px 11px}
+.sec{font-size:13px;color:#6f7894;letter-spacing:2px;margin:0 0 16px;text-transform:uppercase}
+.post{display:block;text-decoration:none;color:inherit;background:rgba(15,20,45,.7);
+  border:1px solid rgba(100,120,180,.18);border-radius:16px;padding:20px 22px;margin-bottom:16px;
+  transition:transform .15s,border-color .15s,box-shadow .15s}
+.post:hover{transform:translateY(-2px);border-color:rgba(120,140,255,.45);box-shadow:0 10px 36px rgba(0,0,0,.4)}
+.post .date{font-size:12px;color:#6f7894;margin-bottom:6px}
+.post .t{font-size:18px;font-weight:800;line-height:1.4;margin:0 0 8px;color:#f0e8d4}
+.post .s{font-size:14px;color:#9aa3bd;line-height:1.7;margin:0}
+.post .tags{margin-top:10px;display:flex;flex-wrap:wrap;gap:6px}
+.post .tags i{font-style:normal;font-size:11px;color:#aeb6cc;background:rgba(100,120,180,.1);border-radius:999px;padding:2px 9px}
+.foot{margin-top:54px;padding-top:24px;border-top:1px solid rgba(100,120,180,.12);text-align:center;font-size:13px;color:#6f7894}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="hero">
+    <h1 class="logo">忍塊查克拉</h1>
+    <p class="tagline">把 Woodoku 方塊消除縫進轉珠 RPG 的卡片收集遊戲<br>開發日誌 · 機制設計與踩坑碎念</p>
+    <div class="kw"><span>#方塊消除</span><span>#轉珠RPG</span><span>#卡片收集</span><span>#獨立開發</span></div>
+  </header>
+
+  <p class="sec">開發日誌</p>
+
+  <a class="post" href="2026-06-11-origin.html">
+    <div class="date">2026-06-11</div>
+    <h2 class="t">我只是想做個消消樂，結果縫出一個沒人做過的東西</h2>
+    <p class="s">把 Woodoku 跟轉珠 RPG 縫在一起會發生什麼事？方塊有了屬性、消除會放招、招式還會反過來改變盤面——附兩個純 CSS 動畫 demo。</p>
+    <div class="tags"><i>#玩法設計</i><i>#方塊消除</i><i>#轉珠RPG</i></div>
+  </a>
+
+  <footer class="foot">忍塊查克拉還在開發中 · © 2026 fightmon</footer>
+</div>
+</body>
+</html>
