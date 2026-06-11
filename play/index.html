@@ -2,11 +2,11 @@
 <html lang="zh-Hant">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <title>忍塊查克拉 — 自適應 v0.6</title>
 <style>
   html,body{margin:0;height:100%;background:#160f18;overflow:hidden;}
-  #game{width:100vw;height:100vh;}
+  #game{width:100vw;height:100vh;height:100dvh;}   /* dvh=動態視口高(實際可見區),100vh 留作舊瀏覽器 fallback */
 </style>
 <script src="https://cdn.jsdelivr.net/npm/phaser@3.80.1/dist/phaser.min.js"></script>
 </head>
@@ -189,8 +189,10 @@ const CS=40, RECT=37, BX0=30, DRAG_LIFT=66;
 // 版面高度依「當下」裝置比例算(尺寸變化時即時重算),FIT 不黑邊;上下錨定
 let H,TRAY_Y,BY0,CARDS_Y,PHP_Y,INFO_Y,BG_H,BATTLE_CY;
 function recomputeLayout(){
-  const vw=(typeof window!=='undefined'&&window.innerWidth)?window.innerWidth:390;
-  const vh=(typeof window!=='undefined'&&window.innerHeight)?window.innerHeight:844;
+  // 讀「真正的容器尺寸」(#game),才與 Phaser FIT 進去的容器一致→零黑邊;取不到再 fallback 視窗
+  const el=(typeof document!=='undefined')?document.getElementById('game'):null;
+  const vw=(el&&el.clientWidth)?el.clientWidth:((typeof window!=='undefined'&&window.innerWidth)?window.innerWidth:390);
+  const vh=(el&&el.clientHeight)?el.clientHeight:((typeof window!=='undefined'&&window.innerHeight)?window.innerHeight:844);
   H=Math.max(640,Math.min(1400,Math.round(W*vh/vw)));   // 涵蓋約 1.52~3.33 的長寬比
   TRAY_Y=H-58; BY0=TRAY_Y-66-9*CS; CARDS_Y=BY0-74; PHP_Y=BY0-30; INFO_Y=BY0-12;
   BG_H=CARDS_Y+38; BATTLE_CY=Math.round(CARDS_Y/2);
