@@ -1,0 +1,1204 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>忍塊查克拉 — 自適應 v0.6</title>
+<style>
+  html,body{margin:0;height:100%;background:#160f18;overflow:hidden;}
+  #game{width:100vw;height:100vh;}
+</style>
+<script src="https://cdn.jsdelivr.net/npm/phaser@3.80.1/dist/phaser.min.js"></script>
+</head>
+<body>
+<div id="game"></div>
+<script>
+/* ===== 純邏輯 ===== */
+const N = 9;
+const EL = {
+  fire:   {name:'火', color:0xe8513a, dark:0x4a2a24, beats:'wind',    face:'👹', fx:'🔥'},
+  wind:   {name:'風', color:0x4caf72, dark:0x23402f, beats:'thunder', face:'👺', fx:'🌀'},
+  thunder:{name:'雷', color:0xe6c12f, dark:0x473f1d, beats:'earth',   face:'🐲', fx:'⚡'},
+  earth:  {name:'土', color:0xc8803a, dark:0x43331f, beats:'water',   face:'🗿', fx:'🪨'},
+  water:  {name:'水', color:0x3a9be8, dark:0x1f3447, beats:'fire',    face:'🐙', fx:'💧'},
+};
+const KEYS = ['fire','wind','thunder','earth','water'];
+const ELEMENT_BOXES = [0,2,4,6,8];
+const NEUTRAL_FILL = 0xc8a06a, NEUTRAL_DARK = 0x2c2114;
+const SHAPES = [
+  {w:2,c:[[0,0]]},
+  {w:7,c:[[0,0],[0,1]]},{w:7,c:[[0,0],[1,0]]},
+  {w:8,c:[[0,0],[0,1],[0,2]]},{w:8,c:[[0,0],[1,0],[2,0]]},
+  {w:5,c:[[0,0],[0,1],[0,2],[0,3]]},{w:5,c:[[0,0],[1,0],[2,0],[3,0]]},
+  {w:3,c:[[0,0],[0,1],[0,2],[0,3],[0,4]]},{w:3,c:[[0,0],[1,0],[2,0],[3,0],[4,0]]},
+  {w:9,c:[[0,0],[0,1],[1,0],[1,1]]},
+  {w:6,c:[[0,0],[1,0],[1,1]]},{w:6,c:[[0,0],[0,1],[1,0]]},{w:6,c:[[0,0],[0,1],[1,1]]},{w:6,c:[[0,1],[1,0],[1,1]]},
+  {w:6,c:[[0,0],[0,1],[0,2],[1,1]]},{w:6,c:[[0,1],[1,0],[1,1],[1,2]]},{w:6,c:[[0,0],[1,0],[1,1],[2,0]]},{w:6,c:[[0,1],[1,0],[1,1],[2,1]]},
+  {w:5,c:[[0,0],[1,0],[2,0],[2,1]]},{w:5,c:[[0,0],[0,1],[0,2],[1,0]]},{w:5,c:[[0,1],[1,1],[2,1],[2,0]]},{w:5,c:[[0,0],[1,0],[1,1],[1,2]]},
+  {w:5,c:[[0,1],[0,2],[1,0],[1,1]]},{w:5,c:[[0,0],[1,0],[1,1],[2,1]]},{w:5,c:[[0,0],[0,1],[1,1],[1,2]]},{w:5,c:[[0,1],[1,0],[1,1],[2,0]]},
+  {w:3,c:[[0,1],[1,0],[1,1],[1,2],[2,1]]},
+  {w:3,c:[[0,0],[0,1],[0,2],[1,0],[1,1],[1,2]]},{w:3,c:[[0,0],[0,1],[1,0],[1,1],[2,0],[2,1]]},
+];   // ※ 3×3 九格塊已移除:太肥難放,且 3×3 留給水/風 LV7 工具塊(WILD_SHAPES[7])專用
+const WSUM = SHAPES.reduce((a,s)=>a+s.w,0);
+const ROSTER = [
+  {id:'c01', name:'焚天上忍', el:'fire',    attrs:['fire','yin'],      rank:'jonin',  atk:200},
+  {id:'c02', name:'業炎中忍', el:'fire',    attrs:['fire'],            rank:'chunin', atk:130},
+  {id:'c03', name:'烈火下忍', el:'fire',    attrs:['fire'],            rank:'genin',  atk:80},
+  {id:'c04', name:'蒼瀾上忍', el:'water',   attrs:['water','yang'],    rank:'jonin',  atk:200},
+  {id:'c05', name:'水鏡中忍', el:'water',   attrs:['water'],           rank:'chunin', atk:130},
+  {id:'c06', name:'潮渦下忍', el:'water',   attrs:['water'],           rank:'genin',  atk:80},
+  {id:'c07', name:'紫雷上忍', el:'thunder', attrs:['thunder','earth'], rank:'jonin',  atk:200},
+  {id:'c08', name:'鳴雷中忍', el:'thunder', attrs:['thunder'],         rank:'chunin', atk:130},
+  {id:'c09', name:'磐石中忍', el:'earth',   attrs:['earth'],           rank:'chunin', atk:130},
+  {id:'c10', name:'砂塵下忍', el:'earth',   attrs:['earth'],           rank:'genin',  atk:80},
+  {id:'c11', name:'疾風中忍', el:'wind',    attrs:['wind'],            rank:'chunin', atk:130},
+  {id:'c12', name:'旋風下忍', el:'wind',    attrs:['wind'],            rank:'genin',  atk:80},
+  /* ── 擴充:補滿五屬階梯 + 影忍(kage ★★★★)SSR 層,共 30 張 ── */
+  {id:'c13', name:'火星下忍', el:'fire',    attrs:['fire'],                 rank:'genin',  atk:80},
+  {id:'c14', name:'赤焰中忍', el:'fire',    attrs:['fire'],                 rank:'chunin', atk:130},
+  {id:'c15', name:'炎獄影忍', el:'fire',    attrs:['fire','yin','yang'],    rank:'kage',   atk:280},
+  {id:'c16', name:'滴水下忍', el:'water',   attrs:['water'],                rank:'genin',  atk:80},
+  {id:'c17', name:'寒霜中忍', el:'water',   attrs:['water'],                rank:'chunin', atk:130},
+  {id:'c18', name:'深淵影忍', el:'water',   attrs:['water','yang','yin'],   rank:'kage',   atk:280},
+  {id:'c19', name:'靜電下忍', el:'thunder', attrs:['thunder'],              rank:'genin',  atk:80},
+  {id:'c20', name:'落雷下忍', el:'thunder', attrs:['thunder'],              rank:'genin',  atk:80},
+  {id:'c21', name:'雷光中忍', el:'thunder', attrs:['thunder'],              rank:'chunin', atk:130},
+  {id:'c22', name:'天雷影忍', el:'thunder', attrs:['thunder','earth','yin'], rank:'kage',  atk:280},
+  {id:'c23', name:'礫石下忍', el:'earth',   attrs:['earth'],                rank:'genin',  atk:80},
+  {id:'c24', name:'岩壁中忍', el:'earth',   attrs:['earth'],                rank:'chunin', atk:130},
+  {id:'c25', name:'山嶽上忍', el:'earth',   attrs:['earth','yang'],         rank:'jonin',  atk:200},
+  {id:'c26', name:'不動影忍', el:'earth',   attrs:['earth','water','yang'], rank:'kage',   atk:280},
+  {id:'c27', name:'輕風下忍', el:'wind',    attrs:['wind'],                 rank:'genin',  atk:80},
+  {id:'c28', name:'烈風中忍', el:'wind',    attrs:['wind'],                 rank:'chunin', atk:130},
+  {id:'c29', name:'風遁上忍', el:'wind',    attrs:['wind','yin'],           rank:'jonin',  atk:200},
+  {id:'c30', name:'颶嵐影忍', el:'wind',    attrs:['wind','thunder','yang'], rank:'kage',  atk:280},
+];
+const CONFIG = {
+  ADV_MULT:2.0, WEAK_MULT:0.5, NORM_MULT:1.0,
+  NEUTRAL_BOX_BASE:40, LINE_BASE:30, LINE_SAME_RATE:0.5,
+  COMBO_STEP:0.15, COMBO_CAP:10,
+  MORALE_NAMES:['無','弱','中','強','超','極'], MORALE_MULT:[0.8,0.9,1.0,1.25,1.5,1.8], MORALE_START:2, MORALE_GRACE:3,  // 鬥志6階:上重下輕、起始中、極=全體;清除升到超封頂、暴擊直接衝極、連3手空手才降
+  PLAYER_HP_BASE:1000, RESHUFFLE_COST:120,
+  ATTR:{ fire_burn_rate:0.4, wind_immune:1, earth_dr:0.3, yang_heal_rate:1.2, yin_amp:1.5 },
+};
+const KATA = ['壹之型','貳之型','參之型','肆之型','伍之型','禁術','真奧義'];   // LV1~7
+const JUTSU = {
+  fire:   ['火種','烈火掌','紅蓮炎舞','業火焚天','煉獄·天羅滅盡','焦土爆心','焚世煉獄'],
+  water:  ['水紋','蒼瀾','怒濤渦卷','千流奔潮','滄溟·天傾海覆','萬丈狂瀾','汪洋葬天'],
+  thunder:['靜電','紫電','雷霆萬鈞','九天落雷','雷神·天裂霹靂','雷獄連鎖','天罰滅雷'],
+  earth:  ['砂礫','岩壁','磐石崩天','地動山搖','不動·大地鎮魂','崩山裂地','須彌崩墜'],
+  wind:   ['微風','旋風刃','颶風亂舞','九霄罡風','風神·天穹裂空','真空斷界','天遁神風'],
+};
+// 地下城:序章(教學)+ 五元素關 + 最終塔;turns 以「手」為單位;線性解鎖
+const DUNGEONS = {
+  prologue:{id:'prologue',name:'序章·結印之章',emoji:'🏯',cost:10,stages:[
+      {es:[{el:'wind',hp:450,atk:90,turns:2}]},
+      {es:[{el:'earth',hp:380,atk:80,turns:2},{el:'earth',hp:380,atk:80,turns:2}]},
+      {es:[{el:'thunder',hp:340,atk:70,turns:2},{el:'fire',hp:1500,atk:190,turns:3,boss:true},{el:'thunder',hp:340,atk:70,turns:2}]},
+    ],drops:[[{rank:'genin',rate:0.6}],[{rank:'genin',rate:1.0},{rank:'chunin',rate:0.25}],[{rank:'chunin',rate:1.0},{rank:'jonin',rate:0.18}]]},
+  fire:{id:'fire',name:'火之火山',emoji:'🌋',el:'fire',cost:12,stages:[
+      {es:[{el:'fire',hp:650,atk:100,turns:2}]},
+      {es:[{el:'fire',hp:560,atk:90,turns:2},{el:'fire',hp:560,atk:90,turns:2}]},
+      {es:[{el:'fire',hp:480,atk:90,turns:2},{el:'fire',hp:1900,atk:200,turns:3,boss:true},{el:'fire',hp:480,atk:90,turns:2}]},
+    ],drops:[[{el:'fire',rate:0.8}],[{el:'fire',rate:1.0}],[{el:'fire',rate:1.0},{rank:'jonin',rate:0.2}]]},
+  water:{id:'water',name:'水之深淵',emoji:'🌊',el:'water',cost:12,stages:[
+      {es:[{el:'water',hp:700,atk:110,turns:3}]},
+      {es:[{el:'water',hp:600,atk:100,turns:2},{el:'water',hp:600,atk:100,turns:2}]},
+      {es:[{el:'water',hp:520,atk:100,turns:2},{el:'water',hp:2000,atk:210,turns:3,boss:true},{el:'water',hp:520,atk:100,turns:2}]},
+    ],drops:[[{el:'water',rate:0.8}],[{el:'water',rate:1.0}],[{el:'water',rate:1.0},{rank:'jonin',rate:0.2}]]},
+  thunder:{id:'thunder',name:'雷之高原',emoji:'⚡',el:'thunder',cost:12,stages:[
+      {es:[{el:'thunder',hp:720,atk:110,turns:3}]},
+      {es:[{el:'thunder',hp:600,atk:100,turns:2},{el:'thunder',hp:600,atk:100,turns:2}]},
+      {es:[{el:'thunder',hp:500,atk:100,turns:2},{el:'thunder',hp:2000,atk:210,turns:3,boss:true},{el:'thunder',hp:500,atk:100,turns:2}]},
+    ],drops:[[{el:'thunder',rate:0.8}],[{el:'thunder',rate:1.0}],[{el:'thunder',rate:1.0},{rank:'jonin',rate:0.2}]]},
+  earth:{id:'earth',name:'土之山岳',emoji:'⛰️',el:'earth',cost:12,stages:[
+      {es:[{el:'earth',hp:700,atk:100,turns:2}]},
+      {es:[{el:'earth',hp:580,atk:90,turns:2},{el:'earth',hp:580,atk:90,turns:2}]},
+      {es:[{el:'earth',hp:520,atk:90,turns:2},{el:'earth',hp:2000,atk:200,turns:3,boss:true},{el:'earth',hp:520,atk:90,turns:2}]},
+    ],drops:[[{el:'earth',rate:0.8}],[{el:'earth',rate:1.0}],[{el:'earth',rate:1.0},{rank:'jonin',rate:0.2}]]},
+  wind:{id:'wind',name:'風之峽谷',emoji:'🌪️',el:'wind',cost:12,stages:[
+      {es:[{el:'wind',hp:680,atk:100,turns:2}]},
+      {es:[{el:'wind',hp:580,atk:90,turns:2},{el:'wind',hp:580,atk:90,turns:2}]},
+      {es:[{el:'wind',hp:500,atk:90,turns:2},{el:'wind',hp:1900,atk:200,turns:3,boss:true},{el:'wind',hp:500,atk:90,turns:2}]},
+    ],drops:[[{el:'wind',rate:0.8}],[{el:'wind',rate:1.0}],[{el:'wind',rate:1.0},{rank:'jonin',rate:0.2}]]},
+  tower:{id:'tower',name:'結印之塔',emoji:'🗼',cost:20,stages:[
+      {es:[{el:'fire',hp:800,atk:120,turns:2},{el:'water',hp:800,atk:120,turns:2}]},
+      {es:[{el:'thunder',hp:750,atk:110,turns:2},{el:'earth',hp:750,atk:110,turns:2},{el:'wind',hp:750,atk:110,turns:2}]},
+      {es:[{el:'thunder',hp:1200,atk:140,turns:2},{el:'water',hp:3000,atk:240,turns:3,boss:true},{el:'fire',hp:1200,atk:140,turns:2}]},
+    ],drops:[[{rank:'chunin',rate:1.0}],[{rank:'chunin',rate:1.0}],[{rank:'jonin',rate:0.5},{rank:'chunin',rate:1.0}]]},
+};
+const STAGES = DUNGEONS.prologue.stages;   // 相容舊引用
+const ELEM_DUNGEONS=['fire','water','thunder','earth','wind'];
+// 純查克拉(水塊)形狀:大小=水等級。可重疊放置(只填空格、重疊處忽略)
+const WILD_SHAPES = {1:[[0,0]], 2:[[0,0],[0,1]], 3:[[0,0],[0,1],[0,2]], 4:[[0,0],[0,1],[1,0],[1,1]], 5:[[0,1],[1,0],[1,1],[1,2],[2,1]],
+  6:[[0,0],[0,1],[0,2],[1,0],[1,1],[1,2]],                                  // LV6:2×3
+  7:[[0,0],[0,1],[0,2],[1,0],[1,1],[1,2],[2,0],[2,1],[2,2]]};               // LV7:3×3(9格)
+
+function rnd(n){return Math.floor(Math.random()*n);}
+function pickShape(){let r=rnd(WSUM);for(const s of SHAPES){r-=s.w;if(r<0)return s.c.map(x=>x.slice());}}
+function boxOf(r,c){return Math.floor(r/3)*3+Math.floor(c/3);}
+function canPlace(board,cells,r,c,kind){
+  const inB=cells.every(([dr,dc])=>{const rr=r+dr,cc=c+dc;return rr>=0&&rr<N&&cc>=0&&cc<N;});
+  if(!inB)return false;
+  if(kind==='water')return cells.some(([dr,dc])=>!board[r+dr][c+dc]);   // 水塊:界內 + 至少一格空(可填)
+  if(kind==='wind') return cells.some(([dr,dc])=> board[r+dr][c+dc]);   // 風刃:界內 + 至少一格有方塊(可消)
+  if(kind==='earth')return cells.some(([dr,dc])=> board[r+dr][c+dc]);   // 土塊:界內 + 至少一格有方塊(可抓取搬移)
+  return cells.every(([dr,dc])=>!board[r+dr][c+dc]);                    // 一般塊:全空
+}
+function computeClears(board, boxElement, boxCard, enemyEl, ampMult){
+  let rows=[],cols=[],boxes=[];
+  for(let r=0;r<N;r++)if(board[r].every(x=>x))rows.push(r);
+  for(let c=0;c<N;c++){let f=true;for(let r=0;r<N;r++)if(!board[r][c])f=false;if(f)cols.push(c);}
+  for(let b=0;b<9;b++){const br=Math.floor(b/3)*3,bc=(b%3)*3;let f=true;
+    for(let r=br;r<br+3;r++)for(let c=bc;c<bc+3;c++)if(!board[r][c])f=false;if(f)boxes.push(b);}
+  const groups=rows.length+cols.length+boxes.length;
+  if(groups===0)return null;
+  const cellSet=new Set();
+  rows.forEach(r=>{for(let c=0;c<N;c++)cellSet.add(r+'_'+c);});
+  cols.forEach(c=>{for(let r=0;r<N;r++)cellSet.add(r+'_'+c);});
+  boxes.forEach(b=>{const br=Math.floor(b/3)*3,bc=(b%3)*3;for(let r=br;r<br+3;r++)for(let c=bc;c<bc+3;c++)cellSet.add(r+'_'+c);});
+  const mult=(el)=> el==='neutral'?1 : (EL[el].beats===enemyEl?CONFIG.ADV_MULT : (EL[enemyEl].beats===el?CONFIG.WEAK_MULT:CONFIG.NORM_MULT));
+  let total=0,hitWeak=false,parts=[];
+  boxes.forEach(b=>{const el=boxElement[b]||'neutral';const card=boxCard[b];
+    let d = card ? Math.round(card.atk*mult(el)*ampMult) : Math.round(CONFIG.NEUTRAL_BOX_BASE*mult(el));
+    total+=d;
+    if(el!=='neutral'&&EL[el].beats===enemyEl)hitWeak=true;
+    const br=Math.floor(b/3)*3,bc=(b%3)*3;parts.push({el,d,r:br+1,c:bc+1});});
+  const lineDmg=(bx)=>{let d=CONFIG.LINE_BASE,best=null,weak=false;const byEl={};
+    bx.forEach(b=>{const e=boxElement[b];if(e&&boxCard[b])(byEl[e]=byEl[e]||[]).push(boxCard[b]);});
+    for(const e in byEl)if(byEl[e].length>=2){byEl[e].forEach(card=>{d+=Math.round(card.atk*CONFIG.LINE_SAME_RATE*mult(e));});best=e;if(EL[e].beats===enemyEl)weak=true;}
+    return {d,best,weak};};
+  rows.forEach(r=>{const br=Math.floor(r/3);const L=lineDmg([br*3,br*3+1,br*3+2]);
+    total+=L.d;if(L.weak)hitWeak=true;parts.push({el:L.best||'neutral',d:L.d,r,c:4});});
+  cols.forEach(c=>{const bc=Math.floor(c/3);const L=lineDmg([bc,bc+3,bc+6]);
+    total+=L.d;if(L.weak)hitWeak=true;parts.push({el:L.best||'neutral',d:L.d,r:4,c});});
+  const elemCells={};
+  cellSet.forEach(k=>{const p=k.split('_');const e=boxElement[boxOf(+p[0],+p[1])];if(e)elemCells[e]=(elemCells[e]||0)+1;});
+  const fx={};
+  ELEMENT_BOXES.forEach(b=>{const card=boxCard[b];if(!card)return;const br=Math.floor(b/3)*3,bc=(b%3)*3;
+    let hit=false;for(let r=br;r<br+3&&!hit;r++)for(let c=bc;c<bc+3;c++)if(cellSet.has(r+'_'+c))hit=true;
+    if(!hit)return;const e=card.el;const o=fx[e]||(fx[e]={atk:0,attrs:[]});
+    o.atk=Math.max(o.atk,card.atk);card.attrs.forEach(a=>{if(o.attrs.indexOf(a)<0)o.attrs.push(a);});});
+  Object.keys(fx).forEach(e=>{fx[e].level=Math.min(7,Math.floor((elemCells[e]||0)/3))||1;});
+  return {groups,cells:[...cellSet].map(k=>k.split('_').map(Number)),parts,total,hitWeak,fx};
+}
+
+/* ===== 自適應版面常數(寬度固定 420、高度依裝置比例,FIT 不黑邊;上下錨定) ===== */
+const W=420, CX=210;
+const CS=40, RECT=37, BX0=30, DRAG_LIFT=66;
+// 版面高度依「當下」裝置比例算(尺寸變化時即時重算),FIT 不黑邊;上下錨定
+let H,TRAY_Y,BY0,CARDS_Y,PHP_Y,INFO_Y,BG_H,BATTLE_CY;
+function recomputeLayout(){
+  const vw=(typeof window!=='undefined'&&window.innerWidth)?window.innerWidth:390;
+  const vh=(typeof window!=='undefined'&&window.innerHeight)?window.innerHeight:844;
+  H=Math.max(640,Math.min(1400,Math.round(W*vh/vw)));   // 涵蓋約 1.52~3.33 的長寬比
+  TRAY_Y=H-58; BY0=TRAY_Y-66-9*CS; CARDS_Y=BY0-74; PHP_Y=BY0-30; INFO_Y=BY0-12;
+  BG_H=CARDS_Y+38; BATTLE_CY=Math.round(CARDS_Y/2);
+}
+recomputeLayout();
+const EMOJIFONT='"Segoe UI Emoji","Microsoft JhengHei",sans-serif';
+
+/* ===== F5 收集系統(localStorage 持有卡 + 關卡掉落) ===== */
+const STARTER=['c04','c03','c08','c10','c12'];   // 保底:蒼瀾上忍(水+陽奶) + 火/雷/土/風 基礎,新手即有完整一隊
+const RANKNAME={genin:'下忍',chunin:'中忍',jonin:'上忍',kage:'影忍'};
+const RANKSTAR={genin:'★',chunin:'★★',jonin:'★★★',kage:'★★★★'};
+const EL_SKILL={fire:'🔥 燒傷:清火印 → 敵持續扣血(DoT)',water:'💧 水塊:清水印 → 生成可填空格的塊',thunder:'⚡ 麻痺:清雷印 → 延遲敵人出手',earth:'⛰️ 搬移:清土印 → 生成可搬移查克拉的塊',wind:'🌪️ 風刃:清風印 → 生成可消方塊的塊'};
+const SUB_SKILL={yin:'🟣 陰 · 增傷(該手傷害放大)',yang:'🟢 陽 · 回血(回復我方生命)'};
+const EL_ORDER={fire:0,water:1,thunder:2,earth:3,wind:4};
+const SORT_MODES=[
+  {name:'編號',fn:(a,b)=>a._i-b._i},
+  {name:'屬性',fn:(a,b)=>(EL_ORDER[a.el]-EL_ORDER[b.el])||(a._i-b._i)},
+  {name:'等級',fn:(a,b)=>(getCardLv(b.id)-getCardLv(a.id))||(a._i-b._i)},
+  {name:'星數',fn:(a,b)=>(cardStars(b.id)-cardStars(a.id))||(a._i-b._i)},
+  {name:'攻擊',fn:(a,b)=>(cardAtk(b.id)-cardAtk(a.id))||(a._i-b._i)},
+];
+/* 隊長技:隊伍首位(隊長)的常駐被動,塑造流派 */
+const LEADER_SKILLS={
+  c01:{name:'業火統領',desc:'清到火印那手 全傷害 ×1.5',type:'elemAtk',el:'fire',v:1.5},
+  c02:{name:'爆炎',desc:'暴擊傷害 ×1.4',type:'burstAtk',v:1.4},
+  c03:{name:'焰心',desc:'全體傷害 ×1.15',type:'allAtk',v:1.15},
+  c04:{name:'蒼瀾守護',desc:'我方 HP ×1.3',type:'hp',v:1.3},
+  c05:{name:'靜水流深',desc:'鬥志更難衰退(連4手空手才降)',type:'moraleGrace',v:1},
+  c06:{name:'潮心',desc:'全體傷害 ×1.15',type:'allAtk',v:1.15},
+  c07:{name:'紫電戰意',desc:'起始鬥志從「強」開始',type:'moraleStart',v:3},
+  c08:{name:'轟雷',desc:'暴擊傷害 ×1.4',type:'burstAtk',v:1.4},
+  c09:{name:'磐石之軀',desc:'我方 HP ×1.25',type:'hp',v:1.25},
+  c10:{name:'砂礫',desc:'全體傷害 ×1.12',type:'allAtk',v:1.12},
+  c11:{name:'疾風之足',desc:'出擊體力 −20%',type:'stamina',v:0.8},
+  c12:{name:'微風',desc:'全體傷害 ×1.12',type:'allAtk',v:1.12},
+  // 擴充卡(隊長技隨稀有度遞強;影忍=各流派核心)
+  c13:{name:'小火種',desc:'全體傷害 ×1.08',type:'allAtk',v:1.08},
+  c14:{name:'赤焰',desc:'火屬清除那手 全傷害 ×1.2',type:'elemAtk',el:'fire',v:1.2},
+  c15:{name:'炎獄霸統',desc:'火屬清除那手 全傷害 ×1.8',type:'elemAtk',el:'fire',v:1.8},
+  c16:{name:'滴水',desc:'我方 HP ×1.08',type:'hp',v:1.08},
+  c17:{name:'寒霜護',desc:'我方 HP ×1.15',type:'hp',v:1.15},
+  c18:{name:'深淵守護',desc:'我方 HP ×1.4',type:'hp',v:1.4},
+  c19:{name:'靜電',desc:'全體傷害 ×1.08',type:'allAtk',v:1.08},
+  c20:{name:'落雷',desc:'暴擊傷害 ×1.2',type:'burstAtk',v:1.2},
+  c21:{name:'雷光',desc:'暴擊傷害 ×1.3',type:'burstAtk',v:1.3},
+  c22:{name:'天雷裁決',desc:'暴擊傷害 ×1.6',type:'burstAtk',v:1.6},
+  c23:{name:'礫石',desc:'我方 HP ×1.08',type:'hp',v:1.08},
+  c24:{name:'岩壁',desc:'我方 HP ×1.2',type:'hp',v:1.2},
+  c25:{name:'山嶽不動',desc:'我方 HP ×1.3',type:'hp',v:1.3},
+  c26:{name:'不動戰意',desc:'起始鬥志從「超」開始',type:'moraleStart',v:4},
+  c27:{name:'輕風',desc:'出擊體力 −5%',type:'stamina',v:0.95},
+  c28:{name:'烈風',desc:'全體傷害 ×1.15',type:'allAtk',v:1.15},
+  c29:{name:'風遁',desc:'全體傷害 ×1.2',type:'allAtk',v:1.2},
+  c30:{name:'颶嵐統領',desc:'全體傷害 ×1.3',type:'allAtk',v:1.3},
+};
+function leadSkill(id){return LEADER_SKILLS[id]||null;}
+/* 主動技:戰鬥中蓄力(每出滿一手+1),蓄滿點該卡發動;依卡片屬性給效果(玩家主動決策層) */
+const ACTIVE_SKILLS={
+  fire:   {name:'業火奔流',cd:5,icon:'🔥',desc:'對全體敵造成 攻擊×3 傷害'},
+  water:  {name:'回春之泉',cd:4,icon:'💧',desc:'回復 30% HP + 洗換托盤'},
+  thunder:{name:'封雷結界',cd:4,icon:'⚡',desc:'全體敵出手延遲 +3 手'},
+  earth:  {name:'大地整復',cd:5,icon:'🪨',desc:'清空盤面查克拉(重開盤面)'},
+  wind:   {name:'疾風亂舞',cd:5,icon:'🌀',desc:'鬥志直接衝到「極」'},
+};
+function activeSkill(el){return ACTIVE_SKILLS[el]||null;}
+/* F6 統一存檔:持有卡 / 編隊 / 進度 / 設定 一個物件全自動存 localStorage */
+const SAVE_KEY='ninja_save';
+function defaultMeta(){return {rank:1,exp:0,coins:0,stones:5,stamina:50,staminaMax:50,staTs:null};}
+function defaultSave(){const owned={};STARTER.forEach(id=>owned[id]=1);return {owned,team:STARTER.slice(),cardLv:{},cardEvo:{},gems:{fire:0,water:0,thunder:0,earth:0,wind:0},progress:{cleared:false,clears:0,bestStage:0},meta:defaultMeta(),settings:{}};}
+function writeSave(s){try{localStorage.setItem(SAVE_KEY,JSON.stringify(s));}catch(e){}}
+function loadSave(){let s=null;try{s=JSON.parse(localStorage.getItem(SAVE_KEY));}catch(e){}
+  if(!s||typeof s!=='object'){s=defaultSave();
+    let old=null;try{old=JSON.parse(localStorage.getItem('ninja_owned'));}catch(e){}   // 遷移舊版持有卡
+    if(old&&typeof old==='object')s.owned=old;
+    writeSave(s);}
+  if(!s.owned||typeof s.owned!=='object'){s.owned={};STARTER.forEach(id=>s.owned[id]=1);}  // 欄位補齊(版本相容)
+  if(!Array.isArray(s.team)||s.team.length!==5)s.team=STARTER.slice();
+  if(!s.progress)s.progress={cleared:false,clears:0,bestStage:0};
+  if(!s.progress.dungeonsCleared)s.progress.dungeonsCleared={};
+  if(!s.settings)s.settings={};
+  if(!s.meta)s.meta=defaultMeta(); else {const _d=defaultMeta();for(const k in _d)if(s.meta[k]==null)s.meta[k]=_d[k];}
+  if(!s.cardLv)s.cardLv={};
+  if(!s.cardEvo)s.cardEvo={};
+  if(!s.gems)s.gems={fire:0,water:0,thunder:0,earth:0,wind:0};
+  return s;}
+function mutSave(fn){const s=loadSave();fn(s);writeSave(s);return s;}
+function loadOwned(){return loadSave().owned;}
+function addCard(id){return mutSave(s=>{s.owned[id]=(s.owned[id]||0)+1;}).owned[id];}
+function isOwned(id){return !!loadSave().owned[id];}
+function ownedCount(){const o=loadSave().owned;return ROSTER.filter(c=>o[c.id]).length;}
+function saveTeam(ids){mutSave(s=>{s.team=ids.slice(0,5);});}
+function loadTeam(){return loadSave().team;}
+function recordStage(stage,won){mutSave(s=>{s.progress.bestStage=Math.max(s.progress.bestStage||0,stage);if(won){s.progress.cleared=true;s.progress.clears=(s.progress.clears||0)+1;}});}
+function getProgress(){return loadSave().progress;}
+function markDungeonCleared(id){mutSave(s=>{if(!s.progress.dungeonsCleared)s.progress.dungeonsCleared={};s.progress.dungeonsCleared[id]=true;if(id==='prologue')s.progress.cleared=true;});}
+function isDungeonCleared(id){return !!(loadSave().progress.dungeonsCleared||{})[id];}
+function isDungeonUnlocked(id){const dc=loadSave().progress.dungeonsCleared||{};
+  if(id==='prologue')return true;
+  if(id==='tower')return ELEM_DUNGEONS.every(e=>dc[e]);
+  if(ELEM_DUNGEONS.indexOf(id)>=0)return !!dc.prologue;
+  return false;}
+/* 養成:卡片等級/經驗(PAD式吃卡強化,同屬×1.5經驗) */
+const MAXLV=20, FEED_COST=100;
+function expToNext(lv){return 50*lv;}
+function getCardLv(id){const c=loadSave().cardLv[id];return c?c.lv:1;}
+function getCardExp(id){const c=loadSave().cardLv[id];return c?c.exp:0;}
+function cardAtk(id){const base=(ROSTER.find(c=>c.id===id)||{}).atk||0;return Math.round(base*EVO_MULT[getCardEvo(id)]*(1+(getCardLv(id)-1)*0.05));}
+function leveledTeam(ids){return ids.map(id=>{const c=ROSTER.find(x=>x.id===id);return c?Object.assign({},c,{atk:cardAtk(id),lv:getCardLv(id)}):null;}).filter(Boolean);}
+function feedFodder(targetId,fodderId){let res={ok:false,msg:''};
+  mutSave(s=>{
+    if((s.owned[fodderId]||0)<2){res.msg='需要多餘的素材卡(同一張至少2張)';return;}
+    if((s.meta.coins||0)<FEED_COST){res.msg='金錢不足(需'+FEED_COST+')';return;}
+    if(!s.cardLv[targetId])s.cardLv[targetId]={lv:1,exp:0};
+    const cl=s.cardLv[targetId]; if(cl.lv>=MAXLV){res.msg='已達滿級 Lv.'+MAXLV;return;}
+    const f=ROSTER.find(c=>c.id===fodderId), t=ROSTER.find(c=>c.id===targetId);
+    const reward=Math.round(({genin:60,chunin:150,jonin:400,kage:900}[f.rank]||60)*(f.el===t.el?1.5:1));
+    s.owned[fodderId]-=1; s.meta.coins-=FEED_COST; cl.exp+=reward;
+    let ups=0; while(cl.lv<MAXLV && cl.exp>=expToNext(cl.lv)){cl.exp-=expToNext(cl.lv);cl.lv++;ups++;}
+    if(cl.lv>=MAXLV)cl.exp=0;
+    res={ok:true,reward:reward,lv:cl.lv,ups:ups,same:f.el===t.el};
+  });
+  return res;}
+function dissolveCard(id){let res={ok:false,msg:''};   // 分解重複卡換金幣(保護最後一張)
+  mutSave(s=>{if((s.owned[id]||0)<2){res.msg='只剩 1 張,無法分解';return;}
+    const c=ROSTER.find(x=>x.id===id), gain={genin:50,chunin:150,jonin:400,kage:800}[c.rank]||50;
+    s.owned[id]-=1; s.meta.coins=(s.meta.coins||0)+gain; res={ok:true,gain:gain,left:s.owned[id]};});
+  return res;}
+function setLeader(id){mutSave(s=>{s.team=[id].concat(s.team.filter(x=>x!==id)).slice(0,5);});}   // 設為隊長(放隊首)
+/* 進化(PAD/神魔共通:滿級+寶玉素材→升階):gems 寶玉 + cardEvo 進化階 */
+const EVO_MAX=2, EVO_MULT=[1,1.6,2.4];
+function evoReq(tier){return {gems:3+tier*3, coins:1000+tier*2000};}
+function getCardEvo(id){return loadSave().cardEvo[id]||0;}
+function cardStars(id){const c=ROSTER.find(x=>x.id===id);return Math.min(6,({genin:1,chunin:2,jonin:3,kage:4}[c.rank]||1)+getCardEvo(id));}
+function starStr(id){return '★'.repeat(cardStars(id));}
+function getGems(el){return loadSave().gems[el]||0;}
+function addGem(el,n){mutSave(s=>{s.gems[el]=(s.gems[el]||0)+(n||1);});}
+function canEvolve(id){const c=ROSTER.find(x=>x.id===id),t=getCardEvo(id);
+  if(t>=EVO_MAX)return {ok:false,msg:'已達進化上限'};
+  if(getCardLv(id)<MAXLV)return {ok:false,msg:'需先練滿 Lv.'+MAXLV};
+  const req=evoReq(t);
+  if(getGems(c.el)<req.gems)return {ok:false,msg:'需 '+req.gems+' 顆'+EL[c.el].name+'寶玉(有'+getGems(c.el)+')'};
+  if((getMeta().coins||0)<req.coins)return {ok:false,msg:'需 '+req.coins+' 金'};
+  return {ok:true,req:req};}
+function evolveCard(id){const chk=canEvolve(id);if(!chk.ok)return chk;const c=ROSTER.find(x=>x.id===id);
+  mutSave(s=>{const req=evoReq(s.cardEvo[id]||0);s.gems[c.el]-=req.gems;s.meta.coins-=req.coins;
+    s.cardEvo[id]=(s.cardEvo[id]||0)+1;s.cardLv[id]={lv:1,exp:0};});
+  return {ok:true,tier:getCardEvo(id)};}
+/* 經濟:體力(時間回復)/ 經驗·等級 / 金錢 / 魔法石 */
+const REGEN_MS=20000;   // 體力每 20 秒 +1
+function syncStamina(m){if(m.staTs==null){m.staTs=Date.now();return;}
+  if(m.stamina>=m.staminaMax){m.staTs=Date.now();return;}
+  const g=Math.floor((Date.now()-m.staTs)/REGEN_MS);
+  if(g>0){m.stamina=Math.min(m.staminaMax,m.stamina+g); m.staTs=(m.stamina>=m.staminaMax)?Date.now():m.staTs+g*REGEN_MS;}}
+function getMeta(){return mutSave(s=>syncStamina(s.meta)).meta;}
+function spendStamina(n){let ok=false;mutSave(s=>{syncStamina(s.meta);if(s.meta.stamina>=n){s.meta.stamina-=n;s.meta.staTs=Date.now();ok=true;}});return ok;}
+function staFullSec(){const m=getMeta();if(m.stamina>=m.staminaMax)return 0;return Math.ceil(((m.staminaMax-m.stamina)*REGEN_MS-(Date.now()-m.staTs))/1000);}
+function expForLevel(rank){return 80+rank*40;}
+function addRewards(exp,coins,stones){return mutSave(s=>{const m=s.meta;m.coins=(m.coins||0)+(coins||0);m.stones=(m.stones||0)+(stones||0);m.exp=(m.exp||0)+(exp||0);
+  let need=expForLevel(m.rank),ups=0;while(m.exp>=need){m.exp-=need;m.rank++;m.staminaMax+=2;m.stamina=m.staminaMax;ups++;need=expForLevel(m.rank);}m._ups=ups;}).meta;}
+function spendStones(n){let ok=false;mutSave(s=>{if((s.meta.stones||0)>=n){s.meta.stones-=n;ok=true;}});return ok;}
+function refillStamina(){mutSave(s=>{s.meta.stamina=s.meta.staminaMax;s.meta.staTs=Date.now();});}
+const RANK_POOL={genin:ROSTER.filter(c=>c.rank==='genin'),chunin:ROSTER.filter(c=>c.rank==='chunin'),jonin:ROSTER.filter(c=>c.rank==='jonin'),kage:ROSTER.filter(c=>c.rank==='kage')};
+function pickDrop(spec){let pool=ROSTER;if(spec.el)pool=pool.filter(c=>c.el===spec.el);
+  if(spec.rank)pool=pool.filter(c=>c.rank===spec.rank); else pool=pool.filter(c=>c.rank!=='kage');   // 影忍只能抽卡取得,不從刷關掉落
+  return pool.length?pool[rnd(pool.length)]:null;}
+function rollDrops(table){const out=[];(table||[]).forEach(d=>{if(Math.random()<d.rate){const c=pickDrop(d);if(c)out.push(c);}});return out;}
+
+/* ===== 轉蛋(簡單版:雙池 + 機率公示) ===== */
+const GACHA={
+  premium:{name:'結印轉蛋',cur:'stones',icon:'💎',cost1:5,   cost10:50,  rates:[['genin',0.50],['chunin',0.35],['jonin',0.12],['kage',0.03]]},
+  normal: {name:'一般轉蛋',cur:'coins', icon:'💰',cost1:1000,cost10:9000,rates:[['genin',0.70],['chunin',0.28],['jonin',0.02]]},
+};
+function rollRarity(rates){const r=Math.random();let acc=0;for(let k=0;k<rates.length;k++){acc+=rates[k][1];if(r<acc)return rates[k][0];}return rates[rates.length-1][0];}
+function gachaPull(bankey){const pool=RANK_POOL[rollRarity(GACHA[bankey].rates)];return pool[rnd(pool.length)];}
+function spendCoins(n){let ok=false;mutSave(s=>{if((s.meta.coins||0)>=n){s.meta.coins-=n;ok=true;}});return ok;}
+function doGacha(bankey,count){const b=GACHA[bankey],cost=count===10?b.cost10:b.cost1;
+  const ok=b.cur==='stones'?spendStones(cost):spendCoins(cost); if(!ok)return null;
+  const out=[]; for(let i=0;i<count;i++){const c=gachaPull(bankey);out.push({cd:c,isNew:!isOwned(c.id)});addCard(c.id);} return out;}
+
+/* ===== 出戰編隊 ===== */
+class TeamScene extends Phaser.Scene{
+  constructor(){super('team');}
+  create(){
+    this.add.text(CX,42,'出戰編隊',{fontFamily:EMOJIFONT,fontSize:'22px',color:'#f3e9d8'}).setOrigin(0.5);
+    this.add.text(CX,70,'拖卡片進 5 宮位 · 同屬排一線可加成 · 點宮位取消',
+      {fontFamily:EMOJIFONT,fontSize:'11px',color:'#b9a584'}).setOrigin(0.5);
+    const _pr=getProgress();
+    if(_pr.cleared)this.add.text(CX,92,'🏆 序章已通關 ×'+_pr.clears,{fontFamily:EMOJIFONT,fontSize:'11px',color:'#ffd56a'}).setOrigin(0.5);
+    const defs=[{n:'左上',x:140,y:154},{n:'右上',x:280,y:154},{n:'中央',x:CX,y:234},
+                {n:'左下',x:140,y:314},{n:'右下',x:280,y:314}];
+    this.slots=defs.map(d=>{
+      this.add.text(d.x,d.y-38,d.n,{fontFamily:EMOJIFONT,fontSize:'12px',color:'#c9b48f'}).setOrigin(0.5);
+      const rect=this.add.rectangle(d.x,d.y,104,54,0x2b2014).setStrokeStyle(2,0x4a3824).setInteractive();
+      const txt=this.add.text(d.x,d.y,'＋',{fontFamily:EMOJIFONT,fontSize:'18px',color:'#6a5a40'}).setOrigin(0.5);
+      const slot={el:null,cardId:null,rect,txt,x:d.x,y:d.y};
+      rect.on('pointerdown',()=>this.clearSlot(slot));
+      return slot;
+    });
+    this.cardUsed={}; this.cards=[];
+    const myCards=ROSTER.filter(c=>isOwned(c.id));
+    const cols=3, cw=122, ch=40, gx=132, gy=50, x0=78, y0=398;
+    myCards.forEach((cd,i)=>{
+      const cx=x0+(i%cols)*gx, cy=y0+Math.floor(i/cols)*gy;
+      const rect=this.add.rectangle(0,0,cw,ch,EL[cd.el].color).setStrokeStyle(2,0x000000,0.2);
+      const txt=this.add.text(0,0,cd.name+'·'+EL[cd.el].name,
+        {fontFamily:EMOJIFONT,fontSize:'14px',color:'#1a1208',fontStyle:'bold'}).setOrigin(0.5);
+      const cont=this.add.container(cx,cy,[rect,txt]);
+      cont.setInteractive(new Phaser.Geom.Rectangle(-cw/2,-ch/2,cw,ch),Phaser.Geom.Rectangle.Contains);
+      this.input.setDraggable(cont);
+      cont.setData('card',cd); cont.setData('home',{x:cx,y:cy});
+      this.cards.push(cont);
+    });
+    this.input.on('dragstart',(p,o)=>this.children.bringToTop(o));
+    this.input.on('drag',(p,o,dx,dy)=>o.setPosition(dx,dy));
+    this.input.on('dragend',(p,o)=>this.dropCard(p,o));
+    this.startBtn=this.add.rectangle(CX,632,220,52,0x2b2014).setStrokeStyle(2,0x5a8a3c).setInteractive();
+    this.startTxt=this.add.text(CX,632,'💾 確定編隊',{fontFamily:EMOJIFONT,fontSize:'20px',color:'#cfe8b0'}).setOrigin(0.5);
+    this.startBtn.on('pointerup',()=>this.launch());
+    this.hint=this.add.text(CX,670,'',{fontFamily:EMOJIFONT,fontSize:'12px',color:'#ffd56a'}).setOrigin(0.5);
+    const rnd2=this.add.rectangle(78,706,124,40,0x2b2014).setStrokeStyle(2,0x4a3824).setInteractive();
+    this.add.text(78,706,'🎲 隨機',{fontFamily:EMOJIFONT,fontSize:'13px',color:'#f3e9d8'}).setOrigin(0.5);
+    rnd2.on('pointerup',()=>this.randomFill());
+    const colBtn=this.add.rectangle(210,706,124,40,0x2b2014).setStrokeStyle(2,0x5a6a8a).setInteractive();
+    this.add.text(210,706,'📖 卡冊'+ownedCount()+'/'+ROSTER.length,{fontFamily:EMOJIFONT,fontSize:'11px',color:'#cfe0ff'}).setOrigin(0.5);
+    colBtn.on('pointerup',()=>{this.scene.manager.start('collection');this.scene.manager.stop('team');});
+    const homeBtn=this.add.rectangle(342,706,124,40,0x2b2014).setStrokeStyle(2,0x8a6a5a).setInteractive();
+    this.add.text(342,706,'🏠 大廳',{fontFamily:EMOJIFONT,fontSize:'13px',color:'#ffd9b0'}).setOrigin(0.5);
+    homeBtn.on('pointerup',()=>{const t=this.slots.map(s=>s.cardId).filter(Boolean);if(t.length===5)saveTeam(t);this.scene.manager.start('home');this.scene.manager.stop('team');});
+    loadTeam().forEach((id,i)=>{const cd=ROSTER.find(c=>c.id===id);if(cd&&isOwned(id)&&this.slots[i]&&!this.cardUsed[id])this.assign(this.slots[i],cd);});  // F6:自動回填上次編隊
+    this.refreshStart();
+    this.scale.on('resize',()=>{const o=H;recomputeLayout();if(Math.abs(H-o)>3)this.scale.setGameSize(W,H);});
+  }
+  slotUnder(px,py){return this.slots.find(s=>Math.abs(px-s.x)<56&&Math.abs(py-s.y)<31);}
+  assign(slot,cd){slot.el=cd.el;slot.cardId=cd.id;
+    slot.rect.setFillStyle(EL[cd.el].color);slot.txt.setText(cd.name).setColor('#1a1208');
+    this.cardUsed[cd.id]=true;const card=this.cards.find(c=>c.getData('card').id===cd.id);
+    if(card){card.setAlpha(0.22);this.input.setDraggable(card,false);}}
+  dropCard(p,o){const cd=o.getData('card'),home=o.getData('home'),slot=this.slotUnder(p.x,p.y);
+    if(slot&&!slot.el&&!this.cardUsed[cd.id])this.assign(slot,cd);
+    o.setPosition(home.x,home.y);this.refreshStart();}
+  clearSlot(slot){if(!slot.el)return;const id=slot.cardId;this.cardUsed[id]=false;
+    const card=this.cards.find(c=>c.getData('card').id===id);
+    if(card){card.setAlpha(1);this.input.setDraggable(card,true);}
+    slot.el=null;slot.cardId=null;slot.rect.setFillStyle(0x2b2014);slot.txt.setText('＋').setColor('#6a5a40');
+    this.refreshStart();}
+  randomFill(){this.slots.forEach(s=>this.clearSlot(s));
+    const avail=ROSTER.filter(c=>isOwned(c.id)&&!this.cardUsed[c.id]);
+    this.slots.forEach(slot=>{if(avail.length)this.assign(slot,avail.splice(rnd(avail.length),1)[0]);});
+    this.refreshStart();}
+  refreshStart(){const n=this.slots.filter(s=>s.el).length,ok=n===5;
+    this.startBtn.setFillStyle(ok?0x3a5a2c:0x2b2014);this.startTxt.setAlpha(ok?1:0.4);
+    this.hint.setText(ok?'':'還需放滿 5 宮位('+n+'/5)');}
+  launch(){if(this.slots.filter(s=>s.el).length!==5)return;
+    saveTeam(this.slots.map(s=>s.cardId));   // 存隊 → 回大廳(戰鬥從世界地圖進場)
+    this.scene.manager.start('home');this.scene.manager.stop('team');}
+}
+
+/* ===== 戰鬥(多敵 + 自由查克拉) ===== */
+class GameScene extends Phaser.Scene{
+  constructor(){super('game');}
+  init(data){ this.presetTeam=(data&&data.team)?data.team:null; this.dungeonId=(data&&data.dungeonId)||'prologue'; this.dungeon=DUNGEONS[this.dungeonId]||DUNGEONS.prologue; }
+
+  create(){
+    this.cells=[]; this.boxLabels=[]; this.trayIcons=[]; this.teamCards=[]; this.drag=null; this.enemies=[];
+
+    // 戰鬥場景背景(滿版,最底層)
+    const bg=this.bgGfx=this.add.graphics();
+    bg.fillGradientStyle(0x44607a,0x44607a,0x223524,0x223524,1); bg.fillRect(0,0,W,BG_H);
+    bg.fillStyle(0x000000,0.25); bg.fillEllipse(CX,BATTLE_CY+56,W*0.85,46);
+    this.bgLine=this.add.rectangle(CX,BG_H,W,2,0x000000,0.5);
+
+    // nav(背景之上)
+    this.add.rectangle(CX,13,W,26,0x000000,0.30);
+    this.goldTxt=this.add.text(10,13,'💰 0',{fontFamily:EMOJIFONT,fontSize:'14px',color:'#ffe08a'}).setOrigin(0,0.5);
+    this.chestTxt=this.add.text(298,13,'📦 0',{fontFamily:EMOJIFONT,fontSize:'14px',color:'#cfe8ff'}).setOrigin(0,0.5);
+    const menuBtn=this.add.rectangle(388,13,58,22,0x3a2c1d).setStrokeStyle(1,0x5a4128).setInteractive();
+    this.add.text(388,13,'☰ 選單',{fontFamily:EMOJIFONT,fontSize:'11px',color:'#f3e9d8'}).setOrigin(0.5);
+    menuBtn.on('pointerup',()=>this.showMenu());
+
+    // 我方卡(正方形,背景之上)
+    for(let i=0;i<5;i++){const x=54+i*78;
+      const rect=this.add.rectangle(x,CARDS_Y,62,62,0xffffff).setStrokeStyle(2,0x00000044).setInteractive();
+      rect.on('pointerup',()=>this.fireActive(i));   // 點卡發動主動技(蓄力滿才有效)
+      const txt=this.add.text(x,CARDS_Y,'',{fontFamily:EMOJIFONT,fontSize:'24px',color:'#1a1208'}).setOrigin(0.5);
+      const barBg=this.add.rectangle(x,CARDS_Y+23,54,5,0x000000,0.5).setOrigin(0.5);          // 主動技蓄力條(卡底內)
+      const barFill=this.add.rectangle(x-27,CARDS_Y+23,0,5,0x4f9e42).setOrigin(0,0.5);
+      const icon=this.add.text(x+22,CARDS_Y-22,'',{fontFamily:EMOJIFONT,fontSize:'14px'}).setOrigin(0.5).setVisible(false);
+      this.teamCards.push({rect,txt,barBg,barFill,icon,el:null,pulse:null});}
+
+    // 我方血條 + 資訊列
+    this.pHpBg=this.add.rectangle(BX0,PHP_Y,W-2*BX0,16,0x000000,0.5).setOrigin(0,0.5);
+    this.pHp=this.add.rectangle(BX0,PHP_Y,W-2*BX0,16,0x4f9e42).setOrigin(0,0.5);
+    this.pHpTxt=this.add.text(CX,PHP_Y,'',{fontFamily:EMOJIFONT,fontSize:'10px',color:'#fff'}).setOrigin(0.5);
+    this.infoTxt=this.add.text(CX,INFO_Y,'',{fontFamily:EMOJIFONT,fontSize:'11px',color:'#ffd56a',fontStyle:'bold'}).setOrigin(0.5);
+
+    // 結印區
+    for(let r=0;r<N;r++)for(let c=0;c<N;c++)
+      this.cells.push(this.add.rectangle(BX0+c*CS, BY0+r*CS, RECT, RECT, NEUTRAL_DARK).setOrigin(0,0));
+    for(let b=0;b<9;b++){const br=Math.floor(b/3)*3,bc=(b%3)*3;const cen=this.cellCenter(br+1,bc+1);
+      this.boxLabels[b]=this.add.text(cen.x,cen.y,'',{fontFamily:EMOJIFONT,fontSize:'17px',color:'#fff'}).setOrigin(0.5).setAlpha(0.55);}
+
+    // 托盤
+    this.traySlots=[80,210,340]; this.trayHits=[];
+    this.traySlots.forEach((sx,i)=>{const hit=this.add.rectangle(sx,TRAY_Y,128,100,0,0).setOrigin(0.5).setInteractive();hit.setData('slot',i);this.trayHits.push(hit);});
+
+    this.input.on('gameobjectdown',(p,obj)=>{const i=obj.getData('slot');
+      if(i!=null && this.tray[i] && !this.tray[i].used) this.startDrag(i,p);});
+    this.input.on('pointermove',p=>{this.updateDrag(p);this.updateEarthMove(p);});
+    this.input.on('pointerup',p=>{this.endDrag(p);this.endEarthMove(p);});
+    this.input.on('pointerdown',p=>{if(this.earthSel&&!this.earthDrag)this.startEarthMove(p);});
+    this.scale.on('resize',this.onResize,this);
+
+    this.newGame();
+  }
+  onResize(){const o=H;recomputeLayout();if(Math.abs(H-o)>3){this.scale.setGameSize(W,H);this.relayout();}}
+  relayout(){
+    this.bgGfx.clear();
+    this.bgGfx.fillGradientStyle(0x44607a,0x44607a,0x223524,0x223524,1); this.bgGfx.fillRect(0,0,W,BG_H);
+    this.bgGfx.fillStyle(0x000000,0.25); this.bgGfx.fillEllipse(CX,BATTLE_CY+56,W*0.85,46);
+    this.bgLine.setPosition(CX,BG_H);
+    this.teamCards.forEach((card,i)=>{const x=54+i*78;card.rect.setPosition(x,CARDS_Y);card.txt.setPosition(x,CARDS_Y);
+      if(card.barBg)card.barBg.setPosition(x,CARDS_Y+23);if(card.barFill)card.barFill.setPosition(x-27,CARDS_Y+23);if(card.icon)card.icon.setPosition(x+22,CARDS_Y-22);});
+    this.pHpBg.setPosition(BX0,PHP_Y);this.pHp.setPosition(BX0,PHP_Y);this.pHpTxt.setPosition(CX,PHP_Y);
+    this.infoTxt.setPosition(CX,INFO_Y);
+    for(let r=0;r<N;r++)for(let c=0;c<N;c++)this.cellRect(r,c).setPosition(BX0+c*CS,BY0+r*CS);
+    for(let b=0;b<9;b++){const br=Math.floor(b/3)*3,bc=(b%3)*3,cen=this.cellCenter(br+1,bc+1);this.boxLabels[b].setPosition(cen.x,cen.y);}
+    this.trayHits.forEach(h=>h.setPosition(h.x,TRAY_Y));
+    if(this.tray)this.renderTray();
+    this.enemies.forEach(e=>{if(!e.sprite||e.dead)return;const x=e.sprite.x,cy=BATTLE_CY;
+      e.sel.setPosition(x,cy);e.timerTxt.setPosition(x,cy-44);e.hpBg.setPosition(x,cy+42);e.hpFill.setPosition(e.hpx,cy+42);
+      if(e.bob)e.bob.stop();e.sprite.setY(cy);e.bob=this.tweens.add({targets:e.sprite,y:cy-6,duration:1200,yoyo:true,repeat:-1,ease:'Sine.inOut'});});
+  }
+
+  cellRect(r,c){return this.cells[r*N+c];}
+  cellCenter(r,c){return {x:BX0+c*CS+RECT/2, y:BY0+r*CS+RECT/2};}
+  pointerToCell(px,py){const c=Math.floor((px-BX0)/CS),r=Math.floor((py-BY0)/CS);
+    if(r<0||r>=N||c<0||c>=N)return null;return {r,c};}
+
+  newGame(){
+    this.boxElement={}; this.boxCard={};
+    if(this.presetTeam) ELEMENT_BOXES.forEach((b,i)=>{const card=this.presetTeam[i];this.boxCard[b]=card;this.boxElement[b]=card.el;});
+    else ELEMENT_BOXES.forEach(b=>{const card=ROSTER[rnd(ROSTER.length)];this.boxCard[b]=card;this.boxElement[b]=card.el;});
+    this.lead=(this.presetTeam&&this.presetTeam[0]&&LEADER_SKILLS[this.presetTeam[0].id])||null;   // 隊長技=隊首卡
+    this.maxHP=Math.round(CONFIG.PLAYER_HP_BASE*((this.lead&&this.lead.type==='hp')?this.lead.v:1));
+    this.playerHP=this.maxHP; this.stage=1; this.resultOpen=false; this.chests=0; this.gold=0; this.runDrops=[]; this.runExp=0; this.runCoins=0; this.runGems=0;
+    this.charge=[0,0,0,0,0];   // 主動技蓄力(整場累積、跨關保留)
+    this.renderTeam(); this.startStage();
+  }
+  resetWave(){this.combo=0;this.immune=0;this.armor=0;this.amp=1;}
+  startStage(){
+    this.board=Array.from({length:N},()=>Array(N).fill(null));
+    this.resetWave(); this.morale=(this.lead&&this.lead.type==='moraleStart')?this.lead.v:CONFIG.MORALE_START; this.handCleared=false; this.handBurst=false; this.whiffStreak=0; this.refill();   // 鬥志起始(隊長技可拉高)
+    if(this.stage===1&&this.lead)this.time.delayedCall(450,()=>this.tonFloat('🎖 隊長技:'+this.lead.name,'#ffe08a'));
+    this.spawnEnemies(); this.refreshBoard(); this.renderTray(); this.updateAll(); this.renderCharges();
+  }
+  spawnEnemies(){
+    if(this.enemyG)this.enemyG.destroy();
+    this.enemyG=this.add.container(0,0);
+    const defs=this.dungeon.stages[this.stage-1].es;
+    this.enemies=defs.map(d=>({el:d.el,max:d.hp,hp:d.hp,atk:d.atk,interval:d.turns,timer:d.turns,burn:0,dead:false,boss:!!d.boss}));
+    const n=this.enemies.length, slot=380/n, sz=(n<=1?52:n<=2?44:n<=3?38:30);
+    this.enemies.forEach((e,i)=>{
+      const x=20+slot*(i+0.5), w=Math.min(slot-14,84), cy=BATTLE_CY;
+      e.sel=this.add.rectangle(x,cy,slot-6,132,0xffd56a,0).setStrokeStyle(2,0xffd56a,0);
+      e.sprite=this.add.text(x,cy,EL[e.el].face,{fontFamily:EMOJIFONT,fontSize:sz+'px'}).setOrigin(0.5).setInteractive();
+      e.sprite.on('pointerdown',()=>this.selectTarget(i));
+      e.timerTxt=this.add.text(x,cy-44,'',{fontFamily:EMOJIFONT,fontSize:'12px',color:'#ffb0b0',fontStyle:'bold'}).setOrigin(0.5);
+      e.hpW=w; e.hpx=x-w/2;
+      e.hpBg=this.add.rectangle(x,cy+42,w,8,0x000000,0.5).setOrigin(0.5);
+      e.hpFill=this.add.rectangle(e.hpx,cy+42,w,8,e.boss?0xff7a3a:0xc23c2c).setOrigin(0,0.5);
+      e.bob=this.tweens.add({targets:e.sprite,y:cy-6,duration:1200,yoyo:true,repeat:-1,ease:'Sine.inOut'});
+      [e.sel,e.sprite,e.timerTxt,e.hpBg,e.hpFill].forEach(o=>this.enemyG.add(o));
+    });
+    this.target=0;
+  }
+  refill(){this.tray=[pickShape(),pickShape(),pickShape()].map(c=>({c,used:false}));}
+  aliveCount(){return this.enemies.filter(e=>!e.dead).length;}
+  targetEnemy(){let e=this.enemies[this.target];if(e&&!e.dead)return e;
+    const i=this.enemies.findIndex(x=>!x.dead);this.target=i;return i<0?null:this.enemies[i];}
+  selectTarget(i){if(this.enemies[i]&&!this.enemies[i].dead){this.target=i;this.updateEnemies();}}
+
+  refreshBoard(){
+    for(let r=0;r<N;r++)for(let c=0;c<N;c++){const rc=this.cellRect(r,c), be=this.boxElement[boxOf(r,c)];
+      if(this.board[r][c]){const el=this.board[r][c].el;rc.setFillStyle(EL[el]?EL[el].color:NEUTRAL_FILL);}
+      else rc.setFillStyle(be?EL[be].dark:NEUTRAL_DARK);
+      rc.setStrokeStyle(2,0x000000,0);}
+    for(let b=0;b<9;b++){const be=this.boxElement[b];
+      this.boxLabels[b].setText(be?EL[be].name:'·').setColor(be?'#'+EL[be].color.toString(16).padStart(6,'0'):'#ffffff66');}
+  }
+  renderTeam(){ELEMENT_BOXES.forEach((b,i)=>{const k=this.boxElement[b],card=this.teamCards[i];
+    card.el=k;card.rect.setFillStyle(EL[k].color);card.txt.setText(EL[k].name);});
+    this.renderCharges();}
+  // 主動技蓄力條/發光/icon 同步
+  renderCharges(){if(!this.charge)return;this.teamCards.forEach((card,i)=>{const a=activeSkill(card.el);if(!a||!card.barFill)return;
+    const ready=(this.charge[i]||0)>=a.cd, frac=Math.min(1,(this.charge[i]||0)/a.cd);
+    card.barFill.displayWidth=54*frac; card.barFill.setFillStyle(ready?0xffd54a:0x4f9e42);
+    card.rect.setStrokeStyle(ready?3:2,ready?0xffe066:0x000000,ready?1:0.27);
+    card.icon.setText(ready?a.icon:'').setVisible(ready);
+    if(ready&&!card.pulse)card.pulse=this.tweens.add({targets:card.rect,scaleX:1.08,scaleY:1.08,duration:480,yoyo:true,repeat:-1,ease:'Sine.inOut'});
+    if(!ready&&card.pulse){card.pulse.stop();card.pulse=null;card.rect.setScale(1);}});}
+  // 發動主動技
+  fireActive(i){if(this.resultOpen||this.drag||this.earthSel||this.earthDrag)return;
+    const card=this.teamCards[i], a=activeSkill(card.el); if(!a)return;
+    if((this.charge[i]||0)<a.cd){this.tonFloat('蓄力中 '+(this.charge[i]||0)+'/'+a.cd,'#9fb0c0');return;}
+    this.charge[i]=0;
+    const colHex='#'+EL[card.el].color.toString(16).padStart(6,'0');
+    this.tonFloat('★ '+a.name,colHex);
+    const cardObj=this.boxCard[ELEMENT_BOXES[i]], atk=cardObj?cardObj.atk:200;
+    switch(card.el){
+      case 'fire':{const dmg=Math.round(atk*3), vs=this.enemies.filter(e=>!e.dead);   // 全體爆裂
+        vs.forEach(v=>{v.hp=Math.max(0,v.hp-dmg);this.floatText(v.sprite.x,v.sprite.y-24,'-'+dmg,'#ff8f8f');});
+        this.cameras.main.shake(320,0.014);this.burstFX(vs.length);this.updateEnemies();
+        vs.forEach(v=>{if(v.hp<=0)this.killEnemy(v);});break;}
+      case 'water':{const h=Math.round(this.maxHP*0.3);this.playerHP=Math.min(this.maxHP,this.playerHP+h);   // 回血+洗托盤
+        this.floatText(CX,PHP_Y-14,'癒+'+h,'#74e09a');this.refill();this.renderTray();break;}
+      case 'thunder':this.enemies.forEach(e=>{if(!e.dead){e.timer+=3;if(e.sprite)this.floatText(e.sprite.x,e.sprite.y-24,'封+3','#f4da52');}});break;   // 凍結
+      case 'earth':this.board=Array.from({length:N},()=>Array(N).fill(null));this.refreshBoard();this.tonFloat('整地完成','#d49a4a');break;   // 清盤
+      case 'wind':{const m0=this.morale;this.morale=5;if(this.morale!==m0)this.moraleFX(5,true);break;}   // 鬥志衝極
+    }
+    this.updateAll();this.renderCharges();}
+  renderTray(){this.trayIcons.forEach(g=>g.destroy()); this.trayIcons=[];
+    this.tray.forEach((p,i)=>{if(p.used)return;
+      let maxr=0,maxc=0;p.c.forEach(([r,c])=>{maxr=Math.max(maxr,r);maxc=Math.max(maxc,c);});
+      const s=(maxr>=4||maxc>=4)?11:24, pw=(maxc+1)*s, ph=(maxr+1)*s;   // 大塊(如9×9)縮小顯示
+      const children=p.c.map(([dr,dc])=>this.add.rectangle(dc*s-pw/2, dr*s-ph/2, s-3, s-3, p.kind==='water'?0x62b8f0:p.kind==='wind'?0x6ad06a:p.kind==='earth'?0xd49a4a:NEUTRAL_FILL).setOrigin(0));
+      this.trayIcons.push(this.add.container(this.traySlots[i],TRAY_Y,children));});
+  }
+
+  /* 拖曳放塊 */
+  startDrag(i,p){if(this.resultOpen||this.earthSel||this.earthDrag)return;
+    const cells=this.tray[i].c, kind=this.tray[i].kind;
+    const kc=kind==='water'?0x62b8f0:kind==='wind'?0x6ad06a:kind==='earth'?0xd49a4a:0xffffff;
+    const kids=cells.map(([dr,dc])=>this.add.rectangle(dc*CS,dr*CS,RECT,RECT,kc).setOrigin(0));
+    this.drag={i,cells,kind,prev:this.add.container(0,0,kids).setAlpha(0.85),kids};this.updateDrag(p);}
+  updateDrag(p){if(!this.drag)return;this.clearGhost();
+    const cell=this.pointerToCell(p.x,p.y-DRAG_LIFT);
+    if(!cell){this.drag.prev.setVisible(false);return;}
+    this.drag.prev.setVisible(true).setPosition(BX0+cell.c*CS, BY0+cell.r*CS);
+    const k=this.drag.kind, ok=canPlace(this.board,this.drag.cells,cell.r,cell.c,k);
+    const kc=k==='water'?0x62b8f0:k==='wind'?0x6ad06a:k==='earth'?0xd49a4a:0x8fffa6;
+    this.drag.kids.forEach(x=>x.setFillStyle(ok?kc:0xff8f8f));
+    this.drag.cells.forEach(([dr,dc])=>{const rr=cell.r+dr,cc=cell.c+dc;if(rr<0||rr>=N||cc<0||cc>=N)return;
+      let col;
+      if(!ok)col=0xff8f8f;
+      else if(k==='water')col=this.board[rr][cc]?0x6aa0ff:0x8fffa6;     // 重疊藍 / 填綠
+      else if(k==='wind') col=this.board[rr][cc]?0x6ad06a:0x444444;     // 會消綠 / 空格灰
+      else if(k==='earth')col=this.board[rr][cc]?0xd49a4a:0x444444;     // 抓取棕 / 空格灰
+      else col=0x8fffa6;
+      this.cellRect(rr,cc).setStrokeStyle(3,col,1);});}
+  endDrag(p){if(!this.drag)return;const cell=this.pointerToCell(p.x,p.y-DRAG_LIFT), d=this.drag;
+    d.prev.destroy(); this.clearGhost(); this.drag=null;
+    if(cell && canPlace(this.board,d.cells,cell.r,cell.c,d.kind)){
+      if(d.kind==='earth') this.earthSelect(d.i,cell.r,cell.c);
+      else this.doPlace(d.i,cell.r,cell.c);
+    }}
+  clearGhost(){this.cells.forEach(rc=>rc.setStrokeStyle(2,0x000000,0));}
+
+  /* 放塊 = 一回合(敵人推進);放純查克拉 = bonus(不推進回合) */
+  doPlace(i,r,c){if(this.resultOpen)return;
+    const cells=this.tray[i].c, kind=this.tray[i].kind;
+    cells.forEach(([dr,dc])=>{const rr=r+dr,cc=c+dc;
+      if(kind==='wind'){if(this.board[rr][cc])this.board[rr][cc]=null;}        // 風刃:消除
+      else if(!this.board[rr][cc])this.board[rr][cc]={el:this.boxElement[boxOf(rr,cc)]||'neutral'};}); // 一般/水:填(只填空格)
+    this.tray[i].used=true;
+    this.afterAction(kind==='water'||kind==='wind');
+  }
+  // 共用:放塊後處理(消除→燒傷→敵推進→補塊→卡死檢查)
+  afterAction(fromBlock){
+    this.refreshBoard(); this.renderTray();
+    this.fromBlock=!!fromBlock; this.resolve(); this.fromBlock=false;   // 防遞迴:塊清出的消除不再生塊
+    if(this.tray.every(t=>t.used)){this.endHand();this.refill();this.renderTray();}  // 一手(3塊)放完→敵與燒傷推進一次(快節奏、連印滾得起來)
+    if(!this.anyPlaceable()){this.time.delayedCall(420,()=>this.handleStuck());}
+    this.updateAll();
+  }
+  // 一手結束:燒傷 tick + 敵人推進出手(option3:以「手」為節奏,非每塊)
+  endHand(){
+    const m0=this.morale;   // 鬥志(上重下輕):暴擊手=直接衝到「極」(九尾形態);一般清除手=+1升到「超」封頂;連MORALE_GRACE手完全空手才−1階
+    if(!this.handCleared){ this.whiffStreak=(this.whiffStreak||0)+1; if(this.whiffStreak>=(CONFIG.MORALE_GRACE+((this.lead&&this.lead.type==='moraleGrace')?this.lead.v:0))){this.morale=Math.max(0,this.morale-1);this.whiffStreak=0;} }
+    else { this.whiffStreak=0; if(this.handBurst)this.morale=5; else this.morale=Math.min(4,this.morale+1); }
+    this.handCleared=false; this.handBurst=false;
+    if(this.morale!==m0)this.moraleFX(this.morale,this.morale>m0);
+    this.enemies.forEach(e=>{if(!e.dead&&e.burn>0){e.hp=Math.max(0,e.hp-e.burn);
+      this.floatText(e.sprite.x,e.sprite.y-24,'🔥'+e.burn,'#ff7a63'); if(e.hp<=0)this.killEnemy(e);}});
+    this.enemies.forEach(e=>{if(e.dead)return; e.timer--; if(e.timer<=0){this.enemyAttack(e); e.timer=e.interval;}});
+    this.charge=this.charge.map((c,i)=>{const a=activeSkill(this.teamCards[i].el);return a?Math.min(a.cd,(c||0)+1):c;});   // 主動技蓄力+1
+    this.renderCharges();
+  }
+  // 卡死處理:空盤+只剩工具塊(土/風無從施力)→自動補一般查克拉塊;否則才花血重洗
+  handleStuck(){
+    if(this.resultOpen||this.anyPlaceable())return;
+    const empty=this.board.every(row=>row.every(c=>!c));
+    const unused=this.tray.filter(t=>!t.used);
+    const onlyTools=unused.length>0 && unused.every(t=>t.kind==='earth'||t.kind==='wind');
+    if(empty&&onlyTools){const s=this.tray.findIndex(t=>!t.used);
+      if(s>=0){this.tray[s]={c:pickShape(),used:false};this.renderTray();this.tonFloat('盤面已空,自動補查克拉塊','#cfe3ff');return;}}
+    this.showReshuffleModal();
+  }
+  /* 土屬塊:兩段式搬移查克拉 — ①拖塊蓋住要抓的查克拉 ②再拖把它們整組搬到空位 */
+  earthSelect(i,r,c){
+    const cells=this.tray[i].c, sel=[];
+    cells.forEach(([dr,dc])=>{const rr=r+dr,cc=c+dc;if(rr<0||rr>=N||cc<0||cc>=N)return;
+      if(this.board[rr][cc])sel.push({r:rr,c:cc,el:this.board[rr][cc].el});});
+    if(!sel.length)return;
+    this.earthSel={i,cells:sel};
+    this.clearGhost(); sel.forEach(s=>this.cellRect(s.r,s.c).setStrokeStyle(3,0xd49a4a,1));
+    this.tonFloat('抓 '+sel.length+' 格 — 再拖曳搬去空位','#d49a4a');
+  }
+  startEarthMove(p){
+    const sel=this.earthSel.cells;
+    const minR=Math.min.apply(null,sel.map(s=>s.r)), minC=Math.min.apply(null,sel.map(s=>s.c));
+    const rel=sel.map(s=>({dr:s.r-minR,dc:s.c-minC,el:s.el}));
+    sel.forEach(s=>{this.board[s.r][s.c]=null;}); this.refreshBoard();
+    const kids=rel.map(o=>this.add.rectangle(o.dc*CS,o.dr*CS,RECT,RECT,EL[o.el]?EL[o.el].color:NEUTRAL_FILL).setOrigin(0).setAlpha(0.9));
+    this.earthDrag={i:this.earthSel.i, rel, orig:sel.slice(), prev:this.add.container(0,0,kids), kids};
+    this.earthSel=null; this.updateEarthMove(p);
+  }
+  updateEarthMove(p){
+    if(!this.earthDrag)return; this.clearGhost();
+    const cell=this.pointerToCell(p.x,p.y-DRAG_LIFT), d=this.earthDrag;
+    if(!cell){d.prev.setVisible(false);return;}
+    d.prev.setVisible(true).setPosition(BX0+cell.c*CS,BY0+cell.r*CS);
+    const ok=d.rel.every(o=>{const rr=cell.r+o.dr,cc=cell.c+o.dc;return rr>=0&&rr<N&&cc>=0&&cc<N&&!this.board[rr][cc];});
+    d.kids.forEach((k,idx)=>k.setFillStyle(ok?(EL[d.rel[idx].el]?EL[d.rel[idx].el].color:NEUTRAL_FILL):0xff8f8f));
+    d.rel.forEach(o=>{const rr=cell.r+o.dr,cc=cell.c+o.dc;if(rr<0||rr>=N||cc<0||cc>=N)return;
+      this.cellRect(rr,cc).setStrokeStyle(3,ok?0x8fffa6:0xff8f8f,1);});
+  }
+  endEarthMove(p){
+    if(!this.earthDrag)return;
+    const cell=this.pointerToCell(p.x,p.y-DRAG_LIFT), d=this.earthDrag;
+    d.prev.destroy(); this.clearGhost(); this.earthDrag=null;
+    const ok=cell && d.rel.every(o=>{const rr=cell.r+o.dr,cc=cell.c+o.dc;return rr>=0&&rr<N&&cc>=0&&cc<N&&!this.board[rr][cc];});
+    if(ok){ d.rel.forEach(o=>{this.board[cell.r+o.dr][cell.c+o.dc]={el:o.el};});
+      this.tray[d.i].used=true; this.afterAction(true);
+    } else { d.orig.forEach(s=>{this.board[s.r][s.c]={el:s.el};}); this.refreshBoard(); this.updateAll(); }
+  }
+  anyPlaceable(){return this.tray.some(p=>{if(p.used)return false;
+    for(let r=0;r<N;r++)for(let c=0;c<N;c++)if(canPlace(this.board,p.c,r,c,p.kind))return true;return false;});}
+
+  resolve(){
+    const tgt=this.targetEnemy(); if(!tgt)return;
+    const data=computeClears(this.board,this.boxElement,this.boxCard,tgt.el,this.amp);
+    if(!data)return;
+    this.combo+=data.groups; this.handCleared=true; if(data.groups>=2)this.handBurst=true;   // 連擊餵鬥志;暴擊手=直接衝到極(九尾形態)
+    const mmult=CONFIG.MORALE_MULT[this.morale];       // 鬥志倍率(取代會硬歸零的連印倍率)
+    const burst=data.groups>=2 ? 1+(data.groups-1)*0.25 : 1;   // 暴擊:一手多清額外加成(2清×1.25、3清×1.5…)
+    let leadMult=1; if(this.lead){const L=this.lead;   // 隊長技:傷害類加成
+      if(L.type==='allAtk')leadMult=L.v;
+      else if(L.type==='elemAtk'&&data.fx[L.el])leadMult=L.v;
+      else if(L.type==='burstAtk'&&data.groups>=2)leadMult=L.v;}
+    const dealt=Math.round(data.total*mmult*burst*leadMult);
+    let topEl=null;Object.keys(data.fx).forEach(e=>{if(!topEl||data.fx[e].level>data.fx[topEl].level)topEl=e;});
+    const topLv=topEl?data.fx[topEl].level:0;
+    const aoe=(topLv>=4)||(this.morale>=5), victims=aoe?this.enemies.filter(e=>!e.dead):[tgt];   // LV4+大消除 或 鬥志「極」=全體
+    Object.keys(data.fx).forEach(e=>{const f=data.fx[e];f.attrs.forEach(a=>this.fireAttr(a,f.atk,f.level,tgt));});
+    if(topEl)this.showJutsu(topEl,data.fx[topEl].level);
+    data.cells.forEach(([r,c])=>{const rc=this.cellRect(r,c);
+      this.tweens.add({targets:rc,scaleX:1.14,scaleY:1.14,duration:90,yoyo:true});});
+    victims.forEach(v=>{v.hp=Math.max(0,v.hp-dealt);});
+    if(data.hitWeak)tgt.timer+=1;
+    if(this.combo>=2)this.comboPopup(this.combo);
+    if(data.groups>=2)this.burstFX(data.groups);
+    let pi=0;
+    data.parts.forEach(pt=>{if(pt.d<=0)return;const o=this.cellCenter(pt.r,pt.c), isN=pt.el==='neutral';
+      this.projectile(o.x,o.y,tgt.sprite.x,tgt.sprite.y,isN?'✦':EL[pt.el].fx,isN?0xe8d8b0:EL[pt.el].color,pi*70,pt.d,tgt);
+      if(!isN)this.glowTeam(pt.el); pi++;});
+    if(aoe){this.cameras.main.shake(260,0.01);
+      victims.forEach(v=>{if(v!==tgt&&v.sprite)this.floatText(v.sprite.x,v.sprite.y-24,dealt,'#e0a45c');});}
+    data.cells.forEach(([r,c])=>{this.board[r][c]=null;});  // 立即從模型移除,避免 460ms 內重複觸發
+    this.updateEnemies();
+    this.time.delayedCall(460,()=>{this.refreshBoard(); this.updateAll(); victims.forEach(v=>{if(v.hp<=0)this.killEnemy(v);});});
+  }
+  fireAttr(a,atk,lv,tgt){const A=CONFIG.ATTR;switch(a){
+    case 'fire':tgt.burn+=Math.round(atk*A.fire_burn_rate*lv);this.tonFloat('燒LV'+lv,'#ff7a63');break;
+    case 'thunder':tgt.timer+=lv;this.tonFloat('麻LV'+lv,'#f4da52');break;
+    case 'wind':if(!this.fromBlock)this.spawnBlock(lv,'wind');break;
+    case 'earth':if(!this.fromBlock)this.spawnBlock(lv,'earth');break;   // 土=生成搬移塊(可移動查克拉)
+    case 'water':if(!this.fromBlock)this.spawnBlock(lv,'water');break;
+    case 'yang':{const v=Math.round(atk*A.yang_heal_rate*lv);this.playerHP=Math.min(this.maxHP,this.playerHP+v);this.tonFloat('癒+'+v,'#74e09a');break;}
+    case 'yin':this.amp=Math.max(this.amp,1+(A.yin_amp-1)*lv);this.tonFloat('增傷LV'+lv,'#b18cff');break;
+  }}
+  spawnBlock(lv,kind){const slot=this.tray.findIndex(t=>t.used); if(slot<0)return;
+    this.tray[slot]={c:(WILD_SHAPES[Math.min(7,lv)]||[[0,0]]).map(x=>x.slice()),used:false,kind:kind};
+    this.renderTray(); this.tonFloat((kind==='wind'?'風刃':kind==='earth'?'移地塊':'純查克拉')+'LV'+lv, kind==='wind'?'#6ad06a':kind==='earth'?'#d49a4a':'#62b8f0');}
+
+  enemyAttack(e){
+    this.tweens.add({targets:e.sprite,y:e.sprite.y+30,duration:150,yoyo:true});
+    this.cameras.main.shake(300,0.009);
+    const f=this.add.rectangle(CX,H/2,W,H,EL[e.el].color,0.4);
+    this.tweens.add({targets:f,alpha:0,duration:400,onComplete:()=>f.destroy()});
+    let dmg=e.atk, dodged=false;
+    if(this.immune>0){dodged=true;dmg=0;}
+    else if(this.armor>0)dmg=Math.round(dmg*(1-this.armor));
+    this.playerHP=Math.max(0,this.playerHP-dmg);
+    this.floatText(CX,PHP_Y-14,dodged?'迴避!':'-'+dmg,dodged?'#74e09a':'#ff8f8f');
+    this.resetWave(); e.burn=0;
+    this.updateAll(); if(this.playerHP<=0)this.gameOver('HP 歸零');
+  }
+  killEnemy(e){if(e.dead)return; e.dead=true; e.bob.stop();
+    [e.sprite,e.timerTxt,e.hpBg,e.hpFill,e.sel].forEach(o=>o.setVisible(false));
+    if(this.aliveCount()===0)this.stageClear(); else {this.targetEnemy();this.updateEnemies();}
+  }
+  stageClear(){
+    rollDrops(this.dungeon.drops[this.stage-1]).forEach((cd,i)=>{const isNew=!isOwned(cd.id);addCard(cd.id);this.runDrops.push({cd,isNew});
+      this.time.delayedCall(i*240,()=>this.tonFloat('🎁 '+cd.name+(isNew?' ✦NEW':''),isNew?'#ffe04a':'#ffe08a'));});
+    recordStage(this.stage, false);   // 記最佳關
+    if(this.dungeon.el && Math.random()<0.6){addGem(this.dungeon.el);this.runGems++;   // 元素關掉進化素材「寶玉」
+      this.time.delayedCall(120,()=>this.tonFloat('🔮 '+EL[this.dungeon.el].name+'寶玉','#c5b0ff'));}
+    const _rw=addRewards(40,300); this.runExp+=40; this.runCoins+=300;   // 戰鬥獎勵:EXP/金錢
+    if(_rw._ups>0)this.tonFloat('🆙 等級提升! Lv.'+_rw.rank,'#ffe04a');
+    if(this.stage>=this.dungeon.stages.length){markDungeonCleared(this.dungeonId);this.chests++;this.time.delayedCall(600,()=>this.showResult(true));return;}
+    this.stage++; this.chests++; this.playerHP=Math.min(this.maxHP,this.playerHP+150);
+    this.time.delayedCall(700,()=>this.startStage());
+  }
+  reshuffle(){if(this.playerHP<=CONFIG.RESHUFFLE_COST){this.gameOver('生命不足、無法再提煉');return;}
+    this.playerHP-=CONFIG.RESHUFFLE_COST; this.refill(); this.renderTray(); this.updateAll();}
+  gameOver(reason){if(this.resultOpen)return;this.showResult(false);}
+  restartStage(){this.playerHP=this.maxHP;this.startStage();}
+
+  /* UI */
+  updateAll(){this.updateEnemies();this.updateBars();}
+  updateEnemies(){this.enemies.forEach((e,i)=>{if(e.dead)return;
+    e.hpFill.displayWidth=e.hpW*Math.max(0,e.hp/e.max);
+    e.timerTxt.setText('⏳'+e.timer+'手');
+    e.sel.setStrokeStyle(2,0xffd56a,(i===this.target)?1:0);});}
+  updateBars(){
+    this.pHp.displayWidth=(W-2*BX0)*Math.max(0,this.playerHP/this.maxHP);
+    this.pHpTxt.setText('我方 '+this.playerHP+'/'+this.maxHP);
+    this.chestTxt.setText('📦 '+(this.chests||0)); this.goldTxt.setText('💰 '+(this.gold||0));
+    const s=['鬥志·'+CONFIG.MORALE_NAMES[this.morale]+'(×'+CONFIG.MORALE_MULT[this.morale]+')'];
+    if(this.combo>0)s.push('連印'+this.combo);
+    if(this.armor>0)s.push('🛡'+Math.round(this.armor*100)+'%');
+    if(this.immune>0)s.push('✦避'+this.immune);if(this.amp>1)s.push('⚡×'+this.amp.toFixed(1));
+    this.infoTxt.setText(s.join('   '));
+    this.infoTxt.setColor(['#99aabb','#9ac4e0','#ffffff','#ffd24a','#ff9a3a','#ff5a3a'][this.morale]||'#ffd56a');
+  }
+
+  /* 特效 */
+  projectile(ox,oy,tx,ty,glyph,color,delay,dmg,tgt){
+    this.time.delayedCall(delay,()=>{
+      const t=this.add.text(ox,oy,glyph,{fontFamily:EMOJIFONT,fontSize:'24px'}).setOrigin(0.5);
+      this.tweens.add({targets:t,x:tx,y:ty,scale:1.5,duration:360,ease:'Quad.in',
+        onComplete:()=>{t.destroy();this.impact(tx,ty,color,dmg,tgt);}});});
+  }
+  impact(x,y,color,dmg,tgt){
+    if(tgt&&!tgt.dead){tgt.sprite.setTint(0xffffff);
+      this.tweens.add({targets:tgt.sprite,scaleX:1.16,scaleY:1.16,duration:100,yoyo:true,onComplete:()=>tgt.sprite.clearTint()});}
+    const b=this.add.circle(x,y,8,color,0.8);
+    this.tweens.add({targets:b,scale:5,alpha:0,duration:420,onComplete:()=>b.destroy()});
+    this.cameras.main.shake(150,0.005);
+    if(dmg)this.floatText(x,y-24,dmg,'#ffd56a');
+  }
+  floatText(x,y,str,color){const t=this.add.text(x,y,str,{fontFamily:EMOJIFONT,fontSize:'19px',color,fontStyle:'bold'}).setOrigin(0.5);
+    this.tweens.add({targets:t,y:y-40,alpha:0,duration:900,ease:'Quad.out',onComplete:()=>t.destroy()});}
+  tonFloat(str,color){const t=this.add.text(CX,BY0-54,str,{fontFamily:EMOJIFONT,fontSize:'17px',color,fontStyle:'bold'}).setOrigin(0.5);
+    this.tweens.add({targets:t,y:BY0-82,alpha:0,duration:1000,ease:'Quad.out',onComplete:()=>t.destroy()});}
+  comboPopup(n){const t=this.add.text(CX,BY0+46,'連印 '+n,{fontFamily:EMOJIFONT,fontSize:'24px',color:'#ffd56a',fontStyle:'bold'}).setOrigin(0.5).setScale(0.5);
+    this.tweens.add({targets:t,scale:1.05,duration:220,yoyo:true,hold:120,
+      onComplete:()=>this.tweens.add({targets:t,alpha:0,duration:300,onComplete:()=>t.destroy()})});}
+  // 暴擊演出:一手多清(groups≥2)的隆重慶祝 — 全螢幕閃光 + 震動 + 大字
+  burstFX(g){
+    this.cameras.main.shake(200+g*50,0.011+g*0.002);
+    const flash=this.add.rectangle(CX,H/2,W,H,0xfff0c0,0).setDepth(60);
+    this.tweens.add({targets:flash,alpha:0.45,duration:70,yoyo:true,onComplete:()=>flash.destroy()});
+    const label=g>=4?'超·暴擊':g===3?'大暴擊':'暴擊';
+    const t=this.add.text(CX,BATTLE_CY+30,label+' ×'+g+'!',{fontFamily:EMOJIFONT,fontSize:(38+g*4)+'px',color:'#ffd24a',fontStyle:'bold',stroke:'#7a3000',strokeThickness:6}).setOrigin(0.5).setDepth(61).setScale(0.3).setAngle(-6);
+    this.tweens.add({targets:t,scale:1.1,duration:200,ease:'Back.out'});
+    this.tweens.add({targets:t,alpha:0,delay:560,duration:260,onComplete:()=>t.destroy()});
+  }
+  // 鬥志階變演出;升到「極」=全體解放超模式
+  moraleFX(tier,up){
+    const names=CONFIG.MORALE_NAMES, cols=['#99aabb','#9ac4e0','#ffffff','#ffd24a','#ff9a3a','#ff5a3a'];
+    const t=this.add.text(CX,BATTLE_CY+72,'鬥志'+(up?'↑ ':'↓ ')+names[tier],{fontFamily:EMOJIFONT,fontSize:'21px',color:cols[tier],fontStyle:'bold',stroke:'#000',strokeThickness:3}).setOrigin(0.5).setDepth(55).setScale(0.6);
+    this.tweens.add({targets:t,scale:1,y:t.y-18,duration:240,ease:'Back.out'});
+    this.tweens.add({targets:t,alpha:0,delay:480,duration:300,onComplete:()=>t.destroy()});
+    if(tier>=5){ // 極:超模式爆發(全消除轉全體)
+      this.cameras.main.shake(300,0.013);
+      const fl=this.add.rectangle(CX,H/2,W,H,0xff5a3a,0).setDepth(54);
+      this.tweens.add({targets:fl,alpha:0.4,duration:120,yoyo:true,onComplete:()=>fl.destroy()});
+      const big=this.add.text(CX,BATTLE_CY+28,'極・全體解放!',{fontFamily:EMOJIFONT,fontSize:'32px',color:'#ffe04a',fontStyle:'bold',stroke:'#7a1500',strokeThickness:6}).setOrigin(0.5).setDepth(56).setScale(0.4).setAngle(-5);
+      this.tweens.add({targets:big,scale:1.1,duration:240,ease:'Back.out'});
+      this.tweens.add({targets:big,alpha:0,delay:760,duration:320,onComplete:()=>big.destroy()});
+    }
+  }
+  showJutsu(el,lv){const name=KATA[lv-1]+'・'+JUTSU[el][lv-1];const col='#'+EL[el].color.toString(16).padStart(6,'0');
+    const t=this.add.text(CX-50,BY0-28,name,{fontFamily:EMOJIFONT,fontSize:(15+lv*4)+'px',color:col,fontStyle:'bold',stroke:'#000',strokeThickness:3}).setOrigin(0.5).setAlpha(0);
+    this.tweens.add({targets:t,x:CX,alpha:1,duration:200,ease:'Back.out',
+      onComplete:()=>this.tweens.add({targets:t,alpha:0,duration:400,delay:350+lv*120,onComplete:()=>t.destroy()})});
+    if(lv>=4){const big=lv>=6;const f=this.add.rectangle(CX,H/2,W,H,EL[el].color,big?0.6:0.4);
+      this.tweens.add({targets:f,alpha:0,duration:big?540:420,onComplete:()=>f.destroy()});
+      this.cameras.main.shake(big?440:280,big?0.014:0.008);}}
+  glowTeam(el){this.teamCards.forEach(card=>{if(card.el===el)
+    this.tweens.add({targets:card.rect,scaleX:1.12,scaleY:1.12,duration:130,yoyo:true});});}
+
+  /* 彈窗 */
+  overlay(){const g=this.add.container(0,0).setDepth(1000);
+    g.add(this.add.rectangle(CX,H/2,W,H,0x000000,0.74).setInteractive());return g;}
+  mkBtn(g,y,label,cb,col){const r=this.add.rectangle(CX,y,220,46,col||0x3a2c1d).setStrokeStyle(2,0x5a4128).setInteractive();
+    const t=this.add.text(CX,y,label,{fontFamily:EMOJIFONT,fontSize:'15px',color:'#f3e9d8'}).setOrigin(0.5);
+    r.on('pointerup',cb);g.add(r);g.add(t);}
+  showResult(win){this.resultOpen=true;const g=this.overlay();const cy=H/2;
+    g.add(this.add.text(CX,cy-150,win?'🏆 通關 '+this.dungeon.name+'!':'☠️ 敗北',{fontFamily:EMOJIFONT,fontSize:'26px',color:win?'#ffd56a':'#ff8f8f',fontStyle:'bold'}).setOrigin(0.5));
+    g.add(this.add.text(CX,cy-110,win?(this.dungeon.name+' · '+this.dungeon.stages.length+' 關全清!'):'第 '+this.stage+' 關失敗',{fontFamily:EMOJIFONT,fontSize:'14px',color:'#f3e9d8'}).setOrigin(0.5));
+    if(win){
+      const drops=this.runDrops||[], m=Math.min(drops.length,8);
+      g.add(this.add.text(CX,cy-72,drops.length?('🎁 戰利品 ×'+drops.length):'(這趟沒有掉落)',{fontFamily:EMOJIFONT,fontSize:'14px',color:'#ffe08a',fontStyle:'bold'}).setOrigin(0.5));
+      const per=m?Math.min(80,Math.floor((W-24)/m)):0;
+      drops.slice(0,8).forEach((d,i)=>{const dx=CX+(i-(m-1)/2)*per, dy=cy-22;
+        g.add(this.add.rectangle(dx,dy,per-6,46,EL[d.cd.el].color).setStrokeStyle(2,d.isNew?0xffe04a:0x000000,d.isNew?1:0.3));
+        g.add(this.add.text(dx,dy-6,d.cd.name,{fontFamily:EMOJIFONT,fontSize:'10px',color:'#1a1208',fontStyle:'bold'}).setOrigin(0.5));
+        g.add(this.add.text(dx,dy+10,RANKNAME[d.cd.rank],{fontFamily:EMOJIFONT,fontSize:'9px',color:'#3a2c12'}).setOrigin(0.5));
+        if(d.isNew)g.add(this.add.text(dx,dy-22,'✦NEW',{fontFamily:EMOJIFONT,fontSize:'9px',color:'#ffe04a',fontStyle:'bold'}).setOrigin(0.5));});
+      g.add(this.add.text(CX,cy+12,'🎉 EXP +'+(this.runExp||0)+'   💰 +'+(this.runCoins||0),{fontFamily:EMOJIFONT,fontSize:'14px',color:'#ffe08a',fontStyle:'bold'}).setOrigin(0.5));
+      this.mkBtn(g,cy+44,'📖 看卡冊',()=>{this.scene.manager.start('collection');this.scene.manager.stop('game');},0x3a4a5c);
+      this.mkBtn(g,cy+100,'🏠 回大廳',()=>{this.scene.manager.start('home');this.scene.manager.stop('game');});
+    } else {
+      this.mkBtn(g,cy+30,'再挑戰本關',()=>{g.destroy();this.resultOpen=false;this.restartStage();});
+      this.mkBtn(g,cy+88,'🏠 回大廳',()=>{this.scene.manager.start('home');this.scene.manager.stop('game');});
+    }}
+  showReshuffleModal(){this.resultOpen=true;const g=this.overlay();const cy=H/2;
+    g.add(this.add.text(CX,cy-90,'查克拉無法順利提煉',{fontFamily:EMOJIFONT,fontSize:'20px',color:'#ffd56a',fontStyle:'bold'}).setOrigin(0.5));
+    g.add(this.add.text(CX,cy-52,'燃燒生命重新排列查克拉?(−'+CONFIG.RESHUFFLE_COST+' HP)',{fontFamily:EMOJIFONT,fontSize:'13px',color:'#f3e9d8'}).setOrigin(0.5));
+    this.mkBtn(g,cy+10,'燃燒生命重排',()=>{g.destroy();this.resultOpen=false;this.reshuffle();},0x3a5a2c);
+    this.mkBtn(g,cy+68,'放棄(認輸)',()=>{g.destroy();this.resultOpen=false;this.gameOver('放棄提煉');});}
+  showMenu(){if(this.resultOpen)return;this.resultOpen=true;const g=this.overlay();const cy=H/2;
+    g.add(this.add.text(CX,cy-110,'選單',{fontFamily:EMOJIFONT,fontSize:'22px',color:'#f3e9d8',fontStyle:'bold'}).setOrigin(0.5));
+    this.mkBtn(g,cy-50,'繼續戰鬥',()=>{g.destroy();this.resultOpen=false;});
+    this.mkBtn(g,cy+8,'🏠 回大廳(放棄本關)',()=>{this.scene.manager.start('home');this.scene.manager.stop('game');});
+    this.mkBtn(g,cy+66,'說明(待做)',()=>{});
+    this.mkBtn(g,cy+124,'📖 卡冊(放棄本關)',()=>{this.scene.manager.start('collection');this.scene.manager.stop('game');});}
+}
+
+/* ===== 卡冊 → 背包(怪物箱):網格 → 點卡進詳細頁 + 操作 ===== */
+class CollectionScene extends Phaser.Scene{
+  constructor(){super('collection');}
+  init(d){this.sel=(d&&d.sel)||null;
+    if(this.sortMode==null)this.sortMode=0;
+    if(this.filterEl===undefined)this.filterEl=null;
+    if(this.filterOwned==null)this.filterOwned=false;}
+  create(){this.add.rectangle(CX,H/2,W,H,0x160f18);this.rebuild();
+    this.scale.on('resize',()=>{const o=H;recomputeLayout();if(Math.abs(H-o)>3){this.scale.setGameSize(W,H);this.rebuild();}});}
+  rebuild(){if(this.layer)this.layer.destroy();this.layer=this.add.container(0,0);this.draw();}
+  L(o){this.layer.add(o);return o;}
+  txt(x,y,s,size,col,ox,bold){return this.L(this.add.text(x,y,s,{fontFamily:EMOJIFONT,fontSize:(size||'13px'),color:col||'#f3e9d8',fontStyle:bold?'bold':'normal'}).setOrigin(ox==null?0.5:ox,0.5));}
+  rect(x,y,w,h,col,a){return this.L(this.add.rectangle(x,y,w,h,col,a==null?1:a));}
+  btn(x,y,w,h,label,cb,o){o=o||{};const r=this.L(this.add.rectangle(x,y,w,h,o.col==null?0x2b2014:o.col).setStrokeStyle(2,o.stroke==null?0x5a4128:o.stroke).setInteractive());
+    if(label)this.txt(x,y,label,o.fs||'14px',o.color||'#f3e9d8',0.5,o.bold);r.on('pointerup',cb);return r;}
+  toast(msg){const t=this.add.text(CX,Math.round(H*0.4),msg,{fontFamily:EMOJIFONT,fontSize:'15px',color:'#ffd56a',fontStyle:'bold',backgroundColor:'#000000cc',padding:{x:12,y:8}}).setOrigin(0.5).setDepth(2000);
+    this.tweens.add({targets:t,alpha:0,delay:900,duration:400,onComplete:()=>t.destroy()});}
+  draw(){
+    const owned=loadOwned(), total=ROSTER.reduce((a,c)=>a+(owned[c.id]||0),0);
+    this.txt(CX,32,'🎒 背包(卡冊)','19px','#f3e9d8',0.5,true);
+    this.txt(CX,54,'擁有 '+ownedCount()+'/'+ROSTER.length+' 種 · 共 '+total+' 張','10px','#b9a584',0.5);
+    const g=loadSave().gems; this.txt(CX,72,'🔮 '+ELEM_DUNGEONS.map(e=>EL[e].name+(g[e]||0)).join(' '),'10px','#b9a0ff',0.5);
+    // 排序 / 篩選 工具列
+    this.btn(108,96,150,26,'↕ 排序:'+SORT_MODES[this.sortMode].name,()=>{this.sortMode=(this.sortMode+1)%SORT_MODES.length;this.rebuild();},{col:0x2b2014,stroke:0x5a6a8a,color:'#cfe0ff',fs:'11px'});
+    this.btn(300,96,150,26,'只看持有 '+(this.filterOwned?'✓':'✗'),()=>{this.filterOwned=!this.filterOwned;this.rebuild();},{col:0x2b2014,stroke:this.filterOwned?0x6aaa4c:0x4a3824,color:this.filterOwned?'#cfe8b0':'#b9a584',fs:'11px'});
+    const chips=[['全',null]].concat(ELEM_DUNGEONS.map(e=>[EL[e].name,e]));
+    chips.forEach((ch,i)=>{const x=38+i*64, on=this.filterEl===ch[1];
+      this.btn(x,128,58,26,ch[0],()=>{this.filterEl=ch[1];this.rebuild();},{col:on?(ch[1]?EL[ch[1]].color:0x3a5a2c):0x2b2014,stroke:on?0xffd56a:0x4a3824,color:(on&&ch[1])?'#1a1208':(on?'#cfe8b0':'#b9a584'),fs:'12px',bold:on});});
+    // 篩選 + 排序後的清單
+    let list=ROSTER.map((c,i)=>Object.assign({_i:i},c));
+    if(this.filterEl)list=list.filter(c=>c.el===this.filterEl);
+    if(this.filterOwned)list=list.filter(c=>isOwned(c.id));
+    list=list.sort(SORT_MODES[this.sortMode].fn);
+    const cols=4, cw=92, chh=48, gx=98, gy=54, x0=60, y0=172;   // 4 欄密排(容納 30+ 張)
+    if(!list.length)this.txt(CX,224,'(沒有符合條件的卡)','12px','#9a8a6a',0.5);
+    list.forEach((cd,i)=>{const cx=x0+(i%cols)*gx, cy=y0+Math.floor(i/cols)*gy, n=owned[cd.id]||0, has=n>0;
+      const r=this.rect(cx,cy,cw,chh,has?EL[cd.el].color:0x241d12).setStrokeStyle(2,cd.rank==='kage'?0xffd54a:(has?0x000000:0x4a3824),(cd.rank==='kage'&&has)?1:(has?0.25:1));
+      if(has){r.setInteractive();r.on('pointerup',()=>{this.sel=cd.id;this.rebuild();});
+        this.txt(cx,cy-12,cd.name,'11px','#1a1208',0.5,true);
+        this.txt(cx,cy+6,'Lv'+getCardLv(cd.id)+' '+starStr(cd.id),'9px','#3a2c12',0.5);
+        if(n>1)this.txt(cx+cw/2-11,cy-chh/2+8,'×'+n,'10px','#1a1208',0.5,true);
+      } else {this.txt(cx,cy-5,'？','18px','#6a5a40',0.5);this.txt(cx,cy+13,RANKNAME[cd.rank],'8px','#6a5a40',0.5);}
+    });
+    this.btn(CX,H-40,220,42,'🏠 返回大廳',()=>{this.scene.manager.start('home');this.scene.manager.stop('collection');},{stroke:0x5a8a3c,color:'#cfe8b0'});
+    if(this.sel)this.drawDetail();
+  }
+  drawDetail(){
+    const cd=ROSTER.find(c=>c.id===this.sel); if(!cd)return;
+    const owned=loadOwned(), n=owned[cd.id]||0, lv=getCardLv(cd.id), atk=cardAtk(cd.id), exp=getCardExp(cd.id), need=expToNext(lv), mx=lv>=MAXLV;
+    const no='No.'+cd.id.replace(/\D/g,'').padStart(3,'0'), ev=getCardEvo(cd.id), atMax=ev>=EVO_MAX, chk=canEvolve(cd.id);
+    this.rect(CX,H/2,W,H,0x000000,0.74).setInteractive();   // 遮罩(擋住後方網格)
+    const py=Math.round(H*0.42);
+    this.rect(CX,py,380,452,0x1c140c).setStrokeStyle(2,0xffd56a);
+    this.txt(CX,py-204,cd.name+'  '+starStr(cd.id),'17px','#f3e9d8',0.5,true);
+    this.rect(CX,py-166,150,50,EL[cd.el].color).setStrokeStyle(2,0x000000,0.3);
+    this.txt(CX,py-166,EL[cd.el].name,'20px','#1a1208',0.5,true);
+    this.txt(CX,py-128,EL[cd.el].name+'屬 · '+RANKNAME[cd.rank]+(ev>0?' · 進化+'+ev:'')+' · '+no,'11px','#ffd56a',0.5);
+    this.txt(CX,py-106,'持有 ×'+n+'      Lv.'+lv+(mx?' (MAX)':' / '+MAXLV),'12px','#cfe0e8',0.5);
+    this.txt(CX,py-83,'⚔️ 攻擊 '+atk+'   (基礎 '+cd.atk+(atk>cd.atk?' → '+atk:'')+')','12px','#ffd9a0',0.5);
+    this.rect(CX-160,py-62,320,9,0x000000,0.4).setOrigin(0,0.5);
+    this.rect(CX-160,py-62,320*(mx?1:Math.min(1,exp/need)),9,0x6ac0ff).setOrigin(0,0.5);
+    this.txt(CX,py-62,mx?'MAX':('EXP '+exp+' / '+need),'8px','#bfe0ff',0.5);
+    this.rect(CX,py-46,344,1,0x5a4128);
+    this.txt(CX-170,py-36,'【主技】'+(EL_SKILL[cd.el]||'—'),'10px','#dfeae8',0);
+    const subs=cd.attrs.slice(1).filter(a=>SUB_SKILL[a]);
+    this.txt(CX-170,py-20,'【副技】'+(subs.length?subs.map(a=>SUB_SKILL[a]).join('  '):'無'),'10px','#c8b8e8',0);
+    {const ls=leadSkill(cd.id);this.txt(CX-170,py-4,'🎖【隊長技】'+(ls?ls.name+':'+ls.desc:'—'),'9px','#ffd9a0',0);}
+    {const ac=activeSkill(cd.el);this.txt(CX-170,py+12,'⚡【主動技】'+(ac?ac.name+':'+ac.desc:'—'),'9px','#a8d8ff',0);}
+    this.btn(CX,py+38,320,38,'⬆️ 強化合成',()=>{this.scene.manager.start('fuse',{target:cd.id});this.scene.manager.stop('collection');},{col:0x2e3a22,stroke:0x6aaa4c,color:'#eafce0',bold:true,fs:'14px'});
+    let eL,eO;
+    if(atMax){eL='✨ 進化已滿 '+starStr(cd.id);eO={col:0x241a10,stroke:0x3a2e1c,color:'#7a6a4a',fs:'13px'};}
+    else if(chk.ok){eL='✨ 進化 → ★'+(cardStars(cd.id)+1)+'(消'+chk.req.gems+'寶玉)';eO={col:0x3a2a4a,stroke:0xb18cff,color:'#e8d8ff',bold:true,fs:'13px'};}
+    else {eL='✨ 進化:'+chk.msg;eO={col:0x241a10,stroke:0x4a3a5a,color:'#9a8aba',fs:'10px'};}
+    this.btn(CX,py+82,320,38,eL,()=>{const r=evolveCard(cd.id);this.toast(r.ok?('✨ 進化成功! '+starStr(cd.id)):r.msg);this.rebuild();},eO);
+    this.btn(CX-83,py+126,150,36,'🛡️ 設為隊長',()=>{setLeader(cd.id);this.toast(cd.name+' → 隊長');this.rebuild();},{col:0x2e2a3a,stroke:0x5a6a8a,color:'#cfe0ff',fs:'12px'});
+    this.btn(CX+83,py+126,150,36,'🗑️ 分解 💰',()=>{const r=dissolveCard(cd.id);this.toast(r.ok?('分解 +'+r.gain+' 金'):r.msg);this.rebuild();},{col:0x3a2a1a,stroke:0x8a6a3a,color:'#ffd9a0',fs:'12px'});
+    this.btn(CX,py+168,150,34,'✖️ 關閉',()=>{this.sel=null;this.rebuild();},{stroke:0x5a4128,color:'#cfc0a8',fs:'12px'});
+  }
+}
+
+/* ===== 大廳:龍族式系統殼(資源列 + 六分頁 + 內容區) ===== */
+const DUNGEON_COST=10;
+class HomeScene extends Phaser.Scene{
+  constructor(){super('home');}
+  init(d){this.tab=(d&&d.tab)||this.tab||'dungeon';}
+  create(){this.add.rectangle(CX,H/2,W,H,0x160f18);this.rebuild();
+    this.scale.on('resize',()=>{const o=H;recomputeLayout();if(Math.abs(H-o)>3){this.scale.setGameSize(W,H);this.rebuild();}});}
+  rebuild(){this.tweens.killAll();if(this.layer)this.layer.destroy();this.layer=this.add.container(0,0);this.topBar();this.body();this.nav();}
+  L(o){this.layer.add(o);return o;}
+  txt(x,y,s,size,col,ox,bold){return this.L(this.add.text(x,y,s,{fontFamily:EMOJIFONT,fontSize:(size||'13px'),color:col||'#f3e9d8',fontStyle:bold?'bold':'normal'}).setOrigin(ox==null?0.5:ox,0.5));}
+  rect(x,y,w,h,col,a){return this.L(this.add.rectangle(x,y,w,h,col,a==null?1:a));}
+  btn(x,y,w,h,label,cb,o){o=o||{};const r=this.L(this.add.rectangle(x,y,w,h,o.col==null?0x2b2014:o.col).setStrokeStyle(2,o.stroke==null?0x5a4128:o.stroke).setInteractive());
+    this.txt(x,y,label,o.fs||'15px',o.color||'#f3e9d8',0.5,o.bold);r.on('pointerup',cb);return r;}
+  toast(msg){const t=this.add.text(CX,H/2,msg,{fontFamily:EMOJIFONT,fontSize:'15px',color:'#ffd56a',fontStyle:'bold',backgroundColor:'#000000cc',padding:{x:12,y:8}}).setOrigin(0.5).setDepth(2000);
+    this.tweens.add({targets:t,alpha:0,delay:900,duration:400,onComplete:()=>t.destroy()});}
+  go(key){this.scene.manager.start(key);this.scene.manager.stop('home');}
+  switchTab(t){this.tab=t;this.gachaResult=null;this.rebuild();}
+  topBar(){const m=getMeta();
+    this.rect(CX,33,W,66,0x241a10).setStrokeStyle(1,0x4a3824);
+    const _l=loadTeam().map(id=>ROSTER.find(c=>c.id===id)).filter(Boolean)[0];
+    this.L(this.add.circle(20,20,13,_l?EL[_l.el].dark:0x3a2c1d).setStrokeStyle(2,0xffd56a));this.txt(20,20,_l?EL[_l.el].face:'🥷','15px',null,0.5);
+    this.txt(40,14,'Lv.'+m.rank,'12px','#ffe08a',0,true);
+    const need=expForLevel(m.rank);
+    this.rect(120,21,116,7,0x000000,0.5).setOrigin(0,0.5);this.rect(120,21,116*Math.min(1,m.exp/need),7,0x6ac0ff).setOrigin(0,0.5);
+    this.txt(W-12,14,'💎 '+m.stones,'13px','#c5b0ff',1,true);
+    this.txt(8,47,'⚡','13px',null,0);
+    this.rect(26,47,150,11,0x000000,0.5).setOrigin(0,0.5);this.rect(26,47,150*Math.min(1,m.stamina/m.staminaMax),11,0x4fd06a).setOrigin(0,0.5);
+    const f=staFullSec();
+    this.txt(101,47,m.stamina+'/'+m.staminaMax+(f>0?' ('+Math.floor(f/60)+':'+('0'+f%60).slice(-2)+')':''),'10px','#eafce0',0.5,true);
+    this.txt(W-12,47,'💰 '+m.coins.toLocaleString(),'12px','#ffe08a',1,true);
+  }
+  nav(){const tabs=[['dungeon','🏯','關卡'],['monster','🐲','卡片'],['shop','🛒','商店'],['gacha','🥚','抽卡'],['friend','👥','朋友'],['other','⚙️','其他']];
+    const bw=W/6, navY=H-30;
+    this.rect(CX,navY,W,60,0x1a130b).setStrokeStyle(1,0x4a3824);
+    tabs.forEach((t,i)=>{const x=bw*(i+0.5),on=this.tab===t[0];
+      const r=this.rect(x,navY,bw-2,56,on?0x3a2c1d:0x1a130b).setInteractive();if(on)r.setStrokeStyle(2,0xffd56a);
+      this.txt(x,navY-10,t[1],'19px',null,0.5).setAlpha(on?1:0.55);this.txt(x,navY+15,t[2],'10px',on?'#ffd56a':'#9a8a6a',0.5);
+      r.on('pointerup',()=>{if(this.tab!==t[0])this.switchTab(t[0]);});});
+  }
+  body(){const f={dungeon:this.bDungeon,monster:this.bMonster,shop:this.bShop,gacha:this.bGacha,friend:()=>this.bTodo('👥 朋友'),other:this.bOther}[this.tab];if(f)f.call(this);}
+  mapNode(x,y,r,emoji,label,sub,cb,locked){
+    const c=this.L(this.add.circle(x,y,r,locked?0x2a2a3a:0x2e4a2e).setStrokeStyle(3,locked?0x55556a:0xffd56a));
+    c.setInteractive(new Phaser.Geom.Circle(0,0,r),Phaser.Geom.Circle.Contains);
+    this.txt(x,y-1,emoji,Math.round(r*0.95)+'px',null,0.5);
+    if(label)this.txt(x,y+r+11,label,'11px',locked?'#8a8aa0':'#ffe08a',0.5,true);
+    if(sub)this.txt(x,y+r+24,sub,'9px',locked?'#6a6a80':'#bfe0a8',0.5);
+    c.on('pointerup',cb);return c;
+  }
+  bDungeon(){   // 世界地圖式主畫面(神魔之塔風);線性解鎖
+    const top=78, bot=H-64, cy=Math.round((top+bot)/2);
+    this.rect(CX,cy,W-12,bot-top,0x14283a).setStrokeStyle(2,0x2a4a66);
+    this.L(this.add.ellipse(86,top+96,130,74,0x214a2a)).setAlpha(0.5);
+    this.L(this.add.ellipse(W-74,top+150,140,86,0x5a2a1e)).setAlpha(0.5);
+    this.L(this.add.ellipse(72,bot-150,116,72,0x243a5a)).setAlpha(0.5);
+    this.txt(CX,top+18,'🗺️ 結印世界','15px','#cfe0e8',0.5,true);
+    const tx=CX, ty=top+150;
+    // 中央塔(五元素全清才開)
+    const tOpen=isDungeonUnlocked('tower'), tCl=isDungeonCleared('tower');
+    this.mapNode(tx,ty,30,'🗼',tCl?'結印之塔 ✓':'結印之塔',tOpen?('最終 ⚡'+DUNGEONS.tower.cost):'最終(未開放)',
+      ()=>{if(tOpen)this.enterDungeon('tower');else this.toast('需先清五元素關');},!tOpen);
+    // 五元素區(通關序章後解鎖)
+    ELEM_DUNGEONS.forEach((id,i)=>{const d=DUNGEONS[id], a=-Math.PI/2+(i+0.5)*(2*Math.PI/5), x=tx+Math.cos(a)*118, y=ty+34+Math.sin(a)*86;
+      const open=isDungeonUnlocked(id), cl=isDungeonCleared(id);
+      this.mapNode(x,y,21,d.emoji,cl?d.name+' ✓':d.name,open?('⚡'+d.cost):'未解鎖',
+        ()=>{if(open)this.enterDungeon(id);else this.toast('需先通關序章');},!open);});
+    // 序章(永遠可進;未通關時脈動)
+    const sx=CX, sy=bot-94, pc=isDungeonCleared('prologue');
+    if(!pc){const ring=this.L(this.add.circle(sx,sy,32,0x000000,0).setStrokeStyle(3,0xffe04a));
+      this.tweens.add({targets:ring,scale:{from:1,to:1.3},alpha:{from:0.9,to:0},duration:1000,repeat:-1});}
+    this.mapNode(sx,sy,30,'🏯',pc?'序章 ✓':'序章 · 結印之章','⚡'+DUNGEONS.prologue.cost+(pc?'':' · 點此出擊'),()=>this.enterDungeon('prologue'),false);
+    this.btn(64,bot-24,108,38,'🛡️ 編隊',()=>this.go('team'),{col:0x2e2a3a,stroke:0x5a6a8a,color:'#cfe0ff',fs:'13px'});
+  }
+  enterDungeon(id){id=id||'prologue';const d=DUNGEONS[id]||DUNGEONS.prologue;
+    if(!isDungeonUnlocked(id)){this.toast('尚未解鎖');return;}
+    const tm=leveledTeam(loadTeam().filter(x=>isOwned(x)));   // 帶升級後 atk
+    if(tm.length!==5){this.toast('隊伍不齊,先去編隊');this.go('team');return;}
+    const ls=leadSkill(tm[0].id), cost=Math.round(d.cost*((ls&&ls.type==='stamina')?ls.v:1));   // 隊長技:省體力
+    if(!spendStamina(cost)){this.toast('體力不足!去商店回復');this.rebuild();return;}
+    this.scene.manager.start('game',{team:tm,dungeonId:id});this.scene.manager.stop('home');}
+  bMonster(){
+    this.txt(CX,92,'🐲 卡片管理','18px','#f3e9d8',0.5,true);
+    this.btn(CX,150,360,52,'🛡️ 隊伍編成',()=>this.go('team'),{col:0x2e2a3a,stroke:0x5a6a8a,color:'#cfe0ff',bold:true});
+    this.btn(CX,212,360,52,'📦 卡片 BOX('+ownedCount()+'/'+ROSTER.length+')',()=>this.go('collection'),{col:0x2e2a3a,stroke:0x5a6a8a,color:'#cfe0ff',bold:true});
+    this.btn(CX,274,360,48,'⬆️ 強化合成',()=>this.go('fuse'),{col:0x2e2a3a,stroke:0x5a6a8a,color:'#cfe0ff',fs:'14px',bold:true});
+    this.btn(CX,330,360,48,'✨ 進化合成(卡片詳細頁)',()=>this.go('collection'),{col:0x2e2a3a,stroke:0x5a6a8a,color:'#cfe0ff',fs:'13px'});
+    this.btn(CX,386,360,48,'💰 卡片售出 — 待做',()=>this.toast('卡片售出 — 待做'),{col:0x241a10,stroke:0x3a2e1c,color:'#7a6a4a',fs:'13px'});
+  }
+  bShop(){const m=getMeta();
+    this.txt(CX,92,'🛒 商店','18px','#f3e9d8',0.5,true);
+    this.btn(CX,160,360,56,'⚡ 體力全回復(💎1)',()=>{if(m.stamina>=m.staminaMax){this.toast('體力已滿');return;}if(spendStones(1)){refillStamina();this.toast('體力回滿!');this.rebuild();}else this.toast('魔法石不足');},{col:0x2e3a22,stroke:0x6aaa4c,color:'#eafce0',bold:true});
+    this.btn(CX,228,360,48,'💎 魔法石商店 — 待做',()=>this.toast('魔法石商店 — 待做'),{col:0x241a10,stroke:0x3a2e1c,color:'#7a6a4a',fs:'13px'});
+    this.btn(CX,286,360,48,'📦 BOX 擴張 — 待做',()=>this.toast('BOX 擴張 — 待做'),{col:0x241a10,stroke:0x3a2e1c,color:'#7a6a4a',fs:'13px'});
+    this.btn(CX,344,360,48,'👥 好友上限 — 待做',()=>this.toast('好友上限 — 待做'),{col:0x241a10,stroke:0x3a2e1c,color:'#7a6a4a',fs:'13px'});
+  }
+  bTodo(t){this.txt(CX,Math.round(H*0.42),t+' — 待做','20px','#9a8a6a',0.5);}
+  bGacha(){
+    this.txt(CX,90,'🥚 轉蛋','18px','#f3e9d8',0.5,true);
+    this.gachaBanner(168,'premium','✨ 影忍 SSR 限定 · 機率 3%',0x2e2440,0xb18cff);
+    this.gachaBanner(326,'normal','金錢轉蛋(無影忍)',0x2e3320,0x6aaa4c);
+    this.txt(CX,H-78,'※ 機率已公示;影忍僅「結印轉蛋」可得','9px','#9a8a6a',0.5);
+    if(this.gachaResult)this.drawGachaResult();
+  }
+  gachaBanner(y,bankey,tagline,col,stroke){const b=GACHA[bankey];
+    this.rect(CX,y,372,138,col).setStrokeStyle(2,stroke);
+    this.txt(CX,y-50,b.icon+' '+b.name,'16px','#f3e9d8',0.5,true);
+    this.txt(CX,y-29,tagline,'10px','#cfc0e8',0.5);
+    this.txt(CX,y-10,b.rates.map(r=>RANKNAME[r[0]]+' '+Math.round(r[1]*100)+'%').join(' / '),'9px','#bfb0d0',0.5);
+    const unit=b.cur==='stones'?'💎':'💰';
+    this.btn(CX-94,y+38,166,42,'單抽 '+unit+b.cost1,()=>this.pull(bankey,1),{col:0x3a2c1d,stroke:stroke,color:'#ffe08a',bold:true,fs:'14px'});
+    this.btn(CX+94,y+38,166,42,'十連 '+unit+b.cost10,()=>this.pull(bankey,10),{col:0x3a2c1d,stroke:stroke,color:'#ffe08a',bold:true,fs:'14px'});
+  }
+  pull(bankey,count){const out=doGacha(bankey,count);
+    if(!out){this.toast((GACHA[bankey].cur==='stones'?'魔法石':'金錢')+'不足');this.rebuild();return;}
+    this.gachaResult=out;this.rebuild();}
+  drawGachaResult(){const res=this.gachaResult, n=res.length, cols=n>1?5:1, gx=72, gy=86;
+    this.rect(CX,H/2,W,H,0x000000,0.82).setInteractive();
+    const x0=CX-(Math.min(n,cols)-1)/2*gx, y0=Math.round(H*0.30);
+    this.txt(CX,y0-56,n>1?'🎉 十連結果':'🎉 抽卡結果','18px','#ffd56a',0.5,true);
+    res.forEach((it,i)=>{const cx=x0+(i%cols)*gx, cy=y0+Math.floor(i/cols)*gy, cd=it.cd, hi=cd.rank==='kage'||cd.rank==='jonin';
+      this.rect(cx,cy,66,60,EL[cd.el].color).setStrokeStyle(3,cd.rank==='kage'?0xffd54a:(cd.rank==='jonin'?0xffffff:0x000000),hi?1:0.3);
+      this.txt(cx,cy-11,cd.name,'10px','#1a1208',0.5,true);
+      this.txt(cx,cy+9,starStr(cd.id),'9px','#3a2c12',0.5);
+      if(it.isNew)this.txt(cx,cy-27,'✦NEW','9px','#ffe04a',0.5,true);});
+    this.btn(CX,Math.min(H-86,y0+Math.ceil(n/cols)*gy+24),200,44,'確定',()=>{this.gachaResult=null;this.rebuild();},{col:0x2e3a22,stroke:0x6aaa4c,color:'#eafce0',bold:true});}
+  bOther(){const pr=getProgress();
+    this.txt(CX,92,'⚙️ 其他','18px','#f3e9d8',0.5,true);
+    this.txt(CX,150,'🏆 序章通關 ×'+pr.clears+'    📖 收集 '+ownedCount()+'/'+ROSTER.length,'13px','#ffd56a',0.5);
+    this.btn(CX,224,360,48,'📖 卡片圖鑑',()=>this.go('collection'),{col:0x2e2a3a,stroke:0x5a6a8a,color:'#cfe0ff'});
+    this.btn(CX,290,360,48,'🔄 重置存檔(測試用)',()=>{localStorage.removeItem('ninja_save');localStorage.removeItem('ninja_owned');this.toast('已重置');this.switchTab('dungeon');},{col:0x3a201a,stroke:0x8a4a3a,color:'#ffb0a0'});
+  }
+}
+
+/* ===== 強化合成(養成) ===== */
+class FuseScene extends Phaser.Scene{
+  constructor(){super('fuse');}
+  init(d){this.target=(d&&d.target)||this.target||loadTeam()[0];this.mode='feed';}
+  create(){this.add.rectangle(CX,H/2,W,H,0x160f18);this.rebuild();
+    this.scale.on('resize',()=>{const o=H;recomputeLayout();if(Math.abs(H-o)>3){this.scale.setGameSize(W,H);this.rebuild();}});}
+  rebuild(){if(this.layer)this.layer.destroy();this.layer=this.add.container(0,0);this.draw();}
+  L(o){this.layer.add(o);return o;}
+  txt(x,y,s,size,col,ox,bold){return this.L(this.add.text(x,y,s,{fontFamily:EMOJIFONT,fontSize:(size||'13px'),color:col||'#f3e9d8',fontStyle:bold?'bold':'normal'}).setOrigin(ox==null?0.5:ox,0.5));}
+  rect(x,y,w,h,col,a){return this.L(this.add.rectangle(x,y,w,h,col,a==null?1:a));}
+  btn(x,y,w,h,label,cb,o){o=o||{};const r=this.L(this.add.rectangle(x,y,w,h,o.col==null?0x2b2014:o.col).setStrokeStyle(2,o.stroke==null?0x5a4128:o.stroke).setInteractive());
+    if(label)this.txt(x,y,label,o.fs||'14px',o.color||'#f3e9d8',0.5,o.bold);r.on('pointerup',cb);return r;}
+  toast(msg){const t=this.add.text(CX,Math.round(H*0.4),msg,{fontFamily:EMOJIFONT,fontSize:'15px',color:'#ffd56a',fontStyle:'bold',backgroundColor:'#000000cc',padding:{x:12,y:8}}).setOrigin(0.5).setDepth(2000);
+    this.tweens.add({targets:t,alpha:0,delay:900,duration:400,onComplete:()=>t.destroy()});}
+  back(){this.btn(CX,H-42,200,44,'🏠 返回大廳',()=>{this.scene.manager.start('home');this.scene.manager.stop('fuse');},{stroke:0x5a8a3c,color:'#cfe8b0'});}
+  draw(){
+    this.txt(CX,36,'⬆️ 強化合成','20px','#f3e9d8',0.5,true);
+    this.txt(CX,62,'💰 '+getMeta().coins+' · 吃重複卡升級(同屬 ×1.5)· 每張 '+FEED_COST+'金','10px','#ffe08a',0.5);
+    if(this.mode==='pick')return this.drawPick();
+    const t=ROSTER.find(c=>c.id===this.target);
+    if(!t){this.btn(CX,200,200,44,'選擇強化對象',()=>{this.mode='pick';this.rebuild();},{stroke:0x5a6a8a,color:'#cfe0ff'});this.back();return;}
+    const lv=getCardLv(this.target),atk=cardAtk(this.target),exp=getCardExp(this.target),need=expToNext(lv),mx=lv>=MAXLV;
+    this.rect(CX,124,360,86,EL[t.el].color).setStrokeStyle(2,0xffd56a);
+    this.txt(44,104,t.name+'  Lv.'+lv+(mx?' MAX':''),'15px','#1a1208',0,true);
+    this.txt(44,128,EL[t.el].name+'·'+RANKNAME[t.rank]+'  ⚔️atk '+atk+'(基'+t.atk+')','11px','#3a2c12',0);
+    this.rect(44,150,300,10,0x000000,0.4).setOrigin(0,0.5);
+    this.rect(44,150,300*(mx?1:Math.min(1,exp/need)),10,0x6ac0ff).setOrigin(0,0.5);
+    this.txt(344,150,mx?'MAX':(exp+'/'+need),'9px','#10303f',1,true);
+    this.btn(CX,192,150,32,'🔄 換強化對象',()=>{this.mode='pick';this.rebuild();},{col:0x2e2a3a,stroke:0x5a6a8a,color:'#cfe0ff',fs:'12px'});
+    this.txt(CX,232,'點重複卡當素材餵入 ↓','11px','#9a8a6a',0.5);
+    const owned=loadOwned(), feed=ROSTER.filter(c=>(owned[c.id]||0)>=2);
+    if(!feed.length){this.txt(CX,300,'目前沒有多餘的卡可當素材','12px','#9a8a6a',0.5);this.txt(CX,322,'(去元素關多收幾張同卡)','10px','#7a6a4a',0.5);}
+    feed.forEach((c,i)=>{const x=78+(i%3)*132,y=272+Math.floor(i/3)*56,same=c.el===t.el;
+      this.btn(x,y,124,48,'',()=>this.feed(c.id),{col:EL[c.el].color,stroke:same?0xffd56a:0x000000});
+      this.txt(x,y-8,c.name+' ×'+owned[c.id],'11px','#1a1208',0.5,true);
+      this.txt(x,y+9,same?'同屬 ×1.5':'素材','9px',same?'#7a3000':'#3a2c12',0.5);});
+    this.back();
+  }
+  drawPick(){
+    this.txt(CX,98,'選擇強化對象','13px','#ffd56a',0.5,true);
+    const owned=loadOwned(), list=ROSTER.filter(c=>owned[c.id]);
+    list.forEach((c,i)=>{const x=78+(i%3)*132,y=144+Math.floor(i/3)*56;
+      this.btn(x,y,124,48,'',()=>{this.target=c.id;this.mode='feed';this.rebuild();},{col:EL[c.el].color,stroke:c.id===this.target?0xffd56a:0x000000});
+      this.txt(x,y-8,c.name,'11px','#1a1208',0.5,true);
+      this.txt(x,y+9,'Lv.'+getCardLv(c.id)+' ·×'+owned[c.id],'10px','#3a2c12',0.5);});
+    this.btn(CX,H-42,200,44,'返回',()=>{this.mode='feed';this.rebuild();},{stroke:0x5a6a8a,color:'#cfe0ff'});
+  }
+  feed(fid){const r=feedFodder(this.target,fid);if(!r.ok){this.toast(r.msg);return;}
+    this.toast(r.ups>0?('🆙 升級! Lv.'+r.lv+(r.same?'(同屬)':'')):('+'+r.reward+' exp'+(r.same?'(同屬×1.5)':'')));this.rebuild();}
+}
+
+window.GAME = new Phaser.Game({
+  type:Phaser.AUTO, parent:'game', backgroundColor:'#160f18',
+  scale:{mode:Phaser.Scale.FIT, autoCenter:Phaser.Scale.CENTER_BOTH, width:W, height:H},
+  scene:[HomeScene, TeamScene, GameScene, CollectionScene, FuseScene],
+});
+// 真機轉向 / 瀏覽器縮放 / 網址列伸縮 → 即時重算高度 + 重排(不黑邊、不用重整)
+window.addEventListener('resize',function(){
+  const o=H; recomputeLayout();
+  if(Math.abs(H-o)>3){
+    window.GAME.scale.setGameSize(W,H);
+    const gs=window.GAME.scene.getScene('game');
+    if(gs && window.GAME.scene.isActive('game') && gs.relayout) gs.relayout();
+  }
+});
+</script>
+</body>
+</html>
