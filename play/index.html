@@ -433,16 +433,16 @@ class TeamScene extends Phaser.Scene{
     this.cardUsed={}; this.cards=[];
     const myCards=ROSTER.filter(c=>isOwned(c.id));
     // 替補卡:塞進「宮位下方 ~ 確定鈕上方」的空間,列高自適應+垂直置中→永遠不溢出、不蓋按鈕、自適應裝置高度
-    const cols=3, cw=122, gx=132, x0=78, benchTop=352, benchBottom=H-108;
+    const cols=3, cw=124, gx=132, x0=78, benchTop=350, benchBottom=H-128;
     const rows=Math.max(1,Math.ceil(myCards.length/cols));
-    const rowH=Math.max(30,Math.min(48,(benchBottom-benchTop)/rows));
-    const ch=Math.max(24,Math.min(40,rowH-6));
+    const rowH=Math.max(28,Math.min(58,(benchBottom-benchTop)/rows));   // 卡少→大(封頂58),卡多→自動縮小塞滿(不溢出/不蓋鈕)
+    const ch=Math.max(24,Math.min(48,rowH-6));
     const y0=benchTop+Math.max(0,(benchBottom-benchTop-rows*rowH)/2)+rowH/2;
     myCards.forEach((cd,i)=>{
       const cx=x0+(i%cols)*gx, cy=y0+Math.floor(i/cols)*rowH;
       const rect=this.add.rectangle(0,0,cw,ch,EL[cd.el].color).setStrokeStyle(2,0x000000,0.2);
       const txt=this.add.text(0,0,cd.name+'·'+EL[cd.el].name,
-        {fontFamily:EMOJIFONT,fontSize:'13px',color:'#1a1208',fontStyle:'bold'}).setOrigin(0.5);
+        {fontFamily:EMOJIFONT,fontSize:'15px',color:'#1a1208',fontStyle:'bold'}).setOrigin(0.5);
       const cont=this.add.container(cx,cy,[rect,txt]);
       cont.setInteractive(new Phaser.Geom.Rectangle(-cw/2,-ch/2,cw,ch),Phaser.Geom.Rectangle.Contains);
       this.input.setDraggable(cont);
@@ -453,19 +453,19 @@ class TeamScene extends Phaser.Scene{
     this.input.on('drag',(p,o,dx,dy)=>o.setPosition(dx,dy));
     this.input.on('dragend',(p,o)=>this.dropCard(p,o));
     // 底部錨定(永遠貼畫面最下緣,不被切掉、不浮在中間)
-    this.startBtn=this.add.rectangle(CX,H-74,220,50,0x2b2014).setStrokeStyle(2,0x5a8a3c).setInteractive();
-    this.startTxt=this.add.text(CX,H-74,'💾 確定編隊',{fontFamily:EMOJIFONT,fontSize:'20px',color:'#cfe8b0'}).setOrigin(0.5);
+    this.startBtn=this.add.rectangle(CX,H-96,238,56,0x2b2014).setStrokeStyle(2,0x5a8a3c).setInteractive();
+    this.startTxt=this.add.text(CX,H-96,'💾 確定編隊',{fontFamily:EMOJIFONT,fontSize:'22px',color:'#cfe8b0',fontStyle:'bold'}).setOrigin(0.5);
     this.startBtn.on('pointerup',()=>this.launch());
-    this.hint=this.add.text(CX,H-46,'',{fontFamily:EMOJIFONT,fontSize:'12px',color:'#ffd56a'}).setOrigin(0.5);
-    const navY=H-22;
-    const rnd2=this.add.rectangle(78,navY,124,38,0x2b2014).setStrokeStyle(2,0x4a3824).setInteractive();
-    this.add.text(78,navY,'🎲 隨機',{fontFamily:EMOJIFONT,fontSize:'13px',color:'#f3e9d8'}).setOrigin(0.5);
+    this.hint=this.add.text(CX,H-62,'',{fontFamily:EMOJIFONT,fontSize:'12px',color:'#ffd56a'}).setOrigin(0.5);
+    const navY=H-28;
+    const rnd2=this.add.rectangle(76,navY,130,46,0x2b2014).setStrokeStyle(2,0x4a3824).setInteractive();
+    this.add.text(76,navY,'🎲 隨機',{fontFamily:EMOJIFONT,fontSize:'15px',color:'#f3e9d8'}).setOrigin(0.5);
     rnd2.on('pointerup',()=>this.randomFill());
-    const colBtn=this.add.rectangle(210,navY,124,38,0x2b2014).setStrokeStyle(2,0x5a6a8a).setInteractive();
-    this.add.text(210,navY,'📖 卡冊'+ownedCount()+'/'+ROSTER.length,{fontFamily:EMOJIFONT,fontSize:'11px',color:'#cfe0ff'}).setOrigin(0.5);
+    const colBtn=this.add.rectangle(210,navY,130,46,0x2b2014).setStrokeStyle(2,0x5a6a8a).setInteractive();
+    this.add.text(210,navY,'📖 卡冊 '+ownedCount()+'/'+ROSTER.length,{fontFamily:EMOJIFONT,fontSize:'14px',color:'#cfe0ff'}).setOrigin(0.5);
     colBtn.on('pointerup',()=>{this.scene.manager.start('collection');this.scene.manager.stop('team');});
-    const homeBtn=this.add.rectangle(342,navY,124,38,0x2b2014).setStrokeStyle(2,0x8a6a5a).setInteractive();
-    this.add.text(342,navY,'🏠 大廳',{fontFamily:EMOJIFONT,fontSize:'13px',color:'#ffd9b0'}).setOrigin(0.5);
+    const homeBtn=this.add.rectangle(344,navY,130,46,0x2b2014).setStrokeStyle(2,0x8a6a5a).setInteractive();
+    this.add.text(344,navY,'🏠 大廳',{fontFamily:EMOJIFONT,fontSize:'15px',color:'#ffd9b0'}).setOrigin(0.5);
     homeBtn.on('pointerup',()=>{const t=this.slots.map(s=>s.cardId).filter(Boolean);if(t.length===5)saveTeam(t);this.scene.manager.start('home');this.scene.manager.stop('team');});
     loadTeam().forEach((id,i)=>{const cd=ROSTER.find(c=>c.id===id);if(cd&&isOwned(id)&&this.slots[i]&&!this.cardUsed[id])this.assign(this.slots[i],cd);});  // F6:自動回填上次編隊
     this.refreshStart();
