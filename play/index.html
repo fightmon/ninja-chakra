@@ -624,8 +624,7 @@ class GameScene extends Phaser.Scene{
     let mr=0,mc=0;cells.forEach(([r,c])=>{mr=Math.max(mr,r);mc=Math.max(mc,c);});
     const ms=Math.max(5,Math.floor(28/(Math.max(mr,mc)+1))),pw=(mc+1)*ms,ph=(mr+1)*ms;
     so.add(this.add.rectangle(0,0,60,60,0x000000,0.5).setStrokeStyle(3,col,1));
-    cells.forEach(([dr,dc])=>so.add(this.add.rectangle(dc*ms-pw/2,(dr*ms-ph/2)-6,ms-1,ms-1,col).setOrigin(0)));
-    so.add(this.add.text(0,22,'拖 Lv'+s.lv,{fontFamily:EMOJIFONT,fontSize:'10px',color:'#fff',fontStyle:'bold'}).setOrigin(0.5).setStroke('#000',3));
+    cells.forEach(([dr,dc])=>so.add(this.add.rectangle(dc*ms-pw/2,dr*ms-ph/2,ms-1,ms-1,col).setOrigin(0)));   // 看塊形就知道 LV,不寫字
   });}
   // 發動主動技
   fireActive(i){if(this.resultOpen||this.drag||this.earthSel||this.earthDrag)return;
