@@ -24,7 +24,7 @@ const EL = {
   water:  {name:'水', color:0x3a9be8, dark:0x1f3447, beats:'fire',    face:'🐙', fx:'💧'},
 };
 const KEYS = ['fire','wind','thunder','earth','water'];
-const MONSTER_IMG = { water:'art/monsters/slime.png' };   // 元素→怪物圖(測試:水=史萊姆);無對應則用 emoji 臉。圖檔放 001_website/art/monsters/
+const MONSTER_IMG = { water:'art/monsters/slime_water.png', fire:'art/monsters/slime_fire.png', thunder:'art/monsters/slime_thunder.png', earth:'art/monsters/slime_earth.png', wind:'art/monsters/slime_wind.png' };   // 元素→怪物圖(五屬史萊姆);無對應則用 emoji 臉。圖檔放 001_website/art/monsters/
 const ELEMENT_BOXES = [0,2,4,6,8];
 const NEUTRAL_FILL = 0xc8a06a, NEUTRAL_DARK = 0x2c2114;
 const SHAPES = [
@@ -581,7 +581,7 @@ class GameScene extends Phaser.Scene{
     this.enemies.forEach(e=>{if(!e.card||e.dead)return;const x=e.card.x,cy=BATTLE_CY,sz=e.cardH;
       e.card.setPosition(x,cy);
       e.turnG.setPosition(x,cy+sz/2-20);e.hpBg.setPosition(x,cy+sz/2-9);e.hpFill.setPosition(e.hpx,cy+sz/2-9);e.mark.setPosition(x,cy-sz/2-9);
-      const fy=e.img?cy:cy-Math.round(sz*0.14);if(e.img)e.sprite.setDisplaySize(Math.round(sz*0.96),Math.round(sz*0.96));if(e.bob)e.bob.stop();e.sprite.setPosition(x,fy);e.bob=this.tweens.add({targets:e.sprite,y:fy-4,duration:1200,yoyo:true,repeat:-1,ease:'Sine.inOut'});});
+      const fy=e.img?cy:cy-Math.round(sz*0.14);if(e.img)e.sprite.setDisplaySize(sz,sz);if(e.bob)e.bob.stop();e.sprite.setPosition(x,fy);e.bob=this.tweens.add({targets:e.sprite,y:fy-4,duration:1200,yoyo:true,repeat:-1,ease:'Sine.inOut'});});
   }
 
   cellRect(r,c){return this.cells[r*N+c];}
@@ -618,12 +618,12 @@ class GameScene extends Phaser.Scene{
     const n=this.enemies.length, slot=380/n;
     this.enemies.forEach((e,i)=>{
       const x=20+slot*(i+0.5), cy=BATTLE_CY;
-      const szc=Math.max(50,Math.min(slot-8,116,Math.round((CARDS_Y-81)*0.92)));   // 敵圖=正方形:取寬度/高度空檔較小者(矮螢幕自動縮小);可再大一點
+      const szc=Math.max(50,Math.min(slot-8,126,Math.round((CARDS_Y-81)*0.92)));   // 敵欄正方形邊長:取寬度/高度空檔較小者(矮螢幕自動縮小)
       e.cardW=szc; e.cardH=szc;
-      e.card=this.add.rectangle(x,cy,szc,szc,EL[e.el].dark,0.55).setInteractive();   // 敵圖=暗色/中性底(不用亮色塊;臉仍清楚),無黃框
+      e.card=this.add.rectangle(x,cy,szc,szc,0x000000,0).setInteractive();   // 無底色:透明矩形只當點擊區
       e.card.on('pointerdown',()=>this.selectTarget(i));
-      if(MONSTER_IMG[e.el]&&this.textures.exists('mon_'+e.el)){   // 有怪物圖→用圖(填滿敵圖區);否則用 emoji 臉
-        e.sprite=this.add.image(x,cy,'mon_'+e.el).setOrigin(0.5).setInteractive(); e.sprite.setDisplaySize(Math.round(szc*0.96),Math.round(szc*0.96)); e.img=true;
+      if(MONSTER_IMG[e.el]&&this.textures.exists('mon_'+e.el)){   // 有怪物圖→滿版置中;否則用 emoji 臉
+        e.sprite=this.add.image(x,cy,'mon_'+e.el).setOrigin(0.5).setInteractive(); e.sprite.setDisplaySize(szc,szc); e.img=true;
       }else{
         e.sprite=this.add.text(x,cy-Math.round(szc*0.14),EL[e.el].face,{fontFamily:EMOJIFONT,fontSize:Math.round(szc*0.5)+'px'}).setOrigin(0.5).setInteractive();
       }
