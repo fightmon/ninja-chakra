@@ -674,17 +674,20 @@ class GameScene extends Phaser.Scene{
     card.aic.setText(ready?a.icon:String(Math.max(0,a.cd-(this.charge[i]||0)))).setFontSize(ready?'14px':'11px');   // 滿→icon可點;否則顯示剩餘手數
     if(ready&&!card.pulse)card.pulse=this.tweens.add({targets:card.abtn,scaleX:1.15,scaleY:1.15,duration:480,yoyo:true,repeat:-1,ease:'Sine.inOut'});
     if(!ready&&card.pulse){card.pulse.stop();card.pulse=null;card.abtn.setScale(1);}});}
-  // 屬塊存放顯示:每卡疊一個迷你形狀+「拖 Lv」(有存才顯示,可拖到盤面)
+  // 屬塊存放顯示:無框無底,只畫亮白塊本體;新生時彈出一下、平時輕脈動(讓人注意到卻不花)
   renderStored(){if(!this.stored)return;this.teamCards.forEach((card,i)=>{const so=card.storeObj;if(!so)return;
     so.removeAll(true);
-    const s=this.stored[i];
-    if(!s){so.setVisible(false);return;}
+    const s=this.stored[i], key=s?s.el+'_'+s.lv:null;
+    if(card.txt)card.txt.setVisible(!s);   // 有屬塊→元素字讓位給屬塊(免字塊相疊變花;元素仍由卡底色辨識)
+    if(!s){so.setVisible(false); if(card.storePulse){card.storePulse.stop();card.storePulse=null;} card.storeKey=null; return;}
     so.setVisible(true);
-    const cells=s.cells||chakraShape(s.el,s.lv),col=EL[s.el].color;
+    const cells=s.cells||chakraShape(s.el,s.lv);
     let mr=0,mc=0;cells.forEach(([r,c])=>{mr=Math.max(mr,r);mc=Math.max(mc,c);});
-    const ms=10,pw=(mc+1)*ms,ph=(mr+1)*ms;   // 固定格大小:LV1=1小格、LV3=3格…大小反映真實格數(不撐滿框,免 LV1 被誤認成大塊)
-    so.add(this.add.rectangle(0,0,60,60,0x000000,0.5).setStrokeStyle(3,col,1));
-    cells.forEach(([dr,dc])=>so.add(this.add.rectangle(dc*ms-pw/2,dr*ms-ph/2,ms-1,ms-1,col).setOrigin(0)));   // 看塊形就知道 LV,不寫字
+    const ms=12,pw=(mc+1)*ms,ph=(mr+1)*ms;   // 格大小反映真實 LV(格數)
+    const inner=this.add.container(0,0); so.add(inner);   // 內層=塊本體(彈出動畫專用,與外層常駐脈動分開→兩個 scale tween 不打架)
+    cells.forEach(([dr,dc])=>inner.add(this.add.rectangle(dc*ms-pw/2,dr*ms-ph/2,ms-1,ms-1,0xfff2e0).setOrigin(0).setStrokeStyle(1,0x1a1208,0.7)));   // 亮白塊+深細邊:卡是元素色,塊用白才不撞色、任何底色上都看得清
+    if(!card.storePulse){so.setScale(1);card.storePulse=this.tweens.add({targets:so,scaleX:1.1,scaleY:1.1,duration:820,yoyo:true,repeat:-1,ease:'Sine.inOut'});}   // 常駐輕脈動=「這裡有可拖的屬塊」
+    if(card.storeKey!==key){card.storeKey=key;inner.setScale(0.2);this.tweens.add({targets:inner,scaleX:1,scaleY:1,duration:320,ease:'Back.out'});}else inner.setScale(1);   // 新生/升級才彈出一次(醒目);平時只有輕脈動,不亂閃
   });}
   // 發動主動技
   fireActive(i){if(this.resultOpen||this.drag||this.earthSel||this.earthDrag)return;
