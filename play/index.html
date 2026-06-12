@@ -488,9 +488,9 @@ class GameScene extends Phaser.Scene{
       const rect=this.add.rectangle(x,CARDS_Y,62,62,0xffffff).setStrokeStyle(2,0x00000044).setInteractive();
       rect.setData('store',i);   // 卡身=拖屬塊來源(有存塊才可拖)
       const txt=this.add.text(x,CARDS_Y,'',{fontFamily:EMOJIFONT,fontSize:'24px',color:'#1a1208'}).setOrigin(0.5);
-      const storeObj=this.add.container(x,CARDS_Y,[]).setVisible(false);   // 屬塊存放顯示(疊在卡上,可拖)
-      // 主動技小按鈕(浮在卡上方,點放;外顯 affordance)
-      const abtn=this.add.container(x,CARDS_Y-40,[]);
+      const storeObj=this.add.container(x,CARDS_Y,[]).setVisible(false).setDepth(22);   // 屬塊存放顯示(疊在卡上,可拖;拉高 depth 免被敵元素蓋住)
+      // 主動技小按鈕(浮在卡上方,點放;外顯 affordance)— 拉高 depth 免被敵人血條蓋住/擋點擊
+      const abtn=this.add.container(x,CARDS_Y-40,[]).setDepth(40);
       const abg=this.add.circle(0,0,13,0x2b2014).setStrokeStyle(2,0x5a4128);
       const aic=this.add.text(0,0,'',{fontFamily:EMOJIFONT,fontSize:'12px',color:'#fff'}).setOrigin(0.5);
       abtn.add([abg,aic]); abtn.setSize(30,30).setInteractive(new Phaser.Geom.Rectangle(-15,-15,30,30),Phaser.Geom.Rectangle.Contains);
