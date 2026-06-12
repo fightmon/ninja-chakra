@@ -205,6 +205,8 @@ function computeClears(board, boxElement, boxCard, enemyEl, ampMult){
 /* ===== 自適應版面常數(寬度固定 420、高度依裝置比例,FIT 不黑邊;上下錨定) ===== */
 const W=420, CX=210;
 const CS=40, RECT=37, BX0=30, DRAG_LIFT=66;
+// 戰鬥畫面 z-index 分層(由下往上):背景→敵方→我方卡→鬥志/HP→盤面→托盤→暫態特效→nav(最高);暫態特效字壓在盤面之上、僅次 nav
+const DEPTH={bg:0, enemy:10, card:20, store:24, abtn:28, hp:30, morale:32, board:40, tray:50, drag:56, proj:60, flash:62, fx:66, nav:90};
 // 版面高度依「當下」裝置比例算(尺寸變化時即時重算),FIT 不黑邊;上下錨定
 let H,TRAY_Y,BY0,CARDS_Y,PHP_Y,INFO_Y,BG_H,BATTLE_CY,BOARD_CY;
 function recomputeLayout(){
@@ -508,25 +510,24 @@ class GameScene extends Phaser.Scene{
     this.cells=[]; this.boxLabels=[]; this.trayIcons=[]; this.trayTweens=[]; this.teamCards=[]; this.drag=null; this.enemies=[];
 
     // 戰鬥場景背景(最底層):上 ~1/3 漸層帶 + 其下深底延伸到盤面上緣(盤面壓上來)
-    this.bgGfx=this.add.graphics(); this.drawBG();
-    this.bgLine=this.add.rectangle(CX,BG_H,W,2,0x000000,0.3);
+    this.bgGfx=this.add.graphics().setDepth(DEPTH.bg); this.drawBG();
+    this.bgLine=this.add.rectangle(CX,BG_H,W,2,0x000000,0.3).setDepth(DEPTH.bg);
 
-    // nav(背景之上)
-    this.add.rectangle(CX,13,W,26,0x000000,0.30);
-    this.goldTxt=this.add.text(10,13,'💰 0',{fontFamily:EMOJIFONT,fontSize:'14px',color:'#ffe08a'}).setOrigin(0,0.5);
-    this.chestTxt=this.add.text(298,13,'📦 0',{fontFamily:EMOJIFONT,fontSize:'14px',color:'#cfe8ff'}).setOrigin(0,0.5);
-    const menuBtn=this.add.rectangle(388,13,58,22,0x3a2c1d).setStrokeStyle(1,0x5a4128).setInteractive();
-    this.add.text(388,13,'☰ 選單',{fontFamily:EMOJIFONT,fontSize:'11px',color:'#f3e9d8'}).setOrigin(0.5);
-    menuBtn.on('pointerup',()=>this.showMenu());
+    // nav(最高層;無背景條,文字加深色描邊保可讀)
+    this.goldTxt=this.add.text(10,13,'💰 0',{fontFamily:EMOJIFONT,fontSize:'14px',color:'#ffe08a'}).setOrigin(0,0.5).setStroke('#1a1208',4).setDepth(DEPTH.nav);
+    this.chestTxt=this.add.text(298,13,'📦 0',{fontFamily:EMOJIFONT,fontSize:'14px',color:'#cfe8ff'}).setOrigin(0,0.5).setStroke('#1a1208',4).setDepth(DEPTH.nav);
+    const gear=this.add.text(404,13,'⚙',{fontFamily:EMOJIFONT,fontSize:'21px',color:'#f3e9d8'}).setOrigin(0.5).setStroke('#1a1208',4).setDepth(DEPTH.nav);
+    gear.setInteractive(new Phaser.Geom.Rectangle(-17,-15,34,30),Phaser.Geom.Rectangle.Contains);
+    gear.on('pointerup',()=>this.showMenu());
 
     // 我方卡(正方形,背景之上)
     for(let i=0;i<5;i++){const x=54+i*78;
-      const rect=this.add.rectangle(x,CARDS_Y,62,62,0xffffff).setStrokeStyle(2,0x00000044).setInteractive();
+      const rect=this.add.rectangle(x,CARDS_Y,62,62,0xffffff).setStrokeStyle(2,0x00000044).setInteractive().setDepth(DEPTH.card);
       rect.setData('store',i);   // 卡身=拖屬塊來源(有存塊才可拖)
-      const txt=this.add.text(x,CARDS_Y,'',{fontFamily:EMOJIFONT,fontSize:'24px',color:'#1a1208'}).setOrigin(0.5);
-      const storeObj=this.add.container(x,CARDS_Y,[]).setVisible(false).setDepth(22);   // 屬塊存放顯示(疊在卡上,可拖;拉高 depth 免被敵元素蓋住)
-      // 主動技小按鈕(浮在卡上方,點放;外顯 affordance)— 拉高 depth 免被敵人血條蓋住/擋點擊
-      const abtn=this.add.container(x,CARDS_Y-40,[]).setDepth(40);
+      const txt=this.add.text(x,CARDS_Y,'',{fontFamily:EMOJIFONT,fontSize:'24px',color:'#1a1208'}).setOrigin(0.5).setDepth(DEPTH.card);
+      const storeObj=this.add.container(x,CARDS_Y,[]).setVisible(false).setDepth(DEPTH.store);   // 屬塊存放顯示(疊在卡上,可拖)
+      // 主動技小按鈕(浮在卡上方,點放;外顯 affordance)
+      const abtn=this.add.container(x,CARDS_Y-40,[]).setDepth(DEPTH.abtn);
       const abg=this.add.circle(0,0,13,0x2b2014).setStrokeStyle(2,0x5a4128);
       const aic=this.add.text(0,0,'',{fontFamily:EMOJIFONT,fontSize:'12px',color:'#fff'}).setOrigin(0.5);
       abtn.add([abg,aic]); abtn.setSize(30,30).setInteractive(new Phaser.Geom.Rectangle(-15,-15,30,30),Phaser.Geom.Rectangle.Contains);
@@ -534,22 +535,22 @@ class GameScene extends Phaser.Scene{
       this.teamCards.push({rect,txt,storeObj,abtn,abg,aic,el:null,pulse:null});}
 
     // 我方血條 + 資訊列
-    this.pHpBg=this.add.rectangle(BX0,PHP_Y,W-2*BX0,16,0x000000,0.5).setOrigin(0,0.5);
-    this.pHp=this.add.rectangle(BX0,PHP_Y,W-2*BX0,16,0x4f9e42).setOrigin(0,0.5);
-    this.pHpTxt=this.add.text(CX,PHP_Y,'',{fontFamily:EMOJIFONT,fontSize:'11px',color:'#fff'}).setOrigin(0.5);
+    this.pHpBg=this.add.rectangle(BX0,PHP_Y,W-2*BX0,16,0x000000,0.5).setOrigin(0,0.5).setDepth(DEPTH.hp);
+    this.pHp=this.add.rectangle(BX0,PHP_Y,W-2*BX0,16,0x4f9e42).setOrigin(0,0.5).setDepth(DEPTH.hp);
+    this.pHpTxt=this.add.text(CX,PHP_Y,'',{fontFamily:EMOJIFONT,fontSize:'11px',color:'#fff'}).setOrigin(0.5).setDepth(DEPTH.hp);
     // 鬥志徽章:單字,疊在 HP 條左端(z 高於血條)
-    this.moraleBg=this.add.circle(BX0+14,PHP_Y,15,0x1a140c,0.92).setStrokeStyle(2,0xffd56a).setDepth(6);
-    this.moraleTx=this.add.text(BX0+14,PHP_Y,'普',{fontFamily:EMOJIFONT,fontSize:'17px',color:'#fff',fontStyle:'bold'}).setOrigin(0.5).setDepth(7);
+    this.moraleBg=this.add.circle(BX0+14,PHP_Y,15,0x1a140c,0.92).setStrokeStyle(2,0xffd56a).setDepth(DEPTH.morale);
+    this.moraleTx=this.add.text(BX0+14,PHP_Y,'普',{fontFamily:EMOJIFONT,fontSize:'17px',color:'#fff',fontStyle:'bold'}).setOrigin(0.5).setDepth(DEPTH.morale);
 
     // 結印區
     for(let r=0;r<N;r++)for(let c=0;c<N;c++)
-      this.cells.push(this.add.rectangle(BX0+c*CS, BY0+r*CS, RECT, RECT, NEUTRAL_DARK).setOrigin(0,0));
+      this.cells.push(this.add.rectangle(BX0+c*CS, BY0+r*CS, RECT, RECT, NEUTRAL_DARK).setOrigin(0,0).setDepth(DEPTH.board));
     for(let b=0;b<9;b++){const br=Math.floor(b/3)*3,bc=(b%3)*3;const cen=this.cellCenter(br+1,bc+1);
-      this.boxLabels[b]=this.add.text(cen.x,cen.y,'',{fontFamily:EMOJIFONT,fontSize:'17px',color:'#fff'}).setOrigin(0.5).setAlpha(0.55);}
+      this.boxLabels[b]=this.add.text(cen.x,cen.y,'',{fontFamily:EMOJIFONT,fontSize:'17px',color:'#fff'}).setOrigin(0.5).setAlpha(0.55).setDepth(DEPTH.board);}
 
     // 托盤
     this.traySlots=[80,210,340]; this.trayHits=[];
-    this.traySlots.forEach((sx,i)=>{const hit=this.add.rectangle(sx,TRAY_Y,128,100,0,0).setOrigin(0.5).setInteractive();hit.setData('slot',i);this.trayHits.push(hit);});
+    this.traySlots.forEach((sx,i)=>{const hit=this.add.rectangle(sx,TRAY_Y,128,100,0,0).setOrigin(0.5).setInteractive().setDepth(DEPTH.tray);hit.setData('slot',i);this.trayHits.push(hit);});
 
     this.input.on('gameobjectdown',(p,obj)=>{
       const si=obj.getData('store'); if(si!=null && this.stored && this.stored[si]){this.startStoredDrag(si,p);return;}   // 卡上有屬塊→拖
@@ -613,7 +614,7 @@ class GameScene extends Phaser.Scene{
   }
   spawnEnemies(){
     if(this.enemyG)this.enemyG.destroy();
-    this.enemyG=this.add.container(0,0);
+    this.enemyG=this.add.container(0,0).setDepth(DEPTH.enemy);   // 敵方整層在「我方卡」之下、背景之上
     const defs=this.dungeon.stages[this.stage-1].es;
     this.enemies=defs.map(d=>({el:d.el,max:d.hp,hp:d.hp,atk:d.atk,interval:d.turns,timer:d.turns,burn:0,dead:false,boss:!!d.boss}));
     const n=this.enemies.length, slot=380/n;
@@ -636,8 +637,13 @@ class GameScene extends Phaser.Scene{
       e.hpFill=this.add.rectangle(e.hpx,cy+szc/2-3,e.hpW,8,e.boss?0xff7a3a:0xc23c2c).setOrigin(0,0.5);
       e.mark=this.add.text(x,cy-szc/2-9,'▼',{fontFamily:EMOJIFONT,fontSize:'14px',color:'#ffd56a',fontStyle:'bold'}).setOrigin(0.5).setVisible(false);   // 目標指標(取代黃框)
       e.bob=this.tweens.add({targets:e.sprite,y:e.sprite.y-4,duration:1200,yoyo:true,repeat:-1,ease:'Sine.inOut'});
-      [e.card,e.sprite,e.turnG,e.hpBg,e.hpFill,e.mark].forEach(o=>this.enemyG.add(o));
     });
+    // 敵方同層 z 序:敵中 > 敵左 > 敵右(越靠中央畫越上;同距時左>右)。依此由後往前加入容器
+    const zorder=this.enemies.map((e,i)=>i).sort((a,b)=>{
+      const da=Math.abs(this.enemies[a].card.x-CX), db=Math.abs(this.enemies[b].card.x-CX);
+      return da!==db ? db-da : this.enemies[b].card.x-this.enemies[a].card.x;
+    });
+    zorder.forEach(i=>{const e=this.enemies[i];[e.card,e.sprite,e.turnG,e.hpBg,e.hpFill,e.mark].forEach(o=>this.enemyG.add(o));});
     this.target=0;
   }
   refill(){this.tray=[pickShape(),pickShape(),pickShape()].map(c=>({c,used:false}));}
@@ -707,7 +713,7 @@ class GameScene extends Phaser.Scene{
     this.tray.forEach((p,i)=>{if(p.used)return;
       let maxr=0,maxc=0;p.c.forEach(([r,c])=>{maxr=Math.max(maxr,r);maxc=Math.max(maxc,c);});
       const span=Math.max(maxr,maxc)+1, s=Math.min(24,Math.floor(78/span)), pw=(maxc+1)*s, ph=(maxr+1)*s;   // 依最長邊連續縮放,塞進約 78px 高托盤格:小塊維持 24px,4/5 格長塊自動縮到一致高度、不頂出畫面
-      const sp=SP[p.kind], cont=this.add.container(this.traySlots[i],TRAY_Y,[]);
+      const sp=SP[p.kind], cont=this.add.container(this.traySlots[i],TRAY_Y,[]).setDepth(DEPTH.tray);
       if(sp){const glow=this.add.rectangle(0,0,pw+13,ph+13,0,0).setStrokeStyle(3,sp.glow,1); cont.add(glow);   // 脈動光暈
         this.trayTweens.push(this.tweens.add({targets:glow,alpha:{from:0.3,to:1},scaleX:{from:0.9,to:1.06},scaleY:{from:0.9,to:1.06},duration:600,yoyo:true,repeat:-1,ease:'Sine.inOut'}));}
       p.c.forEach(([dr,dc])=>cont.add(this.add.rectangle(dc*s-pw/2, dr*s-ph/2, s-3, s-3, sp?sp.c:NEUTRAL_FILL).setOrigin(0).setStrokeStyle(sp?1:0, 0xffffff, sp?0.5:0)));
@@ -720,13 +726,13 @@ class GameScene extends Phaser.Scene{
     const cells=this.tray[i].c, kind=this.tray[i].kind;
     const kc=kind==='water'?0x62b8f0:kind==='wind'?0x6ad06a:kind==='earth'?0xd49a4a:0xffffff;
     const kids=cells.map(([dr,dc])=>this.add.rectangle(dc*CS,dr*CS,RECT,RECT,kc).setOrigin(0));
-    this.drag={i,cells,kind,prev:this.add.container(0,0,kids).setAlpha(0.85),kids};this.updateDrag(p);}
+    this.drag={i,cells,kind,prev:this.add.container(0,0,kids).setAlpha(0.85).setDepth(DEPTH.drag),kids};this.updateDrag(p);}
   // 從卡拖「存放的屬塊」(萬用塊填空格;不佔托盤格→不推進敵,是連擊引擎)
   startStoredDrag(i,p){if(this.resultOpen||this.drag||this.earthSel||this.earthDrag)return;
     const s=this.stored[i]; if(!s)return;
     const cells=s.cells||chakraShape(s.el,s.lv), col=EL[s.el].color;
     const kids=cells.map(([dr,dc])=>this.add.rectangle(dc*CS,dr*CS,RECT,RECT,col).setOrigin(0));
-    this.drag={store:i,cells,kind:'water',col,prev:this.add.container(0,0,kids).setAlpha(0.85),kids};this.updateDrag(p);}
+    this.drag={store:i,cells,kind:'water',col,prev:this.add.container(0,0,kids).setAlpha(0.85).setDepth(DEPTH.drag),kids};this.updateDrag(p);}
   doPlaceStored(d,r,c){if(this.resultOpen)return;
     d.cells.forEach(([dr,dc])=>{const rr=r+dr,cc=c+dc;
       if(rr>=0&&rr<N&&cc>=0&&cc<N&&!this.board[rr][cc])this.board[rr][cc]={el:this.boxElement[boxOf(rr,cc)]||'neutral'};});
@@ -825,7 +831,7 @@ class GameScene extends Phaser.Scene{
     const rel=sel.map(s=>({dr:s.r-minR,dc:s.c-minC,el:s.el}));
     sel.forEach(s=>{this.board[s.r][s.c]=null;}); this.refreshBoard();
     const kids=rel.map(o=>this.add.rectangle(o.dc*CS,o.dr*CS,RECT,RECT,EL[o.el]?EL[o.el].color:NEUTRAL_FILL).setOrigin(0).setAlpha(0.9));
-    this.earthDrag={i:this.earthSel.i, rel, orig:sel.slice(), prev:this.add.container(0,0,kids), kids};
+    this.earthDrag={i:this.earthSel.i, rel, orig:sel.slice(), prev:this.add.container(0,0,kids).setDepth(DEPTH.drag), kids};
     this.earthSel=null; this.updateEarthMove(p);
   }
   updateEarthMove(p){
@@ -903,7 +909,7 @@ class GameScene extends Phaser.Scene{
   enemyAttack(e){
     this.tweens.add({targets:e.sprite,y:e.sprite.y+30,duration:150,yoyo:true});
     this.cameras.main.shake(300,0.009);
-    const f=this.add.rectangle(CX,H/2,W,H,EL[e.el].color,0.4);
+    const f=this.add.rectangle(CX,H/2,W,H,EL[e.el].color,0.4).setDepth(DEPTH.flash);
     this.tweens.add({targets:f,alpha:0,duration:400,onComplete:()=>f.destroy()});
     let dmg=e.atk, dodged=false;
     if(this.immune>0){dodged=true;dmg=0;}
@@ -955,7 +961,7 @@ class GameScene extends Phaser.Scene{
   /* 特效 */
   projectile(ox,oy,tx,ty,glyph,color,delay,dmg,tgt){
     this.time.delayedCall(delay,()=>{
-      const t=this.add.text(ox,oy,glyph,{fontFamily:EMOJIFONT,fontSize:'24px'}).setOrigin(0.5);
+      const t=this.add.text(ox,oy,glyph,{fontFamily:EMOJIFONT,fontSize:'24px'}).setOrigin(0.5).setDepth(DEPTH.proj);
       this.tweens.add({targets:t,x:tx,y:ty,scale:1.5,duration:360,ease:'Quad.in',
         onComplete:()=>{t.destroy();this.impact(tx,ty,color,dmg,tgt);}});});
   }
@@ -963,25 +969,25 @@ class GameScene extends Phaser.Scene{
     if(tgt&&!tgt.dead){tgt.sprite.setTint(0xffffff);
       const bs=tgt.baseScale||1;if(tgt.hitTw)tgt.hitTw.stop();tgt.sprite.setScale(bs);   // 縮放動畫相對基準縮放(史來姆圖 base≈0.39),先停掉前一個受擊tween避免連擊疊加變大
       tgt.hitTw=this.tweens.add({targets:tgt.sprite,scaleX:bs*1.16,scaleY:bs*1.16,duration:100,yoyo:true,onComplete:()=>{tgt.sprite.setScale(bs);tgt.sprite.clearTint();tgt.hitTw=null;}});}
-    const b=this.add.circle(x,y,8,color,0.8);
+    const b=this.add.circle(x,y,8,color,0.8).setDepth(DEPTH.proj);
     this.tweens.add({targets:b,scale:5,alpha:0,duration:420,onComplete:()=>b.destroy()});
     this.cameras.main.shake(150,0.005);
     if(dmg)this.floatText(x,y-24,dmg,'#ffd56a');
   }
-  floatText(x,y,str,color){const t=this.add.text(x,y,str,{fontFamily:EMOJIFONT,fontSize:'19px',color,fontStyle:'bold'}).setOrigin(0.5);
+  floatText(x,y,str,color){const t=this.add.text(x,y,str,{fontFamily:EMOJIFONT,fontSize:'19px',color,fontStyle:'bold'}).setOrigin(0.5).setDepth(DEPTH.fx);
     this.tweens.add({targets:t,y:y-40,alpha:0,duration:900,ease:'Quad.out',onComplete:()=>t.destroy()});}
-  tonFloat(str,color){const t=this.add.text(CX,BY0-54,str,{fontFamily:EMOJIFONT,fontSize:'17px',color,fontStyle:'bold'}).setOrigin(0.5);
+  tonFloat(str,color){const t=this.add.text(CX,BY0-54,str,{fontFamily:EMOJIFONT,fontSize:'17px',color,fontStyle:'bold'}).setOrigin(0.5).setDepth(DEPTH.fx);
     this.tweens.add({targets:t,y:BY0-82,alpha:0,duration:1000,ease:'Quad.out',onComplete:()=>t.destroy()});}
-  comboPopup(n){const t=this.add.text(CX,BOARD_CY-54,'連印 '+n,{fontFamily:EMOJIFONT,fontSize:'24px',color:'#ffd56a',fontStyle:'bold'}).setOrigin(0.5).setScale(0.5).setDepth(58);
+  comboPopup(n){const t=this.add.text(CX,BOARD_CY-54,'連印 '+n,{fontFamily:EMOJIFONT,fontSize:'24px',color:'#ffd56a',fontStyle:'bold'}).setOrigin(0.5).setScale(0.5).setDepth(DEPTH.fx);
     this.tweens.add({targets:t,scale:1.05,duration:220,yoyo:true,hold:120,
       onComplete:()=>this.tweens.add({targets:t,alpha:0,duration:300,onComplete:()=>t.destroy()})});}
   // 暴擊演出:一手多清(groups≥2)的隆重慶祝 — 全螢幕閃光 + 震動 + 大字
   burstFX(g){
     this.cameras.main.shake(200+g*50,0.011+g*0.002);
-    const flash=this.add.rectangle(CX,H/2,W,H,0xfff0c0,0).setDepth(60);
+    const flash=this.add.rectangle(CX,H/2,W,H,0xfff0c0,0).setDepth(DEPTH.flash);
     this.tweens.add({targets:flash,alpha:0.45,duration:70,yoyo:true,onComplete:()=>flash.destroy()});
     const label=g>=4?'超·暴擊':g===3?'大暴擊':'暴擊';
-    const t=this.add.text(CX,BOARD_CY,label+' ×'+g+'!',{fontFamily:EMOJIFONT,fontSize:(38+g*4)+'px',color:'#ffd24a',fontStyle:'bold',stroke:'#7a3000',strokeThickness:6}).setOrigin(0.5).setDepth(61).setScale(0.3).setAngle(-6);
+    const t=this.add.text(CX,BOARD_CY,label+' ×'+g+'!',{fontFamily:EMOJIFONT,fontSize:(38+g*4)+'px',color:'#ffd24a',fontStyle:'bold',stroke:'#7a3000',strokeThickness:6}).setOrigin(0.5).setDepth(DEPTH.fx).setScale(0.3).setAngle(-6);
     this.tweens.add({targets:t,scale:1.1,duration:200,ease:'Back.out'});
     this.tweens.add({targets:t,alpha:0,delay:560,duration:260,onComplete:()=>t.destroy()});
   }
@@ -989,9 +995,9 @@ class GameScene extends Phaser.Scene{
   firstClearFX(){
     track('first_clear');
     this.cameras.main.shake(300,0.014);
-    const flash=this.add.rectangle(CX,H/2,W,H,0xffe8a0,0).setDepth(60);
+    const flash=this.add.rectangle(CX,H/2,W,H,0xffe8a0,0).setDepth(DEPTH.flash);
     this.tweens.add({targets:flash,alpha:0.5,duration:90,yoyo:true,onComplete:()=>flash.destroy()});
-    const t=this.add.text(CX,BOARD_CY,'結 印 成 功!',{fontFamily:EMOJIFONT,fontSize:'40px',color:'#ffe04a',fontStyle:'bold',stroke:'#7a1500',strokeThickness:7}).setOrigin(0.5).setDepth(62).setScale(0.3).setAngle(-5);
+    const t=this.add.text(CX,BOARD_CY,'結 印 成 功!',{fontFamily:EMOJIFONT,fontSize:'40px',color:'#ffe04a',fontStyle:'bold',stroke:'#7a1500',strokeThickness:7}).setOrigin(0.5).setDepth(DEPTH.fx).setScale(0.3).setAngle(-5);
     this.tweens.add({targets:t,scale:1.12,duration:240,ease:'Back.out'});
     this.tweens.add({targets:t,alpha:0,delay:680,duration:300,onComplete:()=>t.destroy()});
     this.time.delayedCall(380,()=>this.tonFloat('✦ 屬塊已存到卡上 — 可拖下來用!','#ffe08a'));
@@ -999,23 +1005,23 @@ class GameScene extends Phaser.Scene{
   // 鬥志階變演出;升到「極」=全體解放超模式
   moraleFX(tier,up){
     const names=CONFIG.MORALE_NAMES, cols=['#99aabb','#9ac4e0','#ffffff','#ffd24a','#ff9a3a','#ff5a3a'];
-    const t=this.add.text(CX,BOARD_CY+54,'鬥志'+(up?'↑ ':'↓ ')+names[tier],{fontFamily:EMOJIFONT,fontSize:'21px',color:cols[tier],fontStyle:'bold',stroke:'#000',strokeThickness:3}).setOrigin(0.5).setDepth(55).setScale(0.6);
+    const t=this.add.text(CX,BOARD_CY+54,'鬥志'+(up?'↑ ':'↓ ')+names[tier],{fontFamily:EMOJIFONT,fontSize:'21px',color:cols[tier],fontStyle:'bold',stroke:'#000',strokeThickness:3}).setOrigin(0.5).setDepth(DEPTH.fx).setScale(0.6);
     this.tweens.add({targets:t,scale:1,y:t.y-18,duration:240,ease:'Back.out'});
     this.tweens.add({targets:t,alpha:0,delay:480,duration:300,onComplete:()=>t.destroy()});
     if(tier>=5){ // 極:超模式爆發(全消除轉全體)
       this.cameras.main.shake(300,0.013);
-      const fl=this.add.rectangle(CX,H/2,W,H,0xff5a3a,0).setDepth(54);
+      const fl=this.add.rectangle(CX,H/2,W,H,0xff5a3a,0).setDepth(DEPTH.flash);
       this.tweens.add({targets:fl,alpha:0.4,duration:120,yoyo:true,onComplete:()=>fl.destroy()});
-      const big=this.add.text(CX,BOARD_CY,'極・全體解放!',{fontFamily:EMOJIFONT,fontSize:'32px',color:'#ffe04a',fontStyle:'bold',stroke:'#7a1500',strokeThickness:6}).setOrigin(0.5).setDepth(56).setScale(0.4).setAngle(-5);
+      const big=this.add.text(CX,BOARD_CY,'極・全體解放!',{fontFamily:EMOJIFONT,fontSize:'32px',color:'#ffe04a',fontStyle:'bold',stroke:'#7a1500',strokeThickness:6}).setOrigin(0.5).setDepth(DEPTH.fx).setScale(0.4).setAngle(-5);
       this.tweens.add({targets:big,scale:1.1,duration:240,ease:'Back.out'});
       this.tweens.add({targets:big,alpha:0,delay:760,duration:320,onComplete:()=>big.destroy()});
     }
   }
   showJutsu(el,lv){const name=KATA[lv-1]+'・'+JUTSU[el][lv-1];const col='#'+EL[el].color.toString(16).padStart(6,'0');
-    const t=this.add.text(CX-50,BY0-28,name,{fontFamily:EMOJIFONT,fontSize:(15+lv*4)+'px',color:col,fontStyle:'bold',stroke:'#000',strokeThickness:3}).setOrigin(0.5).setAlpha(0);
+    const t=this.add.text(CX-50,BY0-28,name,{fontFamily:EMOJIFONT,fontSize:(15+lv*4)+'px',color:col,fontStyle:'bold',stroke:'#000',strokeThickness:3}).setOrigin(0.5).setAlpha(0).setDepth(DEPTH.fx);
     this.tweens.add({targets:t,x:CX,alpha:1,duration:200,ease:'Back.out',
       onComplete:()=>this.tweens.add({targets:t,alpha:0,duration:400,delay:350+lv*120,onComplete:()=>t.destroy()})});
-    if(lv>=4){const big=lv>=6;const f=this.add.rectangle(CX,H/2,W,H,EL[el].color,big?0.6:0.4);
+    if(lv>=4){const big=lv>=6;const f=this.add.rectangle(CX,H/2,W,H,EL[el].color,big?0.6:0.4).setDepth(DEPTH.flash);
       this.tweens.add({targets:f,alpha:0,duration:big?540:420,onComplete:()=>f.destroy()});
       this.cameras.main.shake(big?440:280,big?0.014:0.008);}}
   glowTeam(el){this.teamCards.forEach(card=>{if(card.el===el)
