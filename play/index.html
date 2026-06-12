@@ -612,7 +612,13 @@ class GameScene extends Phaser.Scene{
   startStage(keepBoard){
     if(!keepBoard){this.board=Array.from({length:N},()=>Array(N).fill(null));this.stored=[null,null,null,null,null];}   // 跨關保留盤面+屬塊:只有新局/重挑才清,過關時累積到下一關的怪
     this.resetWave(); if(!keepBoard)this.morale=(this.lead&&this.lead.type==='moraleStart')?this.lead.v:CONFIG.MORALE_START; this.handCleared=false; this.handBurst=false; this.whiffStreak=0; if(!keepBoard)this.refill();   // 鬥志+托盤:跨關保留(只新局/重挑才重置/換新托盤)
-    if(this.stage===1&&this.lead)this.time.delayedCall(450,()=>this.tonFloat('🎖 隊長技:'+this.lead.name,'#ffe08a'));
+    if(this.stage===1&&this.lead)this.time.delayedCall(450,()=>{   // 隊長技:進關時在盤面中央彈出清楚橫幅(技名+效果),停留可讀(原本上緣快閃小字看不清)
+      const ld=this.lead, mk=(dy,str,sz,col,sw)=>{const t=this.add.text(CX,BOARD_CY+dy,str,{fontFamily:EMOJIFONT,fontSize:sz,color:col,fontStyle:'bold',stroke:'#3a2400',strokeThickness:sw,align:'center'}).setOrigin(0.5).setDepth(DEPTH.fx).setScale(0.5);
+        this.tweens.add({targets:t,scale:1,duration:260,ease:'Back.out'});
+        this.tweens.add({targets:t,alpha:0,delay:1400,duration:420,onComplete:()=>t.destroy()});};
+      mk(-13,'🎖 隊長技 · '+ld.name,'21px','#ffe08a',5);
+      mk(15,ld.desc,'14px','#ffeec4',4);
+    });
     this.spawnEnemies(); this.refreshBoard(); this.renderTray(); this.updateAll(); this.renderCharges(); this.renderStored();
     if(this.stage===1 && !tutSeen())this.showTutorial();   // 首次遊玩→3 步教學
   }
