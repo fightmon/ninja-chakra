@@ -279,7 +279,7 @@ function activeSkill(el){return ACTIVE_SKILLS[el]||null;}
 /* F6 統一存檔:持有卡 / 編隊 / 進度 / 設定 一個物件全自動存 localStorage */
 const SAVE_KEY='ninja_save';
 function defaultMeta(){return {rank:1,exp:0,coins:0,stones:30,stamina:50,staminaMax:50,staTs:null,pity:0};}   // 首登送 30 鑽;pity=結印轉蛋保底計數
-function defaultSave(){const owned={};STARTER.forEach(id=>owned[id]=1);return {owned,team:STARTER.slice(),cardLv:{},cardEvo:{},gems:{fire:0,water:0,thunder:0,earth:0,wind:0},progress:{cleared:false,clears:0,bestStage:0},meta:defaultMeta(),settings:{}};}
+function defaultSave(){const owned={};STARTER.forEach(id=>owned[id]=1);return {owned,team:STARTER.slice(),cardLv:{},cardEvo:{},gems:{fire:0,water:0,thunder:0,earth:0,wind:0},progress:{cleared:false,clears:0,bestStage:0},meta:defaultMeta(),settings:{welcome:true}};}   // 新檔已含 30 鑽→標記已領,免重複
 function writeSave(s){try{localStorage.setItem(SAVE_KEY,JSON.stringify(s));}catch(e){}}
 function loadSave(){let s=null;try{s=JSON.parse(localStorage.getItem(SAVE_KEY));}catch(e){}
   if(!s||typeof s!=='object'){s=defaultSave();
@@ -295,6 +295,7 @@ function loadSave(){let s=null;try{s=JSON.parse(localStorage.getItem(SAVE_KEY));
   if(!s.cardLv)s.cardLv={};
   if(!s.cardEvo)s.cardEvo={};
   if(!s.gems)s.gems={fire:0,water:0,thunder:0,earth:0,wind:0};
+  if(!s.settings.welcome){s.meta.stones=(s.meta.stones||0)+30;s.settings.welcome=true;writeSave(s);}   // 既有存檔一次性補送 30 鑽(新檔已在 defaultSave 標記)
   return s;}
 function mutSave(fn){const s=loadSave();fn(s);writeSave(s);return s;}
 function loadOwned(){return loadSave().owned;}
@@ -413,13 +414,14 @@ function doGacha(bankey,count){const b=GACHA[bankey],cost=count===10?b.cost10:b.
 class TeamScene extends Phaser.Scene{
   constructor(){super('team');}
   create(){
-    this.add.text(CX,42,'出戰編隊',{fontFamily:EMOJIFONT,fontSize:'22px',color:'#f3e9d8'}).setOrigin(0.5);
-    this.add.text(CX,70,'拖卡片進 5 宮位 · 同屬排一線可加成 · 點宮位取消',
+    recomputeLayout();   // 確保 H 是當下裝置高度
+    this.add.text(CX,38,'出戰編隊',{fontFamily:EMOJIFONT,fontSize:'22px',color:'#f3e9d8'}).setOrigin(0.5);
+    this.add.text(CX,66,'拖卡片進 5 宮位 · 同屬排一線可加成 · 點宮位取消',
       {fontFamily:EMOJIFONT,fontSize:'11px',color:'#b9a584'}).setOrigin(0.5);
     const _pr=getProgress();
-    if(_pr.cleared)this.add.text(CX,92,'🏆 序章已通關 ×'+_pr.clears,{fontFamily:EMOJIFONT,fontSize:'11px',color:'#ffd56a'}).setOrigin(0.5);
-    const defs=[{n:'左上',x:140,y:154},{n:'右上',x:280,y:154},{n:'中央',x:CX,y:234},
-                {n:'左下',x:140,y:314},{n:'右下',x:280,y:314}];
+    if(_pr.cleared)this.add.text(CX,88,'🏆 序章已通關 ×'+_pr.clears,{fontFamily:EMOJIFONT,fontSize:'11px',color:'#ffd56a'}).setOrigin(0.5);
+    const defs=[{n:'左上',x:140,y:150},{n:'右上',x:280,y:150},{n:'中央',x:CX,y:228},
+                {n:'左下',x:140,y:306},{n:'右下',x:280,y:306}];
     this.slots=defs.map(d=>{
       this.add.text(d.x,d.y-38,d.n,{fontFamily:EMOJIFONT,fontSize:'12px',color:'#c9b48f'}).setOrigin(0.5);
       const rect=this.add.rectangle(d.x,d.y,104,54,0x2b2014).setStrokeStyle(2,0x4a3824).setInteractive();
@@ -430,12 +432,17 @@ class TeamScene extends Phaser.Scene{
     });
     this.cardUsed={}; this.cards=[];
     const myCards=ROSTER.filter(c=>isOwned(c.id));
-    const cols=3, cw=122, ch=40, gx=132, gy=50, x0=78, y0=398;
+    // 替補卡:塞進「宮位下方 ~ 確定鈕上方」的空間,列高自適應+垂直置中→永遠不溢出、不蓋按鈕、自適應裝置高度
+    const cols=3, cw=122, gx=132, x0=78, benchTop=352, benchBottom=H-108;
+    const rows=Math.max(1,Math.ceil(myCards.length/cols));
+    const rowH=Math.max(30,Math.min(48,(benchBottom-benchTop)/rows));
+    const ch=Math.max(24,Math.min(40,rowH-6));
+    const y0=benchTop+Math.max(0,(benchBottom-benchTop-rows*rowH)/2)+rowH/2;
     myCards.forEach((cd,i)=>{
-      const cx=x0+(i%cols)*gx, cy=y0+Math.floor(i/cols)*gy;
+      const cx=x0+(i%cols)*gx, cy=y0+Math.floor(i/cols)*rowH;
       const rect=this.add.rectangle(0,0,cw,ch,EL[cd.el].color).setStrokeStyle(2,0x000000,0.2);
       const txt=this.add.text(0,0,cd.name+'·'+EL[cd.el].name,
-        {fontFamily:EMOJIFONT,fontSize:'14px',color:'#1a1208',fontStyle:'bold'}).setOrigin(0.5);
+        {fontFamily:EMOJIFONT,fontSize:'13px',color:'#1a1208',fontStyle:'bold'}).setOrigin(0.5);
       const cont=this.add.container(cx,cy,[rect,txt]);
       cont.setInteractive(new Phaser.Geom.Rectangle(-cw/2,-ch/2,cw,ch),Phaser.Geom.Rectangle.Contains);
       this.input.setDraggable(cont);
@@ -445,22 +452,24 @@ class TeamScene extends Phaser.Scene{
     this.input.on('dragstart',(p,o)=>this.children.bringToTop(o));
     this.input.on('drag',(p,o,dx,dy)=>o.setPosition(dx,dy));
     this.input.on('dragend',(p,o)=>this.dropCard(p,o));
-    this.startBtn=this.add.rectangle(CX,632,220,52,0x2b2014).setStrokeStyle(2,0x5a8a3c).setInteractive();
-    this.startTxt=this.add.text(CX,632,'💾 確定編隊',{fontFamily:EMOJIFONT,fontSize:'20px',color:'#cfe8b0'}).setOrigin(0.5);
+    // 底部錨定(永遠貼畫面最下緣,不被切掉、不浮在中間)
+    this.startBtn=this.add.rectangle(CX,H-74,220,50,0x2b2014).setStrokeStyle(2,0x5a8a3c).setInteractive();
+    this.startTxt=this.add.text(CX,H-74,'💾 確定編隊',{fontFamily:EMOJIFONT,fontSize:'20px',color:'#cfe8b0'}).setOrigin(0.5);
     this.startBtn.on('pointerup',()=>this.launch());
-    this.hint=this.add.text(CX,670,'',{fontFamily:EMOJIFONT,fontSize:'12px',color:'#ffd56a'}).setOrigin(0.5);
-    const rnd2=this.add.rectangle(78,706,124,40,0x2b2014).setStrokeStyle(2,0x4a3824).setInteractive();
-    this.add.text(78,706,'🎲 隨機',{fontFamily:EMOJIFONT,fontSize:'13px',color:'#f3e9d8'}).setOrigin(0.5);
+    this.hint=this.add.text(CX,H-46,'',{fontFamily:EMOJIFONT,fontSize:'12px',color:'#ffd56a'}).setOrigin(0.5);
+    const navY=H-22;
+    const rnd2=this.add.rectangle(78,navY,124,38,0x2b2014).setStrokeStyle(2,0x4a3824).setInteractive();
+    this.add.text(78,navY,'🎲 隨機',{fontFamily:EMOJIFONT,fontSize:'13px',color:'#f3e9d8'}).setOrigin(0.5);
     rnd2.on('pointerup',()=>this.randomFill());
-    const colBtn=this.add.rectangle(210,706,124,40,0x2b2014).setStrokeStyle(2,0x5a6a8a).setInteractive();
-    this.add.text(210,706,'📖 卡冊'+ownedCount()+'/'+ROSTER.length,{fontFamily:EMOJIFONT,fontSize:'11px',color:'#cfe0ff'}).setOrigin(0.5);
+    const colBtn=this.add.rectangle(210,navY,124,38,0x2b2014).setStrokeStyle(2,0x5a6a8a).setInteractive();
+    this.add.text(210,navY,'📖 卡冊'+ownedCount()+'/'+ROSTER.length,{fontFamily:EMOJIFONT,fontSize:'11px',color:'#cfe0ff'}).setOrigin(0.5);
     colBtn.on('pointerup',()=>{this.scene.manager.start('collection');this.scene.manager.stop('team');});
-    const homeBtn=this.add.rectangle(342,706,124,40,0x2b2014).setStrokeStyle(2,0x8a6a5a).setInteractive();
-    this.add.text(342,706,'🏠 大廳',{fontFamily:EMOJIFONT,fontSize:'13px',color:'#ffd9b0'}).setOrigin(0.5);
+    const homeBtn=this.add.rectangle(342,navY,124,38,0x2b2014).setStrokeStyle(2,0x8a6a5a).setInteractive();
+    this.add.text(342,navY,'🏠 大廳',{fontFamily:EMOJIFONT,fontSize:'13px',color:'#ffd9b0'}).setOrigin(0.5);
     homeBtn.on('pointerup',()=>{const t=this.slots.map(s=>s.cardId).filter(Boolean);if(t.length===5)saveTeam(t);this.scene.manager.start('home');this.scene.manager.stop('team');});
     loadTeam().forEach((id,i)=>{const cd=ROSTER.find(c=>c.id===id);if(cd&&isOwned(id)&&this.slots[i]&&!this.cardUsed[id])this.assign(this.slots[i],cd);});  // F6:自動回填上次編隊
     this.refreshStart();
-    this.scale.on('resize',()=>{const o=H;recomputeLayout();if(Math.abs(H-o)>3)this.scale.setGameSize(W,H);});
+    this.scale.on('resize',()=>{const o=H;recomputeLayout();if(Math.abs(H-o)>3){this.scale.setGameSize(W,H);this.scene.restart();}});   // 尺寸變→重建(自適應)
   }
   slotUnder(px,py){return this.slots.find(s=>Math.abs(px-s.x)<56&&Math.abs(py-s.y)<31);}
   assign(slot,cd){slot.el=cd.el;slot.cardId=cd.id;
