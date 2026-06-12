@@ -206,7 +206,8 @@ function computeClears(board, boxElement, boxCard, enemyEl, ampMult){
 const W=420, CX=210;
 const CS=40, RECT=37, BX0=30, DRAG_LIFT=66;
 // 戰鬥畫面 z-index 分層(由下往上):背景→敵方→我方卡→鬥志/HP→盤面→托盤→暫態特效→nav(最高);暫態特效字壓在盤面之上、僅次 nav
-const DEPTH={bg:0, enemy:10, card:20, store:24, abtn:28, hp:30, morale:32, board:40, tray:50, drag:56, proj:60, flash:62, fx:66, nav:90};
+const DEPTH={bg:0, enemy:10, card:20, hp:30, morale:32, store:34, abtn:38, board:40, tray:50, drag:56, proj:60, flash:62, fx:66, nav:90};
+// 註:卡身(card)壓在 HP/鬥志之下(照規格);但「卡上的屬塊(store)與主技鈕(abtn)」是可拖/可點的前景配件,提到 HP/鬥志之上才不會被擋住。兩者空間上不與盤面重疊,故仍排在 board 之下無妨。
 // 版面高度依「當下」裝置比例算(尺寸變化時即時重算),FIT 不黑邊;上下錨定
 let H,TRAY_Y,BY0,CARDS_Y,PHP_Y,INFO_Y,BG_H,BATTLE_CY,BOARD_CY;
 function recomputeLayout(){
