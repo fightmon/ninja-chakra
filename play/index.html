@@ -75,12 +75,12 @@ const ROSTER = [
   {id:'c30', name:'颶嵐影忍', el:'wind',    attrs:['wind','thunder','yang'], rank:'kage',  atk:280},
 ];
 const CONFIG = {
-  ADV_MULT:2.0, WEAK_MULT:0.5, NORM_MULT:1.0,
+  ADV_MULT:1.6, WEAK_MULT:0.7, NORM_MULT:1.0,   // 相剋軟化(原2.0/0.5硬牆→1.6/0.7,讓手控能逆轉小劣勢)
   NEUTRAL_BOX_BASE:40, LINE_BASE:30, LINE_SAME_RATE:0.5,
   COMBO_STEP:0.15, COMBO_CAP:10,
   MORALE_NAMES:['無','弱','中','強','超','極'], MORALE_MULT:[0.8,0.9,1.0,1.25,1.5,1.8], MORALE_START:2, MORALE_GRACE:3,  // 鬥志6階:上重下輕、起始中、極=全體;清除升到超封頂、暴擊直接衝極、連3手空手才降
   PLAYER_HP_BASE:1000, RESHUFFLE_COST:120,
-  ATTR:{ fire_burn_rate:0.4, wind_immune:1, earth_dr:0.3, yang_heal_rate:1.2, yin_amp:1.5 },
+  ATTR:{ fire_burn_rate:0.4, wind_immune:1, earth_dr:0.3, yang_heal_rate:0.5, yin_amp:1.5 },   // 陽回血砍狠(1.2→0.5);陰改傷害×2(見 fireAttr)
 };
 const KATA = ['壹之型','貳之型','參之型','肆之型','伍之型','禁術','真奧義'];   // LV1~7
 const JUTSU = {
@@ -134,6 +134,16 @@ const ELEM_DUNGEONS=['fire','water','thunder','earth','wind'];
 const WILD_SHAPES = {1:[[0,0]], 2:[[0,0],[0,1]], 3:[[0,0],[0,1],[0,2]], 4:[[0,0],[0,1],[1,0],[1,1]], 5:[[0,1],[1,0],[1,1],[1,2],[2,1]],
   6:[[0,0],[0,1],[0,2],[1,0],[1,1],[1,2]],                                  // LV6:2×3
   7:[[0,0],[0,1],[0,2],[1,0],[1,1],[1,2],[2,0],[2,1],[2,2]]};               // LV7:3×3(9格)
+
+// 五屬「形狀系統」:清宮生成的萬用查克拉塊,形狀由屬性決定(水直/風橫/火可轉/土斜→2×2→U/雷鋸齒),LV1~5
+const SHAPES_BY_EL = {
+  water:  {1:[[0,0]], 2:[[0,0],[1,0]], 3:[[0,0],[1,0],[2,0]], 4:[[0,0],[1,0],[2,0],[3,0]], 5:[[0,0],[1,0],[2,0],[3,0],[4,0]]},   // 直落
+  wind:   {1:[[0,0]], 2:[[0,0],[0,1]], 3:[[0,0],[0,1],[0,2]], 4:[[0,0],[0,1],[0,2],[0,3]], 5:[[0,0],[0,1],[0,2],[0,3],[0,4]]},   // 橫吹
+  fire:   {1:[[0,0]], 2:[[0,0],[0,1]], 3:[[0,0],[1,0],[1,1]], 4:[[0,0],[0,1],[0,2],[1,1]], 5:[[0,1],[1,0],[1,1],[1,2],[2,1]]},   // 可轉:■/■■/L/T/十
+  earth:  {1:[[0,0]], 2:[[0,0],[1,1]], 3:[[0,0],[1,1],[2,2]], 4:[[0,0],[0,1],[1,0],[1,1]], 5:[[0,0],[0,2],[1,0],[1,1],[1,2]]},   // 斜→2×2→U(■·■/■■■)
+  thunder:{1:[[0,0]], 2:[[0,0],[1,1]], 3:[[0,0],[1,0],[1,1]], 4:[[0,1],[0,2],[1,0],[1,1]], 5:[[0,0],[0,1],[1,1],[2,1],[2,2]]},   // 鋸齒/閃電(N)
+};
+function chakraShape(el,lv){const m=SHAPES_BY_EL[el]||SHAPES_BY_EL.fire;return (m[Math.max(1,Math.min(5,lv))]||m[1]).map(x=>x.slice());}
 
 function rnd(n){return Math.floor(Math.random()*n);}
 function pickShape(){let r=rnd(WSUM);for(const s of SHAPES){r-=s.w;if(r<0)return s.c.map(x=>x.slice());}}
@@ -476,12 +486,16 @@ class GameScene extends Phaser.Scene{
     // 我方卡(正方形,背景之上)
     for(let i=0;i<5;i++){const x=54+i*78;
       const rect=this.add.rectangle(x,CARDS_Y,62,62,0xffffff).setStrokeStyle(2,0x00000044).setInteractive();
-      rect.on('pointerup',()=>this.fireActive(i));   // 點卡發動主動技(蓄力滿才有效)
+      rect.setData('store',i);   // 卡身=拖屬塊來源(有存塊才可拖)
       const txt=this.add.text(x,CARDS_Y,'',{fontFamily:EMOJIFONT,fontSize:'24px',color:'#1a1208'}).setOrigin(0.5);
-      const barBg=this.add.rectangle(x,CARDS_Y+23,54,5,0x000000,0.5).setOrigin(0.5);          // 主動技蓄力條(卡底內)
-      const barFill=this.add.rectangle(x-27,CARDS_Y+23,0,5,0x4f9e42).setOrigin(0,0.5);
-      const icon=this.add.text(x+22,CARDS_Y-22,'',{fontFamily:EMOJIFONT,fontSize:'14px'}).setOrigin(0.5).setVisible(false);
-      this.teamCards.push({rect,txt,barBg,barFill,icon,el:null,pulse:null});}
+      const storeObj=this.add.container(x,CARDS_Y,[]).setVisible(false);   // 屬塊存放顯示(疊在卡上,可拖)
+      // 主動技小按鈕(浮在卡上方,點放;外顯 affordance)
+      const abtn=this.add.container(x,CARDS_Y-40,[]);
+      const abg=this.add.circle(0,0,13,0x2b2014).setStrokeStyle(2,0x5a4128);
+      const aic=this.add.text(0,0,'',{fontFamily:EMOJIFONT,fontSize:'12px',color:'#fff'}).setOrigin(0.5);
+      abtn.add([abg,aic]); abtn.setSize(30,30).setInteractive(new Phaser.Geom.Rectangle(-15,-15,30,30),Phaser.Geom.Rectangle.Contains);
+      abtn.on('pointerup',()=>this.fireActive(i));
+      this.teamCards.push({rect,txt,storeObj,abtn,abg,aic,el:null,pulse:null});}
 
     // 我方血條 + 資訊列
     this.pHpBg=this.add.rectangle(BX0,PHP_Y,W-2*BX0,16,0x000000,0.5).setOrigin(0,0.5);
@@ -499,7 +513,9 @@ class GameScene extends Phaser.Scene{
     this.traySlots=[80,210,340]; this.trayHits=[];
     this.traySlots.forEach((sx,i)=>{const hit=this.add.rectangle(sx,TRAY_Y,128,100,0,0).setOrigin(0.5).setInteractive();hit.setData('slot',i);this.trayHits.push(hit);});
 
-    this.input.on('gameobjectdown',(p,obj)=>{const i=obj.getData('slot');
+    this.input.on('gameobjectdown',(p,obj)=>{
+      const si=obj.getData('store'); if(si!=null && this.stored && this.stored[si]){this.startStoredDrag(si,p);return;}   // 卡上有屬塊→拖
+      const i=obj.getData('slot');
       if(i!=null && this.tray[i] && !this.tray[i].used) this.startDrag(i,p);});
     this.input.on('pointermove',p=>{this.updateDrag(p);this.updateEarthMove(p);});
     this.input.on('pointerup',p=>{this.endDrag(p);this.endEarthMove(p);});
@@ -515,7 +531,8 @@ class GameScene extends Phaser.Scene{
     this.bgGfx.fillStyle(0x000000,0.25); this.bgGfx.fillEllipse(CX,BATTLE_CY+56,W*0.85,46);
     this.bgLine.setPosition(CX,BG_H);
     this.teamCards.forEach((card,i)=>{const x=54+i*78;card.rect.setPosition(x,CARDS_Y);card.txt.setPosition(x,CARDS_Y);
-      if(card.barBg)card.barBg.setPosition(x,CARDS_Y+23);if(card.barFill)card.barFill.setPosition(x-27,CARDS_Y+23);if(card.icon)card.icon.setPosition(x+22,CARDS_Y-22);});
+      if(card.storeObj)card.storeObj.setPosition(x,CARDS_Y);if(card.abtn)card.abtn.setPosition(x,CARDS_Y-40);});
+    this.renderStored();
     this.pHpBg.setPosition(BX0,PHP_Y);this.pHp.setPosition(BX0,PHP_Y);this.pHpTxt.setPosition(CX,PHP_Y);
     this.infoTxt.setPosition(CX,INFO_Y);
     for(let r=0;r<N;r++)for(let c=0;c<N;c++)this.cellRect(r,c).setPosition(BX0+c*CS,BY0+r*CS);
@@ -540,14 +557,15 @@ class GameScene extends Phaser.Scene{
     this.maxHP=Math.round(CONFIG.PLAYER_HP_BASE*((this.lead&&this.lead.type==='hp')?this.lead.v:1));
     this.playerHP=this.maxHP; this.stage=1; this.resultOpen=false; this.chests=0; this.gold=0; this.runDrops=[]; this.runExp=0; this.runCoins=0; this.runGems=0;
     this.charge=[0,0,0,0,0];   // 主動技蓄力(整場累積、跨關保留)
+    this.stored=[null,null,null,null,null];   // 每卡存放的屬塊 {el,lv}(跨關保留,新局/重挑才清)
     this.renderTeam(); this.startStage();
   }
   resetWave(){this.combo=0;this.immune=0;this.armor=0;this.amp=1;}
   startStage(keepBoard){
-    if(!keepBoard)this.board=Array.from({length:N},()=>Array(N).fill(null));   // 跨關保留盤面:只有新局/重挑才清盤,過關時累積到下一關
+    if(!keepBoard){this.board=Array.from({length:N},()=>Array(N).fill(null));this.stored=[null,null,null,null,null];}   // 跨關保留盤面+屬塊:只有新局/重挑才清,過關時累積到下一關的怪
     this.resetWave(); if(!keepBoard)this.morale=(this.lead&&this.lead.type==='moraleStart')?this.lead.v:CONFIG.MORALE_START; this.handCleared=false; this.handBurst=false; this.whiffStreak=0; this.refill();   // 鬥志:跨關保留(只新局/重挑才重置回起始)
     if(this.stage===1&&this.lead)this.time.delayedCall(450,()=>this.tonFloat('🎖 隊長技:'+this.lead.name,'#ffe08a'));
-    this.spawnEnemies(); this.refreshBoard(); this.renderTray(); this.updateAll(); this.renderCharges();
+    this.spawnEnemies(); this.refreshBoard(); this.renderTray(); this.updateAll(); this.renderCharges(); this.renderStored();
   }
   spawnEnemies(){
     if(this.enemyG)this.enemyG.destroy();
@@ -587,13 +605,28 @@ class GameScene extends Phaser.Scene{
     card.el=k;card.rect.setFillStyle(EL[k].color);card.txt.setText(EL[k].name);});
     this.renderCharges();}
   // 主動技蓄力條/發光/icon 同步
-  renderCharges(){if(!this.charge)return;this.teamCards.forEach((card,i)=>{const a=activeSkill(card.el);if(!a||!card.barFill)return;
-    const ready=(this.charge[i]||0)>=a.cd, frac=Math.min(1,(this.charge[i]||0)/a.cd);
-    card.barFill.displayWidth=54*frac; card.barFill.setFillStyle(ready?0xffd54a:0x4f9e42);
-    card.rect.setStrokeStyle(ready?3:2,ready?0xffe066:0x000000,ready?1:0.27);
-    card.icon.setText(ready?a.icon:'').setVisible(ready);
-    if(ready&&!card.pulse)card.pulse=this.tweens.add({targets:card.rect,scaleX:1.08,scaleY:1.08,duration:480,yoyo:true,repeat:-1,ease:'Sine.inOut'});
-    if(!ready&&card.pulse){card.pulse.stop();card.pulse=null;card.rect.setScale(1);}});}
+  renderCharges(){if(!this.charge)return;this.teamCards.forEach((card,i)=>{const a=activeSkill(card.el);
+    if(!card.abtn)return;
+    if(!a){card.abtn.setVisible(false);return;}
+    card.abtn.setVisible(true);
+    const ready=(this.charge[i]||0)>=a.cd;
+    card.abg.setFillStyle(ready?0x6a5020:0x2b2014).setStrokeStyle(2,ready?0xffe066:0x5a4128);
+    card.aic.setText(ready?a.icon:String(Math.max(0,a.cd-(this.charge[i]||0)))).setFontSize(ready?'14px':'11px');   // 滿→icon可點;否則顯示剩餘手數
+    if(ready&&!card.pulse)card.pulse=this.tweens.add({targets:card.abtn,scaleX:1.15,scaleY:1.15,duration:480,yoyo:true,repeat:-1,ease:'Sine.inOut'});
+    if(!ready&&card.pulse){card.pulse.stop();card.pulse=null;card.abtn.setScale(1);}});}
+  // 屬塊存放顯示:每卡疊一個迷你形狀+「拖 Lv」(有存才顯示,可拖到盤面)
+  renderStored(){if(!this.stored)return;this.teamCards.forEach((card,i)=>{const so=card.storeObj;if(!so)return;
+    so.removeAll(true);
+    const s=this.stored[i];
+    if(!s){so.setVisible(false);return;}
+    so.setVisible(true);
+    const cells=chakraShape(s.el,s.lv),col=EL[s.el].color;
+    let mr=0,mc=0;cells.forEach(([r,c])=>{mr=Math.max(mr,r);mc=Math.max(mc,c);});
+    const ms=Math.max(5,Math.floor(28/(Math.max(mr,mc)+1))),pw=(mc+1)*ms,ph=(mr+1)*ms;
+    so.add(this.add.rectangle(0,0,60,60,0x000000,0.5).setStrokeStyle(3,col,1));
+    cells.forEach(([dr,dc])=>so.add(this.add.rectangle(dc*ms-pw/2,(dr*ms-ph/2)-6,ms-1,ms-1,col).setOrigin(0)));
+    so.add(this.add.text(0,22,'拖 Lv'+s.lv,{fontFamily:EMOJIFONT,fontSize:'10px',color:'#fff',fontStyle:'bold'}).setOrigin(0.5).setStroke('#000',3));
+  });}
   // 發動主動技
   fireActive(i){if(this.resultOpen||this.drag||this.earthSel||this.earthDrag)return;
     const card=this.teamCards[i], a=activeSkill(card.el); if(!a)return;
@@ -636,12 +669,23 @@ class GameScene extends Phaser.Scene{
     const kc=kind==='water'?0x62b8f0:kind==='wind'?0x6ad06a:kind==='earth'?0xd49a4a:0xffffff;
     const kids=cells.map(([dr,dc])=>this.add.rectangle(dc*CS,dr*CS,RECT,RECT,kc).setOrigin(0));
     this.drag={i,cells,kind,prev:this.add.container(0,0,kids).setAlpha(0.85),kids};this.updateDrag(p);}
+  // 從卡拖「存放的屬塊」(萬用塊填空格;不佔托盤格→不推進敵,是連擊引擎)
+  startStoredDrag(i,p){if(this.resultOpen||this.drag||this.earthSel||this.earthDrag)return;
+    const s=this.stored[i]; if(!s)return;
+    const cells=chakraShape(s.el,s.lv), col=EL[s.el].color;
+    const kids=cells.map(([dr,dc])=>this.add.rectangle(dc*CS,dr*CS,RECT,RECT,col).setOrigin(0));
+    this.drag={store:i,cells,kind:'water',col,prev:this.add.container(0,0,kids).setAlpha(0.85),kids};this.updateDrag(p);}
+  doPlaceStored(d,r,c){if(this.resultOpen)return;
+    d.cells.forEach(([dr,dc])=>{const rr=r+dr,cc=c+dc;
+      if(rr>=0&&rr<N&&cc>=0&&cc<N&&!this.board[rr][cc])this.board[rr][cc]={el:this.boxElement[boxOf(rr,cc)]||'neutral'};});
+    this.stored[d.store]=null; this.renderStored();
+    this.afterAction(true);}   // fromBlock=true:不再生塊(防遞迴)、不佔托盤→不推進敵
   updateDrag(p){if(!this.drag)return;this.clearGhost();
     const cell=this.pointerToCell(p.x,p.y-DRAG_LIFT);
     if(!cell){this.drag.prev.setVisible(false);return;}
     this.drag.prev.setVisible(true).setPosition(BX0+cell.c*CS, BY0+cell.r*CS);
     const k=this.drag.kind, ok=canPlace(this.board,this.drag.cells,cell.r,cell.c,k);
-    const kc=k==='water'?0x62b8f0:k==='wind'?0x6ad06a:k==='earth'?0xd49a4a:0x8fffa6;
+    const kc=this.drag.col||(k==='water'?0x62b8f0:k==='wind'?0x6ad06a:k==='earth'?0xd49a4a:0x8fffa6);
     this.drag.kids.forEach(x=>x.setFillStyle(ok?kc:0xff8f8f));
     this.drag.cells.forEach(([dr,dc])=>{const rr=cell.r+dr,cc=cell.c+dc;if(rr<0||rr>=N||cc<0||cc>=N)return;
       let col;
@@ -654,7 +698,8 @@ class GameScene extends Phaser.Scene{
   endDrag(p){if(!this.drag)return;const cell=this.pointerToCell(p.x,p.y-DRAG_LIFT), d=this.drag;
     d.prev.destroy(); this.clearGhost(); this.drag=null;
     if(cell && canPlace(this.board,d.cells,cell.r,cell.c,d.kind)){
-      if(d.kind==='earth') this.earthSelect(d.i,cell.r,cell.c);
+      if(d.store!=null) this.doPlaceStored(d,cell.r,cell.c);
+      else if(d.kind==='earth') this.earthSelect(d.i,cell.r,cell.c);
       else this.doPlace(d.i,cell.r,cell.c);
     }}
   clearGhost(){this.cells.forEach(rc=>rc.setStrokeStyle(2,0x000000,0));}
@@ -756,6 +801,7 @@ class GameScene extends Phaser.Scene{
     const topLv=topEl?data.fx[topEl].level:0;
     const aoe=(topLv>=4)||(this.morale>=5), victims=aoe?this.enemies.filter(e=>!e.dead):[tgt];   // LV4+大消除 或 鬥志「極」=全體
     Object.keys(data.fx).forEach(e=>{const f=data.fx[e];f.attrs.forEach(a=>this.fireAttr(a,f.atk,f.level,tgt));});
+    if(!this.fromBlock)Object.keys(data.fx).forEach(e=>this.storeBlock(e,data.fx[e].level));   // 清宮→生成該屬形狀塊存到卡(萬用塊清出的消除不再生塊)
     if(topEl)this.showJutsu(topEl,data.fx[topEl].level);
     data.cells.forEach(([r,c])=>{const rc=this.cellRect(r,c);
       this.tweens.add({targets:rc,scaleX:1.14,scaleY:1.14,duration:90,yoyo:true});});
@@ -773,18 +819,20 @@ class GameScene extends Phaser.Scene{
     this.updateEnemies();
     this.time.delayedCall(460,()=>{this.refreshBoard(); this.updateAll(); victims.forEach(v=>{if(v.hp<=0)this.killEnemy(v);});});
   }
+  // 形狀系統:火/水/風/土/雷 的主技=生成形狀塊存到卡(在 resolve 統一處理 storeBlock);fireAttr 只剩子屬性 陰/陽
   fireAttr(a,atk,lv,tgt){const A=CONFIG.ATTR;switch(a){
-    case 'fire':tgt.burn+=Math.round(atk*A.fire_burn_rate*lv);this.tonFloat('燒LV'+lv,'#ff7a63');break;
-    case 'thunder':tgt.timer+=lv;this.tonFloat('麻LV'+lv,'#f4da52');break;
-    case 'wind':if(!this.fromBlock)this.spawnBlock(lv,'wind');break;
-    case 'earth':if(!this.fromBlock)this.spawnBlock(lv,'earth');break;   // 土=生成搬移塊(可移動查克拉)
-    case 'water':if(!this.fromBlock)this.spawnBlock(lv,'water');break;
-    case 'yang':{const v=Math.round(atk*A.yang_heal_rate*lv);this.playerHP=Math.min(this.maxHP,this.playerHP+v);this.tonFloat('癒+'+v,'#74e09a');break;}
-    case 'yin':this.amp=Math.max(this.amp,1+(A.yin_amp-1)*lv);this.tonFloat('增傷LV'+lv,'#b18cff');break;
+    case 'yang':{const v=Math.round(atk*A.yang_heal_rate*lv);this.playerHP=Math.min(this.maxHP,this.playerHP+v);this.tonFloat('☯陽·癒+'+v,'#74e09a');break;}   // 陽=回血(已砍)
+    case 'yin':this.amp=Math.max(this.amp,2);this.tonFloat('☯陰·傷害×2','#b18cff');break;   // 陰=本手傷害×2(快殺)
   }}
-  spawnBlock(lv,kind){const slot=this.tray.findIndex(t=>t.used); if(slot<0)return;
-    this.tray[slot]={c:(WILD_SHAPES[Math.min(7,lv)]||[[0,0]]).map(x=>x.slice()),used:false,kind:kind};
-    this.renderTray(); this.tonFloat((kind==='wind'?'風刃':kind==='earth'?'移地塊':'純查克拉')+'LV'+lv, kind==='wind'?'#6ad06a':kind==='earth'?'#d49a4a':'#62b8f0');}
+  // 存放屬塊到「該屬性的卡」:優先填空卡,否則升級最低階那張;每卡最多1塊、留最高LV(上限LV5)
+  storeBlock(el,lv){if(!this.stored)this.stored=[null,null,null,null,null];
+    lv=Math.max(1,Math.min(5,lv));
+    const slots=[]; this.teamCards.forEach((c,i)=>{if(c.el===el)slots.push(i);});
+    if(!slots.length)return;
+    let target=slots.find(i=>!this.stored[i]);
+    if(target==null){target=slots.reduce((a,b)=>this.stored[b].lv<this.stored[a].lv?b:a,slots[0]); if(this.stored[target].lv>=lv)return;}
+    this.stored[target]={el,lv}; this.renderStored();
+    this.tonFloat(EL[el].name+'塊Lv'+lv+'→存卡','#'+EL[el].color.toString(16).padStart(6,'0'));}
 
   enemyAttack(e){
     this.tweens.add({targets:e.sprite,y:e.sprite.y+30,duration:150,yoyo:true});
