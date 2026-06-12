@@ -270,9 +270,9 @@ function leadSkill(id){return LEADER_SKILLS[id]||null;}
 /* 主動技:戰鬥中蓄力(每出滿一手+1),蓄滿點該卡發動;依卡片屬性給效果(玩家主動決策層) */
 const ACTIVE_SKILLS={
   fire:   {name:'業火奔流',cd:5,icon:'🔥',desc:'對全體敵造成 攻擊×3 傷害'},
-  water:  {name:'回春之泉',cd:4,icon:'💧',desc:'回復 30% HP + 洗換托盤'},
+  water:  {name:'回春之泉',cd:4,icon:'💧',desc:'回復 30% 生命'},
   thunder:{name:'封雷結界',cd:4,icon:'⚡',desc:'全體敵出手延遲 +3 手'},
-  earth:  {name:'大地整復',cd:5,icon:'🪨',desc:'清空盤面查克拉(重開盤面)'},
+  earth:  {name:'大地整復',cd:5,icon:'🪨',desc:'洗換手中的查克拉塊(換新一手)'},
   wind:   {name:'疾風亂舞',cd:5,icon:'🌀',desc:'鬥志直接衝到「極」'},
 };
 function activeSkill(el){return ACTIVE_SKILLS[el]||null;}
@@ -584,7 +584,7 @@ class GameScene extends Phaser.Scene{
   resetWave(){this.combo=0;this.immune=0;this.armor=0;this.amp=1;}
   startStage(keepBoard){
     if(!keepBoard){this.board=Array.from({length:N},()=>Array(N).fill(null));this.stored=[null,null,null,null,null];}   // 跨關保留盤面+屬塊:只有新局/重挑才清,過關時累積到下一關的怪
-    this.resetWave(); if(!keepBoard)this.morale=(this.lead&&this.lead.type==='moraleStart')?this.lead.v:CONFIG.MORALE_START; this.handCleared=false; this.handBurst=false; this.whiffStreak=0; this.refill();   // 鬥志:跨關保留(只新局/重挑才重置回起始)
+    this.resetWave(); if(!keepBoard)this.morale=(this.lead&&this.lead.type==='moraleStart')?this.lead.v:CONFIG.MORALE_START; this.handCleared=false; this.handBurst=false; this.whiffStreak=0; if(!keepBoard)this.refill();   // 鬥志+托盤:跨關保留(只新局/重挑才重置/換新托盤)
     if(this.stage===1&&this.lead)this.time.delayedCall(450,()=>this.tonFloat('🎖 隊長技:'+this.lead.name,'#ffe08a'));
     this.spawnEnemies(); this.refreshBoard(); this.renderTray(); this.updateAll(); this.renderCharges(); this.renderStored();
     if(this.stage===1 && !tutSeen())this.showTutorial();   // 首次遊玩→3 步教學
@@ -661,10 +661,10 @@ class GameScene extends Phaser.Scene{
         vs.forEach(v=>{v.hp=Math.max(0,v.hp-dmg);this.floatText(v.sprite.x,v.sprite.y-24,'-'+dmg,'#ff8f8f');});
         this.cameras.main.shake(320,0.014);this.burstFX(vs.length);this.updateEnemies();
         vs.forEach(v=>{if(v.hp<=0)this.killEnemy(v);});break;}
-      case 'water':{const h=Math.round(this.maxHP*0.3);this.playerHP=Math.min(this.maxHP,this.playerHP+h);   // 回血+洗托盤
-        this.floatText(CX,PHP_Y-14,'癒+'+h,'#74e09a');this.refill();this.renderTray();break;}
+      case 'water':{const h=Math.round(this.maxHP*0.3);this.playerHP=Math.min(this.maxHP,this.playerHP+h);   // 純補血(不再洗托盤)
+        this.floatText(CX,PHP_Y-14,'癒+'+h,'#74e09a');break;}
       case 'thunder':this.enemies.forEach(e=>{if(!e.dead){e.timer+=3;if(e.sprite)this.floatText(e.sprite.x,e.sprite.y-24,'封+3','#f4da52');}});break;   // 凍結
-      case 'earth':this.board=Array.from({length:N},()=>Array(N).fill(null));this.refreshBoard();this.tonFloat('整地完成','#d49a4a');break;   // 清盤
+      case 'earth':this.refill();this.renderTray();this.tonFloat('洗換一手查克拉塊','#d49a4a');break;   // 換新一手托盤塊(原水的洗托盤移來這)
       case 'wind':{const m0=this.morale;this.morale=5;if(this.morale!==m0)this.moraleFX(5,true);break;}   // 鬥志衝極
     }
     this.updateAll();this.renderCharges();}
