@@ -619,7 +619,7 @@ class GameScene extends Phaser.Scene{
       mk(-13,'🎖 隊長技 · '+ld.name,'21px','#ffe08a',5);
       mk(15,ld.desc,'14px','#ffeec4',4);
     });
-    this.spawnEnemies(); this.refreshBoard(); this.renderTray(); this.updateAll(); this.renderCharges(); this.renderStored();
+    this.spawnEnemies(); this.refreshBoard(); this.renderTray(); this.updateAll(); this.renderCharges(); this.renderStored(); this.syncMoraleState();   // 進關依目前鬥志同步「極」脈動(跨關帶來的極要持續演)
     if(this.stage===1 && !tutSeen())this.showTutorial();   // 首次遊玩→3 步教學
   }
   spawnEnemies(){
@@ -804,7 +804,7 @@ class GameScene extends Phaser.Scene{
   endHand(){
     const m0=this.morale;   // 鬥志(上重下輕):暴擊手=直接衝到「極」(九尾形態);一般清除手=+1升到「超」封頂;連MORALE_GRACE手完全空手才−1階
     if(!this.handCleared){ this.whiffStreak=(this.whiffStreak||0)+1; if(this.whiffStreak>=(CONFIG.MORALE_GRACE+((this.lead&&this.lead.type==='moraleGrace')?this.lead.v:0))){this.morale=Math.max(0,this.morale-1);this.whiffStreak=0;} }
-    else { this.whiffStreak=0; if(this.handBurst)this.morale=5; else this.morale=Math.min(4,this.morale+1); }
+    else { this.whiffStreak=0; if(this.handBurst)this.morale=5; else if(this.morale<5)this.morale=Math.min(4,this.morale+1); }   // 已在「極」時一般清除手不掉階(極=絕好調持續狀態,只連續空手才降)→ 不再 極→超→極 重覆觸發
     this.handCleared=false; this.handBurst=false;
     if(this.morale!==m0)this.moraleFX(this.morale,this.morale>m0);
     this.enemies.forEach(e=>{if(!e.dead&&e.burn>0){e.hp=Math.max(0,e.hp-e.burn);
@@ -1024,19 +1024,23 @@ class GameScene extends Phaser.Scene{
     this.time.delayedCall(380,()=>this.tonFloat('✦ 屬塊已存到卡上 — 可拖下來用!','#ffe08a'));
   }
   // 鬥志階變演出;升到「極」=全體解放超模式
+  // 鬥志階變:全部演在「鬥志圈圈」裡(不在盤面出字)。升/降彈一下+擴散一圈該階色光;進入「極」後交給 syncMoraleState 跑常駐脈動
   moraleFX(tier,up){
-    const names=CONFIG.MORALE_NAMES, cols=['#99aabb','#9ac4e0','#ffffff','#ffd24a','#ff9a3a','#ff5a3a'];
-    const t=this.add.text(CX,BOARD_CY+54,'鬥志'+(up?'↑ ':'↓ ')+names[tier],{fontFamily:EMOJIFONT,fontSize:'21px',color:cols[tier],fontStyle:'bold',stroke:'#000',strokeThickness:3}).setOrigin(0.5).setDepth(DEPTH.fx).setScale(0.6);
-    this.tweens.add({targets:t,scale:1,y:t.y-18,duration:240,ease:'Back.out'});
-    this.tweens.add({targets:t,alpha:0,delay:480,duration:300,onComplete:()=>t.destroy()});
-    if(tier>=5){ // 極:超模式爆發(全消除轉全體)
-      this.cameras.main.shake(300,0.013);
-      const fl=this.add.rectangle(CX,H/2,W,H,0xff5a3a,0).setDepth(DEPTH.flash);
-      this.tweens.add({targets:fl,alpha:0.4,duration:120,yoyo:true,onComplete:()=>fl.destroy()});
-      const big=this.add.text(CX,BOARD_CY,'極・全體解放!',{fontFamily:EMOJIFONT,fontSize:'32px',color:'#ffe04a',fontStyle:'bold',stroke:'#7a1500',strokeThickness:6}).setOrigin(0.5).setDepth(DEPTH.fx).setScale(0.4).setAngle(-5);
-      this.tweens.add({targets:big,scale:1.1,duration:240,ease:'Back.out'});
-      this.tweens.add({targets:big,alpha:0,delay:760,duration:320,onComplete:()=>big.destroy()});
-    }
+    if(!this.moraleBg)return;
+    const bx=this.moraleBg.x, by=this.moraleBg.y, tg=[this.moraleBg,this.moraleTx];
+    if(this.moralePulse){this.moralePulse.stop();this.moralePulse=null;}
+    this.tweens.killTweensOf(tg); tg.forEach(o=>o.setScale(up?1.5:0.72));   // 升=放大回彈、降=縮一下
+    this.tweens.add({targets:tg,scaleX:1,scaleY:1,duration:300,ease:'Back.out',onComplete:()=>this.syncMoraleState()});   // 彈完→依目前鬥志決定要不要跑「極」脈動
+    const col=parseInt((['99aabb','9ac4e0','ffffff','ffd24a','ff9a3a','ff5a3a'][tier]||'ffd56a'),16);   // 擴散環:該階色,在徽章處 ping 一下
+    const ring=this.add.circle(bx,by,15,0x000000,0).setStrokeStyle(3,col,1).setDepth(DEPTH.fx);
+    this.tweens.add({targets:ring,scale:tier>=5?3.2:2.1,alpha:0,duration:tier>=5?560:420,ease:'Quad.out',onComplete:()=>ring.destroy()});
+  }
+  // 讓「極=絕好調」的常駐脈動與目前鬥志同步(進關帶來的極、階變後都呼叫):極→脈動,非極→停
+  syncMoraleState(){
+    if(!this.moraleBg)return;
+    if(this.moralePulse){this.moralePulse.stop();this.moralePulse=null;}
+    this.moraleBg.setScale(1); this.moraleTx.setScale(1);
+    if(this.morale>=5)this.moralePulse=this.tweens.add({targets:[this.moraleBg,this.moraleTx],scaleX:1.2,scaleY:1.2,duration:480,yoyo:true,repeat:-1,ease:'Sine.inOut'});
   }
   showJutsu(el,lv){const name=KATA[lv-1]+'・'+JUTSU[el][lv-1];const col='#'+EL[el].color.toString(16).padStart(6,'0');
     const t=this.add.text(CX-50,BY0-28,name,{fontFamily:EMOJIFONT,fontSize:(15+lv*4)+'px',color:col,fontStyle:'bold',stroke:'#000',strokeThickness:3}).setOrigin(0.5).setAlpha(0).setDepth(DEPTH.fx);
