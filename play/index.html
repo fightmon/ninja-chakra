@@ -1118,33 +1118,33 @@ class CollectionScene extends Phaser.Scene{
     const cd=ROSTER.find(c=>c.id===this.sel); if(!cd)return;
     const owned=loadOwned(), n=owned[cd.id]||0, lv=getCardLv(cd.id), atk=cardAtk(cd.id), exp=getCardExp(cd.id), need=expToNext(lv), mx=lv>=MAXLV;
     const no='No.'+cd.id.replace(/\D/g,'').padStart(3,'0'), ev=getCardEvo(cd.id), atMax=ev>=EVO_MAX, chk=canEvolve(cd.id);
-    this.rect(CX,H/2,W,H,0x000000,0.74).setInteractive();   // 遮罩(擋住後方網格)
-    const py=Math.round(H*0.42);
-    this.rect(CX,py,380,452,0x1c140c).setStrokeStyle(2,0xffd56a);
-    this.txt(CX,py-204,cd.name+'  '+starStr(cd.id),'17px','#f3e9d8',0.5,true);
-    this.rect(CX,py-166,150,50,EL[cd.el].color).setStrokeStyle(2,0x000000,0.3);
-    this.txt(CX,py-166,EL[cd.el].name,'20px','#1a1208',0.5,true);
-    this.txt(CX,py-128,EL[cd.el].name+'屬 · '+RANKNAME[cd.rank]+(ev>0?' · 進化+'+ev:'')+' · '+no,'11px','#ffd56a',0.5);
-    this.txt(CX,py-106,'持有 ×'+n+'      Lv.'+lv+(mx?' (MAX)':' / '+MAXLV),'12px','#cfe0e8',0.5);
-    this.txt(CX,py-83,'⚔️ 攻擊 '+atk+'   (基礎 '+cd.atk+(atk>cd.atk?' → '+atk:'')+')','12px','#ffd9a0',0.5);
-    this.rect(CX-160,py-62,320,9,0x000000,0.4).setOrigin(0,0.5);
-    this.rect(CX-160,py-62,320*(mx?1:Math.min(1,exp/need)),9,0x6ac0ff).setOrigin(0,0.5);
-    this.txt(CX,py-62,mx?'MAX':('EXP '+exp+' / '+need),'8px','#bfe0ff',0.5);
-    this.rect(CX,py-46,344,1,0x5a4128);
-    this.txt(CX-170,py-36,'【主技】'+(EL_SKILL[cd.el]||'—'),'10px','#dfeae8',0);
+    this.rect(CX,H/2,W,H,0x000000,0.78).setInteractive();   // 遮罩(擋住後方網格)
+    const py=Math.round(H/2);                                // 視窗上下置中
+    this.rect(CX,py,406,536,0x1c140c).setStrokeStyle(2,0xffd56a);
+    this.txt(CX,py-244,cd.name+'  '+starStr(cd.id),'20px','#f3e9d8',0.5,true);
+    this.rect(CX,py-178,100,100,EL[cd.el].color).setStrokeStyle(3,0x000000,0.35);   // 正方形卡圖
+    this.txt(CX,py-178,EL[cd.el].name,'46px','#1a1208',0.5,true);
+    this.txt(CX,py-110,EL[cd.el].name+'屬 · '+RANKNAME[cd.rank]+(ev>0?' · 進化+'+ev:'')+' · '+no,'13px','#ffd56a',0.5);
+    this.txt(CX,py-85,'持有 ×'+n+'      Lv.'+lv+(mx?' (MAX)':' / '+MAXLV),'14px','#cfe0e8',0.5);
+    this.txt(CX,py-61,'⚔️ 攻擊 '+atk+'   (基礎 '+cd.atk+')','14px','#ffd9a0',0.5);
+    this.rect(CX-172,py-40,344,10,0x000000,0.4).setOrigin(0,0.5);
+    this.rect(CX-172,py-40,344*(mx?1:Math.min(1,exp/need)),10,0x6ac0ff).setOrigin(0,0.5);
+    this.txt(CX,py-40,mx?'MAX':('EXP '+exp+' / '+need),'9px','#bfe0ff',0.5);
+    this.rect(CX,py-22,362,1,0x5a4128);
+    this.txt(CX-178,py-8,'【主技】'+(EL_SKILL[cd.el]||'—'),'12px','#dfeae8',0);
     const subs=cd.attrs.slice(1).filter(a=>SUB_SKILL[a]);
-    this.txt(CX-170,py-20,'【副技】'+(subs.length?subs.map(a=>SUB_SKILL[a]).join('  '):'無'),'10px','#c8b8e8',0);
-    {const ls=leadSkill(cd.id);this.txt(CX-170,py-4,'🎖【隊長技】'+(ls?ls.name+':'+ls.desc:'—'),'9px','#ffd9a0',0);}
-    {const ac=activeSkill(cd.el);this.txt(CX-170,py+12,'⚡【主動技】'+(ac?ac.name+':'+ac.desc:'—'),'9px','#a8d8ff',0);}
-    this.btn(CX,py+38,320,38,'⬆️ 強化合成',()=>{this.scene.manager.start('fuse',{target:cd.id});this.scene.manager.stop('collection');},{col:0x2e3a22,stroke:0x6aaa4c,color:'#eafce0',bold:true,fs:'14px'});
+    this.txt(CX-178,py+12,'【副技】'+(subs.length?subs.map(a=>SUB_SKILL[a]).join('  '):'無'),'12px','#c8b8e8',0);
+    {const ls=leadSkill(cd.id);this.txt(CX-178,py+32,'🎖【隊長技】'+(ls?ls.name+':'+ls.desc:'—'),'11px','#ffd9a0',0);}
+    {const ac=activeSkill(cd.el);this.txt(CX-178,py+52,'⚡【主動技】'+(ac?ac.name+':'+ac.desc:'—'),'11px','#a8d8ff',0);}
+    this.btn(CX,py+88,330,38,'⬆️ 強化合成',()=>{this.scene.manager.start('fuse',{target:cd.id});this.scene.manager.stop('collection');},{col:0x2e3a22,stroke:0x6aaa4c,color:'#eafce0',bold:true,fs:'14px'});
     let eL,eO;
     if(atMax){eL='✨ 進化已滿 '+starStr(cd.id);eO={col:0x241a10,stroke:0x3a2e1c,color:'#7a6a4a',fs:'13px'};}
     else if(chk.ok){eL='✨ 進化 → ★'+(cardStars(cd.id)+1)+'(消'+chk.req.gems+'寶玉)';eO={col:0x3a2a4a,stroke:0xb18cff,color:'#e8d8ff',bold:true,fs:'13px'};}
     else {eL='✨ 進化:'+chk.msg;eO={col:0x241a10,stroke:0x4a3a5a,color:'#9a8aba',fs:'10px'};}
-    this.btn(CX,py+82,320,38,eL,()=>{const r=evolveCard(cd.id);this.toast(r.ok?('✨ 進化成功! '+starStr(cd.id)):r.msg);this.rebuild();},eO);
-    this.btn(CX-83,py+126,150,36,'🛡️ 設為隊長',()=>{setLeader(cd.id);this.toast(cd.name+' → 隊長');this.rebuild();},{col:0x2e2a3a,stroke:0x5a6a8a,color:'#cfe0ff',fs:'12px'});
-    this.btn(CX+83,py+126,150,36,'🗑️ 分解 💰',()=>{const r=dissolveCard(cd.id);this.toast(r.ok?('分解 +'+r.gain+' 金'):r.msg);this.rebuild();},{col:0x3a2a1a,stroke:0x8a6a3a,color:'#ffd9a0',fs:'12px'});
-    this.btn(CX,py+168,150,34,'✖️ 關閉',()=>{this.sel=null;this.rebuild();},{stroke:0x5a4128,color:'#cfc0a8',fs:'12px'});
+    this.btn(CX,py+130,330,38,eL,()=>{const r=evolveCard(cd.id);this.toast(r.ok?('✨ 進化成功! '+starStr(cd.id)):r.msg);this.rebuild();},eO);
+    this.btn(CX-87,py+172,158,36,'🛡️ 設為隊長',()=>{setLeader(cd.id);this.toast(cd.name+' → 隊長');this.rebuild();},{col:0x2e2a3a,stroke:0x5a6a8a,color:'#cfe0ff',fs:'12px'});
+    this.btn(CX+87,py+172,158,36,'🗑️ 分解 💰',()=>{const r=dissolveCard(cd.id);this.toast(r.ok?('分解 +'+r.gain+' 金'):r.msg);this.rebuild();},{col:0x3a2a1a,stroke:0x8a6a3a,color:'#ffd9a0',fs:'12px'});
+    this.btn(CX,py+212,158,34,'✖️ 關閉',()=>{this.sel=null;this.rebuild();},{stroke:0x5a4128,color:'#cfc0a8',fs:'12px'});
   }
 }
 
