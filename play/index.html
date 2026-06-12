@@ -543,8 +543,8 @@ class GameScene extends Phaser.Scene{
     this.renderTeam(); this.startStage();
   }
   resetWave(){this.combo=0;this.immune=0;this.armor=0;this.amp=1;}
-  startStage(){
-    this.board=Array.from({length:N},()=>Array(N).fill(null));
+  startStage(keepBoard){
+    if(!keepBoard)this.board=Array.from({length:N},()=>Array(N).fill(null));   // 跨關保留盤面:只有新局/重挑才清盤,過關時累積到下一關
     this.resetWave(); this.morale=(this.lead&&this.lead.type==='moraleStart')?this.lead.v:CONFIG.MORALE_START; this.handCleared=false; this.handBurst=false; this.whiffStreak=0; this.refill();   // 鬥志起始(隊長技可拉高)
     if(this.stage===1&&this.lead)this.time.delayedCall(450,()=>this.tonFloat('🎖 隊長技:'+this.lead.name,'#ffe08a'));
     this.spawnEnemies(); this.refreshBoard(); this.renderTray(); this.updateAll(); this.renderCharges();
@@ -813,7 +813,7 @@ class GameScene extends Phaser.Scene{
     if(_rw._ups>0)this.tonFloat('🆙 等級提升! Lv.'+_rw.rank,'#ffe04a');
     if(this.stage>=this.dungeon.stages.length){markDungeonCleared(this.dungeonId);this.chests++;this.time.delayedCall(600,()=>this.showResult(true));return;}
     this.stage++; this.chests++; this.playerHP=Math.min(this.maxHP,this.playerHP+150);
-    this.time.delayedCall(700,()=>this.startStage());
+    this.time.delayedCall(700,()=>this.startStage(true));   // 帶 true:不清盤,盤面累積到下一關的怪
   }
   reshuffle(){if(this.playerHP<=CONFIG.RESHUFFLE_COST){this.gameOver('生命不足、無法再提煉');return;}
     this.playerHP-=CONFIG.RESHUFFLE_COST; this.refill(); this.renderTray(); this.updateAll();}
