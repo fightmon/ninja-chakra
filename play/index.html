@@ -580,7 +580,7 @@ class GameScene extends Phaser.Scene{
     if(this.tray)this.renderTray();
     this.enemies.forEach(e=>{if(!e.card||e.dead)return;const x=e.card.x,cy=BATTLE_CY,sz=e.cardH;
       e.card.setPosition(x,cy);
-      e.turnG.setPosition(x,cy+sz/2-20);e.hpBg.setPosition(x,cy+sz/2-9);e.hpFill.setPosition(e.hpx,cy+sz/2-9);e.mark.setPosition(x,cy-sz/2-9);
+      e.turnG.setPosition(x,cy+sz/2-14);e.hpBg.setPosition(x,cy+sz/2-3);e.hpFill.setPosition(e.hpx,cy+sz/2-3);e.mark.setPosition(x,cy-sz/2-9);
       const fy=e.img?cy:cy-Math.round(sz*0.14);if(e.img)e.sprite.setDisplaySize(sz,sz);e.baseScale=e.sprite.scaleX;if(e.bob)e.bob.stop();e.sprite.setPosition(x,fy);e.bob=this.tweens.add({targets:e.sprite,y:fy-4,duration:1200,yoyo:true,repeat:-1,ease:'Sine.inOut'});});
   }
 
@@ -629,10 +629,10 @@ class GameScene extends Phaser.Scene{
       }
       e.baseScale=e.sprite.scaleX;   // 受擊縮放動畫的基準(圖=szc/320、emoji=1),回彈要回到這個值,不能歸 1
       e.sprite.on('pointerdown',()=>this.selectTarget(i));
-      e.turnG=this.add.container(x,cy+szc/2-20,[]);   // 回合數方塊:壓在敵圖下方
+      e.turnG=this.add.container(x,cy+szc/2-14,[]);   // 回合數方塊:壓在敵圖下方(再往下 6px)
       e.hpW=szc-10; e.hpx=x-e.hpW/2;
-      e.hpBg=this.add.rectangle(x,cy+szc/2-9,e.hpW,8,0x000000,0.6).setOrigin(0.5);   // HP:壓在敵圖下緣
-      e.hpFill=this.add.rectangle(e.hpx,cy+szc/2-9,e.hpW,8,e.boss?0xff7a3a:0xc23c2c).setOrigin(0,0.5);
+      e.hpBg=this.add.rectangle(x,cy+szc/2-3,e.hpW,8,0x000000,0.6).setOrigin(0.5);   // HP:壓在敵圖下緣(再往下 6px)
+      e.hpFill=this.add.rectangle(e.hpx,cy+szc/2-3,e.hpW,8,e.boss?0xff7a3a:0xc23c2c).setOrigin(0,0.5);
       e.mark=this.add.text(x,cy-szc/2-9,'▼',{fontFamily:EMOJIFONT,fontSize:'14px',color:'#ffd56a',fontStyle:'bold'}).setOrigin(0.5).setVisible(false);   // 目標指標(取代黃框)
       e.bob=this.tweens.add({targets:e.sprite,y:e.sprite.y-4,duration:1200,yoyo:true,repeat:-1,ease:'Sine.inOut'});
       [e.card,e.sprite,e.turnG,e.hpBg,e.hpFill,e.mark].forEach(o=>this.enemyG.add(o));
