@@ -300,6 +300,8 @@ function mutSave(fn){const s=loadSave();fn(s);writeSave(s);return s;}
 function loadOwned(){return loadSave().owned;}
 function addCard(id){return mutSave(s=>{s.owned[id]=(s.owned[id]||0)+1;}).owned[id];}
 function isOwned(id){return !!loadSave().owned[id];}
+function tutSeen(){return !!((loadSave().settings||{}).tut);}              // 新手教學看過沒
+function setTutSeen(){mutSave(s=>{s.settings=s.settings||{};s.settings.tut=true;});}
 function ownedCount(){const o=loadSave().owned;return ROSTER.filter(c=>o[c.id]).length;}
 function saveTeam(ids){mutSave(s=>{s.team=ids.slice(0,5);});}
 function loadTeam(){return loadSave().team;}
@@ -585,6 +587,7 @@ class GameScene extends Phaser.Scene{
     this.resetWave(); if(!keepBoard)this.morale=(this.lead&&this.lead.type==='moraleStart')?this.lead.v:CONFIG.MORALE_START; this.handCleared=false; this.handBurst=false; this.whiffStreak=0; this.refill();   // 鬥志:跨關保留(只新局/重挑才重置回起始)
     if(this.stage===1&&this.lead)this.time.delayedCall(450,()=>this.tonFloat('🎖 隊長技:'+this.lead.name,'#ffe08a'));
     this.spawnEnemies(); this.refreshBoard(); this.renderTray(); this.updateAll(); this.renderCharges(); this.renderStored();
+    if(this.stage===1 && !tutSeen())this.showTutorial();   // 首次遊玩→3 步教學
   }
   spawnEnemies(){
     if(this.enemyG)this.enemyG.destroy();
@@ -1019,8 +1022,33 @@ class GameScene extends Phaser.Scene{
     g.add(this.add.text(CX,cy-110,'選單',{fontFamily:EMOJIFONT,fontSize:'22px',color:'#f3e9d8',fontStyle:'bold'}).setOrigin(0.5));
     this.mkBtn(g,cy-50,'繼續戰鬥',()=>{g.destroy();this.resultOpen=false;});
     this.mkBtn(g,cy+8,'🏠 回大廳(放棄本關)',()=>{this.scene.manager.start('home');this.scene.manager.stop('game');});
-    this.mkBtn(g,cy+66,'說明(待做)',()=>{});
+    this.mkBtn(g,cy+66,'📖 新手教學',()=>{g.destroy();this.resultOpen=false;this.showTutorial(true);},0x3a4a5c);
     this.mkBtn(g,cy+124,'📖 卡冊(放棄本關)',()=>{this.scene.manager.start('collection');this.scene.manager.stop('game');});}
+  // 首次遊玩 3 步教學(replay=true 從選單重看,不影響已看過旗標)
+  showTutorial(replay){
+    this.resultOpen=true;
+    const steps=[
+      {ic:'🧩',t:'拼塊 × 打怪',b:'把方塊拖進 9×9 盤面,\n填滿一整「列 / 行 / 宮(3×3)」\n就會消除 → 攻擊敵人!'},
+      {ic:'⭐',t:'屬塊保存(招牌玩法)',b:'消除一個「宮」會生成屬塊,\n存到對應的忍卡上。\n把它拖到盤面湊更多消除,\n還能囤到 boss 一次狂放!'},
+      {ic:'⚡',t:'相剋 & 大招',b:'帶相剋屬性更強:\n火→風→雷→土→水→火。\n卡片「上方的小鈕」蓄滿會發亮,\n點一下放大招!'},
+    ];
+    let i=0;
+    const show=()=>{
+      const g=this.add.container(0,0).setDepth(1500);
+      g.add(this.add.rectangle(CX,H/2,W,H,0x0a0805,0.92).setInteractive());
+      const cy=H/2, s=steps[i], last=i>=steps.length-1;
+      g.add(this.add.text(CX,cy-198,'新手教學   '+(i+1)+' / '+steps.length,{fontFamily:EMOJIFONT,fontSize:'13px',color:'#ffd56a',fontStyle:'bold'}).setOrigin(0.5));
+      g.add(this.add.text(CX,cy-120,s.ic,{fontFamily:EMOJIFONT,fontSize:'58px'}).setOrigin(0.5));
+      g.add(this.add.text(CX,cy-52,s.t,{fontFamily:EMOJIFONT,fontSize:'21px',color:'#ffe08a',fontStyle:'bold'}).setOrigin(0.5));
+      g.add(this.add.text(CX,cy+30,s.b,{fontFamily:EMOJIFONT,fontSize:'15px',color:'#f3e9d8',align:'center',lineSpacing:7}).setOrigin(0.5));
+      let dots='';for(let k=0;k<steps.length;k++)dots+=(k===i?'●':'○')+'  ';
+      g.add(this.add.text(CX,cy+118,dots.trim(),{fontFamily:EMOJIFONT,fontSize:'15px',color:'#ffd56a'}).setOrigin(0.5));
+      this.mkBtn(g,cy+166,last?'開始戰鬥! ⚔':'下一步 →',()=>{g.destroy();if(last){if(!replay)setTutSeen();this.resultOpen=false;}else{i++;show();}},last?0x3a5a2c:0x3a2c1d);
+      if(!last){const sk=this.add.text(CX,cy+218,'跳過教學',{fontFamily:EMOJIFONT,fontSize:'13px',color:'#9fb0c0'}).setOrigin(0.5).setInteractive();
+        sk.on('pointerup',()=>{g.destroy();if(!replay)setTutSeen();this.resultOpen=false;});g.add(sk);}
+    };
+    show();
+  }
 }
 
 /* ===== 卡冊 → 背包(怪物箱):網格 → 點卡進詳細頁 + 操作 ===== */
