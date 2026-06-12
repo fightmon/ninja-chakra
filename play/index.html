@@ -278,7 +278,7 @@ const ACTIVE_SKILLS={
 function activeSkill(el){return ACTIVE_SKILLS[el]||null;}
 /* F6 統一存檔:持有卡 / 編隊 / 進度 / 設定 一個物件全自動存 localStorage */
 const SAVE_KEY='ninja_save';
-function defaultMeta(){return {rank:1,exp:0,coins:0,stones:5,stamina:50,staminaMax:50,staTs:null};}
+function defaultMeta(){return {rank:1,exp:0,coins:0,stones:30,stamina:50,staminaMax:50,staTs:null,pity:0};}   // 首登送 30 鑽;pity=結印轉蛋保底計數
 function defaultSave(){const owned={};STARTER.forEach(id=>owned[id]=1);return {owned,team:STARTER.slice(),cardLv:{},cardEvo:{},gems:{fire:0,water:0,thunder:0,earth:0,wind:0},progress:{cleared:false,clears:0,bestStage:0},meta:defaultMeta(),settings:{}};}
 function writeSave(s){try{localStorage.setItem(SAVE_KEY,JSON.stringify(s));}catch(e){}}
 function loadSave(){let s=null;try{s=JSON.parse(localStorage.getItem(SAVE_KEY));}catch(e){}
@@ -386,9 +386,20 @@ const GACHA={
 function rollRarity(rates){const r=Math.random();let acc=0;for(let k=0;k<rates.length;k++){acc+=rates[k][1];if(r<acc)return rates[k][0];}return rates[rates.length-1][0];}
 function gachaPull(bankey){const pool=RANK_POOL[rollRarity(GACHA[bankey].rates)];return pool[rnd(pool.length)];}
 function spendCoins(n){let ok=false;mutSave(s=>{if((s.meta.coins||0)>=n){s.meta.coins-=n;ok=true;}});return ok;}
+const PITY_MAX=50;   // 結印轉蛋保底:第 50 抽必得影忍(kage)
+function getPity(){return loadSave().meta.pity||0;}
+function setPity(n){mutSave(s=>{s.meta.pity=n;});}
 function doGacha(bankey,count){const b=GACHA[bankey],cost=count===10?b.cost10:b.cost1;
   const ok=b.cur==='stones'?spendStones(cost):spendCoins(cost); if(!ok)return null;
-  const out=[]; for(let i=0;i<count;i++){const c=gachaPull(bankey);out.push({cd:c,isNew:!isOwned(c.id)});addCard(c.id);} return out;}
+  const out=[];
+  for(let i=0;i<count;i++){let c,pityHit=false;
+    if(bankey==='premium'){let p=getPity();
+      if(p>=PITY_MAX-1){c=RANK_POOL.kage[rnd(RANK_POOL.kage.length)];setPity(0);pityHit=true;}   // 第50抽保底:必影忍
+      else{c=gachaPull(bankey);if(c.rank==='kage')setPity(0);else setPity(p+1);}                  // 抽到影忍歸零、否則+1
+    }else{c=gachaPull(bankey);}
+    out.push({cd:c,isNew:!isOwned(c.id),pity:pityHit});addCard(c.id);
+  }
+  return out;}
 
 /* ===== 出戰編隊 ===== */
 class TeamScene extends Phaser.Scene{
@@ -565,6 +576,7 @@ class GameScene extends Phaser.Scene{
     this.playerHP=this.maxHP; this.stage=1; this.resultOpen=false; this.chests=0; this.gold=0; this.runDrops=[]; this.runExp=0; this.runCoins=0; this.runGems=0;
     this.charge=[0,0,0,0,0];   // 主動技蓄力(整場累積、跨關保留)
     this.stored=[null,null,null,null,null];   // 每卡存放的屬塊 {el,lv}(跨關保留,新局/重挑才清)
+    this.firstClear=true;   // 新手鉤子:本場第一次消除=隆重慶祝
     this.renderTeam(); this.startStage();
   }
   resetWave(){this.combo=0;this.immune=0;this.armor=0;this.amp=1;}
@@ -828,6 +840,7 @@ class GameScene extends Phaser.Scene{
     if(data.hitWeak)tgt.timer+=1;
     if(this.combo>=2)this.comboPopup(this.combo);
     if(data.groups>=2)this.burstFX(data.groups);
+    if(this.firstClear){this.firstClear=false;this.firstClearFX();}   // 本場第一次消除→爆炸演出+提示拖屬塊
     let pi=0;
     data.parts.forEach(pt=>{if(pt.d<=0)return;const o=this.cellCenter(pt.r,pt.c), isN=pt.el==='neutral';
       this.projectile(o.x,o.y,tgt.sprite.x,tgt.sprite.y,isN?'✦':EL[pt.el].fx,isN?0xe8d8b0:EL[pt.el].color,pi*70,pt.d,tgt);
@@ -936,6 +949,16 @@ class GameScene extends Phaser.Scene{
     const t=this.add.text(CX,BATTLE_CY+30,label+' ×'+g+'!',{fontFamily:EMOJIFONT,fontSize:(38+g*4)+'px',color:'#ffd24a',fontStyle:'bold',stroke:'#7a3000',strokeThickness:6}).setOrigin(0.5).setDepth(61).setScale(0.3).setAngle(-6);
     this.tweens.add({targets:t,scale:1.1,duration:200,ease:'Back.out'});
     this.tweens.add({targets:t,alpha:0,delay:560,duration:260,onComplete:()=>t.destroy()});
+  }
+  // 新手鉤子:每場第一次消除 = 隆重慶祝(全螢幕閃光+震動+大字+提示拖屬塊)
+  firstClearFX(){
+    this.cameras.main.shake(300,0.014);
+    const flash=this.add.rectangle(CX,H/2,W,H,0xffe8a0,0).setDepth(60);
+    this.tweens.add({targets:flash,alpha:0.5,duration:90,yoyo:true,onComplete:()=>flash.destroy()});
+    const t=this.add.text(CX,BATTLE_CY+30,'結 印 成 功!',{fontFamily:EMOJIFONT,fontSize:'40px',color:'#ffe04a',fontStyle:'bold',stroke:'#7a1500',strokeThickness:7}).setOrigin(0.5).setDepth(62).setScale(0.3).setAngle(-5);
+    this.tweens.add({targets:t,scale:1.12,duration:240,ease:'Back.out'});
+    this.tweens.add({targets:t,alpha:0,delay:680,duration:300,onComplete:()=>t.destroy()});
+    this.time.delayedCall(380,()=>this.tonFloat('✦ 屬塊已存到卡上 — 可拖下來用!','#ffe08a'));
   }
   // 鬥志階變演出;升到「極」=全體解放超模式
   moraleFX(tier,up){
