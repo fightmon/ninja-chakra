@@ -303,7 +303,7 @@ function isOwned(id){return !!loadSave().owned[id];}
 function tutSeen(){return !!((loadSave().settings||{}).tut);}              // 新手教學看過沒
 function setTutSeen(){mutSave(s=>{s.settings=s.settings||{};s.settings.tut=true;});}
 /* ===== 匿名埋點(D1/D7 回流;無個資)===== */
-const ANALYTICS_URL = '';   // ← 部署 Worker 後填入,例如 'https://ninja-stats.xxx.workers.dev'(結尾不要斜線)
+const ANALYTICS_URL = 'https://ninja-stats.fightmon.workers.dev';   // 匿名埋點後台(D1/D7)
 function anonId(){let id=localStorage.getItem('ninja_aid');if(!id){id='a'+Math.random().toString(36).slice(2,10)+Date.now().toString(36);localStorage.setItem('ninja_aid',id);}return id;}
 function track(ev){if(!ANALYTICS_URL)return;try{const body=JSON.stringify({id:anonId(),event:ev});
   if(navigator.sendBeacon)navigator.sendBeacon(ANALYTICS_URL+'/e',body);else fetch(ANALYTICS_URL+'/e',{method:'POST',body:body,keepalive:true});}catch(e){}}
