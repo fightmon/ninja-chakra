@@ -1079,7 +1079,7 @@ class CollectionScene extends Phaser.Scene{
     this.scale.on('resize',()=>{const o=H;recomputeLayout();if(Math.abs(H-o)>3){this.scale.setGameSize(W,H);this.rebuild();}});}
   rebuild(){if(this.layer)this.layer.destroy();this.layer=this.add.container(0,0);this.draw();}
   L(o){this.layer.add(o);return o;}
-  txt(x,y,s,size,col,ox,bold){return this.L(this.add.text(x,y,s,{fontFamily:EMOJIFONT,fontSize:Math.max(13,parseInt(size||'14',10)||14)+'px',color:col||'#f3e9d8',fontStyle:bold?'bold':'normal'}).setOrigin(ox==null?0.5:ox,0.5));}   // 全選單字級最小 13px(手機可讀)
+  txt(x,y,s,size,col,ox,bold){return this.L(this.add.text(x,y,s,{fontFamily:EMOJIFONT,fontSize:Math.max(15,parseInt(size||'16',10)||16)+'px',color:col||'#f3e9d8',fontStyle:bold?'bold':'normal'}).setOrigin(ox==null?0.5:ox,0.5));}   // 全選單字級最小 15px(手機可讀)
   rect(x,y,w,h,col,a){return this.L(this.add.rectangle(x,y,w,h,col,a==null?1:a));}
   btn(x,y,w,h,label,cb,o){o=o||{};const r=this.L(this.add.rectangle(x,y,w,h,o.col==null?0x2b2014:o.col).setStrokeStyle(2,o.stroke==null?0x5a4128:o.stroke).setInteractive());
     if(label)this.txt(x,y,label,o.fs||'14px',o.color||'#f3e9d8',0.5,o.bold);r.on('pointerup',cb);return r;}
@@ -1157,7 +1157,7 @@ class HomeScene extends Phaser.Scene{
     this.scale.on('resize',()=>{const o=H;recomputeLayout();if(Math.abs(H-o)>3){this.scale.setGameSize(W,H);this.rebuild();}});}
   rebuild(){this.tweens.killAll();if(this.layer)this.layer.destroy();this.layer=this.add.container(0,0);this.topBar();this.body();this.nav();}
   L(o){this.layer.add(o);return o;}
-  txt(x,y,s,size,col,ox,bold){return this.L(this.add.text(x,y,s,{fontFamily:EMOJIFONT,fontSize:Math.max(13,parseInt(size||'14',10)||14)+'px',color:col||'#f3e9d8',fontStyle:bold?'bold':'normal'}).setOrigin(ox==null?0.5:ox,0.5));}   // 全選單字級最小 13px(手機可讀)
+  txt(x,y,s,size,col,ox,bold){return this.L(this.add.text(x,y,s,{fontFamily:EMOJIFONT,fontSize:Math.max(15,parseInt(size||'16',10)||16)+'px',color:col||'#f3e9d8',fontStyle:bold?'bold':'normal'}).setOrigin(ox==null?0.5:ox,0.5));}   // 全選單字級最小 15px(手機可讀)
   rect(x,y,w,h,col,a){return this.L(this.add.rectangle(x,y,w,h,col,a==null?1:a));}
   btn(x,y,w,h,label,cb,o){o=o||{};const r=this.L(this.add.rectangle(x,y,w,h,o.col==null?0x2b2014:o.col).setStrokeStyle(2,o.stroke==null?0x5a4128:o.stroke).setInteractive());
     this.txt(x,y,label,o.fs||'15px',o.color||'#f3e9d8',0.5,o.bold);r.on('pointerup',cb);return r;}
@@ -1288,7 +1288,7 @@ class FuseScene extends Phaser.Scene{
     this.scale.on('resize',()=>{const o=H;recomputeLayout();if(Math.abs(H-o)>3){this.scale.setGameSize(W,H);this.rebuild();}});}
   rebuild(){if(this.layer)this.layer.destroy();this.layer=this.add.container(0,0);this.draw();}
   L(o){this.layer.add(o);return o;}
-  txt(x,y,s,size,col,ox,bold){return this.L(this.add.text(x,y,s,{fontFamily:EMOJIFONT,fontSize:Math.max(13,parseInt(size||'14',10)||14)+'px',color:col||'#f3e9d8',fontStyle:bold?'bold':'normal'}).setOrigin(ox==null?0.5:ox,0.5));}   // 全選單字級最小 13px(手機可讀)
+  txt(x,y,s,size,col,ox,bold){return this.L(this.add.text(x,y,s,{fontFamily:EMOJIFONT,fontSize:Math.max(15,parseInt(size||'16',10)||16)+'px',color:col||'#f3e9d8',fontStyle:bold?'bold':'normal'}).setOrigin(ox==null?0.5:ox,0.5));}   // 全選單字級最小 15px(手機可讀)
   rect(x,y,w,h,col,a){return this.L(this.add.rectangle(x,y,w,h,col,a==null?1:a));}
   btn(x,y,w,h,label,cb,o){o=o||{};const r=this.L(this.add.rectangle(x,y,w,h,o.col==null?0x2b2014:o.col).setStrokeStyle(2,o.stroke==null?0x5a4128:o.stroke).setInteractive());
     if(label)this.txt(x,y,label,o.fs||'14px',o.color||'#f3e9d8',0.5,o.bold);r.on('pointerup',cb);return r;}
