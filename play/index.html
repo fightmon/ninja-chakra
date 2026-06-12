@@ -302,6 +302,11 @@ function addCard(id){return mutSave(s=>{s.owned[id]=(s.owned[id]||0)+1;}).owned[
 function isOwned(id){return !!loadSave().owned[id];}
 function tutSeen(){return !!((loadSave().settings||{}).tut);}              // 新手教學看過沒
 function setTutSeen(){mutSave(s=>{s.settings=s.settings||{};s.settings.tut=true;});}
+/* ===== 匿名埋點(D1/D7 回流;無個資)===== */
+const ANALYTICS_URL = '';   // ← 部署 Worker 後填入,例如 'https://ninja-stats.xxx.workers.dev'(結尾不要斜線)
+function anonId(){let id=localStorage.getItem('ninja_aid');if(!id){id='a'+Math.random().toString(36).slice(2,10)+Date.now().toString(36);localStorage.setItem('ninja_aid',id);}return id;}
+function track(ev){if(!ANALYTICS_URL)return;try{const body=JSON.stringify({id:anonId(),event:ev});
+  if(navigator.sendBeacon)navigator.sendBeacon(ANALYTICS_URL+'/e',body);else fetch(ANALYTICS_URL+'/e',{method:'POST',body:body,keepalive:true});}catch(e){}}
 function ownedCount(){const o=loadSave().owned;return ROSTER.filter(c=>o[c.id]).length;}
 function saveTeam(ids){mutSave(s=>{s.team=ids.slice(0,5);});}
 function loadTeam(){return loadSave().team;}
@@ -401,6 +406,7 @@ function doGacha(bankey,count){const b=GACHA[bankey],cost=count===10?b.cost10:b.
     }else{c=gachaPull(bankey);}
     out.push({cd:c,isNew:!isOwned(c.id),pity:pityHit});addCard(c.id);
   }
+  track('gacha');
   return out;}
 
 /* ===== 出戰編隊 ===== */
@@ -570,6 +576,7 @@ class GameScene extends Phaser.Scene{
     if(r<0||r>=N||c<0||c>=N)return null;return {r,c};}
 
   newGame(){
+    track('battle_start');
     this.boxElement={}; this.boxCard={};
     if(this.presetTeam) ELEMENT_BOXES.forEach((b,i)=>{const card=this.presetTeam[i];this.boxCard[b]=card;this.boxElement[b]=card.el;});
     else ELEMENT_BOXES.forEach(b=>{const card=ROSTER[rnd(ROSTER.length)];this.boxCard[b]=card;this.boxElement[b]=card.el;});
@@ -955,6 +962,7 @@ class GameScene extends Phaser.Scene{
   }
   // 新手鉤子:每場第一次消除 = 隆重慶祝(全螢幕閃光+震動+大字+提示拖屬塊)
   firstClearFX(){
+    track('first_clear');
     this.cameras.main.shake(300,0.014);
     const flash=this.add.rectangle(CX,H/2,W,H,0xffe8a0,0).setDepth(60);
     this.tweens.add({targets:flash,alpha:0.5,duration:90,yoyo:true,onComplete:()=>flash.destroy()});
@@ -994,7 +1002,7 @@ class GameScene extends Phaser.Scene{
   mkBtn(g,y,label,cb,col){const r=this.add.rectangle(CX,y,220,46,col||0x3a2c1d).setStrokeStyle(2,0x5a4128).setInteractive();
     const t=this.add.text(CX,y,label,{fontFamily:EMOJIFONT,fontSize:'15px',color:'#f3e9d8'}).setOrigin(0.5);
     r.on('pointerup',cb);g.add(r);g.add(t);}
-  showResult(win){this.resultOpen=true;const g=this.overlay();const cy=H/2;
+  showResult(win){this.resultOpen=true;if(win)track('dungeon_win');const g=this.overlay();const cy=H/2;
     g.add(this.add.text(CX,cy-150,win?'🏆 通關 '+this.dungeon.name+'!':'☠️ 敗北',{fontFamily:EMOJIFONT,fontSize:'26px',color:win?'#ffd56a':'#ff8f8f',fontStyle:'bold'}).setOrigin(0.5));
     g.add(this.add.text(CX,cy-110,win?(this.dungeon.name+' · '+this.dungeon.stages.length+' 關全清!'):'第 '+this.stage+' 關失敗',{fontFamily:EMOJIFONT,fontSize:'14px',color:'#f3e9d8'}).setOrigin(0.5));
     if(win){
@@ -1043,9 +1051,9 @@ class GameScene extends Phaser.Scene{
       g.add(this.add.text(CX,cy+30,s.b,{fontFamily:EMOJIFONT,fontSize:'15px',color:'#f3e9d8',align:'center',lineSpacing:7}).setOrigin(0.5));
       let dots='';for(let k=0;k<steps.length;k++)dots+=(k===i?'●':'○')+'  ';
       g.add(this.add.text(CX,cy+118,dots.trim(),{fontFamily:EMOJIFONT,fontSize:'15px',color:'#ffd56a'}).setOrigin(0.5));
-      this.mkBtn(g,cy+166,last?'開始戰鬥! ⚔':'下一步 →',()=>{g.destroy();if(last){if(!replay)setTutSeen();this.resultOpen=false;}else{i++;show();}},last?0x3a5a2c:0x3a2c1d);
+      this.mkBtn(g,cy+166,last?'開始戰鬥! ⚔':'下一步 →',()=>{g.destroy();if(last){if(!replay){setTutSeen();track('tut_done');}this.resultOpen=false;}else{i++;show();}},last?0x3a5a2c:0x3a2c1d);
       if(!last){const sk=this.add.text(CX,cy+218,'跳過教學',{fontFamily:EMOJIFONT,fontSize:'13px',color:'#9fb0c0'}).setOrigin(0.5).setInteractive();
-        sk.on('pointerup',()=>{g.destroy();if(!replay)setTutSeen();this.resultOpen=false;});g.add(sk);}
+        sk.on('pointerup',()=>{g.destroy();if(!replay){setTutSeen();track('tut_skip');}this.resultOpen=false;});g.add(sk);}
     };
     show();
   }
@@ -1319,6 +1327,7 @@ window.GAME = new Phaser.Game({
   scale:{mode:Phaser.Scale.FIT, autoCenter:Phaser.Scale.CENTER_BOTH, width:W, height:H},
   scene:[HomeScene, TeamScene, GameScene, CollectionScene, FuseScene],
 });
+track('open');   // 開遊戲心跳(回流追蹤;ANALYTICS_URL 空時自動 no-op)
 // 真機轉向 / 瀏覽器縮放 / 網址列伸縮 → 即時重算高度 + 重排(不黑邊、不用重整)
 window.addEventListener('resize',function(){
   const o=H; recomputeLayout();
