@@ -207,6 +207,9 @@ const W=420, CX=210;
 const CS=40, RECT=37, BX0=30, DRAG_LIFT=66;
 // 戰鬥畫面 z-index 分層(由下往上):背景→敵方→我方卡→鬥志/HP→盤面→托盤→暫態特效→nav(最高);暫態特效字壓在盤面之上、僅次 nav
 const DEPTH={bg:0, enemy:10, card:20, hp:30, morale:32, store:34, abtn:38, board:40, tray:50, drag:56, proj:60, flash:62, fx:66, nav:90};
+// 色彩工具:shadeColor(往白/往黑)、lerpColor(兩色內插)→ 給屬塊「明暗漸層流動」用
+function shadeColor(col,f){let r=(col>>16)&255,g=(col>>8)&255,b=col&255;if(f>=0){r+=(255-r)*f;g+=(255-g)*f;b+=(255-b)*f;}else{const k=1+f;r*=k;g*=k;b*=k;}return (Math.round(r)<<16)|(Math.round(g)<<8)|Math.round(b);}
+function lerpColor(a,b,t){const A=[(a>>16)&255,(a>>8)&255,a&255],B=[(b>>16)&255,(b>>8)&255,b&255];return (Math.round(A[0]+(B[0]-A[0])*t)<<16)|(Math.round(A[1]+(B[1]-A[1])*t)<<8)|Math.round(A[2]+(B[2]-A[2])*t);}
 // 註:卡身(card)壓在 HP/鬥志之下(照規格);但「卡上的屬塊(store)與主技鈕(abtn)」是可拖/可點的前景配件,提到 HP/鬥志之上才不會被擋住。兩者空間上不與盤面重疊,故仍排在 board 之下無妨。
 // 版面高度依「當下」裝置比例算(尺寸變化時即時重算),FIT 不黑邊;上下錨定
 let H,TRAY_Y,BY0,CARDS_Y,PHP_Y,INFO_Y,BG_H,BATTLE_CY,BOARD_CY;
@@ -674,21 +677,29 @@ class GameScene extends Phaser.Scene{
     card.aic.setText(ready?a.icon:String(Math.max(0,a.cd-(this.charge[i]||0)))).setFontSize(ready?'14px':'11px');   // 滿→icon可點;否則顯示剩餘手數
     if(ready&&!card.pulse)card.pulse=this.tweens.add({targets:card.abtn,scaleX:1.15,scaleY:1.15,duration:480,yoyo:true,repeat:-1,ease:'Sine.inOut'});
     if(!ready&&card.pulse){card.pulse.stop();card.pulse=null;card.abtn.setScale(1);}});}
-  // 屬塊存放顯示:無框無底,只畫亮白塊本體;新生時彈出一下、平時輕脈動(讓人注意到卻不花)
+  // 屬塊存放顯示:無框無底,元素色塊+「明暗漸層流動」(查克拉在屬性裡流的感覺);新生時彈出一下
   renderStored(){if(!this.stored)return;this.teamCards.forEach((card,i)=>{const so=card.storeObj;if(!so)return;
     so.removeAll(true);
     const s=this.stored[i], key=s?s.el+'_'+s.lv:null;
     if(card.txt)card.txt.setVisible(!s);   // 有屬塊→元素字讓位給屬塊(免字塊相疊變花;元素仍由卡底色辨識)
-    if(!s){so.setVisible(false); if(card.storePulse){card.storePulse.stop();card.storePulse=null;} card.storeKey=null; return;}
+    if(!s){so.setVisible(false); card.storeCells=null; card.storeKey=null; return;}
     so.setVisible(true);
-    const cells=s.cells||chakraShape(s.el,s.lv);
+    const cells=s.cells||chakraShape(s.el,s.lv), col=EL[s.el].color;
+    card.storeDark=shadeColor(col,-0.42); card.storeLight=shadeColor(col,0.55);   // 流動兩端:暗↔亮的同屬性色
     let mr=0,mc=0;cells.forEach(([r,c])=>{mr=Math.max(mr,r);mc=Math.max(mc,c);});
-    const ms=12,pw=(mc+1)*ms,ph=(mr+1)*ms;   // 格大小反映真實 LV(格數)
-    const inner=this.add.container(0,0); so.add(inner);   // 內層=塊本體(彈出動畫專用,與外層常駐脈動分開→兩個 scale tween 不打架)
-    cells.forEach(([dr,dc])=>inner.add(this.add.rectangle(dc*ms-pw/2,dr*ms-ph/2,ms-1,ms-1,0xfff2e0).setOrigin(0).setStrokeStyle(1,0x1a1208,0.7)));   // 亮白塊+深細邊:卡是元素色,塊用白才不撞色、任何底色上都看得清
-    if(!card.storePulse){so.setScale(1);card.storePulse=this.tweens.add({targets:so,scaleX:1.1,scaleY:1.1,duration:820,yoyo:true,repeat:-1,ease:'Sine.inOut'});}   // 常駐輕脈動=「這裡有可拖的屬塊」
-    if(card.storeKey!==key){card.storeKey=key;inner.setScale(0.2);this.tweens.add({targets:inner,scaleX:1,scaleY:1,duration:320,ease:'Back.out'});}else inner.setScale(1);   // 新生/升級才彈出一次(醒目);平時只有輕脈動,不亂閃
+    const ms=12,pw=(mc+1)*ms,ph=(mr+1)*ms, span=(mr+mc)||1;   // 格大小反映真實 LV(格數)
+    const inner=this.add.container(0,0); so.add(inner);   // 內層=塊本體(彈出動畫專用,與流動上色分開)
+    const objs=[];
+    cells.forEach(([dr,dc])=>{const rc=this.add.rectangle(dc*ms-pw/2,dr*ms-ph/2,ms-1,ms-1,col).setOrigin(0).setStrokeStyle(1,0x140d05,0.6); inner.add(rc); objs.push({obj:rc,phase:(dr+dc)/span});});   // 細深邊→撞色卡上也看得清塊形;phase=沿塊身的流動相位
+    card.storeCells=objs;
+    if(card.storeKey!==key){card.storeKey=key;inner.setScale(0.2);this.tweens.add({targets:inner,scaleX:1,scaleY:1,duration:320,ease:'Back.out'});}else inner.setScale(1);   // 新生/升級才彈出一次(醒目);平時靠漸層流動,不亂閃
   });}
+  // 每幀驅動屬塊的明暗漸層流動(沿塊身相位差→像能量在流);無屬塊的卡略過
+  update(time){
+    if(!this.teamCards)return;
+    for(const card of this.teamCards){const cs=card.storeCells; if(!cs)continue;
+      for(const c of cs){const frac=0.5+0.5*Math.sin(time*0.005 - c.phase*3.4); c.obj.setFillStyle(lerpColor(card.storeDark,card.storeLight,frac));}}
+  }
   // 發動主動技
   fireActive(i){if(this.resultOpen||this.drag||this.earthSel||this.earthDrag)return;
     const card=this.teamCards[i], a=activeSkill(card.el); if(!a)return;
