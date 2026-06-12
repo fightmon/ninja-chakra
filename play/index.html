@@ -212,8 +212,8 @@ function recomputeLayout(){
   const vw=(el&&el.clientWidth)?el.clientWidth:((typeof window!=='undefined'&&window.innerWidth)?window.innerWidth:390);
   const vh=(el&&el.clientHeight)?el.clientHeight:((typeof window!=='undefined'&&window.innerHeight)?window.innerHeight:844);
   H=Math.max(640,Math.min(1400,Math.round(W*vh/vw)));   // 涵蓋約 1.52~3.33 的長寬比
-  TRAY_Y=H-58; BY0=TRAY_Y-66-9*CS; CARDS_Y=BY0-74; PHP_Y=BY0-30; INFO_Y=BY0-12;
-  BG_H=BY0+22; BATTLE_CY=Math.round(CARDS_Y/2);   // 背景延伸到盤面上緣+22(讓盤面壓上來);漸層帶另在 drawBG 取 ~1/3
+  TRAY_Y=H-46; BY0=TRAY_Y-52-9*CS; CARDS_Y=BY0-50; PHP_Y=BY0-16; INFO_Y=BY0-2;   // 板面/托盤盡量往下、卡列貼緊板面 → 上方戰鬥區留多一點
+  BG_H=BY0+22; BATTLE_CY=Math.round((CARDS_Y-29)/2);   // 背景延伸到盤面上緣+22;敵人置中於 nav(26) 與主動技鈕(CARDS_Y-55) 之間
 }
 recomputeLayout();
 const EMOJIFONT='"Segoe UI Emoji","Microsoft JhengHei",sans-serif';
@@ -537,7 +537,6 @@ class GameScene extends Phaser.Scene{
     // 鬥志徽章:單字,疊在 HP 條左端(z 高於血條)
     this.moraleBg=this.add.circle(BX0+14,PHP_Y,15,0x1a140c,0.92).setStrokeStyle(2,0xffd56a).setDepth(6);
     this.moraleTx=this.add.text(BX0+14,PHP_Y,'普',{fontFamily:EMOJIFONT,fontSize:'17px',color:'#fff',fontStyle:'bold'}).setOrigin(0.5).setDepth(7);
-    this.infoTxt=this.add.text(CX,INFO_Y,'',{fontFamily:EMOJIFONT,fontSize:'11px',color:'#ffd56a',fontStyle:'bold'}).setOrigin(0.5);
 
     // 結印區
     for(let r=0;r<N;r++)for(let c=0;c<N;c++)
@@ -573,7 +572,6 @@ class GameScene extends Phaser.Scene{
     this.renderStored();
     this.pHpBg.setPosition(BX0,PHP_Y);this.pHp.setPosition(BX0,PHP_Y);this.pHpTxt.setPosition(CX,PHP_Y);
     if(this.moraleBg){this.moraleBg.setPosition(BX0+14,PHP_Y);this.moraleTx.setPosition(BX0+14,PHP_Y);}
-    this.infoTxt.setPosition(CX,INFO_Y);
     for(let r=0;r<N;r++)for(let c=0;c<N;c++)this.cellRect(r,c).setPosition(BX0+c*CS,BY0+r*CS);
     for(let b=0;b<9;b++){const br=Math.floor(b/3)*3,bc=(b%3)*3,cen=this.cellCenter(br+1,bc+1);this.boxLabels[b].setPosition(cen.x,cen.y);}
     this.trayHits.forEach(h=>h.setPosition(h.x,TRAY_Y));
@@ -617,7 +615,7 @@ class GameScene extends Phaser.Scene{
     this.enemies=defs.map(d=>({el:d.el,max:d.hp,hp:d.hp,atk:d.atk,interval:d.turns,timer:d.turns,burn:0,dead:false,boss:!!d.boss}));
     const n=this.enemies.length, slot=380/n;
     this.enemies.forEach((e,i)=>{
-      const x=20+slot*(i+0.5), cardW=Math.min(slot-10,90), cardH=Math.min(108,Math.round(cardW*1.16)), cy=BATTLE_CY, sz=Math.round(cardH*0.42);
+      const x=20+slot*(i+0.5), cardW=Math.min(slot-10,90), cardH=Math.max(44,Math.min(108,Math.round(cardW*1.16),Math.round((CARDS_Y-81)*0.92))), cy=BATTLE_CY, sz=Math.round(cardH*0.42);   // 敵卡高=塞進 nav~CD鈕 的空檔(矮螢幕自動縮小,絕不擠到我方卡)
       e.cardW=cardW; e.cardH=cardH;
       e.sel=this.add.rectangle(x,cy,cardW+8,cardH+8,0xffd56a,0).setStrokeStyle(3,0xffd56a,0);
       e.card=this.add.rectangle(x,cy,cardW,cardH,EL[e.el].color,1).setStrokeStyle(2,0x000000,0.45).setInteractive();   // 敵卡圖=底
@@ -940,13 +938,7 @@ class GameScene extends Phaser.Scene{
     this.pHpTxt.setText('我方 '+this.playerHP+'/'+this.maxHP);
     this.chestTxt.setText('📦 '+(this.chests||0)); this.goldTxt.setText('💰 '+(this.gold||0));
     const mcol=['#99aabb','#9ac4e0','#ffffff','#ffd24a','#ff9a3a','#ff5a3a'][this.morale]||'#ffd56a';
-    if(this.moraleTx){this.moraleTx.setText(CONFIG.MORALE_NAMES[this.morale]).setColor(mcol);this.moraleBg.setStrokeStyle(2,parseInt(mcol.slice(1),16));}
-    const s=['鬥志 ×'+CONFIG.MORALE_MULT[this.morale]];   // 鬥志名改用左端徽章顯示,此處只留倍率
-    if(this.combo>0)s.push('連印'+this.combo);
-    if(this.armor>0)s.push('🛡'+Math.round(this.armor*100)+'%');
-    if(this.immune>0)s.push('✦避'+this.immune);if(this.amp>1)s.push('⚡×'+this.amp.toFixed(1));
-    this.infoTxt.setText(s.join('   '));
-    this.infoTxt.setColor(mcol);
+    if(this.moraleTx){this.moraleTx.setText(CONFIG.MORALE_NAMES[this.morale]).setColor(mcol);this.moraleBg.setStrokeStyle(2,parseInt(mcol.slice(1),16));}   // 鬥志=左端徽章;原「鬥志×1」資訊列已移除以釋放高度
   }
 
   /* 特效 */
