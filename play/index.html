@@ -545,7 +545,7 @@ class GameScene extends Phaser.Scene{
   resetWave(){this.combo=0;this.immune=0;this.armor=0;this.amp=1;}
   startStage(keepBoard){
     if(!keepBoard)this.board=Array.from({length:N},()=>Array(N).fill(null));   // 跨關保留盤面:只有新局/重挑才清盤,過關時累積到下一關
-    this.resetWave(); this.morale=(this.lead&&this.lead.type==='moraleStart')?this.lead.v:CONFIG.MORALE_START; this.handCleared=false; this.handBurst=false; this.whiffStreak=0; this.refill();   // 鬥志起始(隊長技可拉高)
+    this.resetWave(); if(!keepBoard)this.morale=(this.lead&&this.lead.type==='moraleStart')?this.lead.v:CONFIG.MORALE_START; this.handCleared=false; this.handBurst=false; this.whiffStreak=0; this.refill();   // 鬥志:跨關保留(只新局/重挑才重置回起始)
     if(this.stage===1&&this.lead)this.time.delayedCall(450,()=>this.tonFloat('🎖 隊長技:'+this.lead.name,'#ffe08a'));
     this.spawnEnemies(); this.refreshBoard(); this.renderTray(); this.updateAll(); this.renderCharges();
   }
