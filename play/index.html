@@ -938,9 +938,11 @@ class GameScene extends Phaser.Scene{
   updateAll(){this.updateEnemies();this.updateBars();}
   updateEnemies(){this.enemies.forEach((e,i)=>{if(e.dead)return;
     e.hpFill.displayWidth=e.hpW*Math.max(0,e.hp/e.max);
-    e.turnG.removeAll(true);   // 回合數方塊:剩幾手出手→幾個紅方塊(壓在敵圖下方、HP 上方)
-    const k=Math.max(0,e.timer), bw=9, gap=3, tot=k*bw+(k-1)*gap;
-    for(let j=0;j<k;j++)e.turnG.add(this.add.rectangle(j*(bw+gap)-tot/2+bw/2,0,bw,9,0xff5a4a).setStrokeStyle(1,0x000000,0.55));
+    e.turnG.removeAll(true);   // 敵出手進度條:離出手越近→條越短、顏色綠→黃→紅(壓在敵圖下方、HP 上方)
+    const tw=e.hpW, iv=Math.max(1,e.interval), tm=Math.max(0,e.timer), frac=Math.max(0,Math.min(1,tm/iv));
+    const tcol=tm<=1?0xff4632:(tm===2?0xffae2a:0x5ad44a);   // 1手內=紅(下一手就揍)、2手=黃、≥3手=綠
+    e.turnG.add(this.add.rectangle(0,0,tw,6,0x000000,0.5).setOrigin(0.5));   // 底軌(滿寬、半透黑)
+    e.turnG.add(this.add.rectangle(-tw/2,0,Math.max(4,Math.round(tw*frac)),6,tcol).setOrigin(0,0.5));   // 進度填充:左端對齊、長度=剩餘手數比例
     e.mark.setVisible(i===this.target);});}
   updateBars(){
     this.pHp.displayWidth=(W-2*BX0)*Math.max(0,this.playerHP/this.maxHP);
