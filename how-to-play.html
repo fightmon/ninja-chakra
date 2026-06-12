@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>忍塊查克拉 — 30 秒上手</title>
+<style>
+  :root{
+    --fire:#e8513a; --water:#3a9be8; --wind:#4caf72; --thunder:#e6c12f; --earth:#c8803a;
+    --bg:#161210; --panel:#221a13; --panel2:#2c2117; --line:#3a2c1d;
+    --ink:#f0e6d2; --ink2:#c8b89a; --gold:#ffd56a;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;background:linear-gradient(180deg,#1b2733 0%,#161210 38%);color:var(--ink);
+    font-family:"Noto Sans TC","PingFang TC","Microsoft JhengHei",system-ui,sans-serif;line-height:1.7;
+    -webkit-text-size-adjust:100%;padding:0 0 60px;}
+  .wrap{max-width:620px;margin:0 auto;padding:0 18px;}
+  header{text-align:center;padding:34px 18px 22px;}
+  header .logo{font-size:13px;letter-spacing:4px;color:var(--gold);font-weight:700;}
+  header h1{font-size:30px;margin:6px 0 4px;letter-spacing:1px;}
+  header p{margin:4px 0 0;color:var(--ink2);font-size:15px;}
+  h2{font-size:19px;margin:34px 0 12px;display:flex;align-items:center;gap:9px;}
+  h2 .n{flex:none;width:28px;height:28px;border-radius:8px;background:var(--gold);color:#2a1d0a;
+    font-size:15px;font-weight:800;display:grid;place-items:center;}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:16px 16px;margin:10px 0;}
+  .card.lead{background:linear-gradient(135deg,#2c2238,#221a13);border-color:#5a4a7a;}
+  p{margin:8px 0;font-size:15.5px;}
+  .muted{color:var(--ink2);font-size:14px;}
+  b{color:var(--gold);}
+  .big{font-size:17px;}
+  .tag{display:inline-block;font-size:12.5px;padding:1px 8px;border-radius:20px;background:#3a2c1d;color:var(--ink2);margin-left:4px;}
+  /* 屬性 */
+  .elhead{display:flex;align-items:center;gap:10px;margin:0 0 8px;}
+  .elhead .dot{width:30px;height:30px;border-radius:9px;display:grid;place-items:center;font-size:17px;flex:none;}
+  .elhead .nm{font-size:17px;font-weight:700;}
+  .elhead .ps{font-size:13px;color:var(--ink2);margin-left:auto;text-align:right;line-height:1.35;}
+  .shapes{display:flex;gap:9px;flex-wrap:wrap;align-items:flex-end;margin-top:4px;}
+  .sh{display:flex;flex-direction:column;align-items:center;gap:4px;}
+  .sh .lv{font-size:11px;color:var(--ink2);}
+  .grid{display:grid;gap:2px;}
+  .cell{width:11px;height:11px;border-radius:2px;}
+  .cell.on{box-shadow:inset 0 0 0 1px rgba(255,255,255,.25);}
+  .cell.off{background:transparent;}
+  /* CD技 */
+  .skill{display:flex;gap:11px;align-items:flex-start;padding:9px 0;border-top:1px solid var(--line);}
+  .skill:first-child{border-top:0;}
+  .skill .ic{width:34px;height:34px;border-radius:50%;background:#2b2014;border:2px solid #5a4128;
+    display:grid;place-items:center;font-size:17px;flex:none;}
+  .skill .tx b{color:var(--ink);}
+  .skill .tx .d{font-size:13.5px;color:var(--ink2);}
+  /* 相剋環 */
+  .ring{display:flex;flex-wrap:wrap;gap:6px;justify-content:center;font-size:14px;align-items:center;}
+  .ring .e{padding:3px 10px;border-radius:8px;font-weight:700;color:#1a140e;}
+  .ring .ar{color:var(--ink2);}
+  .pill{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;}
+  .pill span{font-size:13px;background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:3px 9px;}
+  .footer{text-align:center;margin-top:40px;padding-top:22px;border-top:1px solid var(--line);}
+  .btn{display:inline-block;margin-top:14px;background:var(--gold);color:#2a1d0a;font-weight:800;
+    text-decoration:none;padding:13px 30px;border-radius:30px;font-size:16px;}
+  .flow{display:flex;gap:8px;align-items:stretch;margin-top:6px;}
+  .flow .step{flex:1;background:var(--panel2);border:1px solid var(--line);border-radius:12px;padding:12px;text-align:center;}
+  .flow .step .e{font-size:22px;}
+  .flow .step b{display:block;margin-top:3px;}
+  .flow .step .d{font-size:12.5px;color:var(--ink2);}
+  .arrow{align-self:center;color:var(--gold);font-size:20px;font-weight:800;}
+</style>
+</head>
+<body>
+<header>
+  <div class="logo">忍 塊 查 克 拉</div>
+  <h1>30 秒上手</h1>
+  <p>拼方塊 × 卡牌 RPG — 看完就會玩</p>
+</header>
+
+<div class="wrap">
+
+  <div class="card lead">
+    <p class="big">🧩 <b>一句話：</b>把方塊拼進 <b>9×9</b> 盤面，填滿一整<b>列／行／宮</b>就「消除」→ 對敵人造成傷害，消光敵人就過關。</p>
+    <p class="muted">就像「<b style="color:var(--ink)">Woodoku 方塊消除</b>」，但每次消除都是在打怪。</p>
+  </div>
+
+  <h2><span class="n">1</span>你的隊伍</h2>
+  <div class="card">
+    <p>一隊 <b>5 張忍者卡</b>，每張各「鎮守」盤面上的一個<b>宮（3×3）</b>，決定那個宮的<b>屬性</b>。</p>
+    <p class="muted">盤面 = 9 個宮，對應你 5 張卡的屬性地圖。</p>
+  </div>
+
+  <h2><span class="n">2</span>招牌玩法：屬塊保存 ⭐</h2>
+  <div class="card">
+    <p class="big">這是本作最特別的地方 👇</p>
+    <p>① 填滿一個<b>宮</b>消除時 → 那屬性會生成一塊「<b>屬性塊</b>」，<b>存到對應的忍卡上</b>（卡上出現小方塊）。</p>
+    <p>② 想用時，<b>從卡上把它「拖」到盤面</b> → 它是萬用塊，填任何空格、湊出更多消除（<b>連環爆發引擎</b>）。</p>
+    <p>③ <b>不一定要馬上用！</b>可以一路囤 ——
+      <b>前面小怪慢慢養塊，第 3 關 boss 一次狂放</b>，超有爽度。</p>
+    <p class="muted">塊越大＝等級越高（清越多格生越大塊）。一張卡最高到 LV3；同屬疊兩張可衝 LV4～5。每張卡最多存 1 塊（留最高等的）。</p>
+  </div>
+
+  <h2><span class="n">3</span>五屬 & 形狀</h2>
+  <div class="card" id="elements"></div>
+  <div class="card">
+    <p>🔥 火 / 🪨 土 / ⚡ 雷 的塊 <b>生成時就自動隨機轉好方向</b>（你不用手動轉，每次拿到不一樣）。</p>
+    <p>💧 水 / 🌀 風 <b>方向固定</b>（直落 / 橫吹）→ 永遠知道會拿到什麼，最好規劃。</p>
+  </div>
+
+  <h2><span class="n">4</span>CD技（大招）</h2>
+  <div class="card">
+    <p class="muted" style="margin-top:0">每張卡<b style="color:var(--ink2)">上方有一顆小按鈕</b>，打幾手蓄滿後會發亮 → 點一下放招：</p>
+    <div class="skill"><div class="ic">🔥</div><div class="tx"><b>業火奔流</b><div class="d">對全體敵人造成 攻擊×3 的爆擊</div></div></div>
+    <div class="skill"><div class="ic">💧</div><div class="tx"><b>回春之泉</b><div class="d">回復 30% 生命 ＋ 換掉手上的塊</div></div></div>
+    <div class="skill"><div class="ic">⚡</div><div class="tx"><b>封雷結界</b><div class="d">全體敵人延後 3 手才出手</div></div></div>
+    <div class="skill"><div class="ic">🪨</div><div class="tx"><b>大地整復</b><div class="d">清空整個盤面，重新開局</div></div></div>
+    <div class="skill"><div class="ic">🌀</div><div class="tx"><b>疾風亂舞</b><div class="d">鬥志直接衝到最高「極」</div></div></div>
+  </div>
+
+  <h2><span class="n">5</span>鬥志（連擊獎勵）</h2>
+  <div class="card">
+    <p>持續消除 → <b>鬥志</b>一階一階往上爬：<span class="muted">弱 → 中 → 強 → 超 → 極</span>。</p>
+    <p>鬥志越高，<b>傷害倍率越大</b>（最高 ×1.8）；衝到「<b>極</b>」時攻擊會打<b>全體敵人</b>。</p>
+    <p class="muted">一手清掉 2 組以上（暴擊）能直接把鬥志衝到頂。</p>
+  </div>
+
+  <h2><span class="n">6</span>相剋（帶對屬性更強）</h2>
+  <div class="card">
+    <div class="ring">
+      <span class="e" style="background:var(--fire)">火</span><span class="ar">→</span>
+      <span class="e" style="background:var(--wind)">風</span><span class="ar">→</span>
+      <span class="e" style="background:var(--thunder)">雷</span><span class="ar">→</span>
+      <span class="e" style="background:var(--earth)">土</span><span class="ar">→</span>
+      <span class="e" style="background:var(--water)">水</span><span class="ar">→</span>
+      <span class="e" style="background:var(--fire)">火</span>
+    </div>
+    <p style="text-align:center;margin-top:10px" class="muted">箭頭 = 剋。</p>
+    <div class="pill">
+      <span>剋到敵人 → 傷害 <b>×1.6</b></span>
+      <span>被敵人剋 → 傷害 <b>×0.7</b></span>
+    </div>
+    <p class="muted">帶相剋的屬性去打對應關卡，會輕鬆很多 —— 但帶錯屬性只要操作夠好（衝鬥志、囤塊），一樣翻得回來。</p>
+  </div>
+
+  <h2><span class="n">7</span>陰陽（卡片副屬）</h2>
+  <div class="card">
+    <p>有些卡帶副屬性，消除時額外觸發：</p>
+    <p>☯ <b>陰</b> — 這一手的傷害 <b>×2</b>（爆發向）</p>
+    <p>☯ <b>陽</b> — <b>回血</b>（續航向）</p>
+  </div>
+
+  <h2><span class="n">8</span>卡住了？別怕</h2>
+  <div class="card">
+    <p>盤面塞滿、手上的塊放不下時 —— 只要卡上有<b>能用的屬塊</b>，它會<b>跳動發亮</b>提醒你，把它拖下去解圍，<b>不扣血</b>。</p>
+    <p class="muted">真的連存的塊也救不了，才會花一點生命重洗。<b style="color:var(--ink2)">所以會玩的人幾乎不掉血。</b></p>
+  </div>
+
+  <h2><span class="n">9</span>一局心法</h2>
+  <div class="card">
+    <div class="flow">
+      <div class="step"><div class="e">🌱</div><b>前期：養</b><div class="d">小怪關囤屬塊、衝鬥志</div></div>
+      <div class="arrow">→</div>
+      <div class="step"><div class="e">💥</div><b>Boss：放</b><div class="d">狂拖屬塊＋放大招爆發</div></div>
+    </div>
+    <p class="muted" style="margin-top:12px">盤面、鬥志、屬塊都會<b>帶到下一關</b>，所以一城 3 關是一場「連續戰」。</p>
+  </div>
+
+  <div class="footer">
+    <p class="muted">準備好了嗎？</p>
+    <a class="btn" href="./play/">▶ 開始試玩</a>
+    <p class="muted" style="margin-top:16px;font-size:12px;">忍塊查克拉 · 開發中 Demo</p>
+  </div>
+
+</div>
+
+<script>
+const SHAPES = {
+  water:  {color:'var(--water)',  emoji:'💧', name:'水', ps:'直落 · 可靠好規劃', s:{1:[[0,0]],2:[[0,0],[1,0]],3:[[0,0],[1,0],[2,0]],4:[[0,0],[1,0],[2,0],[3,0]],5:[[0,0],[1,0],[2,0],[3,0],[4,0]]}},
+  wind:   {color:'var(--wind)',   emoji:'🌀', name:'風', ps:'橫吹 · 可靠好規劃', s:{1:[[0,0]],2:[[0,0],[0,1]],3:[[0,0],[0,1],[0,2]],4:[[0,0],[0,1],[0,2],[0,3]],5:[[0,0],[0,1],[0,2],[0,3],[0,4]]}},
+  fire:   {color:'var(--fire)',   emoji:'🔥', name:'火', ps:'萬能可轉 · 每階都好用', s:{1:[[0,0]],2:[[0,0],[0,1]],3:[[0,0],[1,0],[1,1]],4:[[0,0],[0,1],[0,2],[1,1]],5:[[0,1],[1,0],[1,1],[1,2],[2,1]]}},
+  earth:  {color:'var(--earth)',  emoji:'🪨', name:'土', ps:'方塊系 · 高手向，疊兩張超強', s:{1:[[0,0]],2:[[0,0],[1,1]],3:[[0,0],[1,1],[2,2]],4:[[0,0],[0,1],[1,0],[1,1]],5:[[0,0],[0,2],[1,0],[1,1],[1,2]]}},
+  thunder:{color:'var(--thunder)',emoji:'⚡', name:'雷', ps:'鋸齒閃電 · 慢熱，LV3 後很猛', s:{1:[[0,0]],2:[[0,0],[1,1]],3:[[0,0],[1,0],[1,1]],4:[[0,1],[0,2],[1,0],[1,1]],5:[[0,0],[0,1],[1,1],[2,1],[2,2]]}},
+};
+function makeShape(cells,color){
+  let mr=0,mc=0; cells.forEach(([r,c])=>{mr=Math.max(mr,r);mc=Math.max(mc,c);});
+  const set=new Set(cells.map(p=>p[0]+'_'+p[1]));
+  const g=document.createElement('div'); g.className='grid';
+  g.style.gridTemplateColumns=`repeat(${mc+1},11px)`;
+  for(let r=0;r<=mr;r++)for(let c=0;c<=mc;c++){
+    const d=document.createElement('div');
+    const on=set.has(r+'_'+c);
+    d.className='cell '+(on?'on':'off');
+    if(on)d.style.background=color;
+    g.appendChild(d);
+  }
+  return g;
+}
+const host=document.getElementById('elements');
+Object.values(SHAPES).forEach((el,i)=>{
+  const block=document.createElement('div');
+  if(i>0)block.style.cssText='border-top:1px solid var(--line);padding-top:13px;margin-top:13px;';
+  const head=document.createElement('div'); head.className='elhead';
+  head.innerHTML=`<div class="dot" style="background:${el.color}33;color:${el.color}">${el.emoji}</div>`+
+    `<div class="nm" style="color:${el.color}">${el.name}</div><div class="ps">${el.ps}</div>`;
+  block.appendChild(head);
+  const row=document.createElement('div'); row.className='shapes';
+  for(let lv=1;lv<=5;lv++){
+    const sh=document.createElement('div'); sh.className='sh';
+    sh.appendChild(makeShape(el.s[lv],el.color));
+    const lab=document.createElement('div'); lab.className='lv'; lab.textContent='LV'+lv;
+    sh.appendChild(lab);
+    row.appendChild(sh);
+  }
+  block.appendChild(row);
+  host.appendChild(block);
+});
+</script>
+</body>
+</html>
