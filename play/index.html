@@ -144,6 +144,10 @@ const SHAPES_BY_EL = {
   thunder:{1:[[0,0]], 2:[[0,0],[1,1]], 3:[[0,0],[1,0],[1,1]], 4:[[0,1],[0,2],[1,0],[1,1]], 5:[[0,0],[0,1],[1,1],[2,1],[2,2]]},   // 鋸齒/閃電(N)
 };
 function chakraShape(el,lv){const m=SHAPES_BY_EL[el]||SHAPES_BY_EL.fire;return (m[Math.max(1,Math.min(5,lv))]||m[1]).map(x=>x.slice());}
+function normCells(cells){const mr=Math.min(...cells.map(c=>c[0])),mc=Math.min(...cells.map(c=>c[1]));return cells.map(([r,c])=>[r-mr,c-mc]);}
+function rot90(cells){return normCells(cells.map(([r,c])=>[c,-r]));}
+// 火=生成時就隨機方向(LV2隨機1×2/2×1、L/T隨機朝向),玩家不必手動轉;其餘屬性方向固定
+function randOrient(cells,el){if(el!=='fire')return cells;let out=cells.map(x=>x.slice());const t=rnd(4);for(let k=0;k<t;k++)out=rot90(out);return out;}
 
 function rnd(n){return Math.floor(Math.random()*n);}
 function pickShape(){let r=rnd(WSUM);for(const s of SHAPES){r-=s.w;if(r<0)return s.c.map(x=>x.slice());}}
@@ -620,7 +624,7 @@ class GameScene extends Phaser.Scene{
     const s=this.stored[i];
     if(!s){so.setVisible(false);return;}
     so.setVisible(true);
-    const cells=chakraShape(s.el,s.lv),col=EL[s.el].color;
+    const cells=s.cells||chakraShape(s.el,s.lv),col=EL[s.el].color;
     let mr=0,mc=0;cells.forEach(([r,c])=>{mr=Math.max(mr,r);mc=Math.max(mc,c);});
     const ms=10,pw=(mc+1)*ms,ph=(mr+1)*ms;   // 固定格大小:LV1=1小格、LV3=3格…大小反映真實格數(不撐滿框,免 LV1 被誤認成大塊)
     so.add(this.add.rectangle(0,0,60,60,0x000000,0.5).setStrokeStyle(3,col,1));
@@ -671,7 +675,7 @@ class GameScene extends Phaser.Scene{
   // 從卡拖「存放的屬塊」(萬用塊填空格;不佔托盤格→不推進敵,是連擊引擎)
   startStoredDrag(i,p){if(this.resultOpen||this.drag||this.earthSel||this.earthDrag)return;
     const s=this.stored[i]; if(!s)return;
-    const cells=chakraShape(s.el,s.lv), col=EL[s.el].color;
+    const cells=s.cells||chakraShape(s.el,s.lv), col=EL[s.el].color;
     const kids=cells.map(([dr,dc])=>this.add.rectangle(dc*CS,dr*CS,RECT,RECT,col).setOrigin(0));
     this.drag={store:i,cells,kind:'water',col,prev:this.add.container(0,0,kids).setAlpha(0.85),kids};this.updateDrag(p);}
   doPlaceStored(d,r,c){if(this.resultOpen)return;
@@ -741,8 +745,21 @@ class GameScene extends Phaser.Scene{
     const onlyTools=unused.length>0 && unused.every(t=>t.kind==='earth'||t.kind==='wind');
     if(empty&&onlyTools){const s=this.tray.findIndex(t=>!t.used);
       if(s>=0){this.tray[s]={c:pickShape(),used:false};this.renderTray();this.tonFloat('盤面已空,自動補查克拉塊','#cfe3ff');return;}}
+    if(this.anyStoredPlaceable()){this.flashStored();this.tonFloat('托盤卡住 → 拖卡上的屬塊解圍!','#ffe066');return;}   // 有存塊能解=不扣血,提示用屬塊(真沒塊可解才花血)
     this.showReshuffleModal();
   }
+  // 有任何「存的屬塊」放得下嗎(萬用塊只要有空格可填)
+  anyStoredPlaceable(){if(!this.stored)return false;
+    return this.stored.some(s=>{if(!s)return false;const cells=s.cells||chakraShape(s.el,s.lv);
+      for(let r=0;r<N;r++)for(let c=0;c<N;c++)if(canPlace(this.board,cells,r,c,'water'))return true;return false;});}
+  // 卡死提示:能解圍的屬塊「跳+脹」一下,叫你拖它(不扣血的救命塊)
+  flashStored(){this.teamCards.forEach((card,i)=>{const s=this.stored&&this.stored[i],so=card.storeObj;if(!s||!so)return;
+    const cells=s.cells||chakraShape(s.el,s.lv);let ok=false;
+    for(let r=0;r<N&&!ok;r++)for(let c=0;c<N&&!ok;c++)if(canPlace(this.board,cells,r,c,'water'))ok=true;
+    if(!ok)return;
+    const y0=so.y;
+    this.tweens.add({targets:so,y:y0-11,duration:190,yoyo:true,repeat:2,ease:'Quad.inOut',onComplete:()=>so.setY(y0)});
+    this.tweens.add({targets:so,scaleX:1.2,scaleY:1.2,duration:190,yoyo:true,repeat:2,ease:'Sine.inOut',onComplete:()=>so.setScale(1)});});}
   /* 土屬塊:兩段式搬移查克拉 — ①拖塊蓋住要抓的查克拉 ②再拖把它們整組搬到空位 */
   earthSelect(i,r,c){
     const cells=this.tray[i].c, sel=[];
@@ -830,7 +847,7 @@ class GameScene extends Phaser.Scene{
     if(!slots.length)return;
     let target=slots.find(i=>!this.stored[i]);
     if(target==null){target=slots.reduce((a,b)=>this.stored[b].lv<this.stored[a].lv?b:a,slots[0]); if(this.stored[target].lv>=lv)return;}
-    this.stored[target]={el,lv}; this.renderStored();
+    this.stored[target]={el,lv,cells:randOrient(chakraShape(el,lv),el)}; this.renderStored();   // 火塊生成時就定隨機方向
     this.tonFloat(EL[el].name+'塊Lv'+lv+'→存卡','#'+EL[el].color.toString(16).padStart(6,'0'));}
 
   enemyAttack(e){
