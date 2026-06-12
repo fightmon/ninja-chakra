@@ -581,7 +581,7 @@ class GameScene extends Phaser.Scene{
     this.enemies.forEach(e=>{if(!e.card||e.dead)return;const x=e.card.x,cy=BATTLE_CY,sz=e.cardH;
       e.card.setPosition(x,cy);
       e.turnG.setPosition(x,cy+sz/2-20);e.hpBg.setPosition(x,cy+sz/2-9);e.hpFill.setPosition(e.hpx,cy+sz/2-9);e.mark.setPosition(x,cy-sz/2-9);
-      const fy=e.img?cy:cy-Math.round(sz*0.14);if(e.img)e.sprite.setDisplaySize(sz,sz);if(e.bob)e.bob.stop();e.sprite.setPosition(x,fy);e.bob=this.tweens.add({targets:e.sprite,y:fy-4,duration:1200,yoyo:true,repeat:-1,ease:'Sine.inOut'});});
+      const fy=e.img?cy:cy-Math.round(sz*0.14);if(e.img)e.sprite.setDisplaySize(sz,sz);e.baseScale=e.sprite.scaleX;if(e.bob)e.bob.stop();e.sprite.setPosition(x,fy);e.bob=this.tweens.add({targets:e.sprite,y:fy-4,duration:1200,yoyo:true,repeat:-1,ease:'Sine.inOut'});});
   }
 
   cellRect(r,c){return this.cells[r*N+c];}
@@ -627,6 +627,7 @@ class GameScene extends Phaser.Scene{
       }else{
         e.sprite=this.add.text(x,cy-Math.round(szc*0.14),EL[e.el].face,{fontFamily:EMOJIFONT,fontSize:Math.round(szc*0.5)+'px'}).setOrigin(0.5).setInteractive();
       }
+      e.baseScale=e.sprite.scaleX;   // 受擊縮放動畫的基準(圖=szc/320、emoji=1),回彈要回到這個值,不能歸 1
       e.sprite.on('pointerdown',()=>this.selectTarget(i));
       e.turnG=this.add.container(x,cy+szc/2-20,[]);   // 回合數方塊:壓在敵圖下方
       e.hpW=szc-10; e.hpx=x-e.hpW/2;
@@ -957,7 +958,8 @@ class GameScene extends Phaser.Scene{
   }
   impact(x,y,color,dmg,tgt){
     if(tgt&&!tgt.dead){tgt.sprite.setTint(0xffffff);
-      this.tweens.add({targets:tgt.sprite,scaleX:1.16,scaleY:1.16,duration:100,yoyo:true,onComplete:()=>tgt.sprite.clearTint()});}
+      const bs=tgt.baseScale||1;if(tgt.hitTw)tgt.hitTw.stop();tgt.sprite.setScale(bs);   // 縮放動畫相對基準縮放(史來姆圖 base≈0.39),先停掉前一個受擊tween避免連擊疊加變大
+      tgt.hitTw=this.tweens.add({targets:tgt.sprite,scaleX:bs*1.16,scaleY:bs*1.16,duration:100,yoyo:true,onComplete:()=>{tgt.sprite.setScale(bs);tgt.sprite.clearTint();tgt.hitTw=null;}});}
     const b=this.add.circle(x,y,8,color,0.8);
     this.tweens.add({targets:b,scale:5,alpha:0,duration:420,onComplete:()=>b.destroy()});
     this.cameras.main.shake(150,0.005);
