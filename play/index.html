@@ -705,7 +705,7 @@ class GameScene extends Phaser.Scene{
     const SP={water:{c:0x62b8f0,glow:0x8fd6ff,label:'填'},wind:{c:0x6ad06a,glow:0xb6ffae,label:'消'},earth:{c:0xd49a4a,glow:0xffc24a,label:'搬'}};
     this.tray.forEach((p,i)=>{if(p.used)return;
       let maxr=0,maxc=0;p.c.forEach(([r,c])=>{maxr=Math.max(maxr,r);maxc=Math.max(maxc,c);});
-      const s=(maxr>=4||maxc>=4)?11:24, pw=(maxc+1)*s, ph=(maxr+1)*s;   // 大塊(如9×9)縮小顯示
+      const span=Math.max(maxr,maxc)+1, s=Math.min(24,Math.floor(78/span)), pw=(maxc+1)*s, ph=(maxr+1)*s;   // 依最長邊連續縮放,塞進約 78px 高托盤格:小塊維持 24px,4/5 格長塊自動縮到一致高度、不頂出畫面
       const sp=SP[p.kind], cont=this.add.container(this.traySlots[i],TRAY_Y,[]);
       if(sp){const glow=this.add.rectangle(0,0,pw+13,ph+13,0,0).setStrokeStyle(3,sp.glow,1); cont.add(glow);   // 脈動光暈
         this.trayTweens.push(this.tweens.add({targets:glow,alpha:{from:0.3,to:1},scaleX:{from:0.9,to:1.06},scaleY:{from:0.9,to:1.06},duration:600,yoyo:true,repeat:-1,ease:'Sine.inOut'}));}
