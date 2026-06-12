@@ -618,7 +618,7 @@ class GameScene extends Phaser.Scene{
     const n=this.enemies.length, slot=380/n;
     this.enemies.forEach((e,i)=>{
       const x=20+slot*(i+0.5), cy=BATTLE_CY;
-      const szc=Math.max(46,Math.min(slot-8,150,Math.round((CARDS_Y-81)*0.5)));   // 敵欄正方形邊長:約佔戰鬥帶高度一半(矮螢幕不再爆大)、寬度不互相重疊、上限 150
+      const szc=Math.max(50,Math.min(slot-8,126,Math.round((CARDS_Y-81)*0.92)));   // 敵欄正方形邊長:取寬度/高度空檔較小者(矮螢幕自動縮小)
       e.cardW=szc; e.cardH=szc;
       e.card=this.add.rectangle(x,cy,szc,szc,0x000000,0).setInteractive();   // 無底色:透明矩形只當點擊區
       e.card.on('pointerdown',()=>this.selectTarget(i));
