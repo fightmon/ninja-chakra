@@ -206,7 +206,7 @@ function computeClears(board, boxElement, boxCard, enemyEl, ampMult){
 const W=420, CX=210;
 const CS=40, RECT=37, BX0=30, DRAG_LIFT=66;
 // 版面高度依「當下」裝置比例算(尺寸變化時即時重算),FIT 不黑邊;上下錨定
-let H,TRAY_Y,BY0,CARDS_Y,PHP_Y,INFO_Y,BG_H,BATTLE_CY;
+let H,TRAY_Y,BY0,CARDS_Y,PHP_Y,INFO_Y,BG_H,BATTLE_CY,BOARD_CY;
 function recomputeLayout(){
   // 讀「真正的容器尺寸」(#game),才與 Phaser FIT 進去的容器一致→零黑邊;取不到再 fallback 視窗
   const el=(typeof document!=='undefined')?document.getElementById('game'):null;
@@ -215,6 +215,7 @@ function recomputeLayout(){
   H=Math.max(640,Math.min(1400,Math.round(W*vh/vw)));   // 涵蓋約 1.52~3.33 的長寬比
   TRAY_Y=H-46; BY0=TRAY_Y-52-9*CS; CARDS_Y=BY0-50; PHP_Y=BY0-16; INFO_Y=BY0-2;   // 板面/托盤盡量往下、卡列貼緊板面 → 上方戰鬥區留多一點
   BG_H=BY0+22; BATTLE_CY=Math.round((CARDS_Y-29)/2);   // 背景延伸到盤面上緣+22;敵人置中於 nav(26) 與主動技鈕(CARDS_Y-55) 之間
+  BOARD_CY=BY0+Math.round(9*CS/2);   // 盤面正中央(9×9 格的中心)→ 暴擊/連印/鬥志等操控盤面的特效字都以此置中
 }
 recomputeLayout();
 const EMOJIFONT='"Segoe UI Emoji","Microsoft JhengHei",sans-serif';
@@ -969,7 +970,7 @@ class GameScene extends Phaser.Scene{
     this.tweens.add({targets:t,y:y-40,alpha:0,duration:900,ease:'Quad.out',onComplete:()=>t.destroy()});}
   tonFloat(str,color){const t=this.add.text(CX,BY0-54,str,{fontFamily:EMOJIFONT,fontSize:'17px',color,fontStyle:'bold'}).setOrigin(0.5);
     this.tweens.add({targets:t,y:BY0-82,alpha:0,duration:1000,ease:'Quad.out',onComplete:()=>t.destroy()});}
-  comboPopup(n){const t=this.add.text(CX,BY0+46,'連印 '+n,{fontFamily:EMOJIFONT,fontSize:'24px',color:'#ffd56a',fontStyle:'bold'}).setOrigin(0.5).setScale(0.5);
+  comboPopup(n){const t=this.add.text(CX,BOARD_CY-54,'連印 '+n,{fontFamily:EMOJIFONT,fontSize:'24px',color:'#ffd56a',fontStyle:'bold'}).setOrigin(0.5).setScale(0.5).setDepth(58);
     this.tweens.add({targets:t,scale:1.05,duration:220,yoyo:true,hold:120,
       onComplete:()=>this.tweens.add({targets:t,alpha:0,duration:300,onComplete:()=>t.destroy()})});}
   // 暴擊演出:一手多清(groups≥2)的隆重慶祝 — 全螢幕閃光 + 震動 + 大字
@@ -978,7 +979,7 @@ class GameScene extends Phaser.Scene{
     const flash=this.add.rectangle(CX,H/2,W,H,0xfff0c0,0).setDepth(60);
     this.tweens.add({targets:flash,alpha:0.45,duration:70,yoyo:true,onComplete:()=>flash.destroy()});
     const label=g>=4?'超·暴擊':g===3?'大暴擊':'暴擊';
-    const t=this.add.text(CX,BATTLE_CY+30,label+' ×'+g+'!',{fontFamily:EMOJIFONT,fontSize:(38+g*4)+'px',color:'#ffd24a',fontStyle:'bold',stroke:'#7a3000',strokeThickness:6}).setOrigin(0.5).setDepth(61).setScale(0.3).setAngle(-6);
+    const t=this.add.text(CX,BOARD_CY,label+' ×'+g+'!',{fontFamily:EMOJIFONT,fontSize:(38+g*4)+'px',color:'#ffd24a',fontStyle:'bold',stroke:'#7a3000',strokeThickness:6}).setOrigin(0.5).setDepth(61).setScale(0.3).setAngle(-6);
     this.tweens.add({targets:t,scale:1.1,duration:200,ease:'Back.out'});
     this.tweens.add({targets:t,alpha:0,delay:560,duration:260,onComplete:()=>t.destroy()});
   }
@@ -988,7 +989,7 @@ class GameScene extends Phaser.Scene{
     this.cameras.main.shake(300,0.014);
     const flash=this.add.rectangle(CX,H/2,W,H,0xffe8a0,0).setDepth(60);
     this.tweens.add({targets:flash,alpha:0.5,duration:90,yoyo:true,onComplete:()=>flash.destroy()});
-    const t=this.add.text(CX,BATTLE_CY+30,'結 印 成 功!',{fontFamily:EMOJIFONT,fontSize:'40px',color:'#ffe04a',fontStyle:'bold',stroke:'#7a1500',strokeThickness:7}).setOrigin(0.5).setDepth(62).setScale(0.3).setAngle(-5);
+    const t=this.add.text(CX,BOARD_CY,'結 印 成 功!',{fontFamily:EMOJIFONT,fontSize:'40px',color:'#ffe04a',fontStyle:'bold',stroke:'#7a1500',strokeThickness:7}).setOrigin(0.5).setDepth(62).setScale(0.3).setAngle(-5);
     this.tweens.add({targets:t,scale:1.12,duration:240,ease:'Back.out'});
     this.tweens.add({targets:t,alpha:0,delay:680,duration:300,onComplete:()=>t.destroy()});
     this.time.delayedCall(380,()=>this.tonFloat('✦ 屬塊已存到卡上 — 可拖下來用!','#ffe08a'));
@@ -996,14 +997,14 @@ class GameScene extends Phaser.Scene{
   // 鬥志階變演出;升到「極」=全體解放超模式
   moraleFX(tier,up){
     const names=CONFIG.MORALE_NAMES, cols=['#99aabb','#9ac4e0','#ffffff','#ffd24a','#ff9a3a','#ff5a3a'];
-    const t=this.add.text(CX,BATTLE_CY+72,'鬥志'+(up?'↑ ':'↓ ')+names[tier],{fontFamily:EMOJIFONT,fontSize:'21px',color:cols[tier],fontStyle:'bold',stroke:'#000',strokeThickness:3}).setOrigin(0.5).setDepth(55).setScale(0.6);
+    const t=this.add.text(CX,BOARD_CY+54,'鬥志'+(up?'↑ ':'↓ ')+names[tier],{fontFamily:EMOJIFONT,fontSize:'21px',color:cols[tier],fontStyle:'bold',stroke:'#000',strokeThickness:3}).setOrigin(0.5).setDepth(55).setScale(0.6);
     this.tweens.add({targets:t,scale:1,y:t.y-18,duration:240,ease:'Back.out'});
     this.tweens.add({targets:t,alpha:0,delay:480,duration:300,onComplete:()=>t.destroy()});
     if(tier>=5){ // 極:超模式爆發(全消除轉全體)
       this.cameras.main.shake(300,0.013);
       const fl=this.add.rectangle(CX,H/2,W,H,0xff5a3a,0).setDepth(54);
       this.tweens.add({targets:fl,alpha:0.4,duration:120,yoyo:true,onComplete:()=>fl.destroy()});
-      const big=this.add.text(CX,BATTLE_CY+28,'極・全體解放!',{fontFamily:EMOJIFONT,fontSize:'32px',color:'#ffe04a',fontStyle:'bold',stroke:'#7a1500',strokeThickness:6}).setOrigin(0.5).setDepth(56).setScale(0.4).setAngle(-5);
+      const big=this.add.text(CX,BOARD_CY,'極・全體解放!',{fontFamily:EMOJIFONT,fontSize:'32px',color:'#ffe04a',fontStyle:'bold',stroke:'#7a1500',strokeThickness:6}).setOrigin(0.5).setDepth(56).setScale(0.4).setAngle(-5);
       this.tweens.add({targets:big,scale:1.1,duration:240,ease:'Back.out'});
       this.tweens.add({targets:big,alpha:0,delay:760,duration:320,onComplete:()=>big.destroy()});
     }
