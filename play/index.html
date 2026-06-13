@@ -1067,9 +1067,9 @@ class GameScene extends Phaser.Scene{
       this.tweens.add({targets:d,x:x+Math.cos(a)*(42+Math.random()*44),y:y+Math.sin(a)*(42+Math.random()*44)-18,alpha:0,scale:0.2,duration:520+Math.random()*240,ease:'Quad.out',onComplete:()=>d.destroy()});}
   }
   // 敵入場:從「遠處(小、偏高、淡)」浮現到定位 —— 像往深處推進後,新敵自遠方逼近
-  enemyEnter(e,delay){ if(!e||!e.sprite)return; const sp=e.sprite, bs=e.baseScale||1, ry=(e.restY!=null?e.restY:sp.y); delay=delay||0;
+  enemyEnter(e,delay){ if(!e||!e.sprite)return; const sp=e.sprite, bs=e.baseScale||1, ry=(e.restY!=null?e.restY:sp.y), rx=(e.card?e.card.x:sp.x); delay=delay||0;
     if(e.bob){e.bob.stop();e.bob=null;} this.tweens.killTweensOf(sp);
-    sp.setScale(bs*0.22).setAlpha(0).setAngle(0).setPosition(sp.x, ry-48);
+    sp.setScale(bs*0.22).setAlpha(0).setAngle(0).setPosition(rx, ry-48);   // ★ 用敵卡原始 x(非被打飛後的位移 x)→ 重生不再往左飄
     this.tweens.add({targets:sp,alpha:1,duration:220,delay:delay});
     this.tweens.add({targets:sp,scaleX:bs,scaleY:bs,y:ry,duration:460,delay:delay,ease:'Back.out',
       onComplete:()=>{sp.setScale(bs);sp.setY(ry);if(!e.dead)e.bob=this.tweens.add({targets:sp,y:ry-4,duration:1200,yoyo:true,repeat:-1,ease:'Sine.inOut'});}});
