@@ -992,10 +992,11 @@ class GameScene extends Phaser.Scene{
     data.cells.forEach(([r,c])=>{this.board[r][c]=null;});  // 立即從模型移除,避免重複觸發
     const n=data.cells.length;
     const sorted=Object.keys(data.fx).sort((a,b)=>data.fx[b].level-data.fx[a].level);   // 多招:取等級最高的元素;次高若 ≥lv2(≥6格)再出第二招(3 招以上機率低,不做)
-    const jEls=[sorted[0]]; if(sorted[1]&&data.fx[sorted[1]].level>=2)jEls.push(sorted[1]);
+    const jEls=sorted.length?[sorted[0]]:[null];   // 純普通塊清除→無元素(null):不出招式名、用預設色查克拉彈(仍要有 n HIT + 攻擊)
+    if(sorted[1]&&data.fx[sorted[1]].level>=2)jEls.push(sorted[1]);
     const kk=jEls.length, cellsAll=data.cells.slice(), part=Math.ceil(cellsAll.length/kk), dEach=Math.round(dealt/kk);
-    const jutsu=jEls.map((el,i)=>({el, lv:data.fx[el].level, fire:()=>{   // 每招:該元素的色/名,集氣取一段格子,傷害分攤(總和=dealt)
-      this.chakraStrike(victims, (i===kk-1?dealt-dEach*(kk-1):dEach), el, {cells:cellsAll.slice(i*part,(i+1)*part), parts:[{el}], fx:{}});
+    const jutsu=jEls.map((el,i)=>({el, lv:el?data.fx[el].level:1, fire:()=>{   // 每招:該元素的色/名,集氣取一段格子,傷害分攤(總和=dealt)
+      this.chakraStrike(victims, (i===kk-1?dealt-dEach*(kk-1):dEach), el, {cells:cellsAll.slice(i*part,(i+1)*part), parts:el?[{el}]:[], fx:{}});
       if(aoe&&i===0)this.cameras.main.shake(260,0.01);
     }}));
     const atkAt=this.playClearFX(n, jutsu);   // 先 n HIT → 招式名(1~2 招並列)→ 才各招集結射出
