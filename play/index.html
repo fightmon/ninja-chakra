@@ -597,6 +597,7 @@ class GameScene extends Phaser.Scene{
 
   newGame(){
     track('battle_start');
+    this.locked=false;   // 鎖輸入旗標:敵方出手展演期間禁止下一手動作(避免插隊/重覆觸發)
     this.boxElement={}; this.boxCard={};
     if(this.presetTeam) ELEMENT_BOXES.forEach((b,i)=>{const card=this.presetTeam[i];this.boxCard[b]=card;this.boxElement[b]=card.el;});
     else ELEMENT_BOXES.forEach(b=>{const card=ROSTER[rnd(ROSTER.length)];this.boxCard[b]=card;this.boxElement[b]=card.el;});
@@ -713,7 +714,7 @@ class GameScene extends Phaser.Scene{
       this.moraleBg.setStrokeStyle(2,lerpColor(0xff5a2a,0xffd24a,0.5+0.5*Math.sin(t+1.7)));}
   }
   // 發動主動技
-  fireActive(i){if(this.resultOpen||this.drag||this.earthSel||this.earthDrag)return;
+  fireActive(i){if(this.resultOpen||this.locked||this.drag||this.earthSel||this.earthDrag)return;
     const card=this.teamCards[i], a=activeSkill(card.el); if(!a)return;
     if((this.charge[i]||0)<a.cd){this.tonFloat('蓄力中 '+(this.charge[i]||0)+'/'+a.cd,'#9fb0c0');return;}
     this.charge[i]=0;
@@ -749,13 +750,13 @@ class GameScene extends Phaser.Scene{
   }
 
   /* 拖曳放塊 */
-  startDrag(i,p){if(this.resultOpen||this.earthSel||this.earthDrag)return;
+  startDrag(i,p){if(this.resultOpen||this.locked||this.earthSel||this.earthDrag)return;
     const cells=this.tray[i].c, kind=this.tray[i].kind;
     const kc=kind==='water'?0x62b8f0:kind==='wind'?0x6ad06a:kind==='earth'?0xd49a4a:0xffffff;
     const kids=cells.map(([dr,dc])=>this.add.rectangle(dc*CS,dr*CS,RECT,RECT,kc).setOrigin(0));
     this.drag={i,cells,kind,prev:this.add.container(0,0,kids).setAlpha(0.85).setDepth(DEPTH.drag),kids};this.updateDrag(p);}
   // 從卡拖「存放的屬塊」(萬用塊填空格;不佔托盤格→不推進敵,是連擊引擎)
-  startStoredDrag(i,p){if(this.resultOpen||this.drag||this.earthSel||this.earthDrag)return;
+  startStoredDrag(i,p){if(this.resultOpen||this.locked||this.drag||this.earthSel||this.earthDrag)return;
     const s=this.stored[i]; if(!s)return;
     const cells=s.cells||chakraShape(s.el,s.lv), col=EL[s.el].color;
     const kids=cells.map(([dr,dc])=>this.add.rectangle(dc*CS,dr*CS,RECT,RECT,col).setOrigin(0));
@@ -802,22 +803,30 @@ class GameScene extends Phaser.Scene{
   afterAction(fromBlock){
     this.refreshBoard(); this.renderTray();
     this.fromBlock=!!fromBlock; this.resolve(); this.fromBlock=false;   // 防遞迴:塊清出的消除不再生塊
-    if(this.tray.every(t=>t.used)){this.endHand();this.refill();this.renderTray();}  // 一手(3塊)放完→敵與燒傷推進一次(快節奏、連印滾得起來)
+    if(this.tray.every(t=>t.used)){this.endHand();return;}  // 一手(3塊)放完→endHand 負責「等展演完才敵攻+補手+解鎖+卡死檢查」
     if(!this.anyPlaceable()){this.time.delayedCall(420,()=>this.handleStuck());}
     this.updateAll();
   }
-  // 一手結束:燒傷 tick + 敵人推進出手(option3:以「手」為節奏,非每塊)
+  // 一手結束:鬥志/燒傷立即結算(屬我方展演),敵方出手+補新手延後到展演完才發動(以「手」為節奏)
   endHand(){
-    const m0=this.morale;   // 鬥志(上重下輕):暴擊手=直接衝到「極」(九尾形態);一般清除手=+1升到「超」封頂;連MORALE_GRACE手完全空手才−1階
+    const showed=this.handCleared;   // 本手有清除展演→敵攻多等一下;空手→快一點
+    const m0=this.morale;   // 鬥志(上重下輕):暴擊手=直接衝到「極」;一般清除手=+1升到「超」封頂;連MORALE_GRACE手空手才−1階
     if(!this.handCleared){ this.whiffStreak=(this.whiffStreak||0)+1; if(this.whiffStreak>=(CONFIG.MORALE_GRACE+((this.lead&&this.lead.type==='moraleGrace')?this.lead.v:0))){this.morale=Math.max(0,this.morale-1);this.whiffStreak=0;} }
-    else { this.whiffStreak=0; if(this.handBurst)this.morale=5; else if(this.morale<5)this.morale=Math.min(4,this.morale+1); }   // 已在「極」時一般清除手不掉階(極=絕好調持續狀態,只連續空手才降)→ 不再 極→超→極 重覆觸發
+    else { this.whiffStreak=0; if(this.handBurst)this.morale=5; else if(this.morale<5)this.morale=Math.min(4,this.morale+1); }   // 已在「極」時一般清除手不掉階
     this.handCleared=false; this.handBurst=false;
     if(this.morale!==m0)this.moraleFX(this.morale,this.morale>m0);
-    this.enemies.forEach(e=>{if(!e.dead&&e.burn>0){e.hp=Math.max(0,e.hp-e.burn);
+    this.enemies.forEach(e=>{if(!e.dead&&e.burn>0){e.hp=Math.max(0,e.hp-e.burn);   // 燒傷=我方 DoT,屬展演,立即
       this.floatText(e.sprite.x,e.sprite.y-24,'🔥'+e.burn,'#ff7a63'); if(e.hp<=0)this.killEnemy(e);}});
-    this.enemies.forEach(e=>{if(e.dead)return; e.timer--; if(e.timer<=0){this.enemyAttack(e); e.timer=e.interval;} this.animTurnGlass(e);});   // 每回合沙漏跳起來+翻轉,數字隨後變
-    this.charge=this.charge.map((c,i)=>{const a=activeSkill(this.teamCards[i].el);return a?Math.min(a.cd,(c||0)+1):c;});   // 主動技蓄力+1
-    this.renderCharges();
+    this.updateAll();   // 立即反映鬥志字/燒傷後血量(別等延遲回呼)
+    this.locked=true;   // 鎖輸入:等我方這手展演完,敵方才出手(玩家才看得到上面的表現),再補新手解鎖
+    this.time.delayedCall(showed?680:170,()=>{
+      if(this.resultOpen){this.locked=false;return;}   // 期間已開結算/勝敗畫面→不再推進
+      this.enemies.forEach(e=>{if(e.dead)return; e.timer--; if(e.timer<=0){this.enemyAttack(e); e.timer=e.interval;} this.animTurnGlass(e);});   // 敵出手 + 沙漏翻半圈
+      this.charge=this.charge.map((c,i)=>{const a=activeSkill(this.teamCards[i].el);return a?Math.min(a.cd,(c||0)+1):c;});   // 主動技蓄力+1
+      this.renderCharges();
+      this.refill(); this.renderTray(); this.locked=false; this.updateAll();
+      if(!this.anyPlaceable())this.time.delayedCall(420,()=>this.handleStuck());
+    });
   }
   // 卡死處理:空盤+只剩工具塊(土/風無從施力)→自動補一般查克拉塊;否則才花血重洗
   handleStuck(){
@@ -1014,16 +1023,22 @@ class GameScene extends Phaser.Scene{
   comboPopup(n){const t=this.add.text(CX,BOARD_CY-54,'連印 '+n,{fontFamily:EMOJIFONT,fontSize:'24px',color:'#ffd56a',fontStyle:'bold'}).setOrigin(0.5).setScale(0.5).setDepth(DEPTH.fx);
     this.tweens.add({targets:t,scale:1.05,duration:220,yoyo:true,hold:120,
       onComplete:()=>this.tweens.add({targets:t,alpha:0,duration:300,onComplete:()=>t.destroy()})});}
-  // 清除演出:一手清掉 n 格 → 盤面中央「n HIT」。數字越大→字越大、色越熱、震動閃光越強(看數字膨脹就是爽)
+  // 清除演出:一手清掉 n 格 → 盤面中央「n HIT」。數字從 1 一路 +1 跳到 n(看數字飆就是爽),越大→字越大、色越熱、震閃越強
   countFX(n){
     const big=n>=18, huge=n>=27;
     this.cameras.main.shake(huge?320:big?240:150, huge?0.014:big?0.011:0.006);
     if(big){const flash=this.add.rectangle(CX,H/2,W,H,huge?0xffc89a:0xfff0c0,0).setDepth(DEPTH.flash);
       this.tweens.add({targets:flash,alpha:huge?0.5:0.4,duration:80,yoyo:true,onComplete:()=>flash.destroy()});}
-    const fs=Math.min(76,32+n*1.7), col=huge?'#ff6a3a':big?'#ffb02a':'#ffd24a';
-    const t=this.add.text(CX,BOARD_CY,n+' HIT',{fontFamily:EMOJIFONT,fontSize:fs+'px',color:col,fontStyle:'bold',stroke:'#5a1500',strokeThickness:7}).setOrigin(0.5).setDepth(DEPTH.fx).setScale(0.3).setAngle(-6);
-    this.tweens.add({targets:t,scale:1.1,duration:200,ease:'Back.out'});
-    this.tweens.add({targets:t,alpha:0,delay:big?660:460,duration:280,onComplete:()=>t.destroy()});
+    const fs=Math.min(76,32+n*1.7), colFor=v=>v>=27?'#ff6a3a':v>=18?'#ffb02a':'#ffd24a';
+    const t=this.add.text(CX,BOARD_CY,'1 HIT',{fontFamily:EMOJIFONT,fontSize:fs+'px',color:colFor(1),fontStyle:'bold',stroke:'#5a1500',strokeThickness:7}).setOrigin(0.5).setDepth(DEPTH.fx).setScale(0.3).setAngle(-6);
+    this.tweens.add({targets:t,scale:1,duration:160,ease:'Back.out'});
+    const cnt={v:1}, dur=Math.min(560,150+n*16);   // 數字累加時間:格數越多跳越久(封頂)
+    this.tweens.add({targets:cnt,v:n,duration:dur,ease:'Cubic.out',
+      onUpdate:()=>{const cv=Math.round(cnt.v);t.setText(cv+' HIT').setColor(colFor(cv));},
+      onComplete:()=>{t.setText(n+' HIT').setColor(colFor(n));   // 落定強調:彈一下(+大數字額外震)
+        this.tweens.add({targets:t,scaleX:1.28,scaleY:1.28,duration:130,yoyo:true,ease:'Quad.out'});
+        if(big)this.cameras.main.shake(huge?180:120,0.008);}});
+    this.tweens.add({targets:t,alpha:0,delay:dur+420,duration:300,onComplete:()=>t.destroy()});
   }
   // 新手鉤子:每場第一次消除 = 隆重慶祝(全螢幕閃光+震動+大字+提示拖屬塊)
   firstClearFX(){
