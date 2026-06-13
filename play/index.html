@@ -585,7 +585,7 @@ class GameScene extends Phaser.Scene{
     this.input.on('pointerdown',p=>{if(this.earthSel&&!this.earthDrag)this.startEarthMove(p);});
     this.scale.on('resize',this.onResize,this);
     this.cameras.main.setBounds(0,0,W,H);   // 鏡頭鎖在世界範圍內→特寫推近/平移不會露出世界外的黑邊
-    this.startBoardIdle();   // 盤面久久一道查克拉光波流過(不那麼靜態)
+    this.flow=[];   // 查克拉流光粒子池(syncFlow 依各屬性區已放塊數增減)
 
     this.newGame();
   }
@@ -701,6 +701,7 @@ class GameScene extends Phaser.Scene{
       rc.setStrokeStyle(2,0x000000,0);}
     for(let b=0;b<9;b++){const be=this.boxElement[b];
       this.boxLabels[b].setText(be?EL[be].name:'·').setColor(be?'#'+EL[be].color.toString(16).padStart(6,'0'):'#ffffff66');}
+    this.syncFlow();   // 盤面變動→同步各屬性區流光粒子數
   }
   renderTeam(){ELEMENT_BOXES.forEach((b,i)=>{const k=this.boxElement[b],card=this.teamCards[i];
     card.el=k;card.rect.setFillStyle(EL[k].color);card.txt.setText(EL[k].name);});
@@ -741,9 +742,11 @@ class GameScene extends Phaser.Scene{
       if(this.moralePeak&&this.moraleBg&&this.moraleBg.active){const t=time*0.006;   // 極=絕好調:徽章底色與外環在暗紅↔亮橙間流動(相位差→像能量在圈裡轉)
         this.moraleBg.setFillStyle(lerpColor(0x6e1808,0xff8a1e,0.5+0.5*Math.sin(t)),1);
         this.moraleBg.setStrokeStyle(2,lerpColor(0xff5a2a,0xffd24a,0.5+0.5*Math.sin(t+1.7)));}
-      if(this.board&&!this.drag){const t2=time*0.0024;   // 盤面查克拉微流:已放的塊隨對角相位做微亮暗呼吸(不死板;拖曳中略過免干擾)
-        for(let r=0;r<N;r++)for(let c=0;c<N;c++){const cell=this.board[r][c]; if(!cell)continue;
-          const base=EL[cell.el]?EL[cell.el].color:NEUTRAL_FILL; this.cellRect(r,c).setFillStyle(lerpColor(base,shadeColor(base,0.22),0.5+0.5*Math.sin(t2-(r+c)*0.55)));}}
+      if(this.flow&&this.flow.length){   // 盤面查克拉流光:每個屬性 3×3 區內各自有粒子穿梭(數量=該區已放塊數),像龍族拼圖
+        for(const p of this.flow){const o=p.obj; if(!o||!o.active)continue;
+          o.x+=(p.tx-o.x)*0.05; o.y+=(p.ty-o.y)*0.05;
+          if(Math.abs(o.x-p.tx)<2&&Math.abs(o.y-p.ty)<2){p.tx=p.reg.x+Math.random()*p.reg.w; p.ty=p.reg.y+Math.random()*p.reg.h;}   // 到點 → 換新目標(持續穿梭)
+          o.setAlpha(0.5+0.4*Math.sin(time*0.004+p.ph));}}
     }catch(e){}
   }
   // === 主動技 / 敵攻 共用特效 ===
@@ -806,11 +809,16 @@ class GameScene extends Phaser.Scene{
     this.time.delayedCall(340,()=>{ this.refill(); this.renderTray();
       (this.trayIcons||[]).forEach(g=>{g.setScale(0.08);this.tweens.add({targets:g,scaleX:1,scaleY:1,duration:380,ease:'Quart.out'});}); });   // 新塊從各自中心展開
   }
-  startBoardIdle(){ if(this._idleEv)this._idleEv.remove(); this._idleEv=this.time.addEvent({delay:4200,loop:true,callback:()=>this.boardSweep()}); }
-  boardSweep(){ if(this.resultOpen||!this.board)return; if(!this.board.some(row=>row.some(c=>c)))return;   // 盤面有塊才掃,空盤不掃
-    const ADD=Phaser.BlendModes.ADD, band=this.add.rectangle(CX,BY0-14,9*CS-2,22,0x8fd0ff,0).setBlendMode(ADD).setDepth(DEPTH.board+1);   // 久久一道查克拉光波由上往下流過盤面
-    this.tweens.add({targets:band,y:BY0+9*CS+14,duration:1500,ease:'Sine.inOut',onComplete:()=>band.destroy()});
-    this.tweens.add({targets:band,alpha:0.16,duration:380,yoyo:true,hold:740});
+  _boxRegion(b){const br=Math.floor(b/3)*3,bc=(b%3)*3;return {x:BX0+bc*CS+5,y:BY0+br*CS+5,w:3*CS-10,h:3*CS-10};}   // 該 3×3 區的像素範圍(內縮一點)
+  // 同步查克拉流光粒子:每個屬性區的粒子數 = 該區已放塊數(放越多越多;清掉就減)
+  syncFlow(){ if(!this.flow)this.flow=[]; if(!this.board)return; const ADD=Phaser.BlendModes.ADD;
+    for(let b=0;b<9;b++){ const el=this.boxElement[b]; const br=Math.floor(b/3)*3,bc=(b%3)*3;
+      let want=0; if(el!=null){for(let r=br;r<br+3;r++)for(let c=bc;c<bc+3;c++)if(this.board[r][c])want++;}   // 屬性區才有流光,數量=填滿格數
+      let have=this.flow.filter(p=>p.b===b).length;
+      while(have>want){ const idx=this.flow.findIndex(p=>p.b===b); if(idx<0)break; this.flow[idx].obj.destroy(); this.flow.splice(idx,1); have--; }   // 多了→收掉
+      while(have<want){ const reg=this._boxRegion(b), col=EL[el].color, x=reg.x+Math.random()*reg.w, y=reg.y+Math.random()*reg.h;   // 少了→補上
+        const o=this.add.circle(x,y,2.4+Math.random()*1.5,col,0.9).setBlendMode(ADD).setDepth(DEPTH.board+1);
+        this.flow.push({obj:o,b,reg,tx:reg.x+Math.random()*reg.w,ty:reg.y+Math.random()*reg.h,ph:Math.random()*6.28}); have++; } }
   }
   // 發動主動技
   fireActive(i){if(this.resultOpen||this.locked||this.drag||this.earthSel||this.earthDrag)return;
