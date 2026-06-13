@@ -703,7 +703,7 @@ class GameScene extends Phaser.Scene{
   }
   // 放塊:查克拉凝聚成形 —— 屬色凝聚體由略大半透明收實 + 粒子向中心收束 + 格子淡入(只演「放下後仍在盤上」的格)
   coalesceCells(list){ if(!list)return; const ADD=Phaser.BlendModes.ADD;   // list=[{r,c,el}](放下當下就記住屬性→就算馬上結印被清掉也照演凝聚)
-    list.forEach((pc,idx)=>{const r=pc.r,c=pc.c; if(r<0||r>=N||c<0||c>=N)return;
+    list.forEach((pc,idx)=>{const r=pc.r,c=pc.c; if(r<0||r>=N||c<0||c>=N||!this.board[r][c])return;   // 已被結印清掉的格→不跑「聚攏成實心塊」(交給結印的溶解→集結演出)
       const cell=this.cellRect(r,c); if(!cell)return;
       const el=pc.el, col=EL[el]?EL[el].color:NEUTRAL_FILL, cx=BX0+c*CS+RECT/2, cy=BY0+r*CS+RECT/2, dl=idx*55;   // dl:多格逐格錯開→像一道波流過整塊(絲滑)
       this.tweens.killTweensOf(cell); cell.setAlpha(0.12); this.tweens.add({targets:cell,alpha:1,duration:430,delay:dl,ease:'Sine.out',onComplete:()=>cell.setAlpha(1)});   // 格子柔和淡入
@@ -1320,7 +1320,10 @@ class GameScene extends Phaser.Scene{
     this.tweens.add({targets:glow,scale:5*gs,duration:480,ease:'Quad.in'});
     const cells=(data.cells||[]).slice();   // 兩段式:先往外散開→再奔向中心;HIT 越多粒子越多(上限28)
     cells.slice(0,28).forEach((rc,i)=>{const o=this.cellCenter(rc[0],rc[1]);
+      const cel=this.boxElement[boxOf(rc[0],rc[1])], dcol=cel?EL[cel].color:NEUTRAL_FILL;   // 該塊的屬色
       this.time.delayedCall((i%10)*16,()=>{
+        const ov=this.add.rectangle(o.x,o.y,RECT,RECT,dcol).setOrigin(0.5).setBlendMode(ADD).setDepth(DEPTH.proj-1).setAlpha(0.5).setScale(0.95);   // 塊溶解:屬色塊外擴淡出(化成查克拉)
+        this.tweens.add({targets:ov,scaleX:1.55,scaleY:1.55,alpha:0,duration:300,ease:'Quad.out',onComplete:()=>ov.destroy()});
         const dx=o.x-LP.x, dy=o.y-LP.y, sa=Math.atan2(dy,dx)+(Math.random()-0.5)*1.5;   // 大致離心方向 + 隨機
         const sp={x:o.x+Math.cos(sa)*(28+Math.random()*34), y:o.y+Math.sin(sa)*(28+Math.random()*34)-(8+Math.random()*16)};
         const d=this.add.circle(o.x,o.y,4,col,0.9).setBlendMode(ADD).setDepth(DEPTH.proj-1);
