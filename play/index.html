@@ -695,6 +695,7 @@ class GameScene extends Phaser.Scene{
 
   refreshBoard(){
     for(let r=0;r<N;r++)for(let c=0;c<N;c++){const rc=this.cellRect(r,c), be=this.boxElement[boxOf(r,c)];
+      rc.setAlpha(1).setScale(1);   // 還原溶解動畫殘留的 alpha/scale
       if(this.board[r][c]){const el=this.board[r][c].el;rc.setFillStyle(EL[el]?EL[el].color:NEUTRAL_FILL);}
       else rc.setFillStyle(be?EL[be].dark:NEUTRAL_DARK);
       rc.setStrokeStyle(2,0x000000,0);}
@@ -1117,7 +1118,10 @@ class GameScene extends Phaser.Scene{
     }}));
     const atkAt=this.playClearFX(n, jutsu);   // 先 n HIT → 招式名(1~2 招並列)→ 才各招集結射出
     this.updateEnemies();
-    this.time.delayedCall(Math.max(120,atkAt-100),()=>{this.refreshBoard();});                                        // 攻擊發動前夕,清掉的格子消失(集氣同時)
+    this.time.delayedCall(Math.max(120,atkAt-100),()=>{   // 清除的格平滑「溶解」(逐格淡化的波,不是先杵著再一起消)→ 化進集氣
+      const cc=data.cells||[]; cc.forEach((rc,idx)=>{const cell=this.cellRect(rc[0],rc[1]); if(cell)this.tweens.add({targets:cell,alpha:0,duration:260,delay:Math.min(idx,18)*16,ease:'Sine.in'});});
+      this.time.delayedCall(300+Math.min(cc.length,18)*16,()=>this.refreshBoard());   // 溶解完才正式清(refreshBoard 還原 alpha)
+    });
     const impactAt=atkAt+540+this.chargeMs(n)+340;   // 查克拉彈真正命中的時點
     this.time.delayedCall(impactAt,()=>{victims.forEach(v=>{v.hp=Math.max(0,v.hp-dealt);}); this.updateEnemies();});   // ★ 彈著瞬間才扣血(血條動畫,不提早)
     this.time.delayedCall(impactAt+440,()=>{this.updateAll(); victims.forEach(v=>{if(v.hp<=0)this.killEnemy(v);});});   // 命中後再收掉死亡敵
@@ -1320,10 +1324,7 @@ class GameScene extends Phaser.Scene{
     this.tweens.add({targets:glow,scale:5*gs,duration:480,ease:'Quad.in'});
     const cells=(data.cells||[]).slice();   // 兩段式:先往外散開→再奔向中心;HIT 越多粒子越多(上限28)
     cells.slice(0,28).forEach((rc,i)=>{const o=this.cellCenter(rc[0],rc[1]);
-      const cel=this.boxElement[boxOf(rc[0],rc[1])], dcol=cel?EL[cel].color:NEUTRAL_FILL;   // 該塊的屬色
       this.time.delayedCall((i%10)*16,()=>{
-        const ov=this.add.rectangle(o.x,o.y,RECT,RECT,dcol).setOrigin(0.5).setBlendMode(ADD).setDepth(DEPTH.proj-1).setAlpha(0.5).setScale(0.95);   // 塊溶解:屬色塊外擴淡出(化成查克拉)
-        this.tweens.add({targets:ov,scaleX:1.55,scaleY:1.55,alpha:0,duration:300,ease:'Quad.out',onComplete:()=>ov.destroy()});
         const dx=o.x-LP.x, dy=o.y-LP.y, sa=Math.atan2(dy,dx)+(Math.random()-0.5)*1.5;   // 大致離心方向 + 隨機
         const sp={x:o.x+Math.cos(sa)*(28+Math.random()*34), y:o.y+Math.sin(sa)*(28+Math.random()*34)-(8+Math.random()*16)};
         const d=this.add.circle(o.x,o.y,4,col,0.9).setBlendMode(ADD).setDepth(DEPTH.proj-1);
@@ -1414,7 +1415,7 @@ class GameScene extends Phaser.Scene{
   countFX(n){
     if(this.hitTx){this.tweens.killTweensOf(this.hitTx);this.hitTx.destroy();}   // 同位置只留最新(快速連放不疊成一團)
     const big=n>=18, huge=n>=27;
-    this.cameras.main.shake(huge?340:big?260:160, huge?0.014:big?0.011:0.007);
+    this.cameras.main.shake(huge?240:big?170:0, huge?0.008:big?0.006:0);   // 放下/數 HIT 的初震減弱(小清不震,免一放下就晃)
     if(big){const flash=this.add.rectangle(CX,H/2,W,H,huge?0xffc89a:0xfff0c0,0).setDepth(DEPTH.flash);
       this.tweens.add({targets:flash,alpha:huge?0.5:0.4,duration:110,yoyo:true,onComplete:()=>flash.destroy()});}
     const fs=Math.min(80,34+n*1.8), colFor=v=>v>=27?'#ff6a3a':v>=18?'#ffb02a':'#ffd24a';
