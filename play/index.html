@@ -1196,9 +1196,14 @@ class CollectionScene extends Phaser.Scene{
     this.tweens.add({targets:t,scale:1.1,duration:300,ease:'Back.out'});
     this.tweens.add({targets:t,scaleX:1.18,scaleY:1.18,duration:420,yoyo:true,delay:300,ease:'Sine.inOut'});
     this.tweens.add({targets:t,y:cyc-46,alpha:0,delay:820,duration:520,onComplete:()=>t.destroy()});
-    const c2=this.add.text(CX,cyc+42,'→ '+newCap+' 格',{fontFamily:EMOJIFONT,fontSize:'18px',color:'#cfe0ff',fontStyle:'bold',stroke:'#1a2030',strokeThickness:4}).setOrigin(0.5).setDepth(3000).setAlpha(0);
+    const c2=this.add.text(CX,cyc+44,'→ '+newCap+' 格',{fontFamily:EMOJIFONT,fontSize:'18px',color:'#cfe0ff',fontStyle:'bold',stroke:'#1a2030',strokeThickness:4}).setOrigin(0.5).setDepth(3000).setAlpha(0);
     this.tweens.add({targets:c2,alpha:1,duration:260,delay:180});
-    this.tweens.add({targets:c2,alpha:0,delay:960,duration:480,onComplete:()=>c2.destroy()});
+    this.tweens.add({targets:c2,alpha:0,delay:1300,duration:480,onComplete:()=>c2.destroy()});
+    // 5 個新欄位一格格依序冒出來(像格子被加進背包)
+    const sw=26, gp=7, tot=5*sw+4*gp, sx0=CX-tot/2+sw/2, sy=cyc+82;
+    for(let i=0;i<5;i++){const b=this.add.rectangle(sx0+i*(sw+gp),sy,sw,sw,0x4a3a6a,1).setStrokeStyle(2,0xd8c8ff,1).setDepth(3000).setScale(0);
+      this.tweens.add({targets:b,scale:1,duration:260,delay:280+i*150,ease:'Back.out'});   // 依序彈出
+      this.tweens.add({targets:b,alpha:0,delay:280+i*150+820,duration:420,onComplete:()=>b.destroy()});}
   }
   draw(){
     const cards=loadSave().cards, cap=boxCap(), cnt=cards.length, full=cnt>=cap;
@@ -1215,6 +1220,7 @@ class CollectionScene extends Phaser.Scene{
     let list=cards.map((c,i)=>{const r=ROSTER.find(x=>x.id===c.id)||{};return Object.assign({_i:i,u:c.u},r);});
     if(this.filterEl)list=list.filter(c=>c.el===this.filterEl);
     list=list.sort(SORT_MODES[this.sortMode].fn);
+    if(!this.filterEl){const empties=Math.max(0,cap-list.length);for(let e=0;e<empties;e++)list.push(null);}   // 全屬視圖:卡片後補「空欄」到上限→看得到還剩幾格
     // 正方形、一排 5 欄、分頁(5×6=30/頁)
     const cols=5, perPage=30, cw=64, gx=76, gy=74, x0=CX-2*gx, y0=192;
     const pages=Math.max(1,Math.ceil(list.length/perPage));
@@ -1222,6 +1228,7 @@ class CollectionScene extends Phaser.Scene{
     const pageList=list.slice(this.boxPage*perPage,(this.boxPage+1)*perPage);
     if(!list.length)this.txt(CX,280,'(沒有符合條件的卡)','12px','#9a8a6a',0.5);
     pageList.forEach((cd,k)=>{const cx=x0+(k%cols)*gx, cy=y0+Math.floor(k/cols)*gy;
+      if(!cd){this.rect(cx,cy,cw,cw,0x140f0a,0.5).setStrokeStyle(1.5,0x4a3a28,0.6);return;}   // 空欄:暗色框(一眼看出還剩幾格)
       const r=this.rect(cx,cy,cw,cw,EL[cd.el].color).setStrokeStyle(2,cd.rank==='kage'?0xffd54a:0x000000,cd.rank==='kage'?1:0.3).setInteractive();
       r.on('pointerup',()=>{this.sel=cd.id;this.rebuild();});
       this.txt(cx,cy-16,cd.name,'10px','#1a1208',0.5,true);
