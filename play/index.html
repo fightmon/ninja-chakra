@@ -702,10 +702,10 @@ class GameScene extends Phaser.Scene{
       this.boxLabels[b].setText(be?EL[be].name:'·').setColor(be?'#'+EL[be].color.toString(16).padStart(6,'0'):'#ffffff66');}
   }
   // 放塊:查克拉凝聚成形 —— 屬色凝聚體由略大半透明收實 + 粒子向中心收束 + 格子淡入(只演「放下後仍在盤上」的格)
-  coalesceCells(list){ if(!list)return; const ADD=Phaser.BlendModes.ADD;
-    list.forEach((rc,idx)=>{const r=rc[0],c=rc[1]; if(r<0||r>=N||c<0||c>=N||!this.board[r][c])return;
+  coalesceCells(list){ if(!list)return; const ADD=Phaser.BlendModes.ADD;   // list=[{r,c,el}](放下當下就記住屬性→就算馬上結印被清掉也照演凝聚)
+    list.forEach((pc,idx)=>{const r=pc.r,c=pc.c; if(r<0||r>=N||c<0||c>=N)return;
       const cell=this.cellRect(r,c); if(!cell)return;
-      const el=this.board[r][c].el, col=EL[el]?EL[el].color:NEUTRAL_FILL, cx=BX0+c*CS+RECT/2, cy=BY0+r*CS+RECT/2, dl=idx*55;   // dl:多格逐格錯開→像一道波流過整塊(絲滑)
+      const el=pc.el, col=EL[el]?EL[el].color:NEUTRAL_FILL, cx=BX0+c*CS+RECT/2, cy=BY0+r*CS+RECT/2, dl=idx*55;   // dl:多格逐格錯開→像一道波流過整塊(絲滑)
       this.tweens.killTweensOf(cell); cell.setAlpha(0.12); this.tweens.add({targets:cell,alpha:1,duration:430,delay:dl,ease:'Sine.out',onComplete:()=>cell.setAlpha(1)});   // 格子柔和淡入
       const o=this.add.rectangle(cx,cy,RECT,RECT,col).setOrigin(0.5).setBlendMode(ADD).setDepth(DEPTH.board+1).setAlpha(0.5).setScale(1.7);   // 凝聚體:略大半透→緩緩收實(Cubic.out 緩出=軟著陸)
       this.tweens.add({targets:o,scaleX:1,scaleY:1,alpha:0,duration:440,delay:dl,ease:'Cubic.out',onComplete:()=>o.destroy()});
@@ -936,9 +936,9 @@ class GameScene extends Phaser.Scene{
   doPlaceStored(d,r,c){if(this.resultOpen)return;
     d.cells.forEach(([dr,dc])=>{const rr=r+dr,cc=c+dc;
       if(rr>=0&&rr<N&&cc>=0&&cc<N&&!this.board[rr][cc])this.board[rr][cc]={el:this.boxElement[boxOf(rr,cc)]||'neutral'};});
-    const placed=d.cells.map(([dr,dc])=>[r+dr,c+dc]);
+    const placed=d.cells.map(([dr,dc])=>{const rr=r+dr,cc=c+dc;return (rr>=0&&rr<N&&cc>=0&&cc<N&&this.board[rr][cc])?{r:rr,c:cc,el:this.board[rr][cc].el}:null;}).filter(Boolean);
     this.stored[d.store]=null; this.renderStored();
-    this.afterAction(false); this.coalesceCells(placed);   // 查克拉凝聚成形
+    this.afterAction(false); this.coalesceCells(placed);   // 查克拉凝聚成形(結印時也演)
   }   // 連擊引擎:屬塊消除「也生塊」(滾雪球爽度);仍不佔托盤格→不推進敵(由 tray.every(used) 決定)
   updateDrag(p){if(!this.drag)return;this.clearGhost();
     const cell=this.pointerToCell(p.x,p.y-DRAG_LIFT);
@@ -970,10 +970,10 @@ class GameScene extends Phaser.Scene{
     cells.forEach(([dr,dc])=>{const rr=r+dr,cc=c+dc;
       if(kind==='wind'){if(this.board[rr][cc])this.board[rr][cc]=null;}        // 風刃:消除
       else if(!this.board[rr][cc])this.board[rr][cc]={el:this.boxElement[boxOf(rr,cc)]||'neutral'};}); // 一般/水:填(只填空格)
-    const placed=(kind!=='wind')?cells.map(([dr,dc])=>[r+dr,c+dc]):null;
+    const placed=(kind!=='wind')?cells.map(([dr,dc])=>{const rr=r+dr,cc=c+dc;return (rr>=0&&rr<N&&cc>=0&&cc<N&&this.board[rr][cc])?{r:rr,c:cc,el:this.board[rr][cc].el}:null;}).filter(Boolean):null;   // 放下當下記住屬性(之後就算被清也照演)
     this.tray[i].used=true;
     this.afterAction(kind==='water'||kind==='wind');
-    if(placed)this.coalesceCells(placed);   // 查克拉凝聚成形
+    if(placed)this.coalesceCells(placed);   // 查克拉凝聚成形(結印時也會演 → 凝聚→才清)
   }
   // 共用:放塊後處理(消除→燒傷→敵推進→補塊→卡死檢查)
   afterAction(fromBlock){
