@@ -872,9 +872,7 @@ class GameScene extends Phaser.Scene{
       this.stuckTw.push(this.tweens.add({targets:so,scaleX:1.42,scaleY:1.42,duration:240,yoyo:true,repeat:-1,ease:'Sine.inOut'}));  // 持續脹
       const cx=card.rect.x, cy=card.rect.y;   // 卡身亮黃光環持續脈動
       const ring=this.add.rectangle(cx,cy,68,68,0,0).setStrokeStyle(4,0xffe066,1).setDepth(DEPTH.fx); this.stuckObj.push(ring);
-      this.stuckTw.push(this.tweens.add({targets:ring,scaleX:1.3,scaleY:1.3,alpha:0,duration:620,repeat:-1,ease:'Quad.out'}));
-      const ar=this.add.text(cx,cy-46,'⬇',{fontFamily:EMOJIFONT,fontSize:'22px',color:'#ffe066',fontStyle:'bold',stroke:'#5a3a00',strokeThickness:3}).setOrigin(0.5).setDepth(DEPTH.fx); this.stuckObj.push(ar);   // 向下箭頭持續跳
-      this.stuckTw.push(this.tweens.add({targets:ar,y:cy-34,duration:440,yoyo:true,repeat:-1,ease:'Sine.inOut'}));});}
+      this.stuckTw.push(this.tweens.add({targets:ring,scaleX:1.3,scaleY:1.3,alpha:0,duration:620,repeat:-1,ease:'Quad.out'}));});}
   // 收掉卡死提示(玩家一行動就停):停 tween、銷毀光環/箭頭、屬塊歸位
   stopStuckFX(){
     if(this.stuckTw){this.stuckTw.forEach(t=>{if(t)t.stop();});this.stuckTw=null;}
