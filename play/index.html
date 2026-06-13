@@ -585,7 +585,6 @@ class GameScene extends Phaser.Scene{
     this.input.on('pointerdown',p=>{if(this.earthSel&&!this.earthDrag)this.startEarthMove(p);});
     this.scale.on('resize',this.onResize,this);
     this.cameras.main.setBounds(0,0,W,H);   // 鏡頭鎖在世界範圍內→特寫推近/平移不會露出世界外的黑邊
-    this.flow=[];   // 查克拉流光粒子池(syncFlow 依各屬性區已放塊數增減)
 
     this.newGame();
   }
@@ -701,7 +700,6 @@ class GameScene extends Phaser.Scene{
       rc.setStrokeStyle(2,0x000000,0);}
     for(let b=0;b<9;b++){const be=this.boxElement[b];
       this.boxLabels[b].setText(be?EL[be].name:'·').setColor(be?'#'+EL[be].color.toString(16).padStart(6,'0'):'#ffffff66');}
-    this.syncFlow();   // 盤面變動→同步各屬性區流光粒子數
   }
   renderTeam(){ELEMENT_BOXES.forEach((b,i)=>{const k=this.boxElement[b],card=this.teamCards[i];
     card.el=k;card.rect.setFillStyle(EL[k].color);card.txt.setText(EL[k].name);});
@@ -742,12 +740,6 @@ class GameScene extends Phaser.Scene{
       if(this.moralePeak&&this.moraleBg&&this.moraleBg.active){const t=time*0.006;   // 極=絕好調:徽章底色與外環在暗紅↔亮橙間流動(相位差→像能量在圈裡轉)
         this.moraleBg.setFillStyle(lerpColor(0x6e1808,0xff8a1e,0.5+0.5*Math.sin(t)),1);
         this.moraleBg.setStrokeStyle(2,lerpColor(0xff5a2a,0xffd24a,0.5+0.5*Math.sin(t+1.7)));}
-      if(this.flow&&this.flow.length){   // 盤面查克拉流光:每屬性 3×3 區內粒子像螢火蟲緩慢沿弧線穿梭(數量=該區已放塊數)
-        for(const p of this.flow){const o=p.obj; if(!o||!o.active)continue;
-          if(p.t>=1||!p.bt)this.newLeg(p);                                  // 到點 → 換下一段弧線
-          p.t=Math.min(1,p.t+p.spd);
-          const q=this.chakraBez(p.a,p.ctrl,p.bt,p.t); o.setPosition(q.x,q.y);   // 沿二次貝茲(弧線)緩慢移動
-          o.setAlpha(0.32+0.46*Math.sin(time*0.003+p.ph));}}                 // 螢火蟲明滅
     }catch(e){}
   }
   // === 主動技 / 敵攻 共用特效 ===
@@ -809,20 +801,6 @@ class GameScene extends Phaser.Scene{
     this.traySlots.forEach(sx=>{const fl=this.add.circle(sx,TRAY_Y,13,EL.earth.color,0.6).setBlendMode(ADD).setDepth(DEPTH.tray+1);this.tweens.add({targets:fl,scale:2.4,alpha:0,duration:420,delay:260,onComplete:()=>fl.destroy()});});   // 各塊中心元素閃
     this.time.delayedCall(340,()=>{ this.refill(); this.renderTray();
       (this.trayIcons||[]).forEach(g=>{g.setScale(0.08);this.tweens.add({targets:g,scaleX:1,scaleY:1,duration:380,ease:'Quart.out'});}); });   // 新塊從各自中心展開
-  }
-  _boxRegion(b){const br=Math.floor(b/3)*3,bc=(b%3)*3;return {x:BX0+bc*CS+5,y:BY0+br*CS+5,w:3*CS-10,h:3*CS-10};}   // 該 3×3 區的像素範圍(內縮一點)
-  newLeg(p){const r=p.reg,o=p.obj; p.a={x:o.x,y:o.y}; p.bt={x:r.x+Math.random()*r.w,y:r.y+Math.random()*r.h};   // 規劃下一段「弧線」:控制點=中點往垂直偏移
-    const mx=(p.a.x+p.bt.x)/2,my=(p.a.y+p.bt.y)/2,dx=p.bt.x-p.a.x,dy=p.bt.y-p.a.y,L=Math.hypot(dx,dy)||1,mag=(Math.random()-0.5)*L*0.7;
-    p.ctrl={x:mx-dy/L*mag,y:my+dx/L*mag}; p.t=0; p.spd=0.004+Math.random()*0.004;}   // spd 小→很慢(一段約 2~4 秒),像螢火蟲
-  // 同步查克拉流光粒子:每個屬性區的粒子數 = 該區已放塊數(放越多越多;清掉就減)
-  syncFlow(){ if(!this.flow)this.flow=[]; if(!this.board)return; const ADD=Phaser.BlendModes.ADD;
-    for(let b=0;b<9;b++){ const el=this.boxElement[b]; const br=Math.floor(b/3)*3,bc=(b%3)*3;
-      let want=0; if(el!=null){for(let r=br;r<br+3;r++)for(let c=bc;c<bc+3;c++)if(this.board[r][c])want++;}   // 屬性區才有流光,數量=填滿格數
-      let have=this.flow.filter(p=>p.b===b).length;
-      while(have>want){ const idx=this.flow.findIndex(p=>p.b===b); if(idx<0)break; this.flow[idx].obj.destroy(); this.flow.splice(idx,1); have--; }   // 多了→收掉
-      while(have<want){ const reg=this._boxRegion(b), col=EL[el].color, x=reg.x+Math.random()*reg.w, y=reg.y+Math.random()*reg.h;   // 少了→補上
-        const o=this.add.circle(x,y,2.4+Math.random()*1.5,col,0.85).setBlendMode(ADD).setDepth(Math.random()<0.5?DEPTH.board+1:DEPTH.board-1);   // 隨機在塊的「上層或下層」(下層會被塊遮住→有前後景深)
-        this.flow.push({obj:o,b,reg,t:1,ph:Math.random()*6.28}); have++; } }   // t=1 → update 首幀即規劃第一段弧線
   }
   // 發動主動技
   fireActive(i){if(this.resultOpen||this.locked||this.drag||this.earthSel||this.earthDrag)return;
