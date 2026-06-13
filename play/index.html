@@ -700,11 +700,14 @@ class GameScene extends Phaser.Scene{
     card.storeCells=objs;
     if(card.storeKey!==key){card.storeKey=key;inner.setScale(0.2);this.tweens.add({targets:inner,scaleX:1,scaleY:1,duration:320,ease:'Back.out'});}else inner.setScale(1);   // 新生/升級才彈出一次(醒目);平時靠漸層流動,不亂閃
   });}
-  // 每幀驅動屬塊的明暗漸層流動(沿塊身相位差→像能量在流);無屬塊的卡略過
+  // 每幀驅動:屬塊的明暗漸層流動(沿塊身相位差→像能量在流)+ 「極」鬥志徽章底色漸層流動(絕好調)
   update(time){
     if(!this.teamCards)return;
     for(const card of this.teamCards){const cs=card.storeCells; if(!cs)continue;
       for(const c of cs){const frac=0.5+0.5*Math.sin(time*0.005 - c.phase*3.4); c.obj.setFillStyle(lerpColor(card.storeDark,card.storeLight,frac));}}
+    if(this.moralePeak&&this.moraleBg){const t=time*0.006;   // 極=絕好調:徽章底色與外環在暗紅↔亮橙間流動(相位差→像能量在圈裡轉)
+      this.moraleBg.setFillStyle(lerpColor(0x6e1808,0xff8a1e,0.5+0.5*Math.sin(t)),1);
+      this.moraleBg.setStrokeStyle(2,lerpColor(0xff5a2a,0xffd24a,0.5+0.5*Math.sin(t+1.7)));}
   }
   // 發動主動技
   fireActive(i){if(this.resultOpen||this.drag||this.earthSel||this.earthDrag)return;
@@ -973,10 +976,11 @@ class GameScene extends Phaser.Scene{
     e.mark.setVisible(i===this.target);});}
   updateBars(){
     this.pHp.displayWidth=(W-2*BX0)*Math.max(0,this.playerHP/this.maxHP);
-    this.pHpTxt.setText('我方 '+this.playerHP+'/'+this.maxHP);
+    this.pHpTxt.setText(this.playerHP+'/'+this.maxHP);   // 去掉「我方」
     this.chestTxt.setText('📦 '+(this.chests||0)); this.goldTxt.setText('💰 '+(this.gold||0));
     const mcol=['#99aabb','#9ac4e0','#ffffff','#ffd24a','#ff9a3a','#ff5a3a'][this.morale]||'#ffd56a';
-    if(this.moraleTx){this.moraleTx.setText(CONFIG.MORALE_NAMES[this.morale]).setColor(mcol);this.moraleBg.setStrokeStyle(2,parseInt(mcol.slice(1),16));}   // 鬥志=左端徽章;原「鬥志×1」資訊列已移除以釋放高度
+    if(this.moraleTx){this.moraleTx.setText(CONFIG.MORALE_NAMES[this.morale]).setColor(this.morale>=5?'#fff4e0':mcol);   // 極→字用亮白,在流動底上可讀
+      if(this.morale<5)this.moraleBg.setFillStyle(0x1a140c,0.92).setStrokeStyle(2,parseInt(mcol.slice(1),16));}   // 非極=暗底+該階色環;極的底/環交給 update() 跑漸層流動,不在此覆寫
   }
 
   /* 特效 */
@@ -1023,24 +1027,23 @@ class GameScene extends Phaser.Scene{
     this.tweens.add({targets:t,alpha:0,delay:680,duration:300,onComplete:()=>t.destroy()});
     this.time.delayedCall(380,()=>this.tonFloat('✦ 屬塊已存到卡上 — 可拖下來用!','#ffe08a'));
   }
-  // 鬥志階變演出;升到「極」=全體解放超模式
-  // 鬥志階變:全部演在「鬥志圈圈」裡(不在盤面出字)。升/降彈一下+擴散一圈該階色光;進入「極」後交給 syncMoraleState 跑常駐脈動
+  // 鬥志階變:全部演在「鬥志圈圈」裡(不在盤面出字)。非極階變=彈一下;極=不做大小變化(免被當成可按的CD鈕),改由 update() 跑徽章底色漸層流動。一律擴散一圈該階色光
   moraleFX(tier,up){
     if(!this.moraleBg)return;
     const bx=this.moraleBg.x, by=this.moraleBg.y, tg=[this.moraleBg,this.moraleTx];
-    if(this.moralePulse){this.moralePulse.stop();this.moralePulse=null;}
-    this.tweens.killTweensOf(tg); tg.forEach(o=>o.setScale(up?1.5:0.72));   // 升=放大回彈、降=縮一下
-    this.tweens.add({targets:tg,scaleX:1,scaleY:1,duration:300,ease:'Back.out',onComplete:()=>this.syncMoraleState()});   // 彈完→依目前鬥志決定要不要跑「極」脈動
+    this.tweens.killTweensOf(tg);
+    if(tier>=5){ tg.forEach(o=>o.setScale(1)); }   // 極:不做 scale
+    else { tg.forEach(o=>o.setScale(up?1.5:0.72)); this.tweens.add({targets:tg,scaleX:1,scaleY:1,duration:300,ease:'Back.out'}); }   // 其他階:升放大/降縮一下回彈
+    this.syncMoraleState();   // 設「極」旗標 / 還原非極底色
     const col=parseInt((['99aabb','9ac4e0','ffffff','ffd24a','ff9a3a','ff5a3a'][tier]||'ffd56a'),16);   // 擴散環:該階色,在徽章處 ping 一下
     const ring=this.add.circle(bx,by,15,0x000000,0).setStrokeStyle(3,col,1).setDepth(DEPTH.fx);
     this.tweens.add({targets:ring,scale:tier>=5?3.2:2.1,alpha:0,duration:tier>=5?560:420,ease:'Quad.out',onComplete:()=>ring.destroy()});
   }
-  // 讓「極=絕好調」的常駐脈動與目前鬥志同步(進關帶來的極、階變後都呼叫):極→脈動,非極→停
+  // 「極=絕好調」用旗標標記,讓 update() 每幀跑徽章底色漸層流動(不用 scale,免像可按鈕);非極→還原暗底
   syncMoraleState(){
     if(!this.moraleBg)return;
-    if(this.moralePulse){this.moralePulse.stop();this.moralePulse=null;}
-    this.moraleBg.setScale(1); this.moraleTx.setScale(1);
-    if(this.morale>=5)this.moralePulse=this.tweens.add({targets:[this.moraleBg,this.moraleTx],scaleX:1.2,scaleY:1.2,duration:480,yoyo:true,repeat:-1,ease:'Sine.inOut'});
+    this.moralePeak = this.morale>=5;
+    if(!this.moralePeak)this.moraleBg.setFillStyle(0x1a140c,0.92);
   }
   showJutsu(el,lv){const name=KATA[lv-1]+'・'+JUTSU[el][lv-1];const col='#'+EL[el].color.toString(16).padStart(6,'0');
     const t=this.add.text(CX-50,BY0-28,name,{fontFamily:EMOJIFONT,fontSize:(15+lv*4)+'px',color:col,fontStyle:'bold',stroke:'#000',strokeThickness:3}).setOrigin(0.5).setAlpha(0).setDepth(DEPTH.fx);
