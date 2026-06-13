@@ -776,24 +776,37 @@ class GameScene extends Phaser.Scene{
   renderHitLab(){
     this.charge=this.teamCards.map(c=>{const a=activeSkill(c.el);return a?a.cd:0;});   // 主動技恆滿,可隨時測
     this.trayHits.forEach(h=>h.disableInteractive());   // 實驗室不放塊,關掉托盤拖放點
-    const ys=TRAY_Y;   // 上排 4 顆數字、下排 4 數字 +「敵」共 5 顆
-    const mk=(x,y,label,fill,stroke,col,cb)=>{const bg=this.add.rectangle(x,y,76,32,fill).setStrokeStyle(2,stroke).setDepth(DEPTH.tray).setInteractive();
-      const tx=this.add.text(x,y,label,{fontFamily:EMOJIFONT,fontSize:'17px',color:col,fontStyle:'bold'}).setOrigin(0.5).setDepth(DEPTH.tray);
-      bg.on('pointerover',()=>bg.setFillStyle(stroke===0xc24a4a?0x5e2020:0x3d2c18)); bg.on('pointerout',()=>bg.setFillStyle(fill));
+    const ys=TRAY_Y, cols=[42,126,210,294,378];   // 兩排各 5 顆:數字 8 顆 +「2招」+「敵」
+    const mk=(x,y,label,fill,hover,stroke,col,cb)=>{const bg=this.add.rectangle(x,y,76,32,fill).setStrokeStyle(2,stroke).setDepth(DEPTH.tray).setInteractive();
+      const tx=this.add.text(x,y,label,{fontFamily:EMOJIFONT,fontSize:'16px',color:col,fontStyle:'bold'}).setOrigin(0.5).setDepth(DEPTH.tray);
+      bg.on('pointerover',()=>bg.setFillStyle(hover)); bg.on('pointerout',()=>bg.setFillStyle(fill));
       bg.on('pointerup',()=>{bg.setFillStyle(fill);cb();}); this.trayIcons.push(bg,tx);};
-    const top=[9,15,18,21], topCols=[53,158,263,368];   top.forEach((n,k)=>mk(topCols[k],ys-18,String(n),0x2b2014,0x6a4f28,'#ffeec4',()=>this.demoHit(n)));
-    const bot=[27,33,39,45], botCols=[42,126,210,294,378];   bot.forEach((n,k)=>mk(botCols[k],ys+18,String(n),0x2b2014,0x6a4f28,'#ffeec4',()=>this.demoHit(n)));
-    mk(botCols[4],ys+18,'敵',0x4a1818,0xc24a4a,'#ffc8c8',()=>this.demoEnemyAttack());   // 敵攻擊演示(和下排數字同一排)
+    const top=[9,15,18,21,27];   top.forEach((n,k)=>mk(cols[k],ys-18,String(n),0x2b2014,0x3d2c18,0x6a4f28,'#ffeec4',()=>this.demoHit(n)));
+    const bot=[33,39,45];   bot.forEach((n,k)=>mk(cols[k],ys+18,String(n),0x2b2014,0x3d2c18,0x6a4f28,'#ffeec4',()=>this.demoHit(n)));
+    mk(cols[3],ys+18,'2招',0x2a1c40,0x3c2a5a,0x8a6ad0,'#d8c8ff',()=>this.demoMulti());   // 一次清除含 2 元素 → 同時出 2 招
+    mk(cols[4],ys+18,'敵',0x4a1818,0x5e2020,0xc24a4a,'#ffc8c8',()=>this.demoEnemyAttack());
   }
+  _labCells(n,off){const cells=[];off=off||0;for(let r=Math.floor(off/N);r<N&&cells.length<n;r++)for(let c=(r===Math.floor(off/N)?off%N:0);c<N&&cells.length<n;c++)cells.push([r,c]);return cells;}
   demoHit(n){
     const tgt=this.enemies&&this.enemies.find(e=>!e.dead); if(!tgt)return;
     const els=['fire','water','thunder','earth','wind']; this._labEl=((this._labEl==null?-1:this._labEl)+1)%5; const el=els[this._labEl];
-    const lv=Math.max(1,Math.min(7,Math.round(n/9)+1));   // 型/印 階(隨 HIT 升;lv≥4 全螢幕閃,lv≥6 大閃)——重現實際大清陣仗
-    const cells=[]; for(let r=0;r<N&&cells.length<n;r++)for(let c=0;c<N&&cells.length<n;c++)cells.push([r,c]);   // 取前 n 格→集氣粒子從盤面真實位置飛向中心
-    const burst=1+Math.max(0,n-9)/9*0.3, dmg=Math.round(n*10*burst);
-    const data={cells, parts:[{el}], fx:{[el]:{level:lv,atk:tgt.atk,attrs:[]}}, total:dmg, groups:Math.ceil(n/9)};
-    const atkAt=this.playClearFX(el, lv, n, ()=>this.chakraStrike([tgt], dmg, el, data));   // 先 n HIT → 招式名 → 才攻擊
-    this.time.delayedCall(atkAt+(n>=18?1180:860),()=>{tgt.hp=Math.max(0,tgt.hp-dmg);this.updateEnemies();if(tgt.hp<=0)this.killEnemy(tgt);});   // 彈著瞬間才扣血條(動畫慢慢扣;空了回滿)
+    const lv=Math.max(1,Math.min(7,Math.round(n/9)+1));   // 型/印 階(隨 HIT 升;lv≥4 全螢幕閃,lv≥6 大閃)
+    const cells=this._labCells(n), burst=1+Math.max(0,n-9)/9*0.3, dmg=Math.round(n*10*burst);
+    const atkAt=this.playClearFX(n, [{el, lv, fire:()=>this.chakraStrike([tgt], dmg, el, {cells, parts:[{el}], fx:{}})}]);   // 先 n HIT → 招式名 → 才攻擊
+    this.time.delayedCall(atkAt+(n>=18?1180:860),()=>{tgt.hp=Math.max(0,tgt.hp-dmg);this.updateEnemies();if(tgt.hp<=0)this.killEnemy(tgt);});
+  }
+  demoMulti(){   // 演示「一次清除含 2 元素 → 同時出 2 招」(18 格 = 兩條線各一元素)
+    const tgt=this.enemies&&this.enemies.find(e=>!e.dead); if(!tgt)return;
+    const pairs=[['fire','water'],['thunder','earth'],['wind','fire'],['water','thunder'],['earth','wind']];
+    this._labPair=((this._labPair==null?-1:this._labPair)+1)%pairs.length; const pr=pairs[this._labPair];
+    const n=18, dmg=Math.round(n*10*(1+9/9*0.3)), half=Math.round(dmg/2);
+    const cA=this._labCells(9,0), cB=this._labCells(9,9), lvA=4, lvB=4;
+    const jutsu=[
+      {el:pr[0], lv:lvA, fire:()=>this.chakraStrike([tgt], half, pr[0], {cells:cA, parts:[{el:pr[0]}], fx:{}})},
+      {el:pr[1], lv:lvB, fire:()=>this.chakraStrike([tgt], dmg-half, pr[1], {cells:cB, parts:[{el:pr[1]}], fx:{}})}
+    ];
+    const atkAt=this.playClearFX(n, jutsu);
+    this.time.delayedCall(atkAt+1180,()=>{tgt.hp=Math.max(0,tgt.hp-dmg);this.updateEnemies();if(tgt.hp<=0)this.killEnemy(tgt);});
   }
   demoEnemyAttack(){const alive=this.enemies&&this.enemies.filter(e=>!e.dead); if(!alive||!alive.length)return;
     this._labAtkI=((this._labAtkI==null?-1:this._labAtkI)+1)%alive.length; this.enemyAttack(alive[this._labAtkI]);}
@@ -978,7 +991,14 @@ class GameScene extends Phaser.Scene{
     if(this.firstClear){this.firstClear=false;track('first_clear');}   // 第一次消除:只記埋點,不演出(移除「結印成功」動畫)
     data.cells.forEach(([r,c])=>{this.board[r][c]=null;});  // 立即從模型移除,避免重複觸發
     const n=data.cells.length;
-    const atkAt=this.playClearFX(topEl, topLv, n, ()=>{ this.chakraStrike(victims, dealt, topEl, data); if(aoe)this.cameras.main.shake(260,0.01); });   // 先 n HIT → 招式名 → 才查克拉集結射出
+    const sorted=Object.keys(data.fx).sort((a,b)=>data.fx[b].level-data.fx[a].level);   // 多招:取等級最高的元素;次高若 ≥lv2(≥6格)再出第二招(3 招以上機率低,不做)
+    const jEls=[sorted[0]]; if(sorted[1]&&data.fx[sorted[1]].level>=2)jEls.push(sorted[1]);
+    const kk=jEls.length, cellsAll=data.cells.slice(), part=Math.ceil(cellsAll.length/kk), dEach=Math.round(dealt/kk);
+    const jutsu=jEls.map((el,i)=>({el, lv:data.fx[el].level, fire:()=>{   // 每招:該元素的色/名,集氣取一段格子,傷害分攤(總和=dealt)
+      this.chakraStrike(victims, (i===kk-1?dealt-dEach*(kk-1):dEach), el, {cells:cellsAll.slice(i*part,(i+1)*part), parts:[{el}], fx:{}});
+      if(aoe&&i===0)this.cameras.main.shake(260,0.01);
+    }}));
+    const atkAt=this.playClearFX(n, jutsu);   // 先 n HIT → 招式名(1~2 招並列)→ 才各招集結射出
     this.updateEnemies();
     this.time.delayedCall(Math.max(120,atkAt-100),()=>{this.refreshBoard();});                                        // 攻擊發動前夕,清掉的格子消失(集氣同時)
     this.time.delayedCall(atkAt+(n>=18?1760:1400),()=>{this.updateAll(); victims.forEach(v=>{if(v.hp<=0)this.killEnemy(v);});});   // 命中後才扣血條 + 收掉死亡敵(含蓄力/AoE 弧線彈到達)
@@ -1222,16 +1242,16 @@ class GameScene extends Phaser.Scene{
         this.cameras.main.shake(huge?220:big?150:90,0.009);}});
     this.tweens.add({targets:t,alpha:0,delay:dur+620,duration:400,onComplete:()=>{t.destroy();if(this.hitTx===t)this.hitTx=null;}});   // 數完再滯留 ~0.6s 才淡出
   }
-  // 統一攻擊展演:先「n HIT」(快)→ 同位置換成招式名 → 才發動攻擊(fireFn);回傳攻擊開始時點(ms)
-  playClearFX(topEl, lv, n, fireFn){
+  // 統一攻擊展演:先「n HIT」(快)→ 同位置換成招式名(1~2 招上下並列同時出)→ 才發動各招攻擊(微錯開);回傳最後一招攻擊時點(ms)
+  playClearFX(n, jutsu){
     this.countFX(n);
-    const lead=Math.max(280,Math.min(680,Math.round(n*42)));
-    this.time.delayedCall(lead+100,()=>{   // HIT 數完 → 同位置淡出換招式名
+    const lead=Math.max(280,Math.min(680,Math.round(n*42))), k=jutsu.length;
+    this.time.delayedCall(lead+100,()=>{   // HIT 數完 → 同位置淡出 → 招式名同時亮相
       if(this.hitTx){const h=this.hitTx;this.hitTx=null;this.tweens.killTweensOf(h);this.tweens.add({targets:h,alpha:0,scaleX:0.5,scaleY:0.5,duration:150,onComplete:()=>h.destroy()});}
-      if(topEl)this.showJutsu(topEl,lv);
+      jutsu.forEach((j,i)=>{if(j.el)this.showJutsu(j.el,j.lv,k>1?(i===0?-28:28):0);});   // 多招:上下並列
     });
-    this.time.delayedCall(lead+470,fireFn);   // 招式名亮相 → 攻擊
-    return lead+470;
+    jutsu.forEach((j,i)=>this.time.delayedCall(lead+470+i*200,j.fire));   // 各招攻擊微錯開(同時出招感)
+    return lead+470+(k-1)*200;
   }
   // 新手鉤子:每場第一次消除 = 隆重慶祝(全螢幕閃光+震動+大字+提示拖屬塊)
   firstClearFX(){
@@ -1263,8 +1283,8 @@ class GameScene extends Phaser.Scene{
     this.moralePeak = this.morale>=5;
     if(!this.moralePeak)this.moraleBg.setFillStyle(0x1a140c,0.92);
   }
-  showJutsu(el,lv){const name=KATA[lv-1]+'・'+JUTSU[el][lv-1];const col='#'+EL[el].color.toString(16).padStart(6,'0');
-    const t=this.add.text(CX,BOARD_CY,name,{fontFamily:JUTSUFONT,fontSize:(17+lv*4)+'px',color:col,fontStyle:'bold',stroke:'#000',strokeThickness:4}).setOrigin(0.5).setAlpha(0).setScale(0.5).setDepth(DEPTH.fx);   // 毛筆字、置中(和 HIT 同位置,接 HIT 之後出現)
+  showJutsu(el,lv,dy){dy=dy||0;const name=KATA[lv-1]+'・'+JUTSU[el][lv-1];const col='#'+EL[el].color.toString(16).padStart(6,'0');
+    const t=this.add.text(CX,BOARD_CY+dy,name,{fontFamily:JUTSUFONT,fontSize:(17+lv*4)+'px',color:col,fontStyle:'bold',stroke:'#000',strokeThickness:4}).setOrigin(0.5).setAlpha(0).setScale(0.5).setDepth(DEPTH.fx);   // 毛筆字、置中(和 HIT 同位置,接 HIT 之後出現;dy 供多招上下並列)
     this.tweens.add({targets:t,alpha:1,scaleX:1,scaleY:1,duration:240,ease:'Back.out',
       onComplete:()=>this.tweens.add({targets:t,alpha:0,duration:420,delay:600+lv*110,onComplete:()=>t.destroy()})});   // 招式名滯留(華麗感)
     if(lv>=4){const big=lv>=6;const f=this.add.rectangle(CX,H/2,W,H,EL[el].color,big?0.6:0.4).setDepth(DEPTH.flash);
