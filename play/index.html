@@ -729,11 +729,13 @@ class GameScene extends Phaser.Scene{
   // 每幀驅動:屬塊的明暗漸層流動(沿塊身相位差→像能量在流)+ 「極」鬥志徽章底色漸層流動(絕好調)
   update(time){
     if(!this.teamCards)return;
-    for(const card of this.teamCards){const cs=card.storeCells; if(!cs)continue;
-      for(const c of cs){const frac=0.5+0.5*Math.sin(time*0.005 - c.phase*3.4); c.obj.setFillStyle(lerpColor(card.storeDark,card.storeLight,frac));}}
-    if(this.moralePeak&&this.moraleBg){const t=time*0.006;   // 極=絕好調:徽章底色與外環在暗紅↔亮橙間流動(相位差→像能量在圈裡轉)
-      this.moraleBg.setFillStyle(lerpColor(0x6e1808,0xff8a1e,0.5+0.5*Math.sin(t)),1);
-      this.moraleBg.setStrokeStyle(2,lerpColor(0xff5a2a,0xffd24a,0.5+0.5*Math.sin(t+1.7)));}
+    try{   // ★ 單幀繪製例外絕不可外拋,否則會中斷整個遊戲主迴圈→畫面凍住
+      for(const card of this.teamCards){const cs=card.storeCells; if(!cs)continue;
+        for(const c of cs){if(!c.obj||!c.obj.active)continue; const frac=0.5+0.5*Math.sin(time*0.005 - c.phase*3.4); c.obj.setFillStyle(lerpColor(card.storeDark,card.storeLight,frac));}}   // 判 active:屬塊被消耗/重建時舊矩形已銷毀,不可再上色
+      if(this.moralePeak&&this.moraleBg&&this.moraleBg.active){const t=time*0.006;   // 極=絕好調:徽章底色與外環在暗紅↔亮橙間流動(相位差→像能量在圈裡轉)
+        this.moraleBg.setFillStyle(lerpColor(0x6e1808,0xff8a1e,0.5+0.5*Math.sin(t)),1);
+        this.moraleBg.setStrokeStyle(2,lerpColor(0xff5a2a,0xffd24a,0.5+0.5*Math.sin(t+1.7)));}
+    }catch(e){}
   }
   // 發動主動技
   fireActive(i){if(this.resultOpen||this.locked||this.drag||this.earthSel||this.earthDrag)return;
@@ -1092,7 +1094,7 @@ class GameScene extends Phaser.Scene{
     if(_rw._ups>0)this.tonFloat('🆙 等級提升! Lv.'+_rw.rank,'#ffe04a');
     if(this.stage>=this.dungeon.stages.length){markDungeonCleared(this.dungeonId);this.chests++;this.time.delayedCall(600,()=>this.showResult(true));return;}
     this.stage++; this.chests++; this.playerHP=Math.min(this.maxHP,this.playerHP+150);
-    this.time.delayedCall(700,()=>{this.stageAdvanceFX(); this.time.delayedCall(380,()=>this.startStage(true));});   // 過關:前進演出 → 下一關敵人自遠方逼近入場(不清盤,盤面累積)
+    this.time.delayedCall(700,()=>{try{this.stageAdvanceFX();}catch(e){} this.time.delayedCall(380,()=>{try{this.startStage(true);}catch(e){console.error('startStage error',e);}});});   // 過關:前進演出 → 下一關敵人自遠方逼近入場(不清盤,盤面累積)
   }
   reshuffle(){if(this.playerHP<=CONFIG.RESHUFFLE_COST){this.gameOver('生命不足、無法再提煉');return;}
     this.playerHP-=CONFIG.RESHUFFLE_COST; this.refill(); this.renderTray(); this.updateAll();}
