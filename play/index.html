@@ -521,7 +521,7 @@ class TeamScene extends Phaser.Scene{
 /* ===== 戰鬥(多敵 + 自由查克拉) ===== */
 class GameScene extends Phaser.Scene{
   constructor(){super('game');}
-  init(data){ this.presetTeam=(data&&data.team)?data.team:null; this.dungeonId=(data&&data.dungeonId)||'prologue'; this.dungeon=DUNGEONS[this.dungeonId]||DUNGEONS.prologue; }
+  init(data){ this.presetTeam=(data&&data.team)?data.team:null; this.dungeonId=(data&&data.dungeonId)||'prologue'; this.dungeon=DUNGEONS[this.dungeonId]||DUNGEONS.prologue; this.hitLab=!!(data&&data.lab); }
   preload(){ for(const el in MONSTER_IMG){ if(!this.textures.exists('mon_'+el))this.load.image('mon_'+el, MONSTER_IMG[el]); } }   // 載入怪物圖
 
   create(){
@@ -628,7 +628,7 @@ class GameScene extends Phaser.Scene{
     this.stopStuckFX&&this.stopStuckFX();   // 新關/新局清掉殘留的卡死提示
     if(!keepBoard){this.board=Array.from({length:N},()=>Array(N).fill(null));this.stored=[null,null,null,null,null];}   // 跨關保留盤面+屬塊:只有新局/重挑才清,過關時累積到下一關的怪
     this.resetWave(); if(!keepBoard)this.morale=(this.lead&&this.lead.type==='moraleStart')?this.lead.v:CONFIG.MORALE_START; this.handCleared=false; this.handBurst=false; this.whiffStreak=0; if(!keepBoard)this.refill();   // 鬥志+托盤:跨關保留(只新局/重挑才重置/換新托盤)
-    if(this.stage===1&&this.lead)this.time.delayedCall(450,()=>{   // 隊長技:進關時在盤面中央彈出清楚橫幅(技名+效果),停留可讀(原本上緣快閃小字看不清)
+    if(this.stage===1&&this.lead&&!this.hitLab)this.time.delayedCall(450,()=>{   // 隊長技:進關時在盤面中央彈出清楚橫幅(技名+效果),停留可讀(原本上緣快閃小字看不清)
       const ld=this.lead, mk=(dy,str,sz,col,sw)=>{const t=this.add.text(CX,BOARD_CY+dy,str,{fontFamily:EMOJIFONT,fontSize:sz,color:col,fontStyle:'bold',stroke:'#3a2400',strokeThickness:sw,align:'center'}).setOrigin(0.5).setDepth(DEPTH.fx).setScale(0.5);
         this.tweens.add({targets:t,scale:1,duration:260,ease:'Back.out'});
         this.tweens.add({targets:t,alpha:0,delay:1400,duration:420,onComplete:()=>t.destroy()});};
@@ -636,7 +636,7 @@ class GameScene extends Phaser.Scene{
       mk(15,ld.desc,'14px','#ffeec4',4);
     });
     this.spawnEnemies(); this.refreshBoard(); this.renderTray(); this.updateAll(); this.renderCharges(); this.renderStored(); this.syncMoraleState();   // 進關依目前鬥志同步「極」脈動(跨關帶來的極要持續演)
-    if(this.stage===1 && !tutSeen())this.showTutorial();   // 首次遊玩→3 步教學
+    if(this.stage===1 && !tutSeen() && !this.hitLab)this.showTutorial();   // 首次遊玩→3 步教學
   }
   spawnEnemies(){
     if(this.enemyG)this.enemyG.destroy();
@@ -752,6 +752,7 @@ class GameScene extends Phaser.Scene{
   renderTray(){
     if(this.trayTweens)this.trayTweens.forEach(t=>t.remove()); this.trayTweens=[];   // 先收掉舊脈動 tween 再銷毀(避免懸空)
     this.trayIcons.forEach(g=>g.destroy()); this.trayIcons=[];
+    if(this.hitLab){this.renderHitLab();return;}   // HIT 實驗室:塊區改放各 HIT 按鈕(上方敵人+盤面照舊)
     // 特殊工具塊:亮色脈動光暈邊框 + 功能漢字(填/消/搬)→ 一眼看出是特殊塊
     const SP={water:{c:0x62b8f0,glow:0x8fd6ff,label:'填'},wind:{c:0x6ad06a,glow:0xb6ffae,label:'消'},earth:{c:0xd49a4a,glow:0xffc24a,label:'搬'}};
     this.tray.forEach((p,i)=>{if(p.used)return;
@@ -763,6 +764,27 @@ class GameScene extends Phaser.Scene{
       p.c.forEach(([dr,dc])=>cont.add(this.add.rectangle(dc*s-pw/2, dr*s-ph/2, s-3, s-3, sp?sp.c:NEUTRAL_FILL).setOrigin(0).setStrokeStyle(sp?1:0, 0xffffff, sp?0.5:0)));
       if(sp)cont.add(this.add.text(0,0,sp.label,{fontFamily:EMOJIFONT,fontSize:(s>=24?'17px':'10px'),color:'#ffffff',fontStyle:'bold'}).setOrigin(0.5).setStroke('#1a1208',4));   // 功能漢字
       this.trayIcons.push(cont);});
+  }
+  // HIT 實驗室:塊區放各 HIT 按鈕,點按就在敵人身上演示「該 HIT 的招式規模」(純特效、不扣血/不推進)
+  renderHitLab(){
+    const ys=TRAY_Y;
+    const title=this.add.text(CX,ys-46,'🧪 HIT 實驗室 — 點按看招式規模',{fontFamily:EMOJIFONT,fontSize:'13px',color:'#ffe08a',fontStyle:'bold'}).setOrigin(0.5).setStroke('#1a1208',4).setDepth(DEPTH.tray);
+    this.trayIcons.push(title);
+    const vals=[9,15,18,27,36,45], cols=[78,210,342], rows=[ys-16,ys+24];
+    vals.forEach((n,k)=>{const x=cols[k%3], y=rows[Math.floor(k/3)];
+      const bg=this.add.rectangle(x,y,120,34,0x2b2014).setStrokeStyle(2,0x6a4f28).setDepth(DEPTH.tray).setInteractive();
+      const tx=this.add.text(x,y,n+' HIT',{fontFamily:EMOJIFONT,fontSize:'17px',color:'#ffeec4',fontStyle:'bold'}).setOrigin(0.5).setDepth(DEPTH.tray);
+      bg.on('pointerover',()=>bg.setFillStyle(0x3d2c18)); bg.on('pointerout',()=>bg.setFillStyle(0x2b2014));
+      bg.on('pointerup',()=>{bg.setFillStyle(0x2b2014);this.demoHit(n);});
+      this.trayIcons.push(bg,tx);});
+  }
+  demoHit(n){
+    const tgt=this.enemies&&this.enemies.find(e=>!e.dead); if(!tgt)return;
+    const els=['fire','water','thunder','earth','wind']; this._labEl=((this._labEl==null?-1:this._labEl)+1)%5; const el=els[this._labEl];
+    const cells=[]; for(let r=0;r<N&&cells.length<n;r++)for(let c=0;c<N&&cells.length<n;c++)cells.push([r,c]);   // 取前 n 格→集氣粒子從盤面真實位置飛向中心
+    const burst=1+Math.max(0,n-9)/9*0.3, dmg=Math.round(n*10*burst);
+    this.countFX(n);                                                     // 盤面中央彈「n HIT」
+    this.chakraStrike([tgt], dmg, el, {cells, parts:[{el}], fx:{}, total:dmg, groups:Math.ceil(n/9)});
   }
 
   /* 拖曳放塊 */
@@ -1068,7 +1090,7 @@ class GameScene extends Phaser.Scene{
   chakraArc(a,b,mag){const mx=(a.x+b.x)/2,my=(a.y+b.y)/2,dx=b.x-a.x,dy=b.y-a.y,L=Math.hypot(dx,dy)||1;return {x:mx-dy/L*mag, y:my+dx/L*mag};}   // 控制點:中點往垂直偏 mag → 弧線
   chakraStrike(victims, dealt, topEl, data){
     const ADD=Phaser.BlendModes.ADD, LP={x:CX,y:BOARD_CY}, col=topEl?EL[topEl].color:0xbfe6ff;   // 集結到盤面中心
-    const hit=(data.cells||[]).length, pw=Math.min(3,Math.max(1,hit/9)), gs=1+(pw-1)*0.4;   // HIT 越多→集氣/印/彈/爆越大(9→×1、18→×1.4、27→×1.8)
+    const hit=(data.cells||[]).length, pw=Math.min(5,Math.max(1,hit/9)), gs=1+(pw-1)*0.4;   // HIT 越多→集氣/印/彈/爆越大(9→×1、18→×1.4、27→×1.8、36→×2.2、45→×2.6)
     const seen={}; (data.parts||[]).forEach(pt=>{if(pt.el&&pt.el!=='neutral'&&!seen[pt.el]){seen[pt.el]=1;this.glowTeam(pt.el);}});
     const core=this.add.circle(LP.x,LP.y,3,0xffffff,1).setBlendMode(ADD).setDepth(DEPTH.proj);   // 集氣球:亮白核 + 屬色光暈,漸大
     const glow=this.add.circle(LP.x,LP.y,7,col,0.55).setBlendMode(ADD).setDepth(DEPTH.proj);
@@ -1135,8 +1157,7 @@ class GameScene extends Phaser.Scene{
     for(let i=0;i<nD;i++){const a=i/nD*Math.PI*2+(Math.random()-0.5)*0.5, d=this.add.circle(x,y,3.5,0xffffff,1).setBlendMode(ADD).setDepth(DEPTH.proj);
       this.tweens.add({targets:d,x:x+Math.cos(a)*(42+Math.random()*52),y:y+Math.sin(a)*(42+Math.random()*52),alpha:0,scale:0.2,duration:540+Math.random()*280,ease:'Quad.out',onComplete:()=>d.destroy()});}
     if(tgt&&tgt.sprite)this.dmgPop(tgt.sprite.x,tgt.sprite.y,dmg);
-    this.cameras.main.shake(200+pw*40,0.009+pw*0.003);                  // 震幅隨 HIT 加重
-    this.hitStop((tgt&&tgt.boss?150:110)+Math.round((pw-1)*18));   // 命中頓格(HIT 越大頓越久)
+    this.cameras.main.shake(200+pw*40,0.009+pw*0.003);                  // 震幅隨 HIT 加重(不做 hitstop:凍格會被誤認成 lag)
   }
   tonFloat(str,color){const t=this.add.text(CX,BY0-54,str,{fontFamily:EMOJIFONT,fontSize:'17px',color,fontStyle:'bold'}).setOrigin(0.5).setDepth(DEPTH.fx);
     this.tweens.add({targets:t,y:BY0-82,alpha:0,duration:1000,ease:'Quad.out',onComplete:()=>t.destroy()});}
@@ -1583,6 +1604,14 @@ window.GAME = new Phaser.Game({
   scene:[HomeScene, TeamScene, GameScene, CollectionScene, FuseScene],
 });
 track('open');   // 開遊戲心跳(回流追蹤;ANALYTICS_URL 空時自動 no-op)
+// HIT 實驗室入口:網址加 #hitlab → 直接進戰鬥的 lab 模式(塊區放各 HIT 按鈕,演示招式規模)
+window.GAME.events.once('ready',function(){
+  if(location.hash==='#hitlab'){
+    const team=['fire','water','thunder','earth','wind'].map(el=>ROSTER.find(c=>c.el===el)||ROSTER[0]);
+    window.GAME.scene.start('game',{team:team,dungeonId:'tower',lab:true});
+    window.GAME.scene.stop('home');
+  }
+});
 // 真機轉向 / 瀏覽器縮放 / 網址列伸縮 → 即時重算高度 + 重排(不黑邊、不用重整)
 window.addEventListener('resize',function(){
   const o=H; recomputeLayout();
