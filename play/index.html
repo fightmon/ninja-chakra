@@ -586,7 +586,7 @@ class GameScene extends Phaser.Scene{
     if(this.tray)this.renderTray();
     this.enemies.forEach(e=>{if(!e.card||e.dead)return;const x=e.card.x,cy=BATTLE_CY,sz=e.cardH;
       e.card.setPosition(x,cy);
-      e.turnG.setPosition(x,cy+sz/2-14);e.hpBg.setPosition(x,cy+sz/2-3);e.hpFill.setPosition(e.hpx,cy+sz/2-3);e.mark.setPosition(x,cy-sz/2-9);
+      e.turnG.setPosition(x-sz/2+12,cy-sz/2+11);e.hpBg.setPosition(x,cy+sz/2-3);e.hpFill.setPosition(e.hpx,cy+sz/2-3);e.mark.setPosition(x,cy-sz/2-9);
       const fy=e.img?cy:cy-Math.round(sz*0.14);if(e.img)e.sprite.setDisplaySize(sz,sz);e.baseScale=e.sprite.scaleX;if(e.bob)e.bob.stop();e.sprite.setPosition(x,fy);e.bob=this.tweens.add({targets:e.sprite,y:fy-4,duration:1200,yoyo:true,repeat:-1,ease:'Sine.inOut'});});
   }
 
@@ -641,7 +641,10 @@ class GameScene extends Phaser.Scene{
       }
       e.baseScale=e.sprite.scaleX;   // 受擊縮放動畫的基準(圖=szc/320、emoji=1),回彈要回到這個值,不能歸 1
       e.sprite.on('pointerdown',()=>this.selectTarget(i));
-      e.turnG=this.add.container(x,cy+szc/2-14,[]);   // 回合數方塊:壓在敵圖下方(再往下 6px)
+      e.turnG=this.add.container(x-szc/2+12,cy-szc/2+11,[]);   // 出手倒數:沙漏+數字,移到敵卡左上
+      e.glass=this.add.text(0,0,'⏳',{fontFamily:EMOJIFONT,fontSize:'16px'}).setOrigin(0.5);
+      e.turnTx=this.add.text(11,0,String(e.timer),{fontFamily:EMOJIFONT,fontSize:'18px',color:'#eaf3ff',fontStyle:'bold',stroke:'#1a0d05',strokeThickness:4}).setOrigin(0,0.5);
+      e.turnG.add([e.glass,e.turnTx]);
       e.hpW=szc-10; e.hpx=x-e.hpW/2;
       e.hpBg=this.add.rectangle(x,cy+szc/2-3,e.hpW,8,0x000000,0.6).setOrigin(0.5);   // HP:壓在敵圖下緣(再往下 6px)
       e.hpFill=this.add.rectangle(e.hpx,cy+szc/2-3,e.hpW,8,e.boss?0xff7a3a:0xc23c2c).setOrigin(0,0.5);
@@ -812,7 +815,7 @@ class GameScene extends Phaser.Scene{
     if(this.morale!==m0)this.moraleFX(this.morale,this.morale>m0);
     this.enemies.forEach(e=>{if(!e.dead&&e.burn>0){e.hp=Math.max(0,e.hp-e.burn);
       this.floatText(e.sprite.x,e.sprite.y-24,'🔥'+e.burn,'#ff7a63'); if(e.hp<=0)this.killEnemy(e);}});
-    this.enemies.forEach(e=>{if(e.dead)return; e.timer--; if(e.timer<=0){this.enemyAttack(e); e.timer=e.interval;}});
+    this.enemies.forEach(e=>{if(e.dead)return; e.timer--; if(e.timer<=0){this.enemyAttack(e); e.timer=e.interval;} this.animTurnGlass(e);});   // 每回合沙漏跳起來+翻轉,數字隨後變
     this.charge=this.charge.map((c,i)=>{const a=activeSkill(this.teamCards[i].el);return a?Math.min(a.cd,(c||0)+1):c;});   // 主動技蓄力+1
     this.renderCharges();
   }
@@ -968,12 +971,17 @@ class GameScene extends Phaser.Scene{
   updateAll(){this.updateEnemies();this.updateBars();}
   updateEnemies(){this.enemies.forEach((e,i)=>{if(e.dead)return;
     e.hpFill.displayWidth=e.hpW*Math.max(0,e.hp/e.max);
-    e.turnG.removeAll(true);   // 敵出手進度條:離出手越近→條越短、顏色綠→黃→紅(壓在敵圖下方、HP 上方)
-    const tw=e.hpW, iv=Math.max(1,e.interval), tm=Math.max(0,e.timer), frac=Math.max(0,Math.min(1,tm/iv));
-    const tcol=tm<=1?0xff4632:(tm===2?0xffae2a:0x5ad44a);   // 1手內=紅(下一手就揍)、2手=黃、≥3手=綠
-    e.turnG.add(this.add.rectangle(0,0,tw,6,0x000000,0.5).setOrigin(0.5));   // 底軌(滿寬、半透黑)
-    e.turnG.add(this.add.rectangle(-tw/2,0,Math.max(4,Math.round(tw*frac)),6,tcol).setOrigin(0,0.5));   // 進度填充:左端對齊、長度=剩餘手數比例
+    if(e.turnTx){const tm=Math.max(0,e.timer);   // 沙漏右邊的數字=剩餘出手手數;越少越紅(1手內紅、2手黃、≥3白藍)
+      e.turnTx.setText(String(tm)).setColor(tm<=1?'#ff5a4a':tm===2?'#ffc24a':'#eaf3ff');}
     e.mark.setVisible(i===this.target);});}
+  // 每回合:沙漏跳一下 + 翻轉到下一個 90°(累積),數字隨 updateEnemies 更新
+  animTurnGlass(e){
+    if(!e.glass||!e.turnG)return;
+    const tgt=(Math.round(e.glass.angle/90)+1)*90;   // 對齊到下一個 90°,避免被打斷後角度漂移
+    this.tweens.killTweensOf(e.glass); this.tweens.add({targets:e.glass,angle:tgt,duration:320,ease:'Back.out'});
+    const restY=BATTLE_CY-e.cardH/2+11; this.tweens.killTweensOf(e.turnG); e.turnG.setY(restY);
+    this.tweens.add({targets:e.turnG,y:restY-7,duration:150,yoyo:true,ease:'Quad.out'});   // 跳一下落回
+  }
   updateBars(){
     this.pHp.displayWidth=(W-2*BX0)*Math.max(0,this.playerHP/this.maxHP);
     this.pHpTxt.setText(this.playerHP+'/'+this.maxHP);   // 去掉「我方」
