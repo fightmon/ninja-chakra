@@ -945,15 +945,12 @@ class GameScene extends Phaser.Scene{
     if(this.combo>=2)this.comboPopup(this.combo);
     this.countFX(data.cells.length);   // 本手清掉的格數→「n HIT」(一條9、兩條18…),每次清除都顯示
     if(this.firstClear){this.firstClear=false;track('first_clear');}   // 第一次消除:只記埋點,不演出(移除「結印成功」動畫)
-    let pi=0;
-    data.parts.forEach(pt=>{if(pt.d<=0)return;const o=this.cellCenter(pt.r,pt.c), isN=pt.el==='neutral';
-      this.projectile(o.x,o.y,tgt.sprite.x,tgt.sprite.y,isN?'✦':EL[pt.el].fx,isN?0xe8d8b0:EL[pt.el].color,pi*70,pt.d,tgt);
-      if(!isN)this.glowTeam(pt.el); pi++;});
+    this.chakraStrike(victims, dealt, topEl, data);   // 查克拉集結成印 → 射向敵人(集氣→印爆閃→查克拉彈→白點粒子爆 + hitstop)
     if(aoe)this.cameras.main.shake(260,0.01);
-    this.time.delayedCall(330,()=>{victims.forEach(v=>{if(v.sprite)this.dmgPop(v.sprite.x,v.sprite.y,dealt);});});   // 命中時各敵顯示「-總傷害」紅字
-    data.cells.forEach(([r,c])=>{this.board[r][c]=null;});  // 立即從模型移除,避免 460ms 內重複觸發
+    data.cells.forEach(([r,c])=>{this.board[r][c]=null;});  // 立即從模型移除,避免重複觸發
     this.updateEnemies();
-    this.time.delayedCall(460,()=>{this.refreshBoard(); this.updateAll(); victims.forEach(v=>{if(v.hp<=0)this.killEnemy(v);});});
+    this.time.delayedCall(460,()=>{this.refreshBoard();});                                                        // 清掉的格子消失(集結同時)
+    this.time.delayedCall(880,()=>{this.updateAll(); victims.forEach(v=>{if(v.hp<=0)this.killEnemy(v);});});      // 命中後才扣血條 + 收掉死亡敵
   }
   // 形狀系統:火/水/風/土/雷 的主技=生成形狀塊存到卡(在 resolve 統一處理 storeBlock);fireAttr 只剩子屬性 陰/陽
   fireAttr(a,atk,lv,tgt){const A=CONFIG.ATTR;switch(a){
@@ -1060,6 +1057,63 @@ class GameScene extends Phaser.Scene{
   dmgPop(x,y,n){const t=this.add.text(x,y-16,'-'+n,{fontFamily:EMOJIFONT,fontSize:'27px',color:'#ff5040',fontStyle:'bold',stroke:'#350200',strokeThickness:5}).setOrigin(0.5).setDepth(DEPTH.fx).setScale(0.4);
     this.tweens.add({targets:t,scale:1.15,duration:150,ease:'Back.out'});
     this.tweens.add({targets:t,y:y-58,alpha:0,duration:720,delay:220,ease:'Quad.out',onComplete:()=>t.destroy()});}
+  // 打擊頓格:命中瞬間凍住整個場景 ~ms(tween+計時器 timeScale=0,真實時間後復原)→ 打到肉的份量
+  hitStop(ms){ if(this._hitStop)return; this._hitStop=true; this.tweens.timeScale=0; this.time.timeScale=0;
+    setTimeout(()=>{ this.tweens.timeScale=1; this.time.timeScale=1; this._hitStop=false; }, ms); }
+  // 敵人受擊橫向頓一下(bob 在 y、這個動 x 不衝突)
+  knockEnemy(e){ if(!e||!e.sprite)return; const x0=e.sprite.x; this.tweens.add({targets:e.sprite,x:x0+7,duration:60,yoyo:true,repeat:1,ease:'Quad.out',onComplete:()=>e.sprite.setX(x0)}); }
+  // 查克拉集結成印 → 射向敵人(全程 additive 疊光=真發光)
+  chakraStrike(victims, dealt, topEl, data){
+    const ADD=Phaser.BlendModes.ADD, LP={x:CX,y:BY0-16}, col=topEl?EL[topEl].color:0xbfe6ff;
+    const seen={}; (data.parts||[]).forEach(pt=>{if(pt.el&&pt.el!=='neutral'&&!seen[pt.el]){seen[pt.el]=1;this.glowTeam(pt.el);}});
+    const core=this.add.circle(LP.x,LP.y,3,0xffffff,1).setBlendMode(ADD).setDepth(DEPTH.proj);   // 集氣球:亮白核 + 屬色光暈,漸大
+    const glow=this.add.circle(LP.x,LP.y,7,col,0.55).setBlendMode(ADD).setDepth(DEPTH.proj);
+    this.tweens.add({targets:core,scale:4.5,duration:380,ease:'Quad.in'});
+    this.tweens.add({targets:glow,scale:5,duration:380,ease:'Quad.in'});
+    const cells=(data.cells||[]).slice();   // 從清掉的格子飛光點進集結點(打散順序)
+    cells.slice(0,16).forEach((rc,i)=>{const o=this.cellCenter(rc[0],rc[1]);
+      this.time.delayedCall((i%8)*22,()=>{const d=this.add.circle(o.x,o.y,4,col,0.9).setBlendMode(ADD).setDepth(DEPTH.proj-1);
+        this.tweens.add({targets:d,x:LP.x,y:LP.y,scale:0.2,duration:300+(i%5)*40,ease:'Quad.in',onComplete:()=>d.destroy()});});});
+    this.time.delayedCall(390,()=>{   // 集結完成 → 印爆閃 → 射出
+      core.destroy(); glow.destroy();
+      const seal=this.add.circle(LP.x,LP.y,16,0xffffff,1).setBlendMode(ADD).setDepth(DEPTH.proj);
+      this.tweens.add({targets:seal,scale:3.2,alpha:0,duration:220,ease:'Quad.out',onComplete:()=>seal.destroy()});
+      const sg=this.add.circle(LP.x,LP.y,20,col,0.6).setBlendMode(ADD).setDepth(DEPTH.proj);
+      this.tweens.add({targets:sg,scale:2.4,alpha:0,duration:300,ease:'Quad.out',onComplete:()=>sg.destroy()});
+      this.cameras.main.shake(110,0.005);
+      victims.forEach((v,k)=>{if(!v.sprite)return;this.time.delayedCall(k*55,()=>this.chakraBolt(LP.x,LP.y,v.sprite.x,v.sprite.y,col,v,dealt));});
+    });
+  }
+  chakraBolt(ox,oy,tx,ty,color,tgt,dmg){
+    const ADD=Phaser.BlendModes.ADD;
+    const glow=this.add.circle(ox,oy,17,color,0.5).setBlendMode(ADD).setDepth(DEPTH.proj);
+    const core=this.add.circle(ox,oy,9,0xffffff,1).setBlendMode(ADD).setDepth(DEPTH.proj);
+    let fc=0;
+    this.tweens.add({targets:[glow,core],x:tx,y:ty,duration:230,ease:'Quad.in',
+      onUpdate:()=>{if((fc++%2)===0&&core.active){const d=this.add.circle(core.x,core.y,6,color,0.55).setBlendMode(ADD).setDepth(DEPTH.proj-1);
+        this.tweens.add({targets:d,scale:0.1,alpha:0,duration:230,onComplete:()=>d.destroy()});}},
+      onComplete:()=>{glow.destroy();core.destroy();this.chakraImpact(tx,ty,color,tgt,dmg);}});
+    this.tweens.add({targets:glow,scale:1.5,duration:230,ease:'Quad.in'});
+  }
+  chakraImpact(x,y,color,tgt,dmg){
+    const ADD=Phaser.BlendModes.ADD;
+    if(tgt&&!tgt.dead){tgt.sprite.setTint(0xffffff);
+      const bs=tgt.baseScale||1;if(tgt.hitTw)tgt.hitTw.stop();tgt.sprite.setScale(bs);
+      tgt.hitTw=this.tweens.add({targets:tgt.sprite,scaleX:bs*1.2,scaleY:bs*1.2,duration:110,yoyo:true,onComplete:()=>{tgt.sprite.setScale(bs);tgt.sprite.clearTint();tgt.hitTw=null;}});
+      this.knockEnemy(tgt);}
+    const flash=this.add.circle(x,y,18,0xffffff,1).setBlendMode(ADD).setDepth(DEPTH.proj);   // 白點爆閃
+    this.tweens.add({targets:flash,scale:0.2,alpha:0,duration:260,onComplete:()=>flash.destroy()});
+    [[10,4,360,color],[7,6,520,0xffffff]].forEach(o=>{const ring=this.add.circle(x,y,o[0],0,0).setStrokeStyle(4,o[3],1).setBlendMode(ADD).setDepth(DEPTH.proj);   // 雙擴散環
+      this.tweens.add({targets:ring,scale:o[1],alpha:0,duration:o[2],ease:'Quad.out',onComplete:()=>ring.destroy()});});
+    for(let i=0;i<11;i++){const a=i/11*Math.PI*2+(i%2)*0.3, len=11+(i%4)*5;   // 線形火花噴出(白熱)
+      const sp=this.add.rectangle(x,y,len,3,0xffffff).setOrigin(0,0.5).setRotation(a).setBlendMode(ADD).setDepth(DEPTH.proj);
+      this.tweens.add({targets:sp,x:x+Math.cos(a)*(22+(i%5)*7),y:y+Math.sin(a)*(22+(i%5)*7),alpha:0,scaleX:0.2,duration:300+(i%4)*50,ease:'Quad.out',onComplete:()=>sp.destroy()});}
+    for(let i=0;i<8;i++){const a=i/8*Math.PI*2+0.4, d=this.add.circle(x,y,3,0xffffff,1).setBlendMode(ADD).setDepth(DEPTH.proj);   // 白點粒子四射(子機那種)
+      this.tweens.add({targets:d,x:x+Math.cos(a)*(20+(i%4)*8),y:y+Math.sin(a)*(20+(i%4)*8),alpha:0,scale:0.2,duration:340,ease:'Quad.out',onComplete:()=>d.destroy()});}
+    if(tgt&&tgt.sprite)this.dmgPop(tgt.sprite.x,tgt.sprite.y,dmg);
+    this.cameras.main.shake(170,0.008);
+    this.hitStop(tgt&&tgt.boss?100:70);   // 命中頓格
+  }
   tonFloat(str,color){const t=this.add.text(CX,BY0-54,str,{fontFamily:EMOJIFONT,fontSize:'17px',color,fontStyle:'bold'}).setOrigin(0.5).setDepth(DEPTH.fx);
     this.tweens.add({targets:t,y:BY0-82,alpha:0,duration:1000,ease:'Quad.out',onComplete:()=>t.destroy()});}
   comboPopup(n){
