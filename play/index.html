@@ -771,18 +771,14 @@ class GameScene extends Phaser.Scene{
   renderHitLab(){
     this.charge=this.teamCards.map(c=>{const a=activeSkill(c.el);return a?a.cd:0;});   // 主動技恆滿,可隨時測
     this.trayHits.forEach(h=>h.disableInteractive());   // 實驗室不放塊,關掉托盤拖放點
-    const ys=TRAY_Y, vals=[9,15,18,21,27,33,39,45], cols=[60,160,260,360], rows=[ys-30,ys+2];   // 9→45:皆真實可達的滿線聯集(1線/列+宮/2線/列+欄+宮/3線/3列+欄/3列+2欄/3列+3欄)兩排由小到大
-    vals.forEach((n,k)=>{const x=cols[k%4], y=rows[Math.floor(k/4)];
-      const bg=this.add.rectangle(x,y,76,28,0x2b2014).setStrokeStyle(2,0x6a4f28).setDepth(DEPTH.tray).setInteractive();
-      const tx=this.add.text(x,y,String(n),{fontFamily:EMOJIFONT,fontSize:'17px',color:'#ffeec4',fontStyle:'bold'}).setOrigin(0.5).setDepth(DEPTH.tray);
-      bg.on('pointerover',()=>bg.setFillStyle(0x3d2c18)); bg.on('pointerout',()=>bg.setFillStyle(0x2b2014));
-      bg.on('pointerup',()=>{bg.setFillStyle(0x2b2014);this.demoHit(n);});
-      this.trayIcons.push(bg,tx);});
-    const eb=this.add.rectangle(CX,ys+34,150,28,0x4a1818).setStrokeStyle(2,0xc24a4a).setDepth(DEPTH.tray).setInteractive();   // 敵攻擊演示鈕(獨立一排)
-    const et=this.add.text(CX,ys+34,'🗡 敵攻擊',{fontFamily:EMOJIFONT,fontSize:'15px',color:'#ffc8c8',fontStyle:'bold'}).setOrigin(0.5).setDepth(DEPTH.tray);
-    eb.on('pointerover',()=>eb.setFillStyle(0x5e2020)); eb.on('pointerout',()=>eb.setFillStyle(0x4a1818));
-    eb.on('pointerup',()=>{eb.setFillStyle(0x4a1818);this.demoEnemyAttack();});
-    this.trayIcons.push(eb,et);
+    const ys=TRAY_Y;   // 上排 4 顆數字、下排 4 數字 +「敵」共 5 顆
+    const mk=(x,y,label,fill,stroke,col,cb)=>{const bg=this.add.rectangle(x,y,76,32,fill).setStrokeStyle(2,stroke).setDepth(DEPTH.tray).setInteractive();
+      const tx=this.add.text(x,y,label,{fontFamily:EMOJIFONT,fontSize:'17px',color:col,fontStyle:'bold'}).setOrigin(0.5).setDepth(DEPTH.tray);
+      bg.on('pointerover',()=>bg.setFillStyle(stroke===0xc24a4a?0x5e2020:0x3d2c18)); bg.on('pointerout',()=>bg.setFillStyle(fill));
+      bg.on('pointerup',()=>{bg.setFillStyle(fill);cb();}); this.trayIcons.push(bg,tx);};
+    const top=[9,15,18,21], topCols=[53,158,263,368];   top.forEach((n,k)=>mk(topCols[k],ys-18,String(n),0x2b2014,0x6a4f28,'#ffeec4',()=>this.demoHit(n)));
+    const bot=[27,33,39,45], botCols=[42,126,210,294,378];   bot.forEach((n,k)=>mk(botCols[k],ys+18,String(n),0x2b2014,0x6a4f28,'#ffeec4',()=>this.demoHit(n)));
+    mk(botCols[4],ys+18,'敵',0x4a1818,0xc24a4a,'#ffc8c8',()=>this.demoEnemyAttack());   // 敵攻擊演示(和下排數字同一排)
   }
   demoHit(n){
     const tgt=this.enemies&&this.enemies.find(e=>!e.dead); if(!tgt)return;
