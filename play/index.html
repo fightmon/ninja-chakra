@@ -833,7 +833,7 @@ class GameScene extends Phaser.Scene{
       this.floatText(e.sprite.x,e.sprite.y-24,'🔥'+e.burn,'#ff7a63'); if(e.hp<=0)this.killEnemy(e);}});
     this.updateAll();   // 立即反映鬥志字/燒傷後血量(別等延遲回呼)
     this.locked=true;   // 鎖輸入:等我方這手展演完,敵方才出手(玩家才看得到上面的表現),再補新手解鎖
-    this.time.delayedCall(showed?680:170,()=>{
+    this.time.delayedCall(showed?1200:200,()=>{   // 等我方華麗展演(HIT 數到底)演完,敵方才出手
       if(this.resultOpen){this.locked=false;return;}   // 期間已開結算/勝敗畫面→不再推進
       this.enemies.forEach(e=>{if(e.dead)return; e.timer--; if(e.timer<=0){this.enemyAttack(e); e.timer=e.interval;} this.animTurnGlass(e);});   // 敵出手 + 沙漏翻半圈
       this.charge=this.charge.map((c,i)=>{const a=activeSkill(this.teamCards[i].el);return a?Math.min(a.cd,(c||0)+1):c;});   // 主動技蓄力+1
@@ -1034,25 +1034,30 @@ class GameScene extends Phaser.Scene{
     this.tweens.add({targets:t,y:y-40,alpha:0,duration:900,ease:'Quad.out',onComplete:()=>t.destroy()});}
   tonFloat(str,color){const t=this.add.text(CX,BY0-54,str,{fontFamily:EMOJIFONT,fontSize:'17px',color,fontStyle:'bold'}).setOrigin(0.5).setDepth(DEPTH.fx);
     this.tweens.add({targets:t,y:BY0-82,alpha:0,duration:1000,ease:'Quad.out',onComplete:()=>t.destroy()});}
-  comboPopup(n){const t=this.add.text(CX,BOARD_CY-54,'連印 '+n,{fontFamily:EMOJIFONT,fontSize:'24px',color:'#ffd56a',fontStyle:'bold'}).setOrigin(0.5).setScale(0.5).setDepth(DEPTH.fx);
-    this.tweens.add({targets:t,scale:1.05,duration:220,yoyo:true,hold:120,
-      onComplete:()=>this.tweens.add({targets:t,alpha:0,duration:300,onComplete:()=>t.destroy()})});}
-  // 清除演出:一手清掉 n 格 → 盤面中央「n HIT」。數字從 1 一路 +1 跳到 n(看數字飆就是爽),越大→字越大、色越熱、震閃越強
+  comboPopup(n){
+    if(this.comboTx){this.tweens.killTweensOf(this.comboTx);this.comboTx.destroy();}   // 同位置只留最新
+    const t=this.comboTx=this.add.text(CX,BOARD_CY-60,'連印 '+n,{fontFamily:EMOJIFONT,fontSize:'27px',color:'#ffd56a',fontStyle:'bold',stroke:'#7a4a00',strokeThickness:5}).setOrigin(0.5).setScale(0.4).setDepth(DEPTH.fx);
+    this.tweens.add({targets:t,scale:1,duration:300,ease:'Back.out'});                                   // 彈入
+    this.tweens.add({targets:t,scaleX:1.08,scaleY:1.08,duration:560,yoyo:true,delay:300,ease:'Sine.inOut'});   // 緩呼吸(華麗滯留)
+    this.tweens.add({targets:t,alpha:0,delay:1100,duration:400,onComplete:()=>{t.destroy();if(this.comboTx===t)this.comboTx=null;}});
+  }
+  // 清除演出:一手清掉 n 格 → 盤面中央「n HIT」。數字從 1 慢慢 +1 飆到 n(看得清在 +)、邊數邊脹大、落定大彈;放慢求華麗爽感
   countFX(n){
+    if(this.hitTx){this.tweens.killTweensOf(this.hitTx);this.hitTx.destroy();}   // 同位置只留最新(快速連放不疊成一團)
     const big=n>=18, huge=n>=27;
-    this.cameras.main.shake(huge?320:big?240:150, huge?0.014:big?0.011:0.006);
+    this.cameras.main.shake(huge?340:big?260:160, huge?0.014:big?0.011:0.007);
     if(big){const flash=this.add.rectangle(CX,H/2,W,H,huge?0xffc89a:0xfff0c0,0).setDepth(DEPTH.flash);
-      this.tweens.add({targets:flash,alpha:huge?0.5:0.4,duration:80,yoyo:true,onComplete:()=>flash.destroy()});}
-    const fs=Math.min(76,32+n*1.7), colFor=v=>v>=27?'#ff6a3a':v>=18?'#ffb02a':'#ffd24a';
-    const t=this.add.text(CX,BOARD_CY,'1 HIT',{fontFamily:EMOJIFONT,fontSize:fs+'px',color:colFor(1),fontStyle:'bold',stroke:'#5a1500',strokeThickness:7}).setOrigin(0.5).setDepth(DEPTH.fx).setScale(0.3).setAngle(-6);
-    this.tweens.add({targets:t,scale:1,duration:160,ease:'Back.out'});
-    const cnt={v:1}, dur=Math.min(560,150+n*16);   // 數字累加時間:格數越多跳越久(封頂)
-    this.tweens.add({targets:cnt,v:n,duration:dur,ease:'Cubic.out',
-      onUpdate:()=>{const cv=Math.round(cnt.v);t.setText(cv+' HIT').setColor(colFor(cv));},
-      onComplete:()=>{t.setText(n+' HIT').setColor(colFor(n));   // 落定強調:彈一下(+大數字額外震)
-        this.tweens.add({targets:t,scaleX:1.28,scaleY:1.28,duration:130,yoyo:true,ease:'Quad.out'});
-        if(big)this.cameras.main.shake(huge?180:120,0.008);}});
-    this.tweens.add({targets:t,alpha:0,delay:dur+420,duration:300,onComplete:()=>t.destroy()});
+      this.tweens.add({targets:flash,alpha:huge?0.5:0.4,duration:110,yoyo:true,onComplete:()=>flash.destroy()});}
+    const fs=Math.min(80,34+n*1.8), colFor=v=>v>=27?'#ff6a3a':v>=18?'#ffb02a':'#ffd24a';
+    const t=this.hitTx=this.add.text(CX,BOARD_CY,'1 HIT',{fontFamily:EMOJIFONT,fontSize:fs+'px',color:colFor(1),fontStyle:'bold',stroke:'#5a1500',strokeThickness:8}).setOrigin(0.5).setDepth(DEPTH.fx).setScale(0.3).setAngle(-5);
+    this.tweens.add({targets:t,scale:0.92,duration:200,ease:'Back.out'});   // 彈入(起點略小→數的時候慢慢脹大)
+    const cnt={v:1}, dur=Math.max(650,Math.min(1250,Math.round(n*78)));   // ~78ms/步,看得清每個 +1;總長 0.65~1.25s
+    this.tweens.add({targets:cnt,v:n,duration:dur,ease:'Linear',
+      onUpdate:()=>{const cv=Math.round(cnt.v);t.setText(cv+' HIT').setColor(colFor(cv)).setScale(0.92+0.20*((cv-1)/Math.max(1,n-1)));},   // 邊數邊脹大
+      onComplete:()=>{t.setText(n+' HIT').setColor(colFor(n));
+        this.tweens.add({targets:t,scaleX:1.38,scaleY:1.38,duration:170,yoyo:true,ease:'Back.out'});   // 落定大彈
+        this.cameras.main.shake(huge?220:big?150:90,0.009);}});
+    this.tweens.add({targets:t,alpha:0,delay:dur+620,duration:400,onComplete:()=>{t.destroy();if(this.hitTx===t)this.hitTx=null;}});   // 數完再滯留 ~0.6s 才淡出
   }
   // 新手鉤子:每場第一次消除 = 隆重慶祝(全螢幕閃光+震動+大字+提示拖屬塊)
   firstClearFX(){
@@ -1061,9 +1066,10 @@ class GameScene extends Phaser.Scene{
     const flash=this.add.rectangle(CX,H/2,W,H,0xffe8a0,0).setDepth(DEPTH.flash);
     this.tweens.add({targets:flash,alpha:0.5,duration:90,yoyo:true,onComplete:()=>flash.destroy()});
     const t=this.add.text(CX,BOARD_CY,'結 印 成 功!',{fontFamily:EMOJIFONT,fontSize:'40px',color:'#ffe04a',fontStyle:'bold',stroke:'#7a1500',strokeThickness:7}).setOrigin(0.5).setDepth(DEPTH.fx).setScale(0.3).setAngle(-5);
-    this.tweens.add({targets:t,scale:1.12,duration:240,ease:'Back.out'});
-    this.tweens.add({targets:t,alpha:0,delay:680,duration:300,onComplete:()=>t.destroy()});
-    this.time.delayedCall(380,()=>this.tonFloat('✦ 屬塊已存到卡上 — 可拖下來用!','#ffe08a'));
+    this.tweens.add({targets:t,scale:1.12,duration:300,ease:'Back.out'});
+    this.tweens.add({targets:t,scaleX:1.2,scaleY:1.2,duration:560,yoyo:true,delay:300,ease:'Sine.inOut'});   // 緩呼吸滯留
+    this.tweens.add({targets:t,alpha:0,delay:1250,duration:420,onComplete:()=>t.destroy()});
+    this.time.delayedCall(520,()=>this.tonFloat('✦ 屬塊已存到卡上 — 可拖下來用!','#ffe08a'));
   }
   // 鬥志階變:全部演在「鬥志圈圈」裡(不在盤面出字)。非極階變=彈一下;極=不做大小變化(免被當成可按的CD鈕),改由 update() 跑徽章底色漸層流動。一律擴散一圈該階色光
   moraleFX(tier,up){
@@ -1085,8 +1091,8 @@ class GameScene extends Phaser.Scene{
   }
   showJutsu(el,lv){const name=KATA[lv-1]+'・'+JUTSU[el][lv-1];const col='#'+EL[el].color.toString(16).padStart(6,'0');
     const t=this.add.text(CX-50,BY0-28,name,{fontFamily:EMOJIFONT,fontSize:(15+lv*4)+'px',color:col,fontStyle:'bold',stroke:'#000',strokeThickness:3}).setOrigin(0.5).setAlpha(0).setDepth(DEPTH.fx);
-    this.tweens.add({targets:t,x:CX,alpha:1,duration:200,ease:'Back.out',
-      onComplete:()=>this.tweens.add({targets:t,alpha:0,duration:400,delay:350+lv*120,onComplete:()=>t.destroy()})});
+    this.tweens.add({targets:t,x:CX,alpha:1,duration:260,ease:'Back.out',
+      onComplete:()=>this.tweens.add({targets:t,alpha:0,duration:450,delay:850+lv*130,onComplete:()=>t.destroy()})});   // 招式名滯留更久(華麗感)
     if(lv>=4){const big=lv>=6;const f=this.add.rectangle(CX,H/2,W,H,EL[el].color,big?0.6:0.4).setDepth(DEPTH.flash);
       this.tweens.add({targets:f,alpha:0,duration:big?540:420,onComplete:()=>f.destroy()});
       this.cameras.main.shake(big?440:280,big?0.014:0.008);}}
