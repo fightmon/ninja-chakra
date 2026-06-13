@@ -584,6 +584,7 @@ class GameScene extends Phaser.Scene{
     this.input.on('pointerdown',p=>{if(this.earthSel&&!this.earthDrag)this.startEarthMove(p);});
     this.scale.on('resize',this.onResize,this);
     this.cameras.main.setBounds(0,0,W,H);   // 鏡頭鎖在世界範圍內→特寫推近/平移不會露出世界外的黑邊
+    this.startBoardIdle();   // 盤面久久一道查克拉光波流過(不那麼靜態)
 
     this.newGame();
   }
@@ -741,6 +742,68 @@ class GameScene extends Phaser.Scene{
         this.moraleBg.setStrokeStyle(2,lerpColor(0xff5a2a,0xffd24a,0.5+0.5*Math.sin(t+1.7)));}
     }catch(e){}
   }
+  // === 主動技 / 敵攻 共用特效 ===
+  chargeAt(x,y,color,dur){const ADD=Phaser.BlendModes.ADD;   // 花火粒子持續往 (x,y) 收束 + 亮核漸大 → dur 後印爆閃
+    const core=this.add.circle(x,y,4,0xffffff,1).setBlendMode(ADD).setDepth(DEPTH.proj);
+    const glow=this.add.circle(x,y,7,color,0.5).setBlendMode(ADD).setDepth(DEPTH.proj);
+    this.tweens.add({targets:core,scaleX:3.4,scaleY:3.4,duration:dur,ease:'Quad.in'});
+    this.tweens.add({targets:glow,scaleX:3.8,scaleY:3.8,duration:dur,ease:'Quad.in'});
+    this.time.addEvent({delay:30,repeat:Math.max(1,Math.floor(dur/30))-1,callback:()=>{
+      for(let j=0;j<4;j++){const a=Math.random()*Math.PI*2,r0=44+Math.random()*40,sx=x+Math.cos(a)*r0,sy=y+Math.sin(a)*r0;
+        const d=this.add.rectangle(sx,sy,11+Math.random()*8,3,(j%3===0?0xffffff:color)).setOrigin(0,0.5).setRotation(a+Math.PI).setBlendMode(ADD).setDepth(DEPTH.proj);
+        this.tweens.add({targets:d,x:x,y:y,scaleX:0.18,alpha:0.2,duration:200+Math.random()*120,ease:'Quad.in',onComplete:()=>d.destroy()});}}});
+    this.time.delayedCall(dur,()=>{core.destroy();glow.destroy();
+      const fl=this.add.circle(x,y,15,0xffffff,1).setBlendMode(ADD).setDepth(DEPTH.proj);
+      this.tweens.add({targets:fl,scaleX:3.2,scaleY:3.2,alpha:0,duration:220,ease:'Quad.out',onComplete:()=>fl.destroy()});});
+  }
+  flyBall(ox,oy,tx,ty,color,ctrl,dur,onArrive){const ADD=Phaser.BlendModes.ADD,a={x:ox,y:oy},b={x:tx,y:ty};   // 能量球沿二次貝茲飛(亮核+屬暈+逐段軌跡線),到點 onArrive
+    const glow=this.add.circle(ox,oy,13,color,0.6).setBlendMode(ADD).setDepth(DEPTH.proj);
+    const core=this.add.circle(ox,oy,7,0xffffff,1).setBlendMode(ADD).setDepth(DEPTH.proj);
+    const trail=this.add.graphics().setDepth(DEPTH.proj-1).setBlendMode(ADD),ob={t:0};
+    this.tweens.add({targets:ob,t:1,duration:dur,ease:'Quad.inOut',
+      onUpdate:()=>{const p=this.chakraBez(a,ctrl,b,ob.t);glow.setPosition(p.x,p.y);core.setPosition(p.x,p.y);
+        trail.clear();const N=Math.max(2,Math.round(ob.t*22));
+        trail.lineStyle(5,color,0.4);trail.beginPath();trail.moveTo(a.x,a.y);for(let i=1;i<=N;i++){const q=this.chakraBez(a,ctrl,b,ob.t*i/N);trail.lineTo(q.x,q.y);}trail.strokePath();
+        trail.lineStyle(2,0xffffff,0.9);trail.beginPath();trail.moveTo(a.x,a.y);for(let i=1;i<=N;i++){const q=this.chakraBez(a,ctrl,b,ob.t*i/N);trail.lineTo(q.x,q.y);}trail.strokePath();},
+      onComplete:()=>{glow.destroy();core.destroy();this.tweens.add({targets:trail,alpha:0,duration:300,onComplete:()=>trail.destroy()});if(onArrive)onArrive(tx,ty);}});
+  }
+  animPlayerHP(heal){const w=(W-2*BX0)*Math.max(0,this.playerHP/this.maxHP);   // 我方 HP 條先快後慢;heal→補血前端冒上飄粒子
+    if(this.pHpTw)this.pHpTw.stop();
+    this.pHpTw=this.tweens.add({targets:this.pHp,displayWidth:w,duration:480,ease:'Quart.out'});
+    this.pHpTxt.setText(this.playerHP+'/'+this.maxHP);
+    if(heal){const ADD=Phaser.BlendModes.ADD;
+      for(let k=0;k<10;k++)this.time.delayedCall(k*42,()=>{const fx=BX0+(this.pHp.displayWidth||w);
+        const d=this.add.circle(fx-6+Math.random()*12,PHP_Y,2.6,0x9effb8,1).setBlendMode(ADD).setDepth(DEPTH.fx);
+        this.tweens.add({targets:d,y:PHP_Y-18-Math.random()*14,alpha:0,scale:0.3,duration:520,ease:'Quad.out',onComplete:()=>d.destroy()});});}
+  }
+  lightningStrike(e){if(!e.sprite)return;const ADD=Phaser.BlendModes.ADD,x=e.sprite.x,y=e.sprite.y;   // 天落雷:鋸齒閃電劈下 + 爆閃
+    const pts=[]; let yy=-10,xx=x; while(yy<y){pts.push([xx,yy]); yy+=16+Math.random()*16; xx=x+(Math.random()-0.5)*44*Math.max(0.15,(y-yy)/y);} pts.push([x,y]);
+    const g=this.add.graphics().setDepth(DEPTH.proj).setBlendMode(ADD);
+    const stroke=(wd,c,al)=>{g.lineStyle(wd,c,al);g.beginPath();g.moveTo(pts[0][0],pts[0][1]);for(let i=1;i<pts.length;i++)g.lineTo(pts[i][0],pts[i][1]);g.strokePath();};
+    stroke(8,EL.thunder.color,0.5); stroke(3,0xfff6b0,1);
+    this.tweens.add({targets:g,alpha:0,duration:240,delay:60,onComplete:()=>g.destroy()});
+    const fl=this.add.circle(x,y,26,0xffffff,1).setBlendMode(ADD).setDepth(DEPTH.proj);this.tweens.add({targets:fl,scale:3,alpha:0,duration:260,onComplete:()=>fl.destroy()});
+    this.cameras.main.shake(160,0.009); this.paralyze(e,1000);
+  }
+  paralyze(e,ms){if(!e.sprite)return;const sp=e.sprite,bx=(e.card?e.card.x:sp.x),ADD=Phaser.BlendModes.ADD;   // 麻痺:電藍微透 + 小幅高頻抖動 + 偶發電弧
+    sp.setTint(0xaad8ff).setAlpha(0.82);
+    if(e._zap)e._zap.remove();
+    e._zap=this.time.addEvent({delay:55,repeat:Math.floor(ms/55),callback:()=>{ if(sp.active)sp.setX(bx+(Math.random()-0.5)*5);
+      if(Math.random()<0.4){const a=Math.random()*Math.PI*2,len=8+Math.random()*10,s=this.add.rectangle(sp.x,sp.y,len,2,0xbfe6ff).setOrigin(0,0.5).setRotation(a).setBlendMode(ADD).setDepth(DEPTH.proj);this.tweens.add({targets:s,alpha:0,duration:180,onComplete:()=>s.destroy()});}}});
+    this.time.delayedCall(ms,()=>{if(sp.active){sp.setX(bx).setAlpha(1);sp.clearTint();}});
+  }
+  trayRebirth(){const cx=CX,cy=TRAY_Y,ADD=Phaser.BlendModes.ADD;   // 土:舊托盤塊先收到中間(快→慢)→ 補新塊 → 再展開(快→慢),像重生
+    (this.trayIcons||[]).forEach(g=>this.tweens.add({targets:g,x:cx,y:cy,scaleX:0.3,scaleY:0.3,alpha:0.4,duration:300,ease:'Quart.out'}));
+    this.time.delayedCall(340,()=>{ const fl=this.add.circle(cx,cy,18,EL.earth.color,0.6).setBlendMode(ADD).setDepth(DEPTH.proj);this.tweens.add({targets:fl,scale:3,alpha:0,duration:400,onComplete:()=>fl.destroy()});
+      this.refill(); this.renderTray();
+      (this.trayIcons||[]).forEach(g=>{const fx=g.x,fy=g.y;g.setPosition(cx,cy).setScale(0.3);this.tweens.add({targets:g,x:fx,y:fy,scaleX:1,scaleY:1,duration:380,ease:'Quart.out'});}); });
+  }
+  startBoardIdle(){ if(this._idleEv)this._idleEv.remove(); this._idleEv=this.time.addEvent({delay:4200,loop:true,callback:()=>this.boardSweep()}); }
+  boardSweep(){ if(this.resultOpen||!this.board)return; if(!this.board.some(row=>row.some(c=>c)))return;   // 盤面有塊才掃,空盤不掃
+    const ADD=Phaser.BlendModes.ADD, band=this.add.rectangle(CX,BY0-14,9*CS-2,22,0x8fd0ff,0).setBlendMode(ADD).setDepth(DEPTH.board+1);   // 久久一道查克拉光波由上往下流過盤面
+    this.tweens.add({targets:band,y:BY0+9*CS+14,duration:1500,ease:'Sine.inOut',onComplete:()=>band.destroy()});
+    this.tweens.add({targets:band,alpha:0.16,duration:380,yoyo:true,hold:740});
+  }
   // 發動主動技
   fireActive(i){if(this.resultOpen||this.locked||this.drag||this.earthSel||this.earthDrag)return;
     this.stopStuckFX();
@@ -749,17 +812,28 @@ class GameScene extends Phaser.Scene{
     this.charge[i]=0;
     const colHex='#'+EL[card.el].color.toString(16).padStart(6,'0');
     this.tonFloat('★ '+a.name,colHex);
-    const cardObj=this.boxCard[ELEMENT_BOXES[i]], atk=cardObj?cardObj.atk:200;
+    const cardObj=this.boxCard[ELEMENT_BOXES[i]], atk=cardObj?cardObj.atk:200, ox=card.rect.x, oy=card.rect.y;
     switch(card.el){
-      case 'fire':{const dmg=Math.round(atk*3), vs=this.enemies.filter(e=>!e.dead);   // 全體爆裂
-        vs.forEach(v=>{v.hp=Math.max(0,v.hp-dmg);this.floatText(v.sprite.x,v.sprite.y-24,'-'+dmg,'#ff8f8f');});
-        this.cameras.main.shake(320,0.014);{const fl=this.add.rectangle(CX,H/2,W,H,0xffc89a,0).setDepth(DEPTH.flash);this.tweens.add({targets:fl,alpha:0.4,duration:90,yoyo:true,onComplete:()=>fl.destroy()});}this.updateEnemies();
-        vs.forEach(v=>{if(v.hp<=0)this.killEnemy(v);});break;}
-      case 'water':{const h=Math.round(this.maxHP*0.3);this.playerHP=Math.min(this.maxHP,this.playerHP+h);   // 純補血(不再洗托盤)
-        this.floatText(CX,PHP_Y-14,'癒+'+h,'#74e09a');break;}
-      case 'thunder':this.enemies.forEach(e=>{if(!e.dead){e.timer+=3;if(e.sprite)this.floatText(e.sprite.x,e.sprite.y-24,'封+3','#f4da52');}});break;   // 凍結
-      case 'earth':this.refill();this.renderTray();this.tonFloat('洗換一手查克拉塊','#d49a4a');break;   // 換新一手托盤塊(原水的洗托盤移來這)
-      case 'wind':{const m0=this.morale;this.morale=5;if(this.morale!==m0)this.moraleFX(5,true);break;}   // 鬥志衝極
+      case 'fire':{const dmg=Math.round(atk*3), col=EL.fire.color;   // 集氣蓄力 → 從火卡發弧線彈攻擊全體
+        this.chargeAt(ox,oy,col,420);
+        this.time.delayedCall(420,()=>{ const live=this.enemies.filter(e=>!e.dead);
+          live.forEach((v,k)=>this.time.delayedCall(k*60,()=>this.chakraBolt(ox,oy,v.sprite.x,v.sprite.y,col,v,dmg,3)));
+          this.cameras.main.shake(280,0.011);
+          this.time.delayedCall(360,()=>{ live.forEach(v=>{v.hp=Math.max(0,v.hp-dmg);}); this.updateEnemies(); live.forEach(v=>{if(v.hp<=0)this.killEnemy(v);}); }); });
+        break;}
+      case 'water':{const h=Math.round(this.maxHP*0.3);this.playerHP=Math.min(this.maxHP,this.playerHP+h);   // 用元素把傷口治好:HP 動畫先快後慢增加 + 前端上飄粒子
+        this.floatText(CX,PHP_Y-22,'癒+'+h,'#74e09a'); this.animPlayerHP(true);
+        const au=this.add.circle(ox,oy,16,EL.water.color,0.5).setBlendMode(Phaser.BlendModes.ADD).setDepth(DEPTH.proj);this.tweens.add({targets:au,scale:2.4,alpha:0,duration:500,onComplete:()=>au.destroy()});
+        break;}
+      case 'thunder':this.enemies.forEach((e,k)=>{if(!e.dead){e.timer+=3; this.time.delayedCall(k*90,()=>this.lightningStrike(e)); if(e.sprite)this.floatText(e.sprite.x,e.sprite.y-24,'封+3','#f4da52');}});break;   // 天落雷 + 麻痺
+      case 'earth':this.tonFloat('重生查克拉塊','#d49a4a'); this.trayRebirth(); break;   // 托盤塊重生演出
+      case 'wind':{const m0=this.morale, col=EL.wind.color;   // 集氣成能量球 → 拋物線飛向鬥志胸章 → 升華成「極」
+        this.chargeAt(ox,oy,col,420);
+        this.time.delayedCall(420,()=>{ const bx=this.moraleBg.x, by=this.moraleBg.y, ctrl={x:(ox+bx)/2,y:Math.min(oy,by)-70};
+          this.flyBall(ox,oy,bx,by,col,ctrl,440,()=>{ this.morale=5; if(this.morale!==m0)this.moraleFX(5,true); this.updateBars();
+            const ADD=Phaser.BlendModes.ADD, fl=this.add.circle(bx,by,16,0xffffff,1).setBlendMode(ADD).setDepth(DEPTH.fx);this.tweens.add({targets:fl,scale:3.4,alpha:0,duration:380,onComplete:()=>fl.destroy()});
+            for(let k=0;k<10;k++){const a=Math.random()*Math.PI*2,d=this.add.circle(bx,by,2.6,0xffd24a,1).setBlendMode(ADD).setDepth(DEPTH.fx);this.tweens.add({targets:d,x:bx+Math.cos(a)*22,y:by+Math.sin(a)*22-10,alpha:0,scale:0.3,duration:460,onComplete:()=>d.destroy()});} }); });
+        break;}
     }
     if(this.hitLab)this.charge=this.teamCards.map(c=>{const a=activeSkill(c.el);return a?a.cd:0;});   // 實驗室:主動技恆滿
     this.updateAll();this.renderCharges();}
@@ -1043,17 +1117,24 @@ class GameScene extends Phaser.Scene{
     this.tonFloat(EL[el].name+'塊Lv'+lv+'→存卡','#'+EL[el].color.toString(16).padStart(6,'0'));}
 
   enemyAttack(e){
-    this.tweens.add({targets:e.sprite,y:e.sprite.y+30,duration:150,yoyo:true});
-    this.cameras.main.shake(300,0.009);
-    const f=this.add.rectangle(CX,H/2,W,H,EL[e.el].color,0.4).setDepth(DEPTH.flash);
-    this.tweens.add({targets:f,alpha:0,duration:400,onComplete:()=>f.destroy()});
     let dmg=e.atk, dodged=false;
     if(this.immune>0){dodged=true;dmg=0;}
     else if(this.armor>0)dmg=Math.round(dmg*(1-this.armor));
-    this.playerHP=Math.max(0,this.playerHP-dmg);
-    this.floatText(CX,PHP_Y-14,dodged?'迴避!':'-'+dmg,dodged?'#74e09a':'#ff8f8f');
     this.resetWave(); e.burn=0;
-    this.updateAll(); if(this.playerHP<=0){if(this.hitLab){this.playerHP=this.maxHP;this.updateBars();}else this.gameOver('HP 歸零');}
+    const ox=e.sprite?e.sprite.x:CX, oy=e.sprite?e.sprite.y:60, col=EL[e.el].color, ADD=Phaser.BlendModes.ADD;
+    if(e.sprite)this.tweens.add({targets:e.sprite,scaleY:(e.baseScale||1)*0.9,duration:120,yoyo:true});   // 蓄力小縮
+    this.chargeAt(ox,oy,col,360);   // 敵卡中央花火集氣
+    this.time.delayedCall(360,()=>{
+      const tx=W-BX0, ty=PHP_Y, ctrl={x:(ox+tx)/2,y:Math.min(oy,ty)-70};   // 追蹤彈:先上後下弧線 → 我方 HP 條最右端
+      this.flyBall(ox,oy,tx,ty,col,ctrl,440,()=>{
+        const fl=this.add.circle(tx,ty,18,0xffffff,1).setBlendMode(ADD).setDepth(DEPTH.fx);this.tweens.add({targets:fl,scale:2.6,alpha:0,duration:260,onComplete:()=>fl.destroy()});
+        this.cameras.main.shake(220,0.01);
+        this.playerHP=Math.max(0,this.playerHP-dmg);
+        this.floatText(tx-12,PHP_Y-16,dodged?'迴避!':'-'+dmg,dodged?'#74e09a':'#ff8f8f');
+        this.animPlayerHP(false);   // HP 動畫慢慢變少
+        if(this.playerHP<=0){if(this.hitLab){this.playerHP=this.maxHP;this.animPlayerHP(false);}else this.gameOver('HP 歸零');}
+      });
+    });
   }
   killEnemy(e){if(e.dead)return;
     if(this.hitLab){   // 實驗室:也演敗陣化光,演完原地重生(順便看入場動畫)→ 可一直測
@@ -1149,7 +1230,7 @@ class GameScene extends Phaser.Scene{
     this.tweens.add({targets:e.turnG,y:restY-7,duration:170,yoyo:true,ease:'Quad.out'});   // 跳一下落回
   }
   updateBars(){
-    this.pHp.displayWidth=(W-2*BX0)*Math.max(0,this.playerHP/this.maxHP);
+    if(!this.pHpTw||!this.pHpTw.isPlaying())this.pHp.displayWidth=(W-2*BX0)*Math.max(0,this.playerHP/this.maxHP);   // 動畫扣/補血中→不瞬間蓋掉
     this.pHpTxt.setText(this.playerHP+'/'+this.maxHP);   // 去掉「我方」
     this.chestTxt.setText('📦 '+(this.chests||0)); this.goldTxt.setText('💰 '+(this.gold||0));
     const mcol=['#99aabb','#9ac4e0','#ffffff','#ffd24a','#ff9a3a','#ff5a3a'][this.morale]||'#ffd56a';
