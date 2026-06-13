@@ -81,6 +81,7 @@ const ROSTER = [
 const CONFIG = {
   ADV_MULT:1.6, WEAK_MULT:0.7, NORM_MULT:1.0,   // 相剋軟化(原2.0/0.5硬牆→1.6/0.7,讓手控能逆轉小劣勢)
   NEUTRAL_BOX_BASE:40, LINE_BASE:30, LINE_SAME_RATE:0.5,
+  CELL_RATE:0.11, NEUTRAL_CELL:4,   // 逐格傷害:每個被清的屬區格=該屬卡攻擊×相剋×CELL_RATE(滿宮9格≈卡攻擊);中性格每格 NEUTRAL_CELL
   COMBO_STEP:0.15, COMBO_CAP:10,
   MORALE_NAMES:['無','弱','普','強','超','極'], MORALE_MULT:[0.8,0.9,1.0,1.25,1.5,1.8], MORALE_START:2, MORALE_GRACE:3,  // 鬥志6階:無弱普強超極、起始普、極=全體;清除升到超封頂、暴擊直接衝極、連3手空手才降
   PLAYER_HP_BASE:1000, RESHUFFLE_COST:120,
@@ -180,22 +181,15 @@ function computeClears(board, boxElement, boxCard, enemyEl, ampMult){
   cols.forEach(c=>{for(let r=0;r<N;r++)cellSet.add(r+'_'+c);});
   boxes.forEach(b=>{const br=Math.floor(b/3)*3,bc=(b%3)*3;for(let r=br;r<br+3;r++)for(let c=bc;c<bc+3;c++)cellSet.add(r+'_'+c);});
   const mult=(el)=> el==='neutral'?1 : (EL[el].beats===enemyEl?CONFIG.ADV_MULT : (EL[enemyEl].beats===el?CONFIG.WEAK_MULT:CONFIG.NORM_MULT));
-  let total=0,hitWeak=false,parts=[];
-  boxes.forEach(b=>{const el=boxElement[b]||'neutral';const card=boxCard[b];
-    let d = card ? Math.round(card.atk*mult(el)*ampMult) : Math.round(CONFIG.NEUTRAL_BOX_BASE*mult(el));
-    total+=d;
-    if(el!=='neutral'&&EL[el].beats===enemyEl)hitWeak=true;
-    const br=Math.floor(b/3)*3,bc=(b%3)*3;parts.push({el,d,r:br+1,c:bc+1});});
-  const lineDmg=(bx)=>{let d=CONFIG.LINE_BASE,best=null,weak=false;const byEl={};
-    bx.forEach(b=>{const e=boxElement[b];if(e&&boxCard[b])(byEl[e]=byEl[e]||[]).push(boxCard[b]);});
-    for(const e in byEl)if(byEl[e].length>=2){byEl[e].forEach(card=>{d+=Math.round(card.atk*CONFIG.LINE_SAME_RATE*mult(e));});best=e;if(EL[e].beats===enemyEl)weak=true;}
-    return {d,best,weak};};
-  rows.forEach(r=>{const br=Math.floor(r/3);const L=lineDmg([br*3,br*3+1,br*3+2]);
-    total+=L.d;if(L.weak)hitWeak=true;parts.push({el:L.best||'neutral',d:L.d,r,c:4});});
-  cols.forEach(c=>{const bc=Math.floor(c/3);const L=lineDmg([bc,bc+3,bc+6]);
-    total+=L.d;if(L.weak)hitWeak=true;parts.push({el:L.best||'neutral',d:L.d,r:4,c});});
+  // 逐格屬性傷害:不論宮清/線清,「每個被清的屬區格」都算該屬攻擊(card.atk × 相剋 × CELL_RATE);中性格每格固定底。cellSet 已去重→不會重複計
   const elemCells={};
-  cellSet.forEach(k=>{const p=k.split('_');const e=boxElement[boxOf(+p[0],+p[1])];if(e)elemCells[e]=(elemCells[e]||0)+1;});
+  cellSet.forEach(k=>{const p=k.split('_');const e=boxElement[boxOf(+p[0],+p[1])];if(e)elemCells[e]=(elemCells[e]||0)+1;});   // 各屬區被清格數
+  let total=0,hitWeak=false,parts=[], elemUsed=0;
+  ELEMENT_BOXES.forEach(b=>{const card=boxCard[b], e=boxElement[b]; if(!card||e==null)return; const n=elemCells[e]||0; if(!n)return;
+    const d=Math.round(card.atk*mult(e)*ampMult*CONFIG.CELL_RATE*n); total+=d; elemUsed+=n;   // 該屬清了 n 格 → n × 卡攻擊 × 相剋 × 係數
+    if(EL[e].beats===enemyEl)hitWeak=true;
+    const br=Math.floor(b/3)*3,bc=(b%3)*3; parts.push({el:e,d,r:br+1,c:bc+1});});
+  total+=Math.round((cellSet.size-elemUsed)*CONFIG.NEUTRAL_CELL);   // 中性格(無屬區):每格固定底
   const fx={};
   ELEMENT_BOXES.forEach(b=>{const card=boxCard[b];if(!card)return;const br=Math.floor(b/3)*3,bc=(b%3)*3;
     let hit=false;for(let r=br;r<br+3&&!hit;r++)for(let c=bc;c<bc+3;c++)if(cellSet.has(r+'_'+c))hit=true;
