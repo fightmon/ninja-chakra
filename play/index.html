@@ -1051,8 +1051,22 @@ class GameScene extends Phaser.Scene{
       return;
     }
     e.dead=true; if(e.bob){e.bob.stop();e.bob=null;} if(e.knockTw){e.knockTw.stop();e.knockTw=null;}   // ★ bob 在受擊擊退時會被設 null,務必判空(否則每次擊殺都丟例外→鎖死)
+    const last=this.aliveCount()===0, isFinal=last&&this.stage>=this.dungeon.stages.length;
+    if(isFinal){ this._finalEnemy=e; this.stageClear(); return; }   // 最後一關最後一擊:由 finalBlow 演特寫鏡頭+飛出(不在此 playDeath)
     this.playDeath(e);   // 敗陣演出:被打飛(後上)+縮小+旋轉+淡出 → 化成光芒
-    if(this.aliveCount()===0)this.stageClear(); else {this.targetEnemy();this.updateEnemies();}
+    if(last)this.stageClear(); else {this.targetEnemy();this.updateEnemies();}
+  }
+  // 最後一擊:鏡頭推近最後一隻怪特寫 → 蓄勢一下 → 白閃+飛出 → 拉回 → 久一點才進結果
+  finalBlow(e){
+    const cam=this.cameras.main, sp=e&&e.sprite, EOut=Phaser.Math.Easing.Quadratic.Out, EIO=Phaser.Math.Easing.Quadratic.InOut;
+    if(sp){ cam.pan(sp.x, sp.y, 460, EOut); cam.zoomTo(1.9, 460, EOut); }   // 特寫推近
+    this.time.delayedCall(560,()=>{   // 蓄勢後 → 白閃 + 飛出(特寫下更有張力)
+      if(sp&&sp.active){const fl=this.add.circle(sp.x,sp.y,32,0xffffff,1).setBlendMode(Phaser.BlendModes.ADD).setDepth(DEPTH.fx);
+        this.tweens.add({targets:fl,scale:4,alpha:0,duration:320,onComplete:()=>fl.destroy()});}
+      this.playDeath(e);
+    });
+    this.time.delayedCall(1750,()=>{ cam.zoomTo(1,440,EIO); cam.pan(CX,Math.round(H/2),440,EIO); });   // 鏡頭拉回
+    this.time.delayedCall(2250,()=>this.showResult(true));   // 飛出後停留久一點才進結果(不突兀)
   }
   // 敗陣演出:被打飛(後上)、縮小、旋轉、淡出,縮到很小再炸成光芒
   playDeath(e){const sp=e.sprite, bs=e.baseScale||1, x0=sp.x, y0=(e.restY!=null?e.restY:sp.y);
@@ -1092,7 +1106,7 @@ class GameScene extends Phaser.Scene{
       this.time.delayedCall(120,()=>this.tonFloat('🔮 '+EL[this.dungeon.el].name+'寶玉','#c5b0ff'));}
     const _rw=addRewards(40,300); this.runExp+=40; this.runCoins+=300;   // 戰鬥獎勵:EXP/金錢
     if(_rw._ups>0)this.tonFloat('🆙 等級提升! Lv.'+_rw.rank,'#ffe04a');
-    if(this.stage>=this.dungeon.stages.length){markDungeonCleared(this.dungeonId);this.chests++;this.time.delayedCall(600,()=>this.showResult(true));return;}
+    if(this.stage>=this.dungeon.stages.length){markDungeonCleared(this.dungeonId);this.chests++;this.finalBlow(this._finalEnemy);return;}   // 最後一關全清→最後一擊特寫演出後才進結果
     this.stage++; this.chests++; this.playerHP=Math.min(this.maxHP,this.playerHP+150);
     this.time.delayedCall(700,()=>{try{this.stageAdvanceFX();}catch(e){} this.time.delayedCall(380,()=>{try{this.startStage(true);}catch(e){console.error('startStage error',e);}});});   // 過關:前進演出 → 下一關敵人自遠方逼近入場(不清盤,盤面累積)
   }
@@ -1355,16 +1369,17 @@ class GameScene extends Phaser.Scene{
     g.add(this.add.text(CX,cy-110,win?(this.dungeon.name+' · '+this.dungeon.stages.length+' 關全清!'):'第 '+this.stage+' 關失敗',{fontFamily:EMOJIFONT,fontSize:'14px',color:'#f3e9d8'}).setOrigin(0.5));
     if(win){
       const drops=this.runDrops||[], m=Math.min(drops.length,8);
-      g.add(this.add.text(CX,cy-72,drops.length?('🎁 戰利品 ×'+drops.length):'(這趟沒有掉落)',{fontFamily:EMOJIFONT,fontSize:'14px',color:'#ffe08a',fontStyle:'bold'}).setOrigin(0.5));
-      const per=m?Math.min(80,Math.floor((W-24)/m)):0;
-      drops.slice(0,8).forEach((d,i)=>{const dx=CX+(i-(m-1)/2)*per, dy=cy-22;
-        g.add(this.add.rectangle(dx,dy,per-6,46,EL[d.cd.el].color).setStrokeStyle(2,d.isNew?0xffe04a:0x000000,d.isNew?1:0.3));
-        g.add(this.add.text(dx,dy-6,d.cd.name,{fontFamily:EMOJIFONT,fontSize:'10px',color:'#1a1208',fontStyle:'bold'}).setOrigin(0.5));
-        g.add(this.add.text(dx,dy+10,RANKNAME[d.cd.rank],{fontFamily:EMOJIFONT,fontSize:'9px',color:'#3a2c12'}).setOrigin(0.5));
-        if(d.isNew)g.add(this.add.text(dx,dy-22,'✦NEW',{fontFamily:EMOJIFONT,fontSize:'9px',color:'#ffe04a',fontStyle:'bold'}).setOrigin(0.5));});
-      g.add(this.add.text(CX,cy+12,'🎉 EXP +'+(this.runExp||0)+'   💰 +'+(this.runCoins||0),{fontFamily:EMOJIFONT,fontSize:'14px',color:'#ffe08a',fontStyle:'bold'}).setOrigin(0.5));
-      this.mkBtn(g,cy+44,'📖 看卡冊',()=>{this.scene.manager.start('collection');this.scene.manager.stop('game');},0x3a4a5c);
-      this.mkBtn(g,cy+100,'🏠 回大廳',()=>{this.scene.manager.start('home');this.scene.manager.stop('game');});
+      g.add(this.add.text(CX,cy-92,drops.length?('🎁 戰利品 ×'+drops.length):'(這趟沒有掉落)',{fontFamily:EMOJIFONT,fontSize:'15px',color:'#ffe08a',fontStyle:'bold'}).setOrigin(0.5));
+      const per=m?Math.min(86,Math.floor((W-20)/m)):0, sq=Math.min(per-6,74);   // 正方形卡;字級隨卡大小放大
+      const fn=Math.max(12,Math.round(sq*0.22)), fr=Math.max(10,Math.round(sq*0.17));
+      drops.slice(0,8).forEach((d,i)=>{const dx=CX+(i-(m-1)/2)*per, dy=cy-40;
+        g.add(this.add.rectangle(dx,dy,sq,sq,EL[d.cd.el].color).setStrokeStyle(3,d.isNew?0xffe04a:0x000000,d.isNew?1:0.3));
+        g.add(this.add.text(dx,dy-sq*0.12,d.cd.name,{fontFamily:EMOJIFONT,fontSize:fn+'px',color:'#1a1208',fontStyle:'bold',align:'center',wordWrap:{width:sq-4}}).setOrigin(0.5));
+        g.add(this.add.text(dx,dy+sq*0.26,RANKNAME[d.cd.rank],{fontFamily:EMOJIFONT,fontSize:fr+'px',color:'#3a2c12',fontStyle:'bold'}).setOrigin(0.5));
+        if(d.isNew)g.add(this.add.text(dx,dy-sq/2-10,'✦NEW',{fontFamily:EMOJIFONT,fontSize:'11px',color:'#ffe04a',fontStyle:'bold'}).setOrigin(0.5));});
+      g.add(this.add.text(CX,cy+30,'🎉 EXP +'+(this.runExp||0)+'   💰 +'+(this.runCoins||0),{fontFamily:EMOJIFONT,fontSize:'15px',color:'#ffe08a',fontStyle:'bold'}).setOrigin(0.5));
+      this.mkBtn(g,cy+66,'📖 看卡冊',()=>{this.scene.manager.start('collection');this.scene.manager.stop('game');},0x3a4a5c);
+      this.mkBtn(g,cy+122,'🏠 回大廳',()=>{this.scene.manager.start('home');this.scene.manager.stop('game');});
     } else {
       this.mkBtn(g,cy+30,'再挑戰本關',()=>{g.destroy();this.resultOpen=false;this.restartStage();});
       this.mkBtn(g,cy+88,'🏠 回大廳',()=>{this.scene.manager.start('home');this.scene.manager.stop('game');});
