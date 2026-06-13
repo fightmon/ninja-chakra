@@ -1079,7 +1079,7 @@ class GameScene extends Phaser.Scene{
   }
   // 過關前進:鏡頭往前推一下 + 直向速度線往下刷過(像往深處前進到下一關)
   stageAdvanceFX(){ const cam=this.cameras.main;
-    cam.zoomTo(1.06,200,'Quad.out'); this.time.delayedCall(220,()=>cam.zoomTo(1,300,'Quad.inOut'));
+    cam.zoomTo(1.06,200,Phaser.Math.Easing.Quadratic.Out); this.time.delayedCall(220,()=>cam.zoomTo(1,300,Phaser.Math.Easing.Quadratic.InOut));   // ★ 相機效果的 ease 必須是函式(EaseMap 不收 'Quad.out' 簡寫)否則每幀丟例外→凍住
     for(let i=0;i<16;i++){const x=16+Math.random()*(W-32), len=44+Math.random()*90;
       const s=this.add.rectangle(x,-len,2.5,len,0xffffff,0.45).setOrigin(0.5,0).setDepth(DEPTH.flash);
       this.tweens.add({targets:s,y:H+len,alpha:0,duration:320+Math.random()*180,delay:Math.random()*200,ease:'Quad.in',onComplete:()=>s.destroy()});}
