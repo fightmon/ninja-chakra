@@ -703,15 +703,15 @@ class GameScene extends Phaser.Scene{
   }
   // 放塊:查克拉凝聚成形 —— 屬色凝聚體由略大半透明收實 + 粒子向中心收束 + 格子淡入(只演「放下後仍在盤上」的格)
   coalesceCells(list){ if(!list)return; const ADD=Phaser.BlendModes.ADD;
-    list.forEach(rc=>{const r=rc[0],c=rc[1]; if(r<0||r>=N||c<0||c>=N||!this.board[r][c])return;
+    list.forEach((rc,idx)=>{const r=rc[0],c=rc[1]; if(r<0||r>=N||c<0||c>=N||!this.board[r][c])return;
       const cell=this.cellRect(r,c); if(!cell)return;
-      const el=this.board[r][c].el, col=EL[el]?EL[el].color:NEUTRAL_FILL, cx=BX0+c*CS+RECT/2, cy=BY0+r*CS+RECT/2;
-      this.tweens.killTweensOf(cell); cell.setAlpha(0.15); this.tweens.add({targets:cell,alpha:1,duration:240,ease:'Quad.out',onComplete:()=>cell.setAlpha(1)});   // 格子由淡→實
-      const o=this.add.rectangle(cx,cy,RECT,RECT,col).setOrigin(0.5).setBlendMode(ADD).setDepth(DEPTH.board+1).setAlpha(0.5).setScale(1.6);   // 凝聚體:略大半透→收實(中心縮放)
-      this.tweens.add({targets:o,scaleX:1,scaleY:1,alpha:0,duration:240,ease:'Quad.in',onComplete:()=>o.destroy()});
-      for(let k=0;k<5;k++){const a=Math.random()*Math.PI*2, r0=16+Math.random()*12, sx=cx+Math.cos(a)*r0, sy=cy+Math.sin(a)*r0;   // 查克拉粒子向中心收束凝聚
-        const d=this.add.circle(sx,sy,2+Math.random()*1.5,col,0.95).setBlendMode(ADD).setDepth(DEPTH.board+1);
-        this.tweens.add({targets:d,x:cx,y:cy,alpha:0,scale:0.2,duration:200+Math.random()*120,ease:'Quad.in',onComplete:()=>d.destroy()});}
+      const el=this.board[r][c].el, col=EL[el]?EL[el].color:NEUTRAL_FILL, cx=BX0+c*CS+RECT/2, cy=BY0+r*CS+RECT/2, dl=idx*55;   // dl:多格逐格錯開→像一道波流過整塊(絲滑)
+      this.tweens.killTweensOf(cell); cell.setAlpha(0.12); this.tweens.add({targets:cell,alpha:1,duration:430,delay:dl,ease:'Sine.out',onComplete:()=>cell.setAlpha(1)});   // 格子柔和淡入
+      const o=this.add.rectangle(cx,cy,RECT,RECT,col).setOrigin(0.5).setBlendMode(ADD).setDepth(DEPTH.board+1).setAlpha(0.5).setScale(1.7);   // 凝聚體:略大半透→緩緩收實(Cubic.out 緩出=軟著陸)
+      this.tweens.add({targets:o,scaleX:1,scaleY:1,alpha:0,duration:440,delay:dl,ease:'Cubic.out',onComplete:()=>o.destroy()});
+      for(let k=0;k<6;k++){const a=Math.random()*Math.PI*2, r0=18+Math.random()*14, sx=cx+Math.cos(a)*r0, sy=cy+Math.sin(a)*r0;   // 查克拉粒子滑順收束(Sine.inOut+錯開)
+        const d=this.add.circle(sx,sy,1.8+Math.random()*1.4,col,0.85).setBlendMode(ADD).setDepth(DEPTH.board+1);
+        this.tweens.add({targets:d,x:cx,y:cy,alpha:0,scale:0.25,duration:360+Math.random()*180,delay:dl+Math.random()*70,ease:'Sine.inOut',onComplete:()=>d.destroy()});}
     });
   }
   renderTeam(){ELEMENT_BOXES.forEach((b,i)=>{const k=this.boxElement[b],card=this.teamCards[i];
