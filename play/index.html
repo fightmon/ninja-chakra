@@ -601,7 +601,7 @@ class GameScene extends Phaser.Scene{
     this.enemies.forEach(e=>{if(!e.card||e.dead)return;const x=e.card.x,cy=BATTLE_CY,sz=e.cardH;
       e.card.setPosition(x,cy);
       e.turnG.setPosition(x-sz/2+12,cy-sz/2+11);e.hpBg.setPosition(x,cy+sz/2-3);e.hpFill.setPosition(e.hpx,cy+sz/2-3);e.mark.setPosition(x,cy-sz/2-9);
-      const fy=e.img?cy:cy-Math.round(sz*0.14);if(e.img)e.sprite.setDisplaySize(sz,sz);e.baseScale=e.sprite.scaleX;if(e.bob)e.bob.stop();e.sprite.setPosition(x,fy);e.bob=this.tweens.add({targets:e.sprite,y:fy-4,duration:1200,yoyo:true,repeat:-1,ease:'Sine.inOut'});});
+      const fy=e.img?cy:cy-Math.round(sz*0.14);if(e.img)e.sprite.setDisplaySize(sz,sz);e.baseScale=e.sprite.scaleX;if(e.bob)e.bob.stop();e.sprite.setPosition(x,fy);e.restY=fy;e.bob=this.tweens.add({targets:e.sprite,y:fy-4,duration:1200,yoyo:true,repeat:-1,ease:'Sine.inOut'});});
   }
 
   cellRect(r,c){return this.cells[r*N+c];}
@@ -665,6 +665,7 @@ class GameScene extends Phaser.Scene{
       e.hpBg=this.add.rectangle(x,cy+szc/2-3,e.hpW,8,0x000000,0.6).setOrigin(0.5);   // HP:壓在敵圖下緣(再往下 6px)
       e.hpFill=this.add.rectangle(e.hpx,cy+szc/2-3,e.hpW,8,e.boss?0xff7a3a:0xc23c2c).setOrigin(0,0.5);
       e.mark=this.add.text(x,cy-szc/2-9,'▼',{fontFamily:EMOJIFONT,fontSize:'14px',color:'#ffd56a',fontStyle:'bold'}).setOrigin(0.5).setVisible(false);   // 目標指標(取代黃框)
+      e.restY=e.sprite.y;   // 受擊擊退/回位的基準 y
       e.bob=this.tweens.add({targets:e.sprite,y:e.sprite.y-4,duration:1200,yoyo:true,repeat:-1,ease:'Sine.inOut'});
     });
     // 敵方同層 z 序:敵中 > 敵左 > 敵右(越靠中央畫越上;同距時左>右)。依此由後往前加入容器
@@ -748,6 +749,7 @@ class GameScene extends Phaser.Scene{
       case 'earth':this.refill();this.renderTray();this.tonFloat('洗換一手查克拉塊','#d49a4a');break;   // 換新一手托盤塊(原水的洗托盤移來這)
       case 'wind':{const m0=this.morale;this.morale=5;if(this.morale!==m0)this.moraleFX(5,true);break;}   // 鬥志衝極
     }
+    if(this.hitLab)this.charge=this.teamCards.map(c=>{const a=activeSkill(c.el);return a?a.cd:0;});   // 實驗室:主動技恆滿
     this.updateAll();this.renderCharges();}
   renderTray(){
     if(this.trayTweens)this.trayTweens.forEach(t=>t.remove()); this.trayTweens=[];   // 先收掉舊脈動 tween 再銷毀(避免懸空)
@@ -767,24 +769,33 @@ class GameScene extends Phaser.Scene{
   }
   // HIT 實驗室:塊區放各「可能解塊數」按鈕(由小到大兩排),點按完整重現該手實際遊玩畫面(招式名+型/印+全螢幕閃+n HIT+集氣攻擊),純特效不扣血/不推進
   renderHitLab(){
-    const ys=TRAY_Y, vals=[9,15,18,21,27,33,39,45], cols=[60,160,260,360], rows=[ys-16,ys+26];   // 9→45:皆為真實可達的滿線聯集(1線/列+宮/2線/列+欄+宮/3線/3列+欄/3列+2欄/3列+3欄)
+    this.charge=this.teamCards.map(c=>{const a=activeSkill(c.el);return a?a.cd:0;});   // 主動技恆滿,可隨時測
+    this.trayHits.forEach(h=>h.disableInteractive());   // 實驗室不放塊,關掉托盤拖放點
+    const ys=TRAY_Y, vals=[9,15,18,21,27,33,39,45], cols=[60,160,260,360], rows=[ys-30,ys+2];   // 9→45:皆真實可達的滿線聯集(1線/列+宮/2線/列+欄+宮/3線/3列+欄/3列+2欄/3列+3欄)兩排由小到大
     vals.forEach((n,k)=>{const x=cols[k%4], y=rows[Math.floor(k/4)];
-      const bg=this.add.rectangle(x,y,76,36,0x2b2014).setStrokeStyle(2,0x6a4f28).setDepth(DEPTH.tray).setInteractive();
-      const tx=this.add.text(x,y,String(n),{fontFamily:EMOJIFONT,fontSize:'18px',color:'#ffeec4',fontStyle:'bold'}).setOrigin(0.5).setDepth(DEPTH.tray);
+      const bg=this.add.rectangle(x,y,76,28,0x2b2014).setStrokeStyle(2,0x6a4f28).setDepth(DEPTH.tray).setInteractive();
+      const tx=this.add.text(x,y,String(n),{fontFamily:EMOJIFONT,fontSize:'17px',color:'#ffeec4',fontStyle:'bold'}).setOrigin(0.5).setDepth(DEPTH.tray);
       bg.on('pointerover',()=>bg.setFillStyle(0x3d2c18)); bg.on('pointerout',()=>bg.setFillStyle(0x2b2014));
       bg.on('pointerup',()=>{bg.setFillStyle(0x2b2014);this.demoHit(n);});
       this.trayIcons.push(bg,tx);});
+    const eb=this.add.rectangle(CX,ys+34,150,28,0x4a1818).setStrokeStyle(2,0xc24a4a).setDepth(DEPTH.tray).setInteractive();   // 敵攻擊演示鈕(獨立一排)
+    const et=this.add.text(CX,ys+34,'🗡 敵攻擊',{fontFamily:EMOJIFONT,fontSize:'15px',color:'#ffc8c8',fontStyle:'bold'}).setOrigin(0.5).setDepth(DEPTH.tray);
+    eb.on('pointerover',()=>eb.setFillStyle(0x5e2020)); eb.on('pointerout',()=>eb.setFillStyle(0x4a1818));
+    eb.on('pointerup',()=>{eb.setFillStyle(0x4a1818);this.demoEnemyAttack();});
+    this.trayIcons.push(eb,et);
   }
   demoHit(n){
     const tgt=this.enemies&&this.enemies.find(e=>!e.dead); if(!tgt)return;
     const els=['fire','water','thunder','earth','wind']; this._labEl=((this._labEl==null?-1:this._labEl)+1)%5; const el=els[this._labEl];
-    const lv=Math.max(1,Math.min(7,Math.round(n/9)+1));   // 型/印 階(隨 HIT 升;lv≥4 觸發全螢幕閃,lv≥6 大閃)——重現實際大清的招式陣仗
+    const lv=Math.max(1,Math.min(7,Math.round(n/9)+1));   // 型/印 階(隨 HIT 升;lv≥4 全螢幕閃,lv≥6 大閃)——重現實際大清陣仗
     const cells=[]; for(let r=0;r<N&&cells.length<n;r++)for(let c=0;c<N&&cells.length<n;c++)cells.push([r,c]);   // 取前 n 格→集氣粒子從盤面真實位置飛向中心
     const burst=1+Math.max(0,n-9)/9*0.3, dmg=Math.round(n*10*burst);
-    this.showJutsu(el,lv);                                               // 招式名橫幅(KATA 型 + 屬性術名)+ lv≥4 全螢幕屬色閃
-    this.countFX(n);                                                     // 盤面中央彈「n HIT」
-    this.chakraStrike([tgt], dmg, el, {cells, parts:[{el}], fx:{[el]:{level:lv,atk:tgt.atk,attrs:[]}}, total:dmg, groups:Math.ceil(n/9)});
+    const data={cells, parts:[{el}], fx:{[el]:{level:lv,atk:tgt.atk,attrs:[]}}, total:dmg, groups:Math.ceil(n/9)};
+    const atkAt=this.playClearFX(el, lv, n, ()=>this.chakraStrike([tgt], dmg, el, data));   // 先 n HIT → 招式名 → 才攻擊
+    this.time.delayedCall(atkAt+(n>=18?1180:860),()=>{tgt.hp=Math.max(0,tgt.hp-dmg);this.updateEnemies();if(tgt.hp<=0)this.killEnemy(tgt);});   // 彈著瞬間才扣血條(動畫慢慢扣;空了回滿)
   }
+  demoEnemyAttack(){const alive=this.enemies&&this.enemies.filter(e=>!e.dead); if(!alive||!alive.length)return;
+    this._labAtkI=((this._labAtkI==null?-1:this._labAtkI)+1)%alive.length; this.enemyAttack(alive[this._labAtkI]);}
 
   /* 拖曳放塊 */
   startDrag(i,p){if(this.resultOpen||this.locked||this.earthSel||this.earthDrag)return;
@@ -958,20 +969,18 @@ class GameScene extends Phaser.Scene{
     const aoe=(topLv>=4)||(this.morale>=5), victims=aoe?this.enemies.filter(e=>!e.dead):[tgt];   // LV4+大消除 或 鬥志「極」=全體
     Object.keys(data.fx).forEach(e=>{const f=data.fx[e];f.attrs.forEach(a=>this.fireAttr(a,f.atk,f.level,tgt));});
     if(!this.fromBlock)Object.keys(data.fx).forEach(e=>this.storeBlock(e,data.fx[e].level));   // 清宮→生成該屬形狀塊存到卡(萬用塊清出的消除不再生塊)
-    if(topEl)this.showJutsu(topEl,data.fx[topEl].level);
     data.cells.forEach(([r,c])=>{const rc=this.cellRect(r,c);
       this.tweens.add({targets:rc,scaleX:1.14,scaleY:1.14,duration:90,yoyo:true});});
     victims.forEach(v=>{v.hp=Math.max(0,v.hp-dealt);});
     if(data.hitWeak)tgt.timer+=1;
     if(this.combo>=2)this.comboPopup(this.combo);
-    this.countFX(data.cells.length);   // 本手清掉的格數→「n HIT」(一條9、兩條18…),每次清除都顯示
     if(this.firstClear){this.firstClear=false;track('first_clear');}   // 第一次消除:只記埋點,不演出(移除「結印成功」動畫)
-    this.chakraStrike(victims, dealt, topEl, data);   // 查克拉集結成印 → 射向敵人(集氣→印爆閃→查克拉彈→白點粒子爆 + hitstop)
-    if(aoe)this.cameras.main.shake(260,0.01);
     data.cells.forEach(([r,c])=>{this.board[r][c]=null;});  // 立即從模型移除,避免重複觸發
+    const n=data.cells.length;
+    const atkAt=this.playClearFX(topEl, topLv, n, ()=>{ this.chakraStrike(victims, dealt, topEl, data); if(aoe)this.cameras.main.shake(260,0.01); });   // 先 n HIT → 招式名 → 才查克拉集結射出
     this.updateEnemies();
-    this.time.delayedCall(460,()=>{this.refreshBoard();});                                                        // 清掉的格子消失(集結同時)
-    this.time.delayedCall(1060,()=>{this.updateAll(); victims.forEach(v=>{if(v.hp<=0)this.killEnemy(v);});});      // 命中後才扣血條 + 收掉死亡敵(含 AoE 弧線彈到達)
+    this.time.delayedCall(Math.max(120,atkAt-100),()=>{this.refreshBoard();});                                        // 攻擊發動前夕,清掉的格子消失(集氣同時)
+    this.time.delayedCall(atkAt+(n>=18?1760:1400),()=>{this.updateAll(); victims.forEach(v=>{if(v.hp<=0)this.killEnemy(v);});});   // 命中後才扣血條 + 收掉死亡敵(含蓄力/AoE 弧線彈到達)
   }
   // 形狀系統:火/水/風/土/雷 的主技=生成形狀塊存到卡(在 resolve 統一處理 storeBlock);fireAttr 只剩子屬性 陰/陽
   fireAttr(a,atk,lv,tgt){const A=CONFIG.ATTR;switch(a){
@@ -999,9 +1008,11 @@ class GameScene extends Phaser.Scene{
     this.playerHP=Math.max(0,this.playerHP-dmg);
     this.floatText(CX,PHP_Y-14,dodged?'迴避!':'-'+dmg,dodged?'#74e09a':'#ff8f8f');
     this.resetWave(); e.burn=0;
-    this.updateAll(); if(this.playerHP<=0)this.gameOver('HP 歸零');
+    this.updateAll(); if(this.playerHP<=0){if(this.hitLab){this.playerHP=this.maxHP;this.updateBars();}else this.gameOver('HP 歸零');}
   }
-  killEnemy(e){if(e.dead)return; e.dead=true; e.bob.stop();
+  killEnemy(e){if(e.dead)return;
+    if(this.hitLab){e.hp=e.max;if(e.hpTw)e.hpTw.stop();this.updateEnemies();return;}   // 實驗室:不死,血回滿(血條動畫補回)→ 可一直測
+    e.dead=true; e.bob.stop();
     [e.sprite,e.card,e.turnG,e.hpBg,e.hpFill,e.mark].forEach(o=>o.setVisible(false));
     if(this.aliveCount()===0)this.stageClear(); else {this.targetEnemy();this.updateEnemies();}
   }
@@ -1025,7 +1036,9 @@ class GameScene extends Phaser.Scene{
   /* UI */
   updateAll(){this.updateEnemies();this.updateBars();}
   updateEnemies(){this.enemies.forEach((e,i)=>{if(e.dead)return;
-    e.hpFill.displayWidth=e.hpW*Math.max(0,e.hp/e.max);
+    const tw=e.hpW*Math.max(0,e.hp/e.max);   // 血條動畫慢慢扣(不瞬間跳)
+    if(Math.abs((e.hpFill.displayWidth||0)-tw)>0.5){if(e.hpTw)e.hpTw.stop();e.hpTw=this.tweens.add({targets:e.hpFill,displayWidth:tw,duration:340,ease:'Quad.out'});}
+    else e.hpFill.displayWidth=tw;
     if(e.turnTx){const tm=Math.max(0,e.timer);   // 沙漏右邊的數字=剩餘出手手數;越少越紅(1手內紅、2手黃、≥3白藍)
       e.turnTx.setText(String(tm)).setColor(tm<=1?'#ff5a4a':tm===2?'#ffc24a':'#eaf3ff');}
     e.mark.setVisible(i===this.target);});}
@@ -1081,8 +1094,17 @@ class GameScene extends Phaser.Scene{
   // 打擊頓格:命中瞬間凍住整個場景 ~ms(tween+計時器 timeScale=0,真實時間後復原)→ 打到肉的份量
   hitStop(ms){ if(this._hitStop)return; this._hitStop=true; this.tweens.timeScale=0; this.time.timeScale=0;
     setTimeout(()=>{ this.tweens.timeScale=1; this.time.timeScale=1; this._hitStop=false; }, ms); }
-  // 敵人受擊橫向頓一下(bob 在 y、這個動 x 不衝突)
-  knockEnemy(e){ if(!e||!e.sprite)return; const x0=e.sprite.x; this.tweens.add({targets:e.sprite,x:x0+7,duration:60,yoyo:true,repeat:1,ease:'Quad.out',onComplete:()=>e.sprite.setX(x0)}); }
+  // 敵人受擊擊退:後退(上移+縮小)→ 停頓 → 慢慢回到原位
+  knockEnemy(e){ if(!e||!e.sprite)return; const sp=e.sprite, ry=(e.restY!=null?e.restY:sp.y), bs=e.baseScale||1;
+    if(e.bob){e.bob.stop();e.bob=null;}                       // 暫停上下浮動,避免和擊退 y 衝突
+    if(e.knockTw)e.knockTw.stop();
+    sp.setScale(bs);
+    e.knockTw=this.tweens.add({targets:sp,y:ry-20,scaleX:bs*0.8,scaleY:bs*0.8,duration:120,ease:'Quad.out',   // ①後退:上移 + 縮小(快)
+      onComplete:()=>{
+        e.knockTw=this.tweens.add({targets:sp,y:ry,scaleX:bs,scaleY:bs,delay:150,duration:440,ease:'Quad.out',   // ②停頓後慢慢回位
+          onComplete:()=>{sp.setScale(bs);sp.setY(ry);e.knockTw=null;
+            if(!e.dead)e.bob=this.tweens.add({targets:sp,y:ry-4,duration:1200,yoyo:true,repeat:-1,ease:'Sine.inOut'});}});   // 回復上下浮動
+      }}); }
   // 查克拉集結成印 → 射向敵人(全程 additive 疊光=真發光)
   chakraBez(a,c,b,t){const it=1-t;return {x:it*it*a.x+2*it*t*c.x+t*t*b.x, y:it*it*a.y+2*it*t*c.y+t*t*b.y};}   // 二次貝茲
   chakraBez3(a,c1,c2,b,t){const it=1-t,it2=it*it,t2=t*t;return {x:it2*it*a.x+3*it2*t*c1.x+3*it*t2*c2.x+t2*t*b.x, y:it2*it*a.y+3*it2*t*c1.y+3*it*t2*c2.y+t2*t*b.y};}   // 三次貝茲
@@ -1109,14 +1131,30 @@ class GameScene extends Phaser.Scene{
         }});
       });
     });
-    this.time.delayedCall(540,()=>{   // 集結完成 → 印爆閃 → 射出(規模隨 HIT)
+    const fireBolts=()=>{victims.forEach((v,k)=>{if(!v.sprite)return;this.time.delayedCall(k*60,()=>this.chakraBolt(LP.x,LP.y,v.sprite.x,v.sprite.y,col,v,dealt,pw));});};
+    this.time.delayedCall(540,()=>{   // 集結完成 → 印爆閃 → (大 HIT 再二次蓄力) → 射出(規模隨 HIT)
       core.destroy(); glow.destroy();
       const seal=this.add.circle(LP.x,LP.y,16*gs,0xffffff,1).setBlendMode(ADD).setDepth(DEPTH.proj);
       this.tweens.add({targets:seal,scale:3.2,alpha:0,duration:220,ease:'Quad.out',onComplete:()=>seal.destroy()});
       const sg=this.add.circle(LP.x,LP.y,20*gs,col,0.6).setBlendMode(ADD).setDepth(DEPTH.proj);
       this.tweens.add({targets:sg,scale:2.4,alpha:0,duration:300,ease:'Quad.out',onComplete:()=>sg.destroy()});
       this.cameras.main.shake(110+pw*35,0.005+pw*0.002);
-      victims.forEach((v,k)=>{if(!v.sprite)return;this.time.delayedCall(k*60,()=>this.chakraBolt(LP.x,LP.y,v.sprite.x,v.sprite.y,col,v,dealt,pw));});
+      if(hit>=18){   // 18 HIT 以上:再從 360° 外圈把火花往中心收束(蓄力)後才射出
+        const cc=this.add.circle(LP.x,LP.y,6*gs,0xffffff,1).setBlendMode(ADD).setDepth(DEPTH.proj);   // 重新長一顆蓄力核
+        this.tweens.add({targets:cc,scale:3.6,duration:300,ease:'Quad.in'});
+        const cg=this.add.circle(LP.x,LP.y,9*gs,col,0.5).setBlendMode(ADD).setDepth(DEPTH.proj);
+        this.tweens.add({targets:cg,scale:4,duration:300,ease:'Quad.in'});
+        const ringR=66+pw*10, M=Math.round(16+pw*5);
+        for(let i=0;i<M;i++){const a=i/M*Math.PI*2+(Math.random()-0.5)*0.4, r0=ringR+Math.random()*24, sx=LP.x+Math.cos(a)*r0, sy=LP.y+Math.sin(a)*r0;
+          const d=this.add.rectangle(sx,sy,11+Math.random()*9,3,(i%3===0)?0xffffff:col).setOrigin(0,0.5).setRotation(a+Math.PI).setBlendMode(ADD).setDepth(DEPTH.proj);   // 朝中心的短火花,往內收束
+          this.tweens.add({targets:d,x:LP.x,y:LP.y,scaleX:0.2,alpha:0.25,duration:250+Math.random()*120,ease:'Quad.in',onComplete:()=>d.destroy()});}
+        this.time.delayedCall(330,()=>{   // 收束完成 → 二次印爆閃(更亮)→ 射出
+          cc.destroy(); cg.destroy();
+          const fl=this.add.circle(LP.x,LP.y,18*gs,0xffffff,1).setBlendMode(ADD).setDepth(DEPTH.proj);
+          this.tweens.add({targets:fl,scale:3.8,alpha:0,duration:240,ease:'Quad.out',onComplete:()=>fl.destroy()});
+          this.cameras.main.shake(90+pw*30,0.006); fireBolts();
+        });
+      } else fireBolts();
     });
   }
   // 查克拉彈:沿弧線飛 + 逐段描出的弧線軌跡線(亮白核 + 屬色光暈,像子機/追蹤彈)
@@ -1137,10 +1175,8 @@ class GameScene extends Phaser.Scene{
   // ang=查克拉彈到達角度→火花/粒子依「擊中角度」散開(大半往來向反向潑回 back-splash、少數穿透)
   chakraImpact(x,y,color,tgt,dmg,ang,pw){
     const ADD=Phaser.BlendModes.ADD; pw=pw||1; const ps=1+(pw-1)*0.4;   // ps:命中規模隨 HIT(9→×1、18→×1.4、27→×1.8)
-    if(tgt&&!tgt.dead){tgt.sprite.setTint(0xffffff);
-      const bs=tgt.baseScale||1, kp=bs*(1.18+(pw-1)*0.05);if(tgt.hitTw)tgt.hitTw.stop();tgt.sprite.setScale(bs);
-      tgt.hitTw=this.tweens.add({targets:tgt.sprite,scaleX:kp,scaleY:kp,duration:110,yoyo:true,onComplete:()=>{tgt.sprite.setScale(bs);tgt.sprite.clearTint();tgt.hitTw=null;}});
-      this.knockEnemy(tgt);}
+    if(tgt&&!tgt.dead){tgt.sprite.setTint(0xffffff);this.time.delayedCall(110,()=>{if(tgt.sprite&&!tgt.dead)tgt.sprite.clearTint();});   // 受擊白閃
+      this.knockEnemy(tgt);}   // 擊退(後退縮小→停頓→回位)
     const flash=this.add.circle(x,y,15*ps,0xffffff,1).setBlendMode(ADD).setDepth(DEPTH.proj);   // 白點爆閃(縮小快收→不蓋火花;HIT 越多越大)
     this.tweens.add({targets:flash,scale:0.2,alpha:0,duration:170,onComplete:()=>flash.destroy()});
     const halo=this.add.circle(x,y,26*ps,color,0.4).setBlendMode(ADD).setDepth(DEPTH.proj);   // 屬色光暈(淡一點)
@@ -1177,13 +1213,24 @@ class GameScene extends Phaser.Scene{
     const fs=Math.min(80,34+n*1.8), colFor=v=>v>=27?'#ff6a3a':v>=18?'#ffb02a':'#ffd24a';
     const t=this.hitTx=this.add.text(CX,BOARD_CY,'1 HIT',{fontFamily:EMOJIFONT,fontSize:fs+'px',color:colFor(1),fontStyle:'bold',stroke:'#5a1500',strokeThickness:8}).setOrigin(0.5).setDepth(DEPTH.fx).setScale(0.3).setAngle(-5);
     this.tweens.add({targets:t,scale:0.92,duration:200,ease:'Back.out'});   // 彈入(起點略小→數的時候慢慢脹大)
-    const cnt={v:1}, dur=Math.max(650,Math.min(1250,Math.round(n*78)));   // ~78ms/步,看得清每個 +1;總長 0.65~1.25s
+    const cnt={v:1}, dur=Math.max(280,Math.min(680,Math.round(n*42)));   // ~42ms/步(加快);總長 0.28~0.68s
     this.tweens.add({targets:cnt,v:n,duration:dur,ease:'Linear',
       onUpdate:()=>{const cv=Math.round(cnt.v);t.setText(cv+' HIT').setColor(colFor(cv)).setScale(0.92+0.20*((cv-1)/Math.max(1,n-1)));},   // 邊數邊脹大
       onComplete:()=>{t.setText(n+' HIT').setColor(colFor(n));
         this.tweens.add({targets:t,scaleX:1.38,scaleY:1.38,duration:170,yoyo:true,ease:'Back.out'});   // 落定大彈
         this.cameras.main.shake(huge?220:big?150:90,0.009);}});
     this.tweens.add({targets:t,alpha:0,delay:dur+620,duration:400,onComplete:()=>{t.destroy();if(this.hitTx===t)this.hitTx=null;}});   // 數完再滯留 ~0.6s 才淡出
+  }
+  // 統一攻擊展演:先「n HIT」(快)→ 同位置換成招式名 → 才發動攻擊(fireFn);回傳攻擊開始時點(ms)
+  playClearFX(topEl, lv, n, fireFn){
+    this.countFX(n);
+    const lead=Math.max(280,Math.min(680,Math.round(n*42)));
+    this.time.delayedCall(lead+100,()=>{   // HIT 數完 → 同位置淡出換招式名
+      if(this.hitTx){const h=this.hitTx;this.hitTx=null;this.tweens.killTweensOf(h);this.tweens.add({targets:h,alpha:0,scaleX:0.5,scaleY:0.5,duration:150,onComplete:()=>h.destroy()});}
+      if(topEl)this.showJutsu(topEl,lv);
+    });
+    this.time.delayedCall(lead+470,fireFn);   // 招式名亮相 → 攻擊
+    return lead+470;
   }
   // 新手鉤子:每場第一次消除 = 隆重慶祝(全螢幕閃光+震動+大字+提示拖屬塊)
   firstClearFX(){
@@ -1216,9 +1263,9 @@ class GameScene extends Phaser.Scene{
     if(!this.moralePeak)this.moraleBg.setFillStyle(0x1a140c,0.92);
   }
   showJutsu(el,lv){const name=KATA[lv-1]+'・'+JUTSU[el][lv-1];const col='#'+EL[el].color.toString(16).padStart(6,'0');
-    const t=this.add.text(CX-50,BY0-28,name,{fontFamily:EMOJIFONT,fontSize:(15+lv*4)+'px',color:col,fontStyle:'bold',stroke:'#000',strokeThickness:3}).setOrigin(0.5).setAlpha(0).setDepth(DEPTH.fx);
-    this.tweens.add({targets:t,x:CX,alpha:1,duration:260,ease:'Back.out',
-      onComplete:()=>this.tweens.add({targets:t,alpha:0,duration:450,delay:850+lv*130,onComplete:()=>t.destroy()})});   // 招式名滯留更久(華麗感)
+    const t=this.add.text(CX,BOARD_CY,name,{fontFamily:EMOJIFONT,fontSize:(15+lv*4)+'px',color:col,fontStyle:'bold',stroke:'#000',strokeThickness:4}).setOrigin(0.5).setAlpha(0).setScale(0.5).setDepth(DEPTH.fx);   // 置中(和 HIT 同位置,接 HIT 之後出現)
+    this.tweens.add({targets:t,alpha:1,scaleX:1,scaleY:1,duration:240,ease:'Back.out',
+      onComplete:()=>this.tweens.add({targets:t,alpha:0,duration:420,delay:600+lv*110,onComplete:()=>t.destroy()})});   // 招式名滯留(華麗感)
     if(lv>=4){const big=lv>=6;const f=this.add.rectangle(CX,H/2,W,H,EL[el].color,big?0.6:0.4).setDepth(DEPTH.flash);
       this.tweens.add({targets:f,alpha:0,duration:big?540:420,onComplete:()=>f.destroy()});
       this.cameras.main.shake(big?440:280,big?0.014:0.008);}}
