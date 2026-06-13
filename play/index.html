@@ -625,6 +625,7 @@ class GameScene extends Phaser.Scene{
   }
   resetWave(){this.combo=0;this.immune=0;this.armor=0;this.amp=1;}
   startStage(keepBoard){
+    this.stopStuckFX&&this.stopStuckFX();   // 新關/新局清掉殘留的卡死提示
     if(!keepBoard){this.board=Array.from({length:N},()=>Array(N).fill(null));this.stored=[null,null,null,null,null];}   // 跨關保留盤面+屬塊:只有新局/重挑才清,過關時累積到下一關的怪
     this.resetWave(); if(!keepBoard)this.morale=(this.lead&&this.lead.type==='moraleStart')?this.lead.v:CONFIG.MORALE_START; this.handCleared=false; this.handBurst=false; this.whiffStreak=0; if(!keepBoard)this.refill();   // 鬥志+托盤:跨關保留(只新局/重挑才重置/換新托盤)
     if(this.stage===1&&this.lead)this.time.delayedCall(450,()=>{   // 隊長技:進關時在盤面中央彈出清楚橫幅(技名+效果),停留可讀(原本上緣快閃小字看不清)
@@ -729,6 +730,7 @@ class GameScene extends Phaser.Scene{
   }
   // 發動主動技
   fireActive(i){if(this.resultOpen||this.locked||this.drag||this.earthSel||this.earthDrag)return;
+    this.stopStuckFX();
     const card=this.teamCards[i], a=activeSkill(card.el); if(!a)return;
     if((this.charge[i]||0)<a.cd){this.tonFloat('蓄力中 '+(this.charge[i]||0)+'/'+a.cd,'#9fb0c0');return;}
     this.charge[i]=0;
@@ -815,6 +817,7 @@ class GameScene extends Phaser.Scene{
   }
   // 共用:放塊後處理(消除→燒傷→敵推進→補塊→卡死檢查)
   afterAction(fromBlock){
+    this.stopStuckFX();   // 玩家一行動就收掉卡死循環提示(若仍卡死,handleStuck 會再開)
     this.refreshBoard(); this.renderTray();
     this.fromBlock=!!fromBlock; this.resolve(); this.fromBlock=false;   // 防遞迴:塊清出的消除不再生塊
     if(this.tray.every(t=>t.used)){this.endHand();return;}  // 一手(3塊)放完→endHand 負責「等展演完才敵攻+補手+解鎖+卡死檢查」
@@ -858,18 +861,26 @@ class GameScene extends Phaser.Scene{
     return this.stored.some(s=>{if(!s)return false;const cells=s.cells||chakraShape(s.el,s.lv);
       for(let r=0;r<N;r++)for(let c=0;c<N;c++)if(canPlace(this.board,cells,r,c,'water'))return true;return false;});}
   // 卡死提示:能解圍的屬塊「跳+脹」一下,叫你拖它(不扣血的救命塊)
-  flashStored(){this.teamCards.forEach((card,i)=>{const s=this.stored&&this.stored[i],so=card.storeObj;if(!s||!so)return;
-    const cells=s.cells||chakraShape(s.el,s.lv);let ok=false;
-    for(let r=0;r<N&&!ok;r++)for(let c=0;c<N&&!ok;c++)if(canPlace(this.board,cells,r,c,'water'))ok=true;
-    if(!ok)return;
-    const y0=so.y; this.tweens.killTweensOf(so); so.setScale(1).setY(y0);
-    this.tweens.add({targets:so,y:y0-16,duration:210,yoyo:true,repeat:3,ease:'Quad.inOut',onComplete:()=>so.setY(y0)});             // 大幅跳
-    this.tweens.add({targets:so,scaleX:1.45,scaleY:1.45,duration:210,yoyo:true,repeat:3,ease:'Sine.inOut',onComplete:()=>so.setScale(1)});  // 大幅脹
-    const cx=card.rect.x, cy=card.rect.y;   // 卡身亮黃光環脈動(整張卡都醒目,叫你拖這張)
-    const ring=this.add.rectangle(cx,cy,68,68,0,0).setStrokeStyle(4,0xffe066,1).setDepth(DEPTH.fx);
-    this.tweens.add({targets:ring,scaleX:1.3,scaleY:1.3,alpha:0,duration:600,repeat:2,ease:'Quad.out',onComplete:()=>ring.destroy()});
-    const ar=this.add.text(cx,cy-46,'⬇',{fontFamily:EMOJIFONT,fontSize:'22px',color:'#ffe066',fontStyle:'bold',stroke:'#5a3a00',strokeThickness:3}).setOrigin(0.5).setDepth(DEPTH.fx);   // 向下箭頭:拖我解圍
-    this.tweens.add({targets:ar,y:cy-34,duration:420,yoyo:true,repeat:3,ease:'Sine.inOut',onComplete:()=>ar.destroy()});});}
+  flashStored(){this.stopStuckFX(); this.stuckTw=[]; this.stuckObj=[]; this.stuckBlk=[];
+    this.teamCards.forEach((card,i)=>{const s=this.stored&&this.stored[i],so=card.storeObj;if(!s||!so)return;
+      const cells=s.cells||chakraShape(s.el,s.lv);let ok=false;
+      for(let r=0;r<N&&!ok;r++)for(let c=0;c<N&&!ok;c++)if(canPlace(this.board,cells,r,c,'water'))ok=true;
+      if(!ok)return;
+      const y0=so.y; so._baseY=y0; this.tweens.killTweensOf(so); so.setScale(1).setY(y0);
+      this.stuckBlk.push(so);
+      this.stuckTw.push(this.tweens.add({targets:so,y:y0-16,duration:240,yoyo:true,repeat:-1,ease:'Quad.inOut'}));            // 持續跳
+      this.stuckTw.push(this.tweens.add({targets:so,scaleX:1.42,scaleY:1.42,duration:240,yoyo:true,repeat:-1,ease:'Sine.inOut'}));  // 持續脹
+      const cx=card.rect.x, cy=card.rect.y;   // 卡身亮黃光環持續脈動
+      const ring=this.add.rectangle(cx,cy,68,68,0,0).setStrokeStyle(4,0xffe066,1).setDepth(DEPTH.fx); this.stuckObj.push(ring);
+      this.stuckTw.push(this.tweens.add({targets:ring,scaleX:1.3,scaleY:1.3,alpha:0,duration:620,repeat:-1,ease:'Quad.out'}));
+      const ar=this.add.text(cx,cy-46,'⬇',{fontFamily:EMOJIFONT,fontSize:'22px',color:'#ffe066',fontStyle:'bold',stroke:'#5a3a00',strokeThickness:3}).setOrigin(0.5).setDepth(DEPTH.fx); this.stuckObj.push(ar);   // 向下箭頭持續跳
+      this.stuckTw.push(this.tweens.add({targets:ar,y:cy-34,duration:440,yoyo:true,repeat:-1,ease:'Sine.inOut'}));});}
+  // 收掉卡死提示(玩家一行動就停):停 tween、銷毀光環/箭頭、屬塊歸位
+  stopStuckFX(){
+    if(this.stuckTw){this.stuckTw.forEach(t=>{if(t)t.stop();});this.stuckTw=null;}
+    if(this.stuckObj){this.stuckObj.forEach(o=>{if(o&&o.destroy)o.destroy();});this.stuckObj=null;}
+    if(this.stuckBlk){this.stuckBlk.forEach(so=>{if(so&&so.active)so.setScale(1).setY(so._baseY!=null?so._baseY:so.y);});this.stuckBlk=null;}
+  }
   /* 土屬塊:兩段式搬移查克拉 — ①拖塊蓋住要抓的查克拉 ②再拖把它們整組搬到空位 */
   earthSelect(i,r,c){
     const cells=this.tray[i].c, sel=[];
