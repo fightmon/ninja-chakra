@@ -1125,12 +1125,12 @@ class GameScene extends Phaser.Scene{
     this.tweens.add({targets:halo,scale:1.6,alpha:0,duration:320,ease:'Quad.out',onComplete:()=>halo.destroy()});
     [[14,5,420,color],[10,7,560,0xffffff]].forEach(o=>{const ring=this.add.circle(x,y,o[0],0,0).setStrokeStyle(5,o[3],1).setBlendMode(ADD).setDepth(DEPTH.proj);   // 雙擴散環
       this.tweens.add({targets:ring,scale:o[1],alpha:0,duration:o[2],ease:'Quad.out',onComplete:()=>ring.destroy()});});
-    // 線形火花:12 道往來向反向潑回(±75°扇)+ 4 道穿透前方;拉長停留更久
-    [{base:back,spread:1.3,n:12},{base:ang,spread:0.5,n:4}].forEach(L=>{for(let i=0;i<L.n;i++){const a=L.base+(Math.random()-0.5)*L.spread, len=16+Math.random()*16;
+    // 線形火花:圓形 360° 四射(顆粒多、停留久)
+    for(let i=0;i<20;i++){const a=i/20*Math.PI*2+(Math.random()-0.5)*0.5, len=15+Math.random()*16;
       const sp=this.add.rectangle(x,y,len,4,0xffffff).setOrigin(0,0.5).setRotation(a).setBlendMode(ADD).setDepth(DEPTH.proj);
-      this.tweens.add({targets:sp,x:x+Math.cos(a)*(34+Math.random()*40),y:y+Math.sin(a)*(34+Math.random()*40),alpha:0,scaleX:0.18,duration:560+Math.random()*320,ease:'Quad.out',onComplete:()=>sp.destroy()});}});
-    for(let i=0;i<12;i++){const a=back+(Math.random()-0.5)*1.7, d=this.add.circle(x,y,3.5,0xffffff,1).setBlendMode(ADD).setDepth(DEPTH.proj);   // 白點粒子(拉長)
-      this.tweens.add({targets:d,x:x+Math.cos(a)*(30+Math.random()*34),y:y+Math.sin(a)*(30+Math.random()*34),alpha:0,scale:0.2,duration:540+Math.random()*260,ease:'Quad.out',onComplete:()=>d.destroy()});}
+      this.tweens.add({targets:sp,x:x+Math.cos(a)*(32+Math.random()*44),y:y+Math.sin(a)*(32+Math.random()*44),alpha:0,scaleX:0.18,duration:560+Math.random()*340,ease:'Quad.out',onComplete:()=>sp.destroy()});}
+    for(let i=0;i<16;i++){const a=i/16*Math.PI*2+(Math.random()-0.5)*0.5, d=this.add.circle(x,y,3.5,0xffffff,1).setBlendMode(ADD).setDepth(DEPTH.proj);   // 白點粒子四射
+      this.tweens.add({targets:d,x:x+Math.cos(a)*(28+Math.random()*36),y:y+Math.sin(a)*(28+Math.random()*36),alpha:0,scale:0.2,duration:540+Math.random()*280,ease:'Quad.out',onComplete:()=>d.destroy()});}
     if(tgt&&tgt.sprite)this.dmgPop(tgt.sprite.x,tgt.sprite.y,dmg);
     this.cameras.main.shake(220,0.011);                  // 加重震
     this.hitStop(tgt&&tgt.boss?150:110);   // 命中頓格加長(更明顯;畫面凍住最搶眼)
