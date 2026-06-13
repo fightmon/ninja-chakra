@@ -5,6 +5,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <meta name="robots" content="noindex">   <!-- 試玩版不被搜尋引擎收錄(純連結分享);正式上線時移除 -->
 <title>忍塊查克拉 — 自適應 v0.6</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=LXGW+WenKai+TC:wght@700&family=Russo+One&display=swap" rel="stylesheet">   <!-- 招式名=霞鶩文楷(毛筆感, 全繁體) / HIT=Russo One(設計感粗體) -->
 <style>
   html,body{margin:0;height:100%;background:#160f18;overflow:hidden;}
   #game{width:100vw;height:100vh;height:100dvh;}   /* dvh=動態視口高(實際可見區),100vh 留作舊瀏覽器 fallback */
@@ -225,6 +228,8 @@ function recomputeLayout(){
 }
 recomputeLayout();
 const EMOJIFONT='"Segoe UI Emoji","Microsoft JhengHei",sans-serif';
+const JUTSUFONT='"LXGW WenKai TC","Microsoft JhengHei",serif';   // 招式名:霞鶩文楷(毛筆/楷書感, 全繁體覆蓋)
+const HITFONT='"Russo One","Segoe UI Emoji","Arial Black",sans-serif';   // n HIT:Russo One(設計感粗體)
 
 /* ===== F5 收集系統(localStorage 持有卡 + 關卡掉落) ===== */
 const STARTER=['c04','c03','c08','c10','c12'];   // 保底:蒼瀾上忍(水+陽奶) + 火/雷/土/風 基礎,新手即有完整一隊
@@ -1207,7 +1212,7 @@ class GameScene extends Phaser.Scene{
     if(big){const flash=this.add.rectangle(CX,H/2,W,H,huge?0xffc89a:0xfff0c0,0).setDepth(DEPTH.flash);
       this.tweens.add({targets:flash,alpha:huge?0.5:0.4,duration:110,yoyo:true,onComplete:()=>flash.destroy()});}
     const fs=Math.min(80,34+n*1.8), colFor=v=>v>=27?'#ff6a3a':v>=18?'#ffb02a':'#ffd24a';
-    const t=this.hitTx=this.add.text(CX,BOARD_CY,'1 HIT',{fontFamily:EMOJIFONT,fontSize:fs+'px',color:colFor(1),fontStyle:'bold',stroke:'#5a1500',strokeThickness:8}).setOrigin(0.5).setDepth(DEPTH.fx).setScale(0.3).setAngle(-5);
+    const t=this.hitTx=this.add.text(CX,BOARD_CY,'1 HIT',{fontFamily:HITFONT,fontSize:fs+'px',color:colFor(1),fontStyle:'bold',stroke:'#5a1500',strokeThickness:8}).setOrigin(0.5).setDepth(DEPTH.fx).setScale(0.3).setAngle(-5);
     this.tweens.add({targets:t,scale:0.92,duration:200,ease:'Back.out'});   // 彈入(起點略小→數的時候慢慢脹大)
     const cnt={v:1}, dur=Math.max(280,Math.min(680,Math.round(n*42)));   // ~42ms/步(加快);總長 0.28~0.68s
     this.tweens.add({targets:cnt,v:n,duration:dur,ease:'Linear',
@@ -1259,7 +1264,7 @@ class GameScene extends Phaser.Scene{
     if(!this.moralePeak)this.moraleBg.setFillStyle(0x1a140c,0.92);
   }
   showJutsu(el,lv){const name=KATA[lv-1]+'・'+JUTSU[el][lv-1];const col='#'+EL[el].color.toString(16).padStart(6,'0');
-    const t=this.add.text(CX,BOARD_CY,name,{fontFamily:EMOJIFONT,fontSize:(15+lv*4)+'px',color:col,fontStyle:'bold',stroke:'#000',strokeThickness:4}).setOrigin(0.5).setAlpha(0).setScale(0.5).setDepth(DEPTH.fx);   // 置中(和 HIT 同位置,接 HIT 之後出現)
+    const t=this.add.text(CX,BOARD_CY,name,{fontFamily:JUTSUFONT,fontSize:(17+lv*4)+'px',color:col,fontStyle:'bold',stroke:'#000',strokeThickness:4}).setOrigin(0.5).setAlpha(0).setScale(0.5).setDepth(DEPTH.fx);   // 毛筆字、置中(和 HIT 同位置,接 HIT 之後出現)
     this.tweens.add({targets:t,alpha:1,scaleX:1,scaleY:1,duration:240,ease:'Back.out',
       onComplete:()=>this.tweens.add({targets:t,alpha:0,duration:420,delay:600+lv*110,onComplete:()=>t.destroy()})});   // 招式名滯留(華麗感)
     if(lv>=4){const big=lv>=6;const f=this.add.rectangle(CX,H/2,W,H,EL[el].color,big?0.6:0.4).setDepth(DEPTH.flash);
@@ -1646,6 +1651,12 @@ window.GAME = new Phaser.Game({
   scene:[HomeScene, TeamScene, GameScene, CollectionScene, FuseScene],
 });
 track('open');   // 開遊戲心跳(回流追蹤;ANALYTICS_URL 空時自動 no-op)
+// 預載字型字符(招式名毛筆字的所有用字 + HIT 數字)→ 首次展演就已是設計字型,不掉回退
+try{ if(document.fonts&&document.fonts.load){
+  const _jc=KATA.join('')+Object.keys(JUTSU).map(e=>JUTSU[e].join('')).join('');
+  document.fonts.load("700 28px 'LXGW WenKai TC'", _jc);
+  document.fonts.load("400 40px 'Russo One'", '0123456789 HIT');
+}}catch(e){}
 // HIT 實驗室入口:網址加 #hitlab → 直接進戰鬥的 lab 模式(塊區放各 HIT 按鈕,演示招式規模)
 window.GAME.events.once('ready',function(){
   if(location.hash==='#hitlab'){
