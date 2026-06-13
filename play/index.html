@@ -86,7 +86,7 @@ const CONFIG = {
   PLAYER_HP_BASE:1000, RESHUFFLE_COST:120,
   ATTR:{ fire_burn_rate:0.4, wind_immune:1, earth_dr:0.3, yang_heal_rate:0.25, yin_amp:1.5 },   // 陽回血砍到已驗證平衡值(1.2→0.5→0.25);陰改傷害×2(見 fireAttr)
 };
-const KATA = ['壹之型','貳之型','參之型','肆之型','伍之型','禁術','真奧義'];   // LV1~7
+const KATA = ['一之型','二之型','三之型','四之型','五之型','禁術','奧義'];   // LV1~7(簡單數字,日文漢字通用)
 const JUTSU = {
   fire:   ['火種','烈火掌','紅蓮炎舞','業火焚天','煉獄·天羅滅盡','焦土爆心','焚世煉獄'],
   water:  ['水紋','蒼瀾','怒濤渦卷','千流奔潮','滄溟·天傾海覆','萬丈狂瀾','汪洋葬天'],
@@ -793,7 +793,7 @@ class GameScene extends Phaser.Scene{
     const lv=Math.max(1,Math.min(7,Math.round(n/9)+1));   // 型/印 階(隨 HIT 升;lv≥4 全螢幕閃,lv≥6 大閃)
     const cells=this._labCells(n), burst=1+Math.max(0,n-9)/9*0.3, dmg=Math.round(n*10*burst);
     const atkAt=this.playClearFX(n, [{el, lv, fire:()=>this.chakraStrike([tgt], dmg, el, {cells, parts:[{el}], fx:{}})}]);   // 先 n HIT → 招式名 → 才攻擊
-    this.time.delayedCall(atkAt+(n>=18?1180:860),()=>{tgt.hp=Math.max(0,tgt.hp-dmg);this.updateEnemies();if(tgt.hp<=0)this.killEnemy(tgt);});
+    this.time.delayedCall(atkAt+540+this.chargeMs(n)+340,()=>{tgt.hp=Math.max(0,tgt.hp-dmg);this.updateEnemies();if(tgt.hp<=0)this.killEnemy(tgt);});
   }
   demoMulti(){   // 演示「一次清除含 2 元素 → 同時出 2 招」(18 格 = 兩條線各一元素)
     const tgt=this.enemies&&this.enemies.find(e=>!e.dead); if(!tgt)return;
@@ -806,7 +806,7 @@ class GameScene extends Phaser.Scene{
       {el:pr[1], lv:lvB, fire:()=>this.chakraStrike([tgt], dmg-half, pr[1], {cells:cB, parts:[{el:pr[1]}], fx:{}})}
     ];
     const atkAt=this.playClearFX(n, jutsu);
-    this.time.delayedCall(atkAt+1180,()=>{tgt.hp=Math.max(0,tgt.hp-dmg);this.updateEnemies();if(tgt.hp<=0)this.killEnemy(tgt);});
+    this.time.delayedCall(atkAt+540+340,()=>{tgt.hp=Math.max(0,tgt.hp-dmg);this.updateEnemies();if(tgt.hp<=0)this.killEnemy(tgt);});   // 每招各 9 格、無蓄力
   }
   demoEnemyAttack(){const alive=this.enemies&&this.enemies.filter(e=>!e.dead); if(!alive||!alive.length)return;
     this._labAtkI=((this._labAtkI==null?-1:this._labAtkI)+1)%alive.length; this.enemyAttack(alive[this._labAtkI]);}
@@ -1001,7 +1001,7 @@ class GameScene extends Phaser.Scene{
     const atkAt=this.playClearFX(n, jutsu);   // 先 n HIT → 招式名(1~2 招並列)→ 才各招集結射出
     this.updateEnemies();
     this.time.delayedCall(Math.max(120,atkAt-100),()=>{this.refreshBoard();});                                        // 攻擊發動前夕,清掉的格子消失(集氣同時)
-    this.time.delayedCall(atkAt+(n>=18?1760:1400),()=>{this.updateAll(); victims.forEach(v=>{if(v.hp<=0)this.killEnemy(v);});});   // 命中後才扣血條 + 收掉死亡敵(含蓄力/AoE 弧線彈到達)
+    this.time.delayedCall(atkAt+540+this.chargeMs(n)+760,()=>{this.updateAll(); victims.forEach(v=>{if(v.hp<=0)this.killEnemy(v);});});   // 命中後才扣血條 + 收掉死亡敵(含蓄力/AoE 弧線彈到達)
   }
   // 形狀系統:火/水/風/土/雷 的主技=生成形狀塊存到卡(在 resolve 統一處理 storeBlock);fireAttr 只剩子屬性 陰/陽
   fireAttr(a,atk,lv,tgt){const A=CONFIG.ATTR;switch(a){
@@ -1130,6 +1130,7 @@ class GameScene extends Phaser.Scene{
   chakraBez(a,c,b,t){const it=1-t;return {x:it*it*a.x+2*it*t*c.x+t*t*b.x, y:it*it*a.y+2*it*t*c.y+t*t*b.y};}   // 二次貝茲
   chakraBez3(a,c1,c2,b,t){const it=1-t,it2=it*it,t2=t*t;return {x:it2*it*a.x+3*it2*t*c1.x+3*it*t2*c2.x+t2*t*b.x, y:it2*it*a.y+3*it2*t*c1.y+3*it*t2*c2.y+t2*t*b.y};}   // 三次貝茲
   chakraArc(a,b,mag){const mx=(a.x+b.x)/2,my=(a.y+b.y)/2,dx=b.x-a.x,dy=b.y-a.y,L=Math.hypot(dx,dy)||1;return {x:mx-dy/L*mag, y:my+dx/L*mag};}   // 控制點:中點往垂直偏 mag → 弧線
+  chargeMs(hit){ return hit>=15 ? Math.min(1100,Math.round(220+(hit-15)*28)) : 0; }   // 15 HIT 以上才蓄力;HIT 越高粒子炮持續收束越久(15→220ms…45→1060ms)
   chakraStrike(victims, dealt, topEl, data){
     const ADD=Phaser.BlendModes.ADD, LP={x:CX,y:BOARD_CY}, col=topEl?EL[topEl].color:0xbfe6ff;   // 集結到盤面中心
     const hit=(data.cells||[]).length, pw=Math.min(5,Math.max(1,hit/9)), gs=1+(pw-1)*0.4;   // HIT 越多→集氣/印/彈/爆越大(9→×1、18→×1.4、27→×1.8、36→×2.2、45→×2.6)
@@ -1160,16 +1161,19 @@ class GameScene extends Phaser.Scene{
       const sg=this.add.circle(LP.x,LP.y,20*gs,col,0.6).setBlendMode(ADD).setDepth(DEPTH.proj);
       this.tweens.add({targets:sg,scale:2.4,alpha:0,duration:300,ease:'Quad.out',onComplete:()=>sg.destroy()});
       this.cameras.main.shake(110+pw*35,0.005+pw*0.002);
-      if(hit>=18){   // 18 HIT 以上:再從 360° 外圈把火花往中心收束(蓄力)後才射出
-        const cc=this.add.circle(LP.x,LP.y,6*gs,0xffffff,1).setBlendMode(ADD).setDepth(DEPTH.proj);   // 重新長一顆蓄力核
-        this.tweens.add({targets:cc,scale:3.6,duration:300,ease:'Quad.in'});
+      const chDur=this.chargeMs(hit);
+      if(chDur>0){   // 粒子炮蓄力:粒子持續從 360° 外圍「不斷」往中心收束,HIT 越高收束越久,蓄滿才射出
+        const cc=this.add.circle(LP.x,LP.y,6*gs,0xffffff,1).setBlendMode(ADD).setDepth(DEPTH.proj);   // 蓄力核:整段持續長大(能量累積)
+        this.tweens.add({targets:cc,scaleX:4.2,scaleY:4.2,duration:chDur,ease:'Quad.in'});
         const cg=this.add.circle(LP.x,LP.y,9*gs,col,0.5).setBlendMode(ADD).setDepth(DEPTH.proj);
-        this.tweens.add({targets:cg,scale:4,duration:300,ease:'Quad.in'});
-        const ringR=66+pw*10, M=Math.round(16+pw*5);
-        for(let i=0;i<M;i++){const a=i/M*Math.PI*2+(Math.random()-0.5)*0.4, r0=ringR+Math.random()*24, sx=LP.x+Math.cos(a)*r0, sy=LP.y+Math.sin(a)*r0;
-          const d=this.add.rectangle(sx,sy,11+Math.random()*9,3,(i%3===0)?0xffffff:col).setOrigin(0,0.5).setRotation(a+Math.PI).setBlendMode(ADD).setDepth(DEPTH.proj);   // 朝中心的短火花,往內收束
-          this.tweens.add({targets:d,x:LP.x,y:LP.y,scaleX:0.2,alpha:0.25,duration:250+Math.random()*120,ease:'Quad.in',onComplete:()=>d.destroy()});}
-        this.time.delayedCall(330,()=>{   // 收束完成 → 二次印爆閃(更亮)→ 射出
+        this.tweens.add({targets:cg,scaleX:4.6,scaleY:4.6,duration:chDur,ease:'Quad.in'});
+        const tick=40, cnt=2+Math.round(pw*0.5);   // 持續噴流:每 ~40ms 灑幾顆朝中心的火花,整段不間斷
+        this.time.addEvent({delay:tick, repeat:Math.max(1,Math.floor(chDur/tick))-1, callback:()=>{
+          for(let j=0;j<cnt;j++){const a=Math.random()*Math.PI*2, r0=58+pw*12+Math.random()*44, sx=LP.x+Math.cos(a)*r0, sy=LP.y+Math.sin(a)*r0;
+            const d=this.add.rectangle(sx,sy,10+Math.random()*9,3,(j===0?0xffffff:col)).setOrigin(0,0.5).setRotation(a+Math.PI).setBlendMode(ADD).setDepth(DEPTH.proj);
+            this.tweens.add({targets:d,x:LP.x,y:LP.y,scaleX:0.18,alpha:0.2,duration:210+Math.random()*150,ease:'Quad.in',onComplete:()=>d.destroy()});}
+        }});
+        this.time.delayedCall(chDur,()=>{   // 蓄滿 → 印爆閃(更亮)→ 射出
           cc.destroy(); cg.destroy();
           const fl=this.add.circle(LP.x,LP.y,18*gs,0xffffff,1).setBlendMode(ADD).setDepth(DEPTH.proj);
           this.tweens.add({targets:fl,scale:3.8,alpha:0,duration:240,ease:'Quad.out',onComplete:()=>fl.destroy()});
