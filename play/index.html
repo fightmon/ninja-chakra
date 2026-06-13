@@ -977,10 +977,10 @@ class GameScene extends Phaser.Scene{
   // 每回合:沙漏跳一下 + 翻轉到下一個 90°(累積),數字隨 updateEnemies 更新
   animTurnGlass(e){
     if(!e.glass||!e.turnG)return;
-    const tgt=(Math.round(e.glass.angle/90)+1)*90;   // 對齊到下一個 90°,避免被打斷後角度漂移
-    this.tweens.killTweensOf(e.glass); this.tweens.add({targets:e.glass,angle:tgt,duration:320,ease:'Back.out'});
+    const tgt=(Math.round(e.glass.angle/180)+1)*180;   // 對齊到下一個 180°(翻半圈)→ 只在直立↔翻面切換,不會側躺像扯鈴
+    this.tweens.killTweensOf(e.glass); this.tweens.add({targets:e.glass,angle:tgt,duration:340,ease:'Cubic.out'});
     const restY=BATTLE_CY-e.cardH/2+11; this.tweens.killTweensOf(e.turnG); e.turnG.setY(restY);
-    this.tweens.add({targets:e.turnG,y:restY-7,duration:150,yoyo:true,ease:'Quad.out'});   // 跳一下落回
+    this.tweens.add({targets:e.turnG,y:restY-7,duration:170,yoyo:true,ease:'Quad.out'});   // 跳一下落回
   }
   updateBars(){
     this.pHp.displayWidth=(W-2*BX0)*Math.max(0,this.playerHP/this.maxHP);
