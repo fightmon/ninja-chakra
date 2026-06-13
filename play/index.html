@@ -535,6 +535,8 @@ class GameScene extends Phaser.Scene{
     // 戰鬥場景背景(最底層):上 ~1/3 漸層帶 + 其下深底延伸到盤面上緣(盤面壓上來)
     this.bgGfx=this.add.graphics().setDepth(DEPTH.bg); this.drawBG();
     this.bgLine=this.add.rectangle(CX,BG_H,W,2,0x000000,0.3).setDepth(DEPTH.bg);
+    this.fog=[]; {const ADD=Phaser.BlendModes.ADD, cols=[0x6f9fd0,0xcf8f6a,0x8fd0a0,0x9f8fd0];   // 戰鬥區背景:幾團極淡光斑緩慢飄移(讓畫面活著,但不在盤面上→不花)
+      for(let i=0;i<4;i++)this.fog.push(this.add.circle(0,0,72,cols[i],0.06).setBlendMode(ADD).setDepth(1));}
 
     // nav(最高層;無背景條,文字加深色描邊保可讀)
     this.goldTxt=this.add.text(10,13,'💰 0',{fontFamily:EMOJIFONT,fontSize:'14px',color:'#ffe08a'}).setOrigin(0,0.5).setStroke('#1a1208',4).setDepth(DEPTH.nav);
@@ -571,6 +573,9 @@ class GameScene extends Phaser.Scene{
       this.cells.push(this.add.rectangle(BX0+c*CS, BY0+r*CS, RECT, RECT, NEUTRAL_DARK).setOrigin(0,0).setDepth(DEPTH.board));
     for(let b=0;b<9;b++){const br=Math.floor(b/3)*3,bc=(b%3)*3;const cen=this.cellCenter(br+1,bc+1);
       this.boxLabels[b]=this.add.text(cen.x,cen.y,'',{fontFamily:EMOJIFONT,fontSize:'17px',color:'#fff'}).setOrigin(0.5).setAlpha(0.55).setDepth(DEPTH.board);}
+    this.boardGlow=this.add.graphics().setDepth(DEPTH.board+1).setBlendMode(Phaser.BlendModes.ADD); this.drawBoardLines();   // 3×3 宮格線:極淡發光、整體極慢呼吸(動線條不動塊)
+    this.boxRings=[]; for(let b=0;b<9;b++){const br=Math.floor(b/3)*3,bc=(b%3)*3;   // 各宮外框:快清滿(≥8格)時脈動提示
+      this.boxRings.push(this.add.rectangle(BX0+bc*CS+1.5*CS,BY0+br*CS+1.5*CS,3*CS-3,3*CS-3).setStrokeStyle(3,0xffffff,0).setBlendMode(Phaser.BlendModes.ADD).setDepth(DEPTH.board+1));}
 
     // 托盤
     this.traySlots=[80,210,340]; this.trayHits=[];
@@ -585,6 +590,7 @@ class GameScene extends Phaser.Scene{
     this.input.on('pointerdown',p=>{if(this.earthSel&&!this.earthDrag)this.startEarthMove(p);});
     this.scale.on('resize',this.onResize,this);
     this.cameras.main.setBounds(0,0,W,H);   // 鏡頭鎖在世界範圍內→特寫推近/平移不會露出世界外的黑邊
+    this.layoutFog();   // 背景光斑開始緩慢飄移
 
     this.newGame();
   }
@@ -595,6 +601,19 @@ class GameScene extends Phaser.Scene{
     g.fillStyle(0x223524,1);g.fillRect(-W,g1,W*3,Math.max(0,BG_H-g1));               // 中段深底(延伸兩側外)
     g.fillStyle(0x160f18,1);g.fillRect(-W,BG_H,W*3,H-BG_H+M);                        // 盤面區底色(延伸下緣外、兩側外)
     g.fillStyle(0x000000,0.22);g.fillEllipse(CX,BATTLE_CY+54,W*0.82,42);}            // 敵人腳下陰影
+  drawBoardLines(){const g=this.boardGlow; if(!g)return; g.clear(); g.lineStyle(2,0x9fd0ff,1);   // 3×3 宮的分隔線+外框(淡藍發光)
+    for(let k=0;k<=3;k++){const x=BX0+k*3*CS; g.lineBetween(x,BY0,x,BY0+9*CS); const y=BY0+k*3*CS; g.lineBetween(BX0,y,BX0+9*CS,y);}}
+  layoutFog(){ if(!this.fog)return; const cy=BATTLE_CY;   // 光斑在戰鬥區(敵人後方)緩慢飄移+明滅
+    this.fog.forEach((c,i)=>{const bx=46+i*100, by=cy-34+(i%2)*60; this.tweens.killTweensOf(c); c.setPosition(bx,by).setScale(1).setAlpha(0.06);
+      this.tweens.add({targets:c,x:bx+(i%2?44:-44),y:by+26,duration:7000+i*1600,yoyo:true,repeat:-1,ease:'Sine.inOut'});
+      this.tweens.add({targets:c,alpha:0.12,scaleX:1.45,scaleY:1.45,duration:5200+i*1300,yoyo:true,repeat:-1,ease:'Sine.inOut'});});}
+  updateNearFull(){ if(!this.boxRings||!this.board)return;   // 某宮 ≥8/9 → 外框脈動提示「快清滿了」(裝飾兼情報)
+    for(let b=0;b<9;b++){const br=Math.floor(b/3)*3,bc=(b%3)*3; let n=0; for(let r=br;r<br+3;r++)for(let c=bc;c<bc+3;c++)if(this.board[r][c])n++;
+      const ring=this.boxRings[b], near=(n>=8);
+      if(near&&!ring._pulse){const col=this.boxElement[b]!=null?EL[this.boxElement[b]].color:0xffe08a; ring.setStrokeStyle(3,col,1); ring._pulse=this.tweens.add({targets:ring,alpha:{from:0.18,to:0.85},duration:560,yoyo:true,repeat:-1,ease:'Sine.inOut'});}
+      else if(!near&&ring._pulse){ring._pulse.stop();ring._pulse=null;ring.setAlpha(0);}}}
+  popCells(list){ if(!list)return; list.forEach(rc=>{const cell=this.cellRect(rc[0],rc[1]); if(!cell)return; this.tweens.killTweensOf(cell); cell.setScale(1);   // 放塊 Q 彈一下落定
+    this.tweens.add({targets:cell,scaleX:1.12,scaleY:1.12,duration:110,yoyo:true,ease:'Quad.out',onComplete:()=>cell.setScale(1)});});}
   relayout(){
     this.cameras.main.setBounds(0,0,W,H);   // H 隨視窗變,鏡頭範圍同步
     this.drawBG();
@@ -606,6 +625,9 @@ class GameScene extends Phaser.Scene{
     if(this.moraleBg){this.moraleBg.setPosition(BX0+14,PHP_Y);this.moraleTx.setPosition(BX0+14,PHP_Y);}
     for(let r=0;r<N;r++)for(let c=0;c<N;c++)this.cellRect(r,c).setPosition(BX0+c*CS,BY0+r*CS);
     for(let b=0;b<9;b++){const br=Math.floor(b/3)*3,bc=(b%3)*3,cen=this.cellCenter(br+1,bc+1);this.boxLabels[b].setPosition(cen.x,cen.y);}
+    if(this.boardGlow)this.drawBoardLines();
+    if(this.boxRings)this.boxRings.forEach((ring,b)=>{const br=Math.floor(b/3)*3,bc=(b%3)*3;ring.setPosition(BX0+bc*CS+1.5*CS,BY0+br*CS+1.5*CS);});
+    this.layoutFog();
     this.trayHits.forEach(h=>h.setPosition(h.x,TRAY_Y));
     if(this.tray)this.renderTray();
     this.enemies.forEach(e=>{if(!e.card||e.dead)return;const x=e.card.x,cy=BATTLE_CY,sz=e.cardH;
@@ -700,6 +722,7 @@ class GameScene extends Phaser.Scene{
       rc.setStrokeStyle(2,0x000000,0);}
     for(let b=0;b<9;b++){const be=this.boxElement[b];
       this.boxLabels[b].setText(be?EL[be].name:'·').setColor(be?'#'+EL[be].color.toString(16).padStart(6,'0'):'#ffffff66');}
+    this.updateNearFull();   // 盤面變動→更新「快清滿」宮的脈動提示
   }
   renderTeam(){ELEMENT_BOXES.forEach((b,i)=>{const k=this.boxElement[b],card=this.teamCards[i];
     card.el=k;card.rect.setFillStyle(EL[k].color);card.txt.setText(EL[k].name);});
@@ -740,6 +763,7 @@ class GameScene extends Phaser.Scene{
       if(this.moralePeak&&this.moraleBg&&this.moraleBg.active){const t=time*0.006;   // 極=絕好調:徽章底色與外環在暗紅↔亮橙間流動(相位差→像能量在圈裡轉)
         this.moraleBg.setFillStyle(lerpColor(0x6e1808,0xff8a1e,0.5+0.5*Math.sin(t)),1);
         this.moraleBg.setStrokeStyle(2,lerpColor(0xff5a2a,0xffd24a,0.5+0.5*Math.sin(t+1.7)));}
+      if(this.boardGlow)this.boardGlow.setAlpha(0.09+0.06*Math.sin(time*0.0015));   // 宮格線整體極慢呼吸(同步、低對比→不花)
     }catch(e){}
   }
   // === 主動技 / 敵攻 共用特效 ===
@@ -923,6 +947,7 @@ class GameScene extends Phaser.Scene{
   doPlaceStored(d,r,c){if(this.resultOpen)return;
     d.cells.forEach(([dr,dc])=>{const rr=r+dr,cc=c+dc;
       if(rr>=0&&rr<N&&cc>=0&&cc<N&&!this.board[rr][cc])this.board[rr][cc]={el:this.boxElement[boxOf(rr,cc)]||'neutral'};});
+    this.popCells(d.cells.map(([dr,dc])=>[r+dr,c+dc]).filter(([rr,cc])=>rr>=0&&rr<N&&cc>=0&&cc<N&&this.board[rr][cc]));   // 放屬塊也 Q 彈
     this.stored[d.store]=null; this.renderStored();
     this.afterAction(false);}   // 連擊引擎:屬塊消除「也生塊」(滾雪球爽度);仍不佔托盤格→不推進敵(由 tray.every(used) 決定)
   updateDrag(p){if(!this.drag)return;this.clearGhost();
@@ -955,6 +980,7 @@ class GameScene extends Phaser.Scene{
     cells.forEach(([dr,dc])=>{const rr=r+dr,cc=c+dc;
       if(kind==='wind'){if(this.board[rr][cc])this.board[rr][cc]=null;}        // 風刃:消除
       else if(!this.board[rr][cc])this.board[rr][cc]={el:this.boxElement[boxOf(rr,cc)]||'neutral'};}); // 一般/水:填(只填空格)
+    if(kind!=='wind')this.popCells(cells.map(([dr,dc])=>[r+dr,c+dc]).filter(([rr,cc])=>rr>=0&&rr<N&&cc>=0&&cc<N&&this.board[rr][cc]));   // 放塊 Q 彈
     this.tray[i].used=true;
     this.afterAction(kind==='water'||kind==='wind');
   }
