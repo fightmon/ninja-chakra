@@ -779,15 +779,27 @@ class GameScene extends Phaser.Scene{
   renderHitLab(){
     this.charge=this.teamCards.map(c=>{const a=activeSkill(c.el);return a?a.cd:0;});   // 主動技恆滿,可隨時測
     this.trayHits.forEach(h=>h.disableInteractive());   // 實驗室不放塊,關掉托盤拖放點
-    const ys=TRAY_Y, cols=[42,126,210,294,378];   // 兩排各 5 顆:數字 8 顆 +「2招」+「敵」
-    const mk=(x,y,label,fill,hover,stroke,col,cb)=>{const bg=this.add.rectangle(x,y,76,32,fill).setStrokeStyle(2,stroke).setDepth(DEPTH.tray).setInteractive();
-      const tx=this.add.text(x,y,label,{fontFamily:EMOJIFONT,fontSize:'16px',color:col,fontStyle:'bold'}).setOrigin(0.5).setDepth(DEPTH.tray);
+    const ys=TRAY_Y, cols=[36,106,176,246,316,386];   // 兩排各 6 欄:數字 8 顆 +「2招」+「敵」+「完」
+    const mk=(x,y,label,fill,hover,stroke,col,cb)=>{const bg=this.add.rectangle(x,y,62,32,fill).setStrokeStyle(2,stroke).setDepth(DEPTH.tray).setInteractive();
+      const tx=this.add.text(x,y,label,{fontFamily:EMOJIFONT,fontSize:'15px',color:col,fontStyle:'bold'}).setOrigin(0.5).setDepth(DEPTH.tray);
       bg.on('pointerover',()=>bg.setFillStyle(hover)); bg.on('pointerout',()=>bg.setFillStyle(fill));
       bg.on('pointerup',()=>{bg.setFillStyle(fill);cb();}); this.trayIcons.push(bg,tx);};
-    const top=[9,15,18,21,27];   top.forEach((n,k)=>mk(cols[k],ys-18,String(n),0x2b2014,0x3d2c18,0x6a4f28,'#ffeec4',()=>this.demoHit(n)));
-    const bot=[33,39,45];   bot.forEach((n,k)=>mk(cols[k],ys+18,String(n),0x2b2014,0x3d2c18,0x6a4f28,'#ffeec4',()=>this.demoHit(n)));
-    mk(cols[3],ys+18,'2招',0x2a1c40,0x3c2a5a,0x8a6ad0,'#d8c8ff',()=>this.demoMulti());   // 一次清除含 2 元素 → 同時出 2 招
-    mk(cols[4],ys+18,'敵',0x4a1818,0x5e2020,0xc24a4a,'#ffc8c8',()=>this.demoEnemyAttack());
+    const top=[9,15,18,21,27,33];   top.forEach((n,k)=>mk(cols[k],ys-18,String(n),0x2b2014,0x3d2c18,0x6a4f28,'#ffeec4',()=>this.demoHit(n)));
+    const bot=[39,45];   bot.forEach((n,k)=>mk(cols[k],ys+18,String(n),0x2b2014,0x3d2c18,0x6a4f28,'#ffeec4',()=>this.demoHit(n)));
+    mk(cols[2],ys+18,'2招',0x2a1c40,0x3c2a5a,0x8a6ad0,'#d8c8ff',()=>this.demoMulti());   // 一次清除含 2 元素 → 同時出 2 招
+    mk(cols[3],ys+18,'敵',0x4a1818,0x5e2020,0xc24a4a,'#ffc8c8',()=>this.demoEnemyAttack());
+    mk(cols[4],ys+18,'完',0x3a2e10,0x4e3e16,0xd0a83a,'#ffe9a8',()=>this.demoFinal());   // 最後一擊特寫演出
+  }
+  demoFinal(){   // 實驗室演「最後一擊」特寫鏡頭:推近 → 蓄勢 → 飛出 → 拉回 → 重生(不進結果)
+    const tgt=this.enemies&&this.enemies.find(e=>!e.dead); if(!tgt||tgt._labDying)return; tgt._labDying=true;
+    tgt.dead=true; if(tgt.bob){tgt.bob.stop();tgt.bob=null;} if(tgt.knockTw){tgt.knockTw.stop();tgt.knockTw=null;}
+    const cam=this.cameras.main, sp=tgt.sprite, EOut=Phaser.Math.Easing.Quadratic.Out, EIO=Phaser.Math.Easing.Quadratic.InOut;
+    if(sp){ cam.pan(sp.x,sp.y,460,EOut); cam.zoomTo(1.9,460,EOut); }
+    this.time.delayedCall(560,()=>{ if(sp&&sp.active){const fl=this.add.circle(sp.x,sp.y,32,0xffffff,1).setBlendMode(Phaser.BlendModes.ADD).setDepth(DEPTH.fx); this.tweens.add({targets:fl,scale:4,alpha:0,duration:320,onComplete:()=>fl.destroy()});} this.playDeath(tgt); });
+    this.time.delayedCall(1750,()=>{ cam.zoomTo(1,440,EIO); cam.pan(CX,Math.round(H/2),440,EIO); });
+    this.time.delayedCall(2400,()=>{ tgt.dead=false; tgt._labDying=false; tgt.hp=tgt.max; if(tgt.hpTw){tgt.hpTw.stop();tgt.hpTw=null;}
+      sp.setVisible(true); sp.clearTint&&sp.clearTint(); [tgt.turnG,tgt.hpBg,tgt.hpFill].forEach(o=>{if(o)o.setVisible(true);}); if(tgt.card)tgt.card.setInteractive();
+      this.enemyEnter(tgt,0); this.updateEnemies(); });
   }
   _labCells(n,off){const cells=[];off=off||0;for(let r=Math.floor(off/N);r<N&&cells.length<n;r++)for(let c=(r===Math.floor(off/N)?off%N:0);c<N&&cells.length<n;c++)cells.push([r,c]);return cells;}
   demoHit(n){
