@@ -679,6 +679,7 @@ class GameScene extends Phaser.Scene{
       return da!==db ? db-da : this.enemies[b].card.x-this.enemies[a].card.x;
     });
     zorder.forEach(i=>{const e=this.enemies[i];[e.card,e.sprite,e.turnG,e.hpBg,e.hpFill,e.mark].forEach(o=>this.enemyG.add(o));});
+    this.enemies.forEach((e,i)=>this.enemyEnter(e, i*120));   // 自遠方逼近入場(交錯)
     this.target=0;
   }
   refill(){this.tray=[pickShape(),pickShape(),pickShape()].map(c=>({c,used:false}));}
@@ -1037,7 +1038,16 @@ class GameScene extends Phaser.Scene{
     this.updateAll(); if(this.playerHP<=0){if(this.hitLab){this.playerHP=this.maxHP;this.updateBars();}else this.gameOver('HP 歸零');}
   }
   killEnemy(e){if(e.dead)return;
-    if(this.hitLab){e.hp=e.max;if(e.hpTw)e.hpTw.stop();this.updateEnemies();return;}   // 實驗室:不死,血回滿(血條動畫補回)→ 可一直測
+    if(this.hitLab){   // 實驗室:也演敗陣化光,演完原地重生(順便看入場動畫)→ 可一直測
+      if(e._labDying)return; e._labDying=true;
+      e.dead=true; if(e.bob){e.bob.stop();e.bob=null;} if(e.knockTw){e.knockTw.stop();e.knockTw=null;}
+      this.playDeath(e);
+      this.time.delayedCall(950,()=>{ e.dead=false; e._labDying=false; e.hp=e.max; if(e.hpTw){e.hpTw.stop();e.hpTw=null;}
+        const sp=e.sprite; sp.setVisible(true); sp.clearTint&&sp.clearTint();
+        [e.turnG,e.hpBg,e.hpFill].forEach(o=>{if(o)o.setVisible(true);}); if(e.card)e.card.setInteractive();
+        this.enemyEnter(e,0); this.updateEnemies(); });
+      return;
+    }
     e.dead=true; if(e.bob){e.bob.stop();e.bob=null;} if(e.knockTw){e.knockTw.stop();e.knockTw=null;}   // ★ bob 在受擊擊退時會被設 null,務必判空(否則每次擊殺都丟例外→鎖死)
     this.playDeath(e);   // 敗陣演出:被打飛(後上)+縮小+旋轉+淡出 → 化成光芒
     if(this.aliveCount()===0)this.stageClear(); else {this.targetEnemy();this.updateEnemies();}
@@ -1056,6 +1066,22 @@ class GameScene extends Phaser.Scene{
     for(let i=0;i<18;i++){const a=i/18*Math.PI*2+(Math.random()-0.5)*0.4, d=this.add.circle(x,y,3,0xffffff,1).setBlendMode(ADD).setDepth(DEPTH.fx);   // 四散光點
       this.tweens.add({targets:d,x:x+Math.cos(a)*(42+Math.random()*44),y:y+Math.sin(a)*(42+Math.random()*44)-18,alpha:0,scale:0.2,duration:520+Math.random()*240,ease:'Quad.out',onComplete:()=>d.destroy()});}
   }
+  // 敵入場:從「遠處(小、偏高、淡)」浮現到定位 —— 像往深處推進後,新敵自遠方逼近
+  enemyEnter(e,delay){ if(!e||!e.sprite)return; const sp=e.sprite, bs=e.baseScale||1, ry=(e.restY!=null?e.restY:sp.y); delay=delay||0;
+    if(e.bob){e.bob.stop();e.bob=null;} this.tweens.killTweensOf(sp);
+    sp.setScale(bs*0.22).setAlpha(0).setAngle(0).setPosition(sp.x, ry-48);
+    this.tweens.add({targets:sp,alpha:1,duration:220,delay:delay});
+    this.tweens.add({targets:sp,scaleX:bs,scaleY:bs,y:ry,duration:460,delay:delay,ease:'Back.out',
+      onComplete:()=>{sp.setScale(bs);sp.setY(ry);if(!e.dead)e.bob=this.tweens.add({targets:sp,y:ry-4,duration:1200,yoyo:true,repeat:-1,ease:'Sine.inOut'});}});
+    [e.turnG,e.hpBg,e.hpFill].forEach(o=>{if(o){o.setAlpha(0);this.tweens.add({targets:o,alpha:1,duration:300,delay:delay+150});}});
+  }
+  // 過關前進:鏡頭往前推一下 + 直向速度線往下刷過(像往深處前進到下一關)
+  stageAdvanceFX(){ const cam=this.cameras.main;
+    cam.zoomTo(1.06,200,'Quad.out'); this.time.delayedCall(220,()=>cam.zoomTo(1,300,'Quad.inOut'));
+    for(let i=0;i<16;i++){const x=16+Math.random()*(W-32), len=44+Math.random()*90;
+      const s=this.add.rectangle(x,-len,2.5,len,0xffffff,0.45).setOrigin(0.5,0).setDepth(DEPTH.flash);
+      this.tweens.add({targets:s,y:H+len,alpha:0,duration:320+Math.random()*180,delay:Math.random()*200,ease:'Quad.in',onComplete:()=>s.destroy()});}
+  }
   stageClear(){
     rollDrops(this.dungeon.drops[this.stage-1]).forEach((cd,i)=>{const isNew=!isOwned(cd.id);addCard(cd.id);this.runDrops.push({cd,isNew});
       this.time.delayedCall(i*240,()=>this.tonFloat('🎁 '+cd.name+(isNew?' ✦NEW':''),isNew?'#ffe04a':'#ffe08a'));});
@@ -1066,7 +1092,7 @@ class GameScene extends Phaser.Scene{
     if(_rw._ups>0)this.tonFloat('🆙 等級提升! Lv.'+_rw.rank,'#ffe04a');
     if(this.stage>=this.dungeon.stages.length){markDungeonCleared(this.dungeonId);this.chests++;this.time.delayedCall(600,()=>this.showResult(true));return;}
     this.stage++; this.chests++; this.playerHP=Math.min(this.maxHP,this.playerHP+150);
-    this.time.delayedCall(700,()=>this.startStage(true));   // 帶 true:不清盤,盤面累積到下一關的怪
+    this.time.delayedCall(700,()=>{this.stageAdvanceFX(); this.time.delayedCall(380,()=>this.startStage(true));});   // 過關:前進演出 → 下一關敵人自遠方逼近入場(不清盤,盤面累積)
   }
   reshuffle(){if(this.playerHP<=CONFIG.RESHUFFLE_COST){this.gameOver('生命不足、無法再提煉');return;}
     this.playerHP-=CONFIG.RESHUFFLE_COST; this.refill(); this.renderTray(); this.updateAll();}
