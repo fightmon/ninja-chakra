@@ -563,7 +563,7 @@ class GameScene extends Phaser.Scene{
     this.pHpTxt=this.add.text(CX,PHP_Y,'',{fontFamily:EMOJIFONT,fontSize:'11px',color:'#fff'}).setOrigin(0.5).setDepth(DEPTH.hp);
     // 鬥志徽章:單字,疊在 HP 條左端(z 高於血條)
     this.moraleBg=this.add.circle(BX0+14,PHP_Y,15,0x1a140c,0.92).setStrokeStyle(2,0xffd56a).setDepth(DEPTH.morale);
-    this.moraleTx=this.add.text(BX0+14,PHP_Y,'普',{fontFamily:EMOJIFONT,fontSize:'17px',color:'#fff',fontStyle:'bold'}).setOrigin(0.5).setDepth(DEPTH.morale);
+    this.moraleTx=this.add.text(BX0+14,PHP_Y,'普',{fontFamily:JUTSUFONT,fontSize:'18px',color:'#fff',fontStyle:'bold'}).setOrigin(0.5).setDepth(DEPTH.morale);
 
     // 結印區
     for(let r=0;r<N;r++)for(let c=0;c<N;c++)
@@ -988,7 +988,6 @@ class GameScene extends Phaser.Scene{
     if(!this.fromBlock)Object.keys(data.fx).forEach(e=>this.storeBlock(e,data.fx[e].level));   // 清宮→生成該屬形狀塊存到卡(萬用塊清出的消除不再生塊)
     data.cells.forEach(([r,c])=>{const rc=this.cellRect(r,c);
       this.tweens.add({targets:rc,scaleX:1.14,scaleY:1.14,duration:90,yoyo:true});});
-    victims.forEach(v=>{v.hp=Math.max(0,v.hp-dealt);});
     if(data.hitWeak)tgt.timer+=1;
     if(this.combo>=2)this.comboPopup(this.combo);
     if(this.firstClear){this.firstClear=false;track('first_clear');}   // 第一次消除:只記埋點,不演出(移除「結印成功」動畫)
@@ -1005,7 +1004,9 @@ class GameScene extends Phaser.Scene{
     const atkAt=this.playClearFX(n, jutsu);   // 先 n HIT → 招式名(1~2 招並列)→ 才各招集結射出
     this.updateEnemies();
     this.time.delayedCall(Math.max(120,atkAt-100),()=>{this.refreshBoard();});                                        // 攻擊發動前夕,清掉的格子消失(集氣同時)
-    this.time.delayedCall(atkAt+540+this.chargeMs(n)+760,()=>{this.updateAll(); victims.forEach(v=>{if(v.hp<=0)this.killEnemy(v);});});   // 命中後才扣血條 + 收掉死亡敵(含蓄力/AoE 弧線彈到達)
+    const impactAt=atkAt+540+this.chargeMs(n)+340;   // 查克拉彈真正命中的時點
+    this.time.delayedCall(impactAt,()=>{victims.forEach(v=>{v.hp=Math.max(0,v.hp-dealt);}); this.updateEnemies();});   // ★ 彈著瞬間才扣血(血條動畫,不提早)
+    this.time.delayedCall(impactAt+440,()=>{this.updateAll(); victims.forEach(v=>{if(v.hp<=0)this.killEnemy(v);});});   // 命中後再收掉死亡敵
   }
   // 形狀系統:火/水/風/土/雷 的主技=生成形狀塊存到卡(在 resolve 統一處理 storeBlock);fireAttr 只剩子屬性 陰/陽
   fireAttr(a,atk,lv,tgt){const A=CONFIG.ATTR;switch(a){
@@ -1241,7 +1242,7 @@ class GameScene extends Phaser.Scene{
     this.tweens.add({targets:t,y:BY0-82,alpha:0,duration:1000,ease:'Quad.out',onComplete:()=>t.destroy()});}
   comboPopup(n){
     if(this.comboTx){this.tweens.killTweensOf(this.comboTx);this.comboTx.destroy();}   // 同位置只留最新
-    const t=this.comboTx=this.add.text(CX,BOARD_CY-60,'連印 '+n,{fontFamily:EMOJIFONT,fontSize:'27px',color:'#ffd56a',fontStyle:'bold',stroke:'#7a4a00',strokeThickness:5}).setOrigin(0.5).setScale(0.4).setDepth(DEPTH.fx);
+    const t=this.comboTx=this.add.text(CX,BOARD_CY-60,n+' COMBO',{fontFamily:HITFONT,fontSize:'27px',color:'#ffd56a',fontStyle:'bold',stroke:'#7a4a00',strokeThickness:5}).setOrigin(0.5).setScale(0.4).setDepth(DEPTH.fx);
     this.tweens.add({targets:t,scale:1,duration:300,ease:'Back.out'});                                   // 彈入
     this.tweens.add({targets:t,scaleX:1.08,scaleY:1.08,duration:560,yoyo:true,delay:300,ease:'Sine.inOut'});   // 緩呼吸(華麗滯留)
     this.tweens.add({targets:t,alpha:0,delay:1100,duration:400,onComplete:()=>{t.destroy();if(this.comboTx===t)this.comboTx=null;}});
@@ -1695,9 +1696,9 @@ window.GAME = new Phaser.Game({
 track('open');   // 開遊戲心跳(回流追蹤;ANALYTICS_URL 空時自動 no-op)
 // 預載字型字符(招式名毛筆字的所有用字 + HIT 數字)→ 首次展演就已是設計字型,不掉回退
 try{ if(document.fonts&&document.fonts.load){
-  const _jc=KATA.join('')+Object.keys(JUTSU).map(e=>JUTSU[e].join('')).join('');
+  const _jc=KATA.join('')+Object.keys(JUTSU).map(e=>JUTSU[e].join('')).join('')+CONFIG.MORALE_NAMES.join('');
   document.fonts.load("700 28px 'LXGW WenKai TC'", _jc);
-  document.fonts.load("400 40px 'Russo One'", '0123456789 HIT');
+  document.fonts.load("400 40px 'Russo One'", '0123456789 HITCOMBO');
 }}catch(e){}
 // HIT 實驗室入口:網址加 #hitlab → 直接進戰鬥的 lab 模式(塊區放各 HIT 按鈕,演示招式規模)
 window.GAME.events.once('ready',function(){
