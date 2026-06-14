@@ -1085,7 +1085,7 @@ class GameScene extends Phaser.Scene{
     for(let r=0;r<N;r++)for(let c=0;c<N;c++)if(canPlace(this.board,p.c,r,c,p.kind))return true;return false;});}
 
   // 各屬區攻擊:該宮格子收束到「宮中心」→ 結印 → 射向敵人;彈著→該段扣血 + combo++(被彈著一次)
-  zoneStrike(cx,cy,cells,color,dmg,victims,shakeBig){const ADD=Phaser.BlendModes.ADD, hot=shadeColor(color,0.5);   // hot=該屬的亮色(取代白色高光)→ 看得出是帶屬性的攻擊
+  zoneStrike(cx,cy,cells,color,dmg,victims,shakeBig){const ADD=Phaser.BlendModes.ADD, hot=shadeColor(color,0.18);   // hot=略提亮的屬色(不洗白)→ 攻擊明顯帶屬性色
     cells.slice(0,12).forEach((rc,i)=>{const o=this.cellCenter(rc[0],rc[1]);   // 集氣:格子收束到宮中心
       this.time.delayedCall((i%6)*14,()=>{const d=this.add.circle(o.x,o.y,3.5,color,0.9).setBlendMode(ADD).setDepth(DEPTH.proj-1);
         this.tweens.add({targets:d,x:cx,y:cy,scale:0.3,duration:170+Math.random()*70,ease:'Quad.in',onComplete:()=>d.destroy()});});});
@@ -1385,14 +1385,14 @@ class GameScene extends Phaser.Scene{
   chakraBolt(ox,oy,tx,ty,color,tgt,dmg,pw,hot){
     pw=pw||1; hot=hot||0xffffff; const ADD=Phaser.BlendModes.ADD, a={x:ox,y:oy}, b={x:tx,y:ty}, bs=1+(pw-1)*0.4;   // bs:彈體/軌跡隨 HIT 變粗大;hot=高光色(預設白)
     const ctrl=this.chakraArc(a,b,(Math.random()<0.5?1:-1)*(55+Math.random()*45));
-    const glow=this.add.circle(ox,oy,17*bs,color,0.5).setBlendMode(ADD).setDepth(DEPTH.proj);
-    const core=this.add.circle(ox,oy,9*bs,hot,1).setBlendMode(ADD).setDepth(DEPTH.proj);
+    const glow=this.add.circle(ox,oy,22*bs,color,0.85).setBlendMode(ADD).setDepth(DEPTH.proj);   // 屬色光暈:加大加濃→屬色壓過白核
+    const core=this.add.circle(ox,oy,6*bs,hot,1).setBlendMode(ADD).setDepth(DEPTH.proj);          // 亮核縮小→不洗白
     const trail=this.add.graphics().setDepth(DEPTH.proj-1).setBlendMode(ADD), ob={t:0};
     this.tweens.add({targets:ob,t:1,duration:320,ease:'Quad.in',
       onUpdate:()=>{const p=this.chakraBez(a,ctrl,b,ob.t); glow.setPosition(p.x,p.y); core.setPosition(p.x,p.y);
         trail.clear(); const N=Math.max(2,Math.round(ob.t*26));
-        trail.lineStyle(6*bs,color,0.4); trail.beginPath(); trail.moveTo(a.x,a.y); for(let i=1;i<=N;i++){const q=this.chakraBez(a,ctrl,b,ob.t*i/N);trail.lineTo(q.x,q.y);} trail.strokePath();
-        trail.lineStyle(2.5*bs,hot,0.9); trail.beginPath(); trail.moveTo(a.x,a.y); for(let i=1;i<=N;i++){const q=this.chakraBez(a,ctrl,b,ob.t*i/N);trail.lineTo(q.x,q.y);} trail.strokePath();},
+        trail.lineStyle(8*bs,color,0.6); trail.beginPath(); trail.moveTo(a.x,a.y); for(let i=1;i<=N;i++){const q=this.chakraBez(a,ctrl,b,ob.t*i/N);trail.lineTo(q.x,q.y);} trail.strokePath();   // 屬色軌跡加粗加濃
+        trail.lineStyle(2*bs,hot,0.85); trail.beginPath(); trail.moveTo(a.x,a.y); for(let i=1;i<=N;i++){const q=this.chakraBez(a,ctrl,b,ob.t*i/N);trail.lineTo(q.x,q.y);} trail.strokePath();},
       onComplete:()=>{glow.destroy();core.destroy(); this.tweens.add({targets:trail,alpha:0,duration:360,onComplete:()=>trail.destroy()}); this.chakraImpact(tx,ty,color,tgt,dmg,Math.atan2(ty-ctrl.y,tx-ctrl.x),pw,hot);}});   // 傳入到達角度(貝茲末端切線)+ HIT 規模 + 高光色
     this.tweens.add({targets:glow,scale:1.5,duration:320,ease:'Quad.in'});
   }
@@ -1403,7 +1403,7 @@ class GameScene extends Phaser.Scene{
       this.knockEnemy(tgt);}   // 擊退(後退縮小→停頓→回位)
     const flash=this.add.circle(x,y,15*ps,hot,1).setBlendMode(ADD).setDepth(DEPTH.proj);   // 高光爆閃(縮小快收→不蓋火花;HIT 越多越大)
     this.tweens.add({targets:flash,scale:0.2,alpha:0,duration:170,onComplete:()=>flash.destroy()});
-    const halo=this.add.circle(x,y,26*ps,color,0.4).setBlendMode(ADD).setDepth(DEPTH.proj);   // 屬色光暈(淡一點)
+    const halo=this.add.circle(x,y,30*ps,color,0.7).setBlendMode(ADD).setDepth(DEPTH.proj);   // 命中屬色光暈:加大加濃→看得出屬性
     this.tweens.add({targets:halo,scale:1.6,alpha:0,duration:320,ease:'Quad.out',onComplete:()=>halo.destroy()});
     [[14,5,420,color],[10,7,560,hot]].forEach(o=>{const ring=this.add.circle(x,y,o[0]*ps,0,0).setStrokeStyle(5,o[3],1).setBlendMode(ADD).setDepth(DEPTH.proj);   // 雙擴散環
       this.tweens.add({targets:ring,scale:o[1],alpha:0,duration:o[2],ease:'Quad.out',onComplete:()=>ring.destroy()});});
