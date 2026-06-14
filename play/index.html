@@ -1101,8 +1101,8 @@ class GameScene extends Phaser.Scene{
   // combo 顯示在目標敵右上;數字越大字越大
   showCombo(){const e=this.targetEnemy(); if(!e||!e.sprite)return;
     if(this.comboTx){this.tweens.killTweensOf(this.comboTx);this.comboTx.destroy();}
-    const sz=Math.min(46,16+this.combo*2.2), x=e.sprite.x+e.cardW*0.5, y=e.sprite.y-e.cardH*0.42;
-    const t=this.comboTx=this.add.text(x,y,this.combo+' COMBO',{fontFamily:HITFONT,fontSize:sz+'px',color:'#ffd24a',fontStyle:'bold',stroke:'#7a2a00',strokeThickness:4}).setOrigin(1,1).setDepth(DEPTH.fx).setScale(0.5);
+    const sz=Math.min(38,16+this.combo*1.6), x=e.sprite.x+e.cardW*0.5, y=Math.max(28,e.sprite.y-e.cardH*0.5);   // 字級上限↓、上緣夾住
+    const t=this.comboTx=this.add.text(x,y,this.combo+' COMBO',{fontFamily:HITFONT,fontSize:sz+'px',color:'#ffd24a',fontStyle:'bold',stroke:'#7a2a00',strokeThickness:4}).setOrigin(1,0).setDepth(DEPTH.fx).setScale(0.5);
     this.tweens.add({targets:t,scaleX:1,scaleY:1,duration:200,ease:'Back.out'});
     this.tweens.add({targets:t,alpha:0,delay:1300,duration:400,onComplete:()=>{t.destroy();if(this.comboTx===t)this.comboTx=null;}});
   }
