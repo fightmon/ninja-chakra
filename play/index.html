@@ -1085,16 +1085,16 @@ class GameScene extends Phaser.Scene{
     for(let r=0;r<N;r++)for(let c=0;c<N;c++)if(canPlace(this.board,p.c,r,c,p.kind))return true;return false;});}
 
   // 各屬區攻擊:該宮格子收束到「宮中心」→ 結印 → 射向敵人;彈著→該段扣血 + combo++(被彈著一次)
-  zoneStrike(cx,cy,cells,color,dmg,victims,shakeBig){const ADD=Phaser.BlendModes.ADD;
+  zoneStrike(cx,cy,cells,color,dmg,victims,shakeBig){const ADD=Phaser.BlendModes.ADD, hot=shadeColor(color,0.5);   // hot=該屬的亮色(取代白色高光)→ 看得出是帶屬性的攻擊
     cells.slice(0,12).forEach((rc,i)=>{const o=this.cellCenter(rc[0],rc[1]);   // 集氣:格子收束到宮中心
       this.time.delayedCall((i%6)*14,()=>{const d=this.add.circle(o.x,o.y,3.5,color,0.9).setBlendMode(ADD).setDepth(DEPTH.proj-1);
         this.tweens.add({targets:d,x:cx,y:cy,scale:0.3,duration:170+Math.random()*70,ease:'Quad.in',onComplete:()=>d.destroy()});});});
-    const core=this.add.circle(cx,cy,3,0xffffff,1).setBlendMode(ADD).setDepth(DEPTH.proj); this.tweens.add({targets:core,scale:4,duration:240,ease:'Quad.in'});
+    const core=this.add.circle(cx,cy,3,hot,1).setBlendMode(ADD).setDepth(DEPTH.proj); this.tweens.add({targets:core,scale:4,duration:240,ease:'Quad.in'});
     const glow=this.add.circle(cx,cy,7,color,0.55).setBlendMode(ADD).setDepth(DEPTH.proj); this.tweens.add({targets:glow,scale:4.5,duration:240,ease:'Quad.in'});
     this.time.delayedCall(240,()=>{core.destroy();glow.destroy();
-      const seal=this.add.circle(cx,cy,14,0xffffff,1).setBlendMode(ADD).setDepth(DEPTH.proj); this.tweens.add({targets:seal,scale:2.8,alpha:0,duration:200,ease:'Quad.out',onComplete:()=>seal.destroy()});
+      const seal=this.add.circle(cx,cy,14,hot,1).setBlendMode(ADD).setDepth(DEPTH.proj); this.tweens.add({targets:seal,scale:2.8,alpha:0,duration:200,ease:'Quad.out',onComplete:()=>seal.destroy()});
       if(shakeBig)this.cameras.main.shake(180,0.007);
-      victims.forEach((v,k)=>{if(!v.sprite)return; this.time.delayedCall(k*45,()=>this.chakraBolt(cx,cy,v.sprite.x,v.sprite.y,color,v,dmg,1));});
+      victims.forEach((v,k)=>{if(!v.sprite)return; this.time.delayedCall(k*45,()=>this.chakraBolt(cx,cy,v.sprite.x,v.sprite.y,color,v,dmg,1,hot));});
       this.time.delayedCall(330,()=>{victims.forEach(v=>{v.hp=Math.max(0,v.hp-dmg);}); this.updateEnemies(); this.combo++; this.showCombo();});   // 彈著→扣血 + combo++
     });
   }
