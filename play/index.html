@@ -45,38 +45,39 @@ const SHAPES = [
   {w:3,c:[[0,0],[0,1],[0,2],[1,0],[1,1],[1,2]]},{w:3,c:[[0,0],[0,1],[1,0],[1,1],[2,0],[2,1]]},
 ];   // ※ 3×3 九格塊已移除:太肥難放,且 3×3 留給水/風 LV7 工具塊(WILD_SHAPES[7])專用
 const WSUM = SHAPES.reduce((a,s)=>a+s.w,0);
+// 角色:個人名 + 種族(human/yokai/beast) + 三圍(攻/血/回,同星總量公平、分配不同) + rank(沿用:gacha/掉落/★用,genin=★1…kage=★4)
 const ROSTER = [
-  {id:'c01', name:'焚天上忍', el:'fire',    attrs:['fire','yin'],      rank:'jonin',  atk:200},
-  {id:'c02', name:'業炎中忍', el:'fire',    attrs:['fire'],            rank:'chunin', atk:130},
-  {id:'c03', name:'烈火下忍', el:'fire',    attrs:['fire'],            rank:'genin',  atk:80},
-  {id:'c04', name:'蒼瀾上忍', el:'water',   attrs:['water','yang'],    rank:'jonin',  atk:200},
-  {id:'c05', name:'水鏡中忍', el:'water',   attrs:['water'],           rank:'chunin', atk:130},
-  {id:'c06', name:'潮渦下忍', el:'water',   attrs:['water'],           rank:'genin',  atk:80},
-  {id:'c07', name:'紫雷上忍', el:'thunder', attrs:['thunder','earth'], rank:'jonin',  atk:200},
-  {id:'c08', name:'鳴雷中忍', el:'thunder', attrs:['thunder'],         rank:'chunin', atk:130},
-  {id:'c09', name:'磐石中忍', el:'earth',   attrs:['earth'],           rank:'chunin', atk:130},
-  {id:'c10', name:'砂塵下忍', el:'earth',   attrs:['earth'],           rank:'genin',  atk:80},
-  {id:'c11', name:'疾風中忍', el:'wind',    attrs:['wind'],            rank:'chunin', atk:130},
-  {id:'c12', name:'旋風下忍', el:'wind',    attrs:['wind'],            rank:'genin',  atk:80},
-  /* ── 擴充:補滿五屬階梯 + 影忍(kage ★★★★)SSR 層,共 30 張 ── */
-  {id:'c13', name:'火星下忍', el:'fire',    attrs:['fire'],                 rank:'genin',  atk:80},
-  {id:'c14', name:'赤焰中忍', el:'fire',    attrs:['fire'],                 rank:'chunin', atk:130},
-  {id:'c15', name:'炎獄影忍', el:'fire',    attrs:['fire','yin','yang'],    rank:'kage',   atk:280},
-  {id:'c16', name:'滴水下忍', el:'water',   attrs:['water'],                rank:'genin',  atk:80},
-  {id:'c17', name:'寒霜中忍', el:'water',   attrs:['water'],                rank:'chunin', atk:130},
-  {id:'c18', name:'深淵影忍', el:'water',   attrs:['water','yang','yin'],   rank:'kage',   atk:280},
-  {id:'c19', name:'靜電下忍', el:'thunder', attrs:['thunder'],              rank:'genin',  atk:80},
-  {id:'c20', name:'落雷下忍', el:'thunder', attrs:['thunder'],              rank:'genin',  atk:80},
-  {id:'c21', name:'雷光中忍', el:'thunder', attrs:['thunder'],              rank:'chunin', atk:130},
-  {id:'c22', name:'天雷影忍', el:'thunder', attrs:['thunder','earth','yin'], rank:'kage',  atk:280},
-  {id:'c23', name:'礫石下忍', el:'earth',   attrs:['earth'],                rank:'genin',  atk:80},
-  {id:'c24', name:'岩壁中忍', el:'earth',   attrs:['earth'],                rank:'chunin', atk:130},
-  {id:'c25', name:'山嶽上忍', el:'earth',   attrs:['earth','yang'],         rank:'jonin',  atk:200},
-  {id:'c26', name:'不動影忍', el:'earth',   attrs:['earth','water','yang'], rank:'kage',   atk:280},
-  {id:'c27', name:'輕風下忍', el:'wind',    attrs:['wind'],                 rank:'genin',  atk:80},
-  {id:'c28', name:'烈風中忍', el:'wind',    attrs:['wind'],                 rank:'chunin', atk:130},
-  {id:'c29', name:'風遁上忍', el:'wind',    attrs:['wind','yin'],           rank:'jonin',  atk:200},
-  {id:'c30', name:'颶嵐影忍', el:'wind',    attrs:['wind','thunder','yang'], rank:'kage',  atk:280},
+  {id:'c01', name:'灼鬼',   el:'fire',    race:'yokai',  rank:'jonin',  atk:300, hp:375,  rcv:38,  attrs:['fire']},
+  {id:'c02', name:'紅葉',   el:'fire',    race:'human',  rank:'chunin', atk:192, hp:240,  rcv:24,  attrs:['fire']},
+  {id:'c03', name:'炎助',   el:'fire',    race:'human',  rank:'genin',  atk:120, hp:150,  rcv:15,  attrs:['fire']},
+  {id:'c04', name:'淵姬',   el:'water',   race:'yokai',  rank:'jonin',  atk:125, hp:525,  rcv:100, attrs:['water']},
+  {id:'c05', name:'凜',     el:'water',   race:'human',  rank:'chunin', atk:80,  hp:336,  rcv:64,  attrs:['water']},
+  {id:'c06', name:'水無',   el:'water',   race:'human',  rank:'genin',  atk:50,  hp:210,  rcv:40,  attrs:['water']},
+  {id:'c07', name:'雷獸',   el:'thunder', race:'yokai',  rank:'jonin',  atk:275, hp:300,  rcv:63,  attrs:['thunder']},
+  {id:'c08', name:'電光',   el:'thunder', race:'human',  rank:'chunin', atk:176, hp:192,  rcv:40,  attrs:['thunder']},
+  {id:'c09', name:'礫',     el:'earth',   race:'human',  rank:'chunin', atk:64,  hp:576,  rcv:32,  attrs:['earth']},
+  {id:'c10', name:'岩助',   el:'earth',   race:'human',  rank:'genin',  atk:40,  hp:360,  rcv:20,  attrs:['earth']},
+  {id:'c11', name:'颯',     el:'wind',    race:'human',  rank:'chunin', atk:122, hp:355,  rcv:40,  attrs:['wind']},
+  {id:'c12', name:'疾風',   el:'wind',    race:'human',  rank:'genin',  atk:76,  hp:222,  rcv:25,  attrs:['wind']},
+  /* ── 擴充:補滿五屬階梯 + 影忍(kage ★4)SSR 層,共 30 張;★4 靈獸=五屬神主角 ── */
+  {id:'c13', name:'炭丸',   el:'fire',    race:'yokai',  rank:'genin',  atk:120, hp:150,  rcv:15,  attrs:['fire']},
+  {id:'c14', name:'緋貂',   el:'fire',    race:'beast',  rank:'chunin', atk:192, hp:240,  rcv:24,  attrs:['fire']},
+  {id:'c15', name:'迦具土', el:'fire',    race:'beast',  rank:'kage',   atk:420, hp:525,  rcv:53,  attrs:['fire'], hero:true},
+  {id:'c16', name:'潮太',   el:'water',   race:'yokai',  rank:'genin',  atk:50,  hp:210,  rcv:40,  attrs:['water']},
+  {id:'c17', name:'蒼蛟',   el:'water',   race:'beast',  rank:'chunin', atk:80,  hp:336,  rcv:64,  attrs:['water']},
+  {id:'c18', name:'彌都波', el:'water',   race:'beast',  rank:'kage',   atk:175, hp:735,  rcv:140, attrs:['water'], hero:true},
+  {id:'c19', name:'雷太',   el:'thunder', race:'human',  rank:'genin',  atk:110, hp:120,  rcv:25,  attrs:['thunder']},
+  {id:'c20', name:'鳴神丸', el:'thunder', race:'yokai',  rank:'genin',  atk:110, hp:120,  rcv:25,  attrs:['thunder']},
+  {id:'c21', name:'紫豹',   el:'thunder', race:'beast',  rank:'chunin', atk:176, hp:192,  rcv:40,  attrs:['thunder']},
+  {id:'c22', name:'建御雷', el:'thunder', race:'beast',  rank:'kage',   atk:385, hp:420,  rcv:88,  attrs:['thunder'], hero:true},
+  {id:'c23', name:'土蜘蛛', el:'earth',   race:'yokai',  rank:'genin',  atk:40,  hp:360,  rcv:20,  attrs:['earth']},
+  {id:'c24', name:'石龜',   el:'earth',   race:'beast',  rank:'chunin', atk:64,  hp:576,  rcv:32,  attrs:['earth']},
+  {id:'c25', name:'埴輪鬼', el:'earth',   race:'yokai',  rank:'jonin',  atk:100, hp:900,  rcv:50,  attrs:['earth']},
+  {id:'c26', name:'大國主', el:'earth',   race:'beast',  rank:'kage',   atk:140, hp:1260, rcv:70,  attrs:['earth'], hero:true},
+  {id:'c27', name:'鎌鼬',   el:'wind',    race:'yokai',  rank:'genin',  atk:76,  hp:222,  rcv:25,  attrs:['wind']},
+  {id:'c28', name:'風隼',   el:'wind',    race:'beast',  rank:'chunin', atk:122, hp:355,  rcv:40,  attrs:['wind']},
+  {id:'c29', name:'天狗',   el:'wind',    race:'yokai',  rank:'jonin',  atk:190, hp:555,  rcv:63,  attrs:['wind']},
+  {id:'c30', name:'級長津', el:'wind',    race:'beast',  rank:'kage',   atk:266, hp:777,  rcv:88,  attrs:['wind'], hero:true},
 ];
 const CONFIG = {
   ADV_MULT:1.6, WEAK_MULT:0.7, NORM_MULT:1.0,   // 相剋軟化(原2.0/0.5硬牆→1.6/0.7,讓手控能逆轉小劣勢)
@@ -361,8 +362,11 @@ const MAXLV=20, FEED_COST=100;
 function expToNext(lv){return 50*lv;}
 function getCardLv(id){const c=loadSave().cardLv[id];return c?c.lv:1;}
 function getCardExp(id){const c=loadSave().cardLv[id];return c?c.exp:0;}
-function cardAtk(id){const base=(ROSTER.find(c=>c.id===id)||{}).atk||0;return Math.round(base*EVO_MULT[getCardEvo(id)]*(1+(getCardLv(id)-1)*0.05));}
-function leveledTeam(ids){return ids.map(id=>{const c=ROSTER.find(x=>x.id===id);return c?Object.assign({},c,{atk:cardAtk(id),lv:getCardLv(id)}):null;}).filter(Boolean);}
+function _statMul(id){return EVO_MULT[getCardEvo(id)]*(1+(getCardLv(id)-1)*0.05);}   // 進化×等級 共用成長倍率
+function cardAtk(id){const base=(ROSTER.find(c=>c.id===id)||{}).atk||0;return Math.round(base*_statMul(id));}
+function cardHp(id){const base=(ROSTER.find(c=>c.id===id)||{}).hp||0;return Math.round(base*_statMul(id));}
+function cardRcv(id){const base=(ROSTER.find(c=>c.id===id)||{}).rcv||0;return Math.round(base*_statMul(id));}
+function leveledTeam(ids){return ids.map(id=>{const c=ROSTER.find(x=>x.id===id);return c?Object.assign({},c,{atk:cardAtk(id),hp:cardHp(id),rcv:cardRcv(id),lv:getCardLv(id)}):null;}).filter(Boolean);}
 function feedFodder(targetId,fodderId){let res={ok:false,msg:''};
   mutSave(s=>{
     if(s.cards.filter(c=>c.id===fodderId).length<2){res.msg='需要多餘的素材卡(同一張至少2張)';return;}
@@ -640,7 +644,9 @@ class GameScene extends Phaser.Scene{
     if(this.presetTeam) ELEMENT_BOXES.forEach((b,i)=>{const card=this.presetTeam[i];this.boxCard[b]=card;this.boxElement[b]=card.el;});
     else ELEMENT_BOXES.forEach(b=>{const card=ROSTER[rnd(ROSTER.length)];this.boxCard[b]=card;this.boxElement[b]=card.el;});
     this.lead=(this.presetTeam&&this.presetTeam[0]&&LEADER_SKILLS[this.presetTeam[0].id])||null;   // 隊長技=隊首卡
-    this.maxHP=Math.round(CONFIG.PLAYER_HP_BASE*((this.lead&&this.lead.type==='hp')?this.lead.v:1));
+    const teamHp=(this.presetTeam||[]).reduce((s,c)=>s+(c.hp||0),0)||CONFIG.PLAYER_HP_BASE;   // 隊伍血量=隊員 HP 三圍加總
+    this.maxHP=Math.round(teamHp*((this.lead&&this.lead.type==='hp')?this.lead.v:1));
+    this.teamRcv=(this.presetTeam||[]).reduce((s,c)=>s+(c.rcv||0),0)||0;   // 隊伍回復力總和(清無屬區回血用)
     this.playerHP=this.maxHP; this.stage=1; this.resultOpen=false; this.chests=0; this.gold=0; this.runDrops=[]; this.runExp=0; this.runCoins=0; this.runGems=0;
     this.charge=[0,0,0,0,0];   // 主動技蓄力(整場累積、跨關保留)
     this.stored=[null,null,null,null,null];   // 每卡存放的屬塊 {el,lv}(跨關保留,新局/重挑才清)
@@ -1196,7 +1202,9 @@ class GameScene extends Phaser.Scene{
       const cellsB=data.cells.filter(rc=>boxOf(rc[0],rc[1])===h.b);
       const col=h.el!=='neutral'?EL[h.el].color:0xbfe6ff, dmg=Math.round(h.dmg*dmgMul);
       const fireAt=LEAD+i*150+Math.random()*120; lastFire=Math.max(lastFire,fireAt);
-      this.time.delayedCall(fireAt,()=>this.zoneStrike(cen.x,cen.y,cellsB,col,dmg,victims,aoe&&i===0));});
+      this.time.delayedCall(fireAt,()=>{this.zoneStrike(cen.x,cen.y,cellsB,col,dmg,victims,aoe&&i===0);
+        if(h.el==='neutral'&&this.teamRcv>0){const heal=this.teamRcv;   // 清無屬區→回血=隊伍RCV總和(無屬區=愛心珠;傷害照算,回血為加成)
+          this.time.delayedCall(330,()=>{this.playerHP=Math.min(this.maxHP,this.playerHP+heal);this.animPlayerHP(true);this.floatText(cen.x,cen.y,'💚+'+heal,'#74e09a');});}});});
     this.updateEnemies();
     this.time.delayedCall(LEAD-80,()=>{   // 清除的格平滑溶解(逐格淡化的波 → 化進各區集氣)
       this.drawGloss();   // 被清的格(board 已 null)→ 立刻收掉玻璃光澤,塊乾淨淡出
@@ -1576,7 +1584,7 @@ class GameScene extends Phaser.Scene{
       drops.slice(0,8).forEach((d,i)=>{const dx=CX+(i-(m-1)/2)*per, dy=cy-40;
         g.add(this.add.rectangle(dx,dy,sq,sq,EL[d.cd.el].color).setStrokeStyle(3,d.isNew?0xffe04a:0x000000,d.isNew?1:0.3));
         g.add(this.add.text(dx,dy-sq*0.12,d.cd.name,{fontFamily:EMOJIFONT,fontSize:fn+'px',color:'#1a1208',fontStyle:'bold',align:'center',wordWrap:{width:sq-4}}).setOrigin(0.5));
-        g.add(this.add.text(dx,dy+sq*0.26,RANKNAME[d.cd.rank],{fontFamily:EMOJIFONT,fontSize:fr+'px',color:'#3a2c12',fontStyle:'bold'}).setOrigin(0.5));
+        g.add(this.add.text(dx,dy+sq*0.26,RANKSTAR[d.cd.rank],{fontFamily:EMOJIFONT,fontSize:fr+'px',color:'#3a2c12',fontStyle:'bold'}).setOrigin(0.5));
         if(d.isNew)g.add(this.add.text(dx,dy-sq/2-10,'✦NEW',{fontFamily:EMOJIFONT,fontSize:'11px',color:'#ffe04a',fontStyle:'bold'}).setOrigin(0.5));});
       g.add(this.add.text(CX,cy+30,'🎉 EXP +'+(this.runExp||0)+'   💰 +'+(this.runCoins||0),{fontFamily:EMOJIFONT,fontSize:'15px',color:'#ffe08a',fontStyle:'bold'}).setOrigin(0.5));
       this.mkBtn(g,cy+66,'📖 看卡冊',()=>{this.scene.manager.start('collection');this.scene.manager.stop('game');},0x3a4a5c);
@@ -1703,31 +1711,50 @@ class CollectionScene extends Phaser.Scene{
     const no='No.'+cd.id.replace(/\D/g,'').padStart(3,'0'), ev=getCardEvo(cd.id), atMax=ev>=EVO_MAX, chk=canEvolve(cd.id);
     this.rect(CX,H/2,W,H,0x000000,0.78).setInteractive();   // 遮罩(擋住後方網格)
     const py=Math.round(H/2);                                // 視窗上下置中
-    this.rect(CX,py,406,536,0x1c140c).setStrokeStyle(2,0xffd56a);
-    this.txt(CX,py-244,cd.name+'  '+starStr(cd.id),'20px','#f3e9d8',0.5,true);
-    this.rect(CX,py-178,100,100,EL[cd.el].color).setStrokeStyle(3,0x000000,0.35);   // 正方形卡圖
-    this.txt(CX,py-178,EL[cd.el].name,'46px','#1a1208',0.5,true);
-    this.txt(CX,py-110,EL[cd.el].name+'屬 · '+RANKNAME[cd.rank]+(ev>0?' · 進化+'+ev:'')+' · '+no,'13px','#ffd56a',0.5);
-    this.txt(CX,py-85,'持有 ×'+n+'      Lv.'+lv+(mx?' (MAX)':' / '+MAXLV),'14px','#cfe0e8',0.5);
-    this.txt(CX,py-61,'⚔️ 攻擊 '+atk+'   (基礎 '+cd.atk+')','14px','#ffd9a0',0.5);
-    this.rect(CX-172,py-40,344,10,0x000000,0.4).setOrigin(0,0.5);
-    this.rect(CX-172,py-40,344*(mx?1:Math.min(1,exp/need)),10,0x6ac0ff).setOrigin(0,0.5);
-    this.txt(CX,py-40,mx?'MAX':('EXP '+exp+' / '+need),'9px','#bfe0ff',0.5);
-    this.rect(CX,py-22,362,1,0x5a4128);
-    this.txt(CX-178,py-8,'【主技】'+(EL_SKILL[cd.el]||'—'),'12px','#dfeae8',0);
-    const subs=cd.attrs.slice(1).filter(a=>SUB_SKILL[a]);
-    this.txt(CX-178,py+12,'【副技】'+(subs.length?subs.map(a=>SUB_SKILL[a]).join('  '):'無'),'12px','#c8b8e8',0);
-    {const ls=leadSkill(cd.id);this.txt(CX-178,py+32,'🎖【隊長技】'+(ls?ls.name+':'+ls.desc:'—'),'11px','#ffd9a0',0);}
-    {const ac=activeSkill(cd.el);this.txt(CX-178,py+52,'⚡【主動技】'+(ac?ac.name+':'+ac.desc:'—'),'11px','#a8d8ff',0);}
-    this.btn(CX,py+88,330,38,'⬆️ 強化合成',()=>{this.scene.manager.start('fuse',{target:cd.id});this.scene.manager.stop('collection');},{col:0x2e3a22,stroke:0x6aaa4c,color:'#eafce0',bold:true,fs:'14px'});
+    const RI={human:{n:'人忍',e:'🥷',c:'#7fc1ff',bg:0x16314d},yokai:{n:'妖怪',e:'👹',c:'#e0905a',bg:0x3a2418},beast:{n:'靈獸',e:'🐾',c:'#8fd16a',bg:0x1d3a1f}};
+    const ri=RI[cd.race]||RI.human, ac=activeSkill(cd.el), ls=leadSkill(cd.id), elc=EL[cd.el].color;
+    const L=CX-176, R=CX+176;
+    this.rect(CX,py,406,556,0x1c140c).setStrokeStyle(2,0xffd56a);
+    // ── 標頭:No+★ / 名字 ──
+    this.txt(CX,py-258,no+'   '+starStr(cd.id),'11px','#ffd56a',0.5);
+    this.txt(CX,py-239,(cd.hero?'👑 ':'')+cd.name,'20px','#f3e9d8',0.5,true);
+    // ── 大圖橫幅(無立繪→屬色底+大屬字) ──
+    this.rect(CX,py-166,378,112,elc).setStrokeStyle(2,0x000000,0.3);
+    this.txt(CX,py-166,EL[cd.el].name,'56px','#1a1208',0.5,true);
+    // ── 屬性 + 種族 徽章 ──
+    this.rect(CX-92,py-92,108,26,EL[cd.el].dark).setStrokeStyle(1,elc);
+    this.L(this.add.text(CX-92,py-92,EL[cd.el].fx+' '+EL[cd.el].name+'屬',{fontFamily:EMOJIFONT,fontSize:'13px',color:'#f3e9d8',fontStyle:'bold'}).setOrigin(0.5));
+    this.rect(CX+92,py-92,120,26,ri.bg).setStrokeStyle(1,Phaser.Display.Color.HexStringToColor(ri.c).color);
+    this.L(this.add.text(CX+92,py-92,ri.e+' '+ri.n,{fontFamily:EMOJIFONT,fontSize:'13px',color:ri.c,fontStyle:'bold'}).setOrigin(0.5));
+    // ── 三圍數值區塊(P&D 式)──
+    this.rect(CX,py-30,378,86,0x120d07).setStrokeStyle(1,0x4a3a22);
+    const row=(dy,ic,lab,val,lc)=>{this.txt(L,py+dy,ic+' '+lab,'13px',lc,0);this.txt(R,py+dy,String(val),'17px','#ffffff',1,true);};
+    row(-54,'❤️','生命',cardHp(cd.id),'#ff9a9a');
+    row(-30,'⚔️','攻擊',atk,'#ffcf9a');
+    row(-6,'💚','回復',cardRcv(cd.id),'#9ae0a0');
+    // ── Lv + EXP ──
+    this.txt(L,py+22,'Lv.'+lv+(mx?' MAX':' / '+MAXLV),'12px','#cfe0e8',0);
+    this.txt(R,py+22,'持有 ×'+n,'12px','#cfe0e8',1);
+    this.rect(L,py+40,352,7,0x000000,0.4).setOrigin(0,0.5);
+    this.rect(L,py+40,352*(mx?1:Math.min(1,exp/need)),7,0x6ac0ff).setOrigin(0,0.5);
+    // ── 主動技 / 隊長技 分區塊 ──
+    this.rect(CX,py+74,378,40,0x16202c).setStrokeStyle(1,0x3a5a7a);
+    this.txt(L,py+64,'⚡ 主動技 '+(ac?ac.name+'  (CD'+ac.cd+')':'—'),'12px','#a8d8ff',0,true);
+    this.txt(L,py+82,ac?ac.desc:'','10px','#bcd4e8',0);
+    this.rect(CX,py+118,378,40,0x2a2416).setStrokeStyle(1,0x6a5a2a);
+    this.txt(L,py+108,'🎖 隊長技 '+(ls?ls.name:'—'),'12px','#ffd9a0',0,true);
+    this.txt(L,py+126,ls?ls.desc:'','10px','#e8d0a8',0);
+    this.txt(L,py+150,'🧩 主技 '+(EL_SKILL[cd.el]||'—'),'10px','#cfe0d8',0);
+    // ── 按鈕 ──
+    this.btn(CX,py+182,330,32,'⬆️ 強化合成',()=>{this.scene.manager.start('fuse',{target:cd.id});this.scene.manager.stop('collection');},{col:0x2e3a22,stroke:0x6aaa4c,color:'#eafce0',bold:true,fs:'13px'});
     let eL,eO;
-    if(atMax){eL='✨ 進化已滿 '+starStr(cd.id);eO={col:0x241a10,stroke:0x3a2e1c,color:'#7a6a4a',fs:'13px'};}
-    else if(chk.ok){eL='✨ 進化 → ★'+(cardStars(cd.id)+1)+'(消'+chk.req.gems+'寶玉)';eO={col:0x3a2a4a,stroke:0xb18cff,color:'#e8d8ff',bold:true,fs:'13px'};}
+    if(atMax){eL='✨ 進化已滿 '+starStr(cd.id);eO={col:0x241a10,stroke:0x3a2e1c,color:'#7a6a4a',fs:'12px'};}
+    else if(chk.ok){eL='✨ 進化 → ★'+(cardStars(cd.id)+1)+'(消'+chk.req.gems+'寶玉)';eO={col:0x3a2a4a,stroke:0xb18cff,color:'#e8d8ff',bold:true,fs:'12px'};}
     else {eL='✨ 進化:'+chk.msg;eO={col:0x241a10,stroke:0x4a3a5a,color:'#9a8aba',fs:'10px'};}
-    this.btn(CX,py+130,330,38,eL,()=>{const r=evolveCard(cd.id);this.toast(r.ok?('✨ 進化成功! '+starStr(cd.id)):r.msg);this.rebuild();},eO);
-    this.btn(CX-87,py+172,158,36,'🛡️ 設為隊長',()=>{setLeader(cd.id);this.toast(cd.name+' → 隊長');this.rebuild();},{col:0x2e2a3a,stroke:0x5a6a8a,color:'#cfe0ff',fs:'12px'});
-    this.btn(CX+87,py+172,158,36,'🗑️ 分解 💰',()=>{const r=dissolveCard(cd.id);this.toast(r.ok?('分解 +'+r.gain+' 金'):r.msg);this.rebuild();},{col:0x3a2a1a,stroke:0x8a6a3a,color:'#ffd9a0',fs:'12px'});
-    this.btn(CX,py+212,158,34,'✖️ 關閉',()=>{this.sel=null;this.rebuild();},{stroke:0x5a4128,color:'#cfc0a8',fs:'12px'});
+    this.btn(CX,py+218,330,32,eL,()=>{const r=evolveCard(cd.id);this.toast(r.ok?('✨ 進化成功! '+starStr(cd.id)):r.msg);this.rebuild();},eO);
+    this.btn(CX-86,py+254,158,32,'🛡️ 設為隊長',()=>{setLeader(cd.id);this.toast(cd.name+' → 隊長');this.rebuild();},{col:0x2e2a3a,stroke:0x5a6a8a,color:'#cfe0ff',fs:'12px'});
+    this.btn(CX+86,py+254,158,32,'🗑️ 分解 💰',()=>{const r=dissolveCard(cd.id);this.toast(r.ok?('分解 +'+r.gain+' 金'):r.msg);this.rebuild();},{col:0x3a2a1a,stroke:0x8a6a3a,color:'#ffd9a0',fs:'12px'});
+    this.L(this.add.text(CX+186,py-258,'✕',{fontFamily:EMOJIFONT,fontSize:'18px',color:'#cfc0a8',fontStyle:'bold'}).setOrigin(0.5).setInteractive()).on('pointerup',()=>{this.sel=null;this.rebuild();});
   }
 }
 
@@ -1860,7 +1887,7 @@ class HomeScene extends Phaser.Scene{
     this.rect(CX,y,372,138,col).setStrokeStyle(2,stroke);
     this.txt(CX,y-50,b.icon+' '+b.name,'16px','#f3e9d8',0.5,true);
     this.txt(CX,y-29,tagline,'10px','#cfc0e8',0.5);
-    this.txt(CX,y-10,b.rates.map(r=>RANKNAME[r[0]]+' '+Math.round(r[1]*100)+'%').join(' / '),'9px','#bfb0d0',0.5);
+    this.txt(CX,y-10,b.rates.map(r=>RANKSTAR[r[0]]+' '+Math.round(r[1]*100)+'%').join(' / '),'9px','#bfb0d0',0.5);
     const unit=b.cur==='stones'?'💎':'💰';
     this.btn(CX-94,y+38,166,42,'單抽 '+unit+b.cost1,()=>this.pull(bankey,1),{col:0x3a2c1d,stroke:stroke,color:'#ffe08a',bold:true,fs:'14px'});
     this.btn(CX+94,y+38,166,42,'十連 '+unit+b.cost10,()=>this.pull(bankey,10),{col:0x3a2c1d,stroke:stroke,color:'#ffe08a',bold:true,fs:'14px'});
@@ -1912,7 +1939,7 @@ class FuseScene extends Phaser.Scene{
     const lv=getCardLv(this.target),atk=cardAtk(this.target),exp=getCardExp(this.target),need=expToNext(lv),mx=lv>=MAXLV;
     this.rect(CX,124,360,86,EL[t.el].color).setStrokeStyle(2,0xffd56a);
     this.txt(44,104,t.name+'  Lv.'+lv+(mx?' MAX':''),'15px','#1a1208',0,true);
-    this.txt(44,128,EL[t.el].name+'·'+RANKNAME[t.rank]+'  ⚔️atk '+atk+'(基'+t.atk+')','11px','#3a2c12',0);
+    this.txt(44,128,EL[t.el].name+'·'+RANKSTAR[t.rank]+'  ⚔️atk '+atk+'(基'+t.atk+')','11px','#3a2c12',0);
     this.rect(44,150,300,10,0x000000,0.4).setOrigin(0,0.5);
     this.rect(44,150,300*(mx?1:Math.min(1,exp/need)),10,0x6ac0ff).setOrigin(0,0.5);
     this.txt(344,150,mx?'MAX':(exp+'/'+need),'9px','#10303f',1,true);
