@@ -135,6 +135,17 @@ const DUNGEONS = {
 };
 const STAGES = DUNGEONS.prologue.stages;   // 相容舊引用
 const ELEM_DUNGEONS=['fire','water','thunder','earth','wind'];
+// ===== 難度(P&D 式:同一基準表 × 倍率;中級=基準。staM=體力倍率、rwd=獎勵倍率、dt=詠唱手數增減、counter=摻反制屬敵) =====
+const DIFFS=[
+  {key:'baby',     name:'嬰兒',emoji:'👶',hp:0.7, atk:0.3, dt:+2, staM:0.5, rwd:0.3, rec:'亂玩都過',baby:true,    col:0xff9ec4},
+  {key:'beginner', name:'初級',emoji:'🌱',hp:0.7, atk:0.7, dt:+1, staM:0.7, rwd:0.7, rec:'別全帶被剋',           col:0x8fd16a},
+  {key:'normal',   name:'中級',emoji:'⚔️',hp:1.0, atk:1.0, dt:0,  staM:1.0, rwd:1.0, rec:'對屬 2 張',            col:0x6ab0e0},
+  {key:'advanced', name:'上級',emoji:'🔥',hp:1.35,atk:1.2, dt:0,  staM:1.3, rwd:1.5, rec:'卡 LV5+', counter:true, col:0xe0a64a},
+  {key:'super',    name:'超級',emoji:'💀',hp:1.8, atk:1.45,dt:-1, staM:1.6, rwd:2.2, rec:'卡 LV10+',counter:true, col:0xe0653a},
+  {key:'hell',     name:'地獄',emoji:'☠️',hp:2.4, atk:1.8, dt:-1, staM:2.0, rwd:3.5, rec:'卡 LV20', counter:true, col:0xb44ae0},
+];
+const DIFFS_BY={}; DIFFS.forEach(d=>DIFFS_BY[d.key]=d);
+function counterOf(el){return Object.keys(EL).find(k=>EL[k].beats===el);}   // 回傳「剋 el」的屬性(x.beats===el)
 // 純查克拉(水塊)形狀:大小=水等級。可重疊放置(只填空格、重疊處忽略)
 const WILD_SHAPES = {1:[[0,0]], 2:[[0,0],[0,1]], 3:[[0,0],[0,1],[0,2]], 4:[[0,0],[0,1],[1,0],[1,1]], 5:[[0,1],[1,0],[1,1],[1,2],[2,1]],
   6:[[0,0],[0,1],[0,2],[1,0],[1,1],[1,2]],                                  // LV6:2×3
@@ -526,7 +537,7 @@ class TeamScene extends Phaser.Scene{
 /* ===== 戰鬥(多敵 + 自由查克拉) ===== */
 class GameScene extends Phaser.Scene{
   constructor(){super('game');}
-  init(data){ this.presetTeam=(data&&data.team)?data.team:null; this.dungeonId=(data&&data.dungeonId)||'prologue'; this.dungeon=DUNGEONS[this.dungeonId]||DUNGEONS.prologue; this.hitLab=!!(data&&data.lab); }
+  init(data){ this.presetTeam=(data&&data.team)?data.team:null; this.dungeonId=(data&&data.dungeonId)||'prologue'; this.dungeon=DUNGEONS[this.dungeonId]||DUNGEONS.prologue; this.hitLab=!!(data&&data.lab); this.diff=DIFFS_BY[(data&&data.diff)]||DIFFS_BY.normal; }
   preload(){ for(const el in MONSTER_IMG){ if(!this.textures.exists('mon_'+el))this.load.image('mon_'+el, MONSTER_IMG[el]); } }   // 載入怪物圖
 
   create(){
@@ -572,6 +583,7 @@ class GameScene extends Phaser.Scene{
     for(let b=0;b<9;b++){const br=Math.floor(b/3)*3,bc=(b%3)*3;const cen=this.cellCenter(br+1,bc+1);
       this.boxLabels[b]=this.add.text(cen.x,cen.y,'',{fontFamily:EMOJIFONT,fontSize:'17px',color:'#fff'}).setOrigin(0.5).setAlpha(0.55).setDepth(DEPTH.board);}
     this.gloss=this.add.graphics().setDepth(DEPTH.board+0.5);   // 玻璃光澤+立體斜角(疊在塊上、依 board 狀態重畫)
+    this.hintG=this.add.graphics().setDepth(DEPTH.board+0.6);   // 嬰兒級:多HIT塊的建議落點高亮(脈動)
 
     // 托盤
     this.traySlots=[80,210,340]; this.trayHits=[];
@@ -654,7 +666,14 @@ class GameScene extends Phaser.Scene{
     if(this.enemyG)this.enemyG.destroy();
     this.enemyG=this.add.container(0,0).setDepth(DEPTH.enemy);   // 敵方整層在「我方卡」之下、背景之上
     const defs=this.dungeon.stages[this.stage-1].es;
-    this.enemies=defs.map(d=>({el:d.el,max:d.hp,hp:d.hp,atk:d.atk,interval:d.turns,timer:d.turns,burn:0,dead:false,boss:!!d.boss}));
+    const df=this.diff||DIFFS_BY.normal;
+    // 反制混搭:上級以上 + 元素關 → 把一隻「主屬非王敵」換成「剋你剋牌」的懲罰屬(逼你不能帶純剋牌)
+    let pun=null; if(df.counter&&this.dungeon.el){const C=counterOf(this.dungeon.el); pun=counterOf(C);} let punished=false;
+    this.enemies=defs.map(d=>{
+      let el=d.el; if(pun&&!punished&&d.el===this.dungeon.el&&!d.boss){el=pun;punished=true;}
+      const hp=Math.max(1,Math.round(d.hp*df.hp)), atk=Math.max(1,Math.round(d.atk*df.atk)), turns=Math.max(1,d.turns+(df.dt||0));
+      return {el,max:hp,hp:hp,atk:atk,interval:turns,timer:turns,burn:0,dead:false,boss:!!d.boss};
+    });
     const n=this.enemies.length, slot=380/n;
     this.enemies.forEach((e,i)=>{
       const x=20+slot*(i+0.5), cy=BATTLE_CY;
@@ -689,7 +708,28 @@ class GameScene extends Phaser.Scene{
     this.enemies.forEach((e,i)=>this.enemyEnter(e, i*120));   // 自遠方逼近入場(交錯)
     this.target=0;
   }
-  refill(){this.tray=[pickShape(),pickShape(),pickShape()].map(c=>({c,used:false}));}
+  refill(){if(this.diff&&this.diff.baby){this.tray=this.babyTray();return;} this.tray=[pickShape(),pickShape(),pickShape()].map(c=>({c,used:false}));}
+  // 嬰兒級「多HIT工廠」:盡量生出「放下去能同時清最多線/box」的塊(順便保證有解、永不卡死)
+  babyTray(){const out=[], targeted=new Set();
+    for(let n=0;n<2;n++){const best=this.bestHitSet(targeted); if(!best)break; out.push({c:best.shape,used:false,hint:best.origin}); best.clears.forEach(id=>targeted.add(id));}
+    while(out.length<3)out.push({c:pickShape(),used:false});
+    this.tray=out;
+    if(!this.anyPlaceable()){const e=this.firstEmpty(); if(e)out[0]={c:[[0,0]],used:false,hint:e};}   // 終極保底:盤上任一空格塞 1 格塊
+    return out;}
+  firstEmpty(){for(let r=0;r<N;r++)for(let c=0;c<N;c++)if(!this.board[r][c])return{r,c};return null;}
+  // 找「填完後清掉最多結構」的空格集(來自最接近完成的線/列/box),回傳相對形狀+落點+會清的結構
+  bestHitSet(exclude){exclude=exclude||new Set(); const K=6, structs=[];
+    for(let r=0;r<N;r++){const e=[];for(let c=0;c<N;c++)if(!this.board[r][c])e.push([r,c]); structs.push({id:'r'+r,empties:e});}
+    for(let c=0;c<N;c++){const e=[];for(let r=0;r<N;r++)if(!this.board[r][c])e.push([r,c]); structs.push({id:'c'+c,empties:e});}
+    for(let b=0;b<9;b++){const br=Math.floor(b/3)*3,bc=(b%3)*3,e=[];for(let r=br;r<br+3;r++)for(let c=bc;c<bc+3;c++)if(!this.board[r][c])e.push([r,c]); structs.push({id:'b'+b,empties:e});}
+    let best=null;
+    structs.forEach(s=>{if(!s.empties.length||s.empties.length>K||exclude.has(s.id))return;
+      const key=new Set(s.empties.map(p=>p[0]+'_'+p[1]));
+      const clears=structs.filter(t=>t.empties.length&&t.empties.every(p=>key.has(p[0]+'_'+p[1]))).map(t=>t.id);
+      const score=clears.length*100-s.empties.length;   // 多清優先、塊小優先
+      if(!best||score>best.score){const mr=Math.min(...s.empties.map(p=>p[0])), mc=Math.min(...s.empties.map(p=>p[1]));
+        best={score,clears,origin:{r:mr,c:mc},shape:s.empties.map(p=>[p[0]-mr,p[1]-mc])};}});
+    return best;}
   aliveCount(){return this.enemies.filter(e=>!e.dead).length;}
   targetEnemy(){let e=this.enemies[this.target];if(e&&!e.dead)return e;
     const i=this.enemies.findIndex(x=>!x.dead);this.target=i;return i<0?null:this.enemies[i];}
@@ -873,6 +913,16 @@ class GameScene extends Phaser.Scene{
       p.c.forEach(([dr,dc])=>cont.add(this.add.rectangle(dc*s-pw/2, dr*s-ph/2, s-3, s-3, sp?sp.c:NEUTRAL_FILL).setOrigin(0).setStrokeStyle(sp?1:0, 0xffffff, sp?0.5:0)));
       if(sp)cont.add(this.add.text(0,0,sp.label,{fontFamily:EMOJIFONT,fontSize:(s>=24?'17px':'10px'),color:'#ffffff',fontStyle:'bold'}).setOrigin(0.5).setStroke('#1a1208',4));   // 功能漢字
       this.trayIcons.push(cont);});
+    this.renderHint();
+  }
+  // 嬰兒級:把多HIT塊的建議落點畫成脈動金色格(放這裡就爆 HIT)
+  renderHint(){const g=this.hintG; if(!g)return; g.clear(); if(this._hintTw){this._hintTw.remove();this._hintTw=null;}
+    if(!this.diff||!this.diff.baby)return;
+    const cells=[]; this.tray.forEach(p=>{if(p.used||!p.hint)return; p.c.forEach(([dr,dc])=>cells.push([p.hint.r+dr,p.hint.c+dc]));});
+    if(!cells.length)return;
+    g.fillStyle(0xffe04a,0.5); g.lineStyle(2,0xfff3b0,0.95);
+    cells.forEach(([r,c])=>{if(r<0||r>=N||c<0||c>=N)return; const cen=this.cellCenter(r,c); g.fillRoundedRect(cen.x-RECT/2,cen.y-RECT/2,RECT,RECT,6); g.strokeRoundedRect(cen.x-RECT/2,cen.y-RECT/2,RECT,RECT,6);});
+    this._hintTw=this.tweens.add({targets:g,alpha:{from:0.35,to:0.9},duration:620,yoyo:true,repeat:-1,ease:'Sine.inOut'});
   }
   // HIT 實驗室:塊區放各「可能解塊數」按鈕(由小到大兩排),點按完整重現該手實際遊玩畫面(招式名+型/印+全螢幕閃+n HIT+集氣攻擊),純特效不扣血/不推進
   renderHitLab(){
@@ -1252,9 +1302,10 @@ class GameScene extends Phaser.Scene{
     rollDrops(this.dungeon.drops[this.stage-1]).forEach((cd,i)=>{const isNew=!isOwned(cd.id);addCard(cd.id);this.runDrops.push({cd,isNew});
       this.time.delayedCall(i*240,()=>this.tonFloat('🎁 '+cd.name+(isNew?' ✦NEW':''),isNew?'#ffe04a':'#ffe08a'));});
     recordStage(this.stage, false);   // 記最佳關
-    if(this.dungeon.el && Math.random()<0.6){addGem(this.dungeon.el);this.runGems++;   // 元素關掉進化素材「寶玉」
+    const rm=(this.diff&&this.diff.rwd)||1;   // 難度獎勵倍率
+    if(this.dungeon.el && Math.random()<Math.min(0.95,0.6*rm)){addGem(this.dungeon.el);this.runGems++;   // 元素關掉進化素材「寶玉」(高難掉率更高)
       this.time.delayedCall(120,()=>this.tonFloat('🔮 '+EL[this.dungeon.el].name+'寶玉','#c5b0ff'));}
-    const _rw=addRewards(40,300); this.runExp+=40; this.runCoins+=300;   // 戰鬥獎勵:EXP/金錢
+    const xp=Math.round(40*rm), gld=Math.round(300*rm), _rw=addRewards(xp,gld); this.runExp+=xp; this.runCoins+=gld;   // 戰鬥獎勵:EXP/金錢(隨難度放大)
     if(_rw._ups>0)this.tonFloat('🆙 等級提升! Lv.'+_rw.rank,'#ffe04a');
     if(this.stage>=this.dungeon.stages.length){markDungeonCleared(this.dungeonId);this.chests++;this.finalBlow(this._finalEnemy);return;}   // 最後一關全清→最後一擊特寫演出後才進結果
     this.stage++; this.chests++; this.playerHP=Math.min(this.maxHP,this.playerHP+150);
@@ -1738,12 +1789,12 @@ class HomeScene extends Phaser.Scene{
     const tx=CX, ty=top+150;
     // 中央塔(五元素全清才開)
     const tOpen=isDungeonUnlocked('tower'), tCl=isDungeonCleared('tower');
-    this.mapNode(tx,ty,30,'🗼',tCl?'結印之塔 ✓':'結印之塔',tOpen?('最終 ⚡'+DUNGEONS.tower.cost):'最終(未開放)',
+    this.mapNode(tx,ty,30,'🗼',tCl?'結印之塔 ✓':'結印之塔',tOpen?('最終 ⚡'+Math.round(DUNGEONS.tower.cost*0.5)+'↑'):'最終(未開放)',
       ()=>{if(tOpen)this.enterDungeon('tower');else this.toast('需先清五元素關');},!tOpen);
     // 五元素區(通關序章後解鎖)
     ELEM_DUNGEONS.forEach((id,i)=>{const d=DUNGEONS[id], a=-Math.PI/2+(i+0.5)*(2*Math.PI/5), x=tx+Math.cos(a)*118, y=ty+34+Math.sin(a)*86;
       const open=isDungeonUnlocked(id), cl=isDungeonCleared(id);
-      this.mapNode(x,y,21,d.emoji,cl?d.name+' ✓':d.name,open?('⚡'+d.cost):'未解鎖',
+      this.mapNode(x,y,21,d.emoji,cl?d.name+' ✓':d.name,open?('⚡'+Math.round(d.cost*0.5)+'↑'):'未解鎖',
         ()=>{if(open)this.enterDungeon(id);else this.toast('需先通關序章');},!open);});
     // 序章(永遠可進;未通關時脈動)
     const sx=CX, sy=bot-94, pc=isDungeonCleared('prologue');
@@ -1752,13 +1803,36 @@ class HomeScene extends Phaser.Scene{
     this.mapNode(sx,sy,30,'🏯',pc?'序章 ✓':'序章 · 結印之章','⚡'+DUNGEONS.prologue.cost+(pc?'':' · 點此出擊'),()=>this.enterDungeon('prologue'),false);
     this.btn(64,bot-24,108,38,'🛡️ 編隊',()=>this.go('team'),{col:0x2e2a3a,stroke:0x5a6a8a,color:'#cfe0ff',fs:'13px'});
   }
-  enterDungeon(id){id=id||'prologue';const d=DUNGEONS[id]||DUNGEONS.prologue;
+  enterDungeon(id){id=id||'prologue';
     if(!isDungeonUnlocked(id)){this.toast('尚未解鎖');return;}
+    const tm=leveledTeam(loadTeam().filter(x=>isOwned(x)));
+    if(tm.length!==5){this.toast('隊伍不齊,先去編隊');this.go('team');return;}
+    if(id==='prologue'){this.startBattle(id,DIFFS_BY.normal);return;}   // 序章=教學,固定中級不選難度
+    this.showDiffPicker(id);}
+  diffCost(id,df){const d=DUNGEONS[id]||DUNGEONS.prologue, tm=loadTeam(), ls=tm[0]?leadSkill(tm[0]):null;
+    return Math.round(d.cost*df.staM*((ls&&ls.type==='stamina')?ls.v:1));}   // 難度體力=關卡基準×難度倍率×隊長省體
+  showDiffPicker(id){const d=DUNGEONS[id]||DUNGEONS.prologue, m=getMeta();
+    if(this._diffG)this._diffG.destroy();
+    const g=this.add.container(0,0).setDepth(1500); this._diffG=g;
+    const close=()=>{g.destroy();this._diffG=null;};
+    g.add(this.add.rectangle(CX,H/2,W,H,0x000000,0.84).setInteractive().on('pointerup',close));
+    g.add(this.add.text(CX,H*0.10,d.emoji+' '+d.name,{fontFamily:EMOJIFONT,fontSize:'18px',color:'#f3e9d8',fontStyle:'bold'}).setOrigin(0.5));
+    g.add(this.add.text(CX,H*0.10+24,'選擇難度(體力越高、獎勵越多)',{fontFamily:EMOJIFONT,fontSize:'11px',color:'#bfb0a0'}).setOrigin(0.5));
+    const y0=H*0.10+50, rh=Math.min(60,(H*0.86-y0)/DIFFS.length);
+    DIFFS.forEach((df,i)=>{const y=y0+rh*i+rh/2, cost=this.diffCost(id,df), afford=m.stamina>=cost;
+      const r=this.add.rectangle(CX,y,W-36,rh-7,df.col,afford?0.20:0.08).setStrokeStyle(2,df.col,afford?1:0.35).setInteractive();
+      g.add(r);
+      g.add(this.add.text(CX-W/2+24,y,df.emoji+' '+df.name,{fontFamily:EMOJIFONT,fontSize:'17px',color:afford?'#fff':'#7a7068',fontStyle:'bold'}).setOrigin(0,0.5));
+      g.add(this.add.text(CX-W/2+118,y,'推薦 '+df.rec,{fontFamily:EMOJIFONT,fontSize:'11px',color:afford?'#d8cfc4':'#6a625a'}).setOrigin(0,0.5));
+      g.add(this.add.text(CX+W/2-24,y-9,'⚡'+cost,{fontFamily:EMOJIFONT,fontSize:'14px',color:afford?'#9fe0b0':'#c46a5a',fontStyle:'bold'}).setOrigin(1,0.5));
+      g.add(this.add.text(CX+W/2-24,y+10,'🎁×'+df.rwd,{fontFamily:EMOJIFONT,fontSize:'11px',color:afford?'#ffd56a':'#7a7060'}).setOrigin(1,0.5));
+      r.on('pointerup',()=>{if(!afford){this.toast('體力不足!去商店回復');return;} close(); this.startBattle(id,df);});});
+  }
+  startBattle(id,df){const d=DUNGEONS[id]||DUNGEONS.prologue;
     const tm=leveledTeam(loadTeam().filter(x=>isOwned(x)));   // 帶升級後 atk
     if(tm.length!==5){this.toast('隊伍不齊,先去編隊');this.go('team');return;}
-    const ls=leadSkill(tm[0].id), cost=Math.round(d.cost*((ls&&ls.type==='stamina')?ls.v:1));   // 隊長技:省體力
-    if(!spendStamina(cost)){this.toast('體力不足!去商店回復');this.rebuild();return;}
-    this.scene.manager.start('game',{team:tm,dungeonId:id});this.scene.manager.stop('home');}
+    if(!spendStamina(this.diffCost(id,df))){this.toast('體力不足!去商店回復');this.rebuild();return;}
+    this.scene.manager.start('game',{team:tm,dungeonId:id,diff:df.key});this.scene.manager.stop('home');}
   bMonster(){
     this.txt(CX,92,'🐲 卡片管理','18px','#f3e9d8',0.5,true);
     this.btn(CX,150,360,52,'🛡️ 隊伍編成',()=>this.go('team'),{col:0x2e2a3a,stroke:0x5a6a8a,color:'#cfe0ff',bold:true});
