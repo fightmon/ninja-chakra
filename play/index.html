@@ -704,12 +704,7 @@ class GameScene extends Phaser.Scene{
       this.boxLabels[b].setText(be?EL[be].name:'·').setColor(be?'#'+EL[be].color.toString(16).padStart(6,'0'):'#ffffff66');}
     this.drawGloss();
   }
-  // 玻璃光澤:每個填滿的塊左上一抹高光(像打光的玻璃;立體斜角已拿掉)
-  drawGloss(){const g=this.gloss; if(!g)return; g.clear();
-    for(let r=0;r<N;r++)for(let c=0;c<N;c++){if(!(this.board[r]&&this.board[r][c]))continue;
-      const x=BX0+c*CS, y=BY0+r*CS;
-      g.fillStyle(0xffffff,0.2); g.fillRect(x+5,y+5,Math.round(RECT*0.34),Math.round(RECT*0.14));}        // 左上 玻璃高光
-  }
+  drawGloss(){const g=this.gloss; if(g)g.clear();}   // 玻璃光澤/斜角都已拿掉,只留屬色亮邊(描邊);保留空函式避免呼叫端報錯
   // 放塊:查克拉凝聚成形 —— 屬色凝聚體由略大半透明收實 + 粒子向中心收束 + 格子淡入(只演「放下後仍在盤上」的格)
   coalesceCells(list){ if(!list)return; const ADD=Phaser.BlendModes.ADD;   // list=[{r,c,el}](放下當下就記住屬性→就算馬上結印被清掉也照演凝聚)
     list.forEach((pc,idx)=>{const r=pc.r,c=pc.c; if(r<0||r>=N||c<0||c>=N||!this.board[r][c])return;   // 已被結印清掉的格→不跑「聚攏成實心塊」(交給結印的溶解→集結演出)
