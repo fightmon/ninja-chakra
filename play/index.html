@@ -1126,7 +1126,10 @@ class GameScene extends Phaser.Scene{
     const aoe=(topLv>=4)||(this.morale>=5), victims=aoe?this.enemies.filter(e=>!e.dead):[tgt];   // LV4+大消除 或 鬥志「極」=全體
     Object.keys(data.fx).forEach(e=>{const f=data.fx[e];f.attrs.forEach(a=>this.fireAttr(a,f.atk,f.level,tgt));});
     if(!this.fromBlock)Object.keys(data.fx).forEach(e=>this.storeBlock(e,data.fx[e].level));   // 清宮→生成該屬形狀塊存到卡
-    data.cells.forEach(([r,c])=>{const rc=this.cellRect(r,c);this.tweens.add({targets:rc,scaleX:1.14,scaleY:1.14,duration:90,yoyo:true});});
+    data.cells.forEach(([r,c],idx)=>{const cel=this.boxElement[boxOf(r,c)], gcol=cel?EL[cel].color:0xbfe6ff, cen=this.cellCenter(r,c), gd=Math.min(idx,18)*16;   // 充能:被清的格亮起屬色微光(由弱漸強)→ 溶解時散掉化成查克拉(取代 90ms 瞬閃)
+      const g=this.add.rectangle(cen.x,cen.y,RECT,RECT,gcol).setOrigin(0.5).setBlendMode(Phaser.BlendModes.ADD).setDepth(DEPTH.board+1).setAlpha(0);
+      this.tweens.add({targets:g,alpha:0.55,duration:160,delay:gd,ease:'Quad.in'});
+      this.tweens.add({targets:g,alpha:0,scaleX:0.6,scaleY:0.6,duration:260,delay:360+gd,ease:'Sine.out',onComplete:()=>g.destroy()});});
     if(data.hitWeak)tgt.timer+=1;
     if(this.firstClear){this.firstClear=false;track('first_clear');}
     data.cells.forEach(([r,c])=>{this.board[r][c]=null;});  // 立即從模型移除,避免重複觸發
