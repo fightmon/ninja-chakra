@@ -571,6 +571,7 @@ class GameScene extends Phaser.Scene{
       this.cells.push(this.add.rectangle(BX0+c*CS, BY0+r*CS, RECT, RECT, NEUTRAL_DARK).setOrigin(0,0).setDepth(DEPTH.board));
     for(let b=0;b<9;b++){const br=Math.floor(b/3)*3,bc=(b%3)*3;const cen=this.cellCenter(br+1,bc+1);
       this.boxLabels[b]=this.add.text(cen.x,cen.y,'',{fontFamily:EMOJIFONT,fontSize:'17px',color:'#fff'}).setOrigin(0.5).setAlpha(0.55).setDepth(DEPTH.board);}
+    this.gloss=this.add.graphics().setDepth(DEPTH.board+0.5);   // 玻璃光澤+立體斜角(疊在塊上、依 board 狀態重畫)
 
     // 托盤
     this.traySlots=[80,210,340]; this.trayHits=[];
@@ -605,6 +606,7 @@ class GameScene extends Phaser.Scene{
     this.pHpBg.setPosition(BX0,PHP_Y);this.pHp.setPosition(BX0,PHP_Y);this.pHpTxt.setPosition(CX,PHP_Y);if(this.pHpCap)this.pHpCap.y=PHP_Y;
     if(this.moraleBg){this.moraleBg.setPosition(BX0+14,PHP_Y);this.moraleTx.setPosition(BX0+14,PHP_Y);}
     for(let r=0;r<N;r++)for(let c=0;c<N;c++)this.cellRect(r,c).setPosition(BX0+c*CS,BY0+r*CS);
+    this.drawGloss();   // 視窗變動→重畫玻璃光澤
     for(let b=0;b<9;b++){const br=Math.floor(b/3)*3,bc=(b%3)*3,cen=this.cellCenter(br+1,bc+1);this.boxLabels[b].setPosition(cen.x,cen.y);}
     this.trayHits.forEach(h=>h.setPosition(h.x,TRAY_Y));
     if(this.tray)this.renderTray();
@@ -700,6 +702,15 @@ class GameScene extends Phaser.Scene{
       else rc.setFillStyle(be?EL[be].dark:NEUTRAL_DARK).setStrokeStyle(2,0x000000,0);}
     for(let b=0;b<9;b++){const be=this.boxElement[b];
       this.boxLabels[b].setText(be?EL[be].name:'·').setColor(be?'#'+EL[be].color.toString(16).padStart(6,'0'):'#ffffff66');}
+    this.drawGloss();
+  }
+  // 玻璃光澤 + 立體斜角:每個填滿的塊上/左亮邊、下/右暗邊 + 左上一抹高光(像打光的能量磚)
+  drawGloss(){const g=this.gloss; if(!g)return; g.clear();
+    for(let r=0;r<N;r++)for(let c=0;c<N;c++){const cell=this.board[r]&&this.board[r][c]; if(!cell)continue;
+      const base=EL[cell.el]?EL[cell.el].color:NEUTRAL_FILL, x=BX0+c*CS, y=BY0+r*CS, lite=shadeColor(base,0.5), dark=shadeColor(base,-0.42);
+      g.fillStyle(lite,0.55); g.fillRect(x+2,y+2,RECT-4,3); g.fillRect(x+2,y+2,3,RECT-4);                 // 上/左 亮邊(斜角高光)
+      g.fillStyle(dark,0.5);  g.fillRect(x+2,y+RECT-5,RECT-4,3); g.fillRect(x+RECT-5,y+2,3,RECT-4);       // 下/右 暗邊(斜角陰影)
+      g.fillStyle(0xffffff,0.2); g.fillRect(x+5,y+5,Math.round(RECT*0.34),Math.round(RECT*0.14));}        // 左上 玻璃高光
   }
   // 放塊:查克拉凝聚成形 —— 屬色凝聚體由略大半透明收實 + 粒子向中心收束 + 格子淡入(只演「放下後仍在盤上」的格)
   coalesceCells(list){ if(!list)return; const ADD=Phaser.BlendModes.ADD;   // list=[{r,c,el}](放下當下就記住屬性→就算馬上結印被清掉也照演凝聚)
@@ -962,7 +973,8 @@ class GameScene extends Phaser.Scene{
       else if(d.kind==='earth') this.earthSelect(d.i,cell.r,cell.c);
       else this.doPlace(d.i,cell.r,cell.c);
     }}
-  clearGhost(){this.cells.forEach(rc=>rc.setStrokeStyle(2,0x000000,0));}
+  clearGhost(){this.cells.forEach((rc,i)=>{const r=Math.floor(i/N),c=i%N;   // 清預覽邊框時:填滿格還原屬色亮邊(不然拖曳時亮邊會消失)
+    if(this.board[r]&&this.board[r][c])rc.setStrokeStyle(2,shadeColor(rc.fillColor,0.55),0.5); else rc.setStrokeStyle(2,0x000000,0);});}
 
   /* 放塊 = 一回合(敵人推進);放純查克拉 = bonus(不推進回合) */
   doPlace(i,r,c){if(this.resultOpen)return;
@@ -1144,6 +1156,7 @@ class GameScene extends Phaser.Scene{
       this.time.delayedCall(fireAt,()=>this.zoneStrike(cen.x,cen.y,cellsB,col,dmg,victims,aoe&&i===0));});
     this.updateEnemies();
     this.time.delayedCall(LEAD-80,()=>{   // 清除的格平滑溶解(逐格淡化的波 → 化進各區集氣)
+      this.drawGloss();   // 被清的格(board 已 null)→ 立刻收掉玻璃光澤,塊乾淨淡出
       const cc=data.cells||[]; cc.forEach((rc,idx)=>{const cell=this.cellRect(rc[0],rc[1]); if(cell)this.tweens.add({targets:cell,alpha:0,duration:260,delay:Math.min(idx,18)*16,ease:'Sine.in'});});
       this.time.delayedCall(300+Math.min(cc.length,18)*16,()=>this.refreshBoard());});
     this.time.delayedCall(lastFire+240+330+260,()=>{this.updateAll(); victims.forEach(v=>{if(v.hp<=0)this.killEnemy(v);});});   // 最後一段彈著後收死亡敵
