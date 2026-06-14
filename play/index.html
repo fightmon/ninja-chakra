@@ -708,7 +708,7 @@ class GameScene extends Phaser.Scene{
       const cell=this.cellRect(r,c); if(!cell)return;
       const el=pc.el, col=EL[el]?EL[el].color:NEUTRAL_FILL, cx=BX0+c*CS+RECT/2, cy=BY0+r*CS+RECT/2, dl=idx*55;   // dl:多格逐格錯開→像一道波流過整塊(絲滑)
       this.tweens.killTweensOf(cell); cell.setAlpha(0.12); this.tweens.add({targets:cell,alpha:1,duration:430,delay:dl,ease:'Sine.out',onComplete:()=>cell.setAlpha(1)});   // 格子柔和淡入
-      const o=this.add.rectangle(cx,cy,RECT,RECT,col).setOrigin(0.5).setBlendMode(ADD).setDepth(DEPTH.board+1).setAlpha(0.5).setScale(1.7);   // 凝聚體:略大半透→緩緩收實(Cubic.out 緩出=軟著陸)
+      const o=this.add.rectangle(cx,cy,RECT,RECT,col).setOrigin(0.5).setBlendMode(ADD).setDepth(DEPTH.board+1).setAlpha(0.5).setScale(1.35);   // 凝聚體:起始倍數 1.7→1.35(略大半透→緩緩收實)
       this.tweens.add({targets:o,scaleX:1,scaleY:1,alpha:0,duration:440,delay:dl,ease:'Cubic.out',onComplete:()=>o.destroy()});
       for(let k=0;k<6;k++){const a=Math.random()*Math.PI*2, r0=18+Math.random()*14, sx=cx+Math.cos(a)*r0, sy=cy+Math.sin(a)*r0;   // 查克拉粒子滑順收束(Sine.inOut+錯開)
         const d=this.add.circle(sx,sy,1.8+Math.random()*1.4,col,0.85).setBlendMode(ADD).setDepth(DEPTH.board+1);
