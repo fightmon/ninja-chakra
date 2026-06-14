@@ -704,12 +704,10 @@ class GameScene extends Phaser.Scene{
       this.boxLabels[b].setText(be?EL[be].name:'·').setColor(be?'#'+EL[be].color.toString(16).padStart(6,'0'):'#ffffff66');}
     this.drawGloss();
   }
-  // 玻璃光澤 + 立體斜角:每個填滿的塊上/左亮邊、下/右暗邊 + 左上一抹高光(像打光的能量磚)
+  // 玻璃光澤:每個填滿的塊左上一抹高光(像打光的玻璃;立體斜角已拿掉)
   drawGloss(){const g=this.gloss; if(!g)return; g.clear();
-    for(let r=0;r<N;r++)for(let c=0;c<N;c++){const cell=this.board[r]&&this.board[r][c]; if(!cell)continue;
-      const base=EL[cell.el]?EL[cell.el].color:NEUTRAL_FILL, x=BX0+c*CS, y=BY0+r*CS, lite=shadeColor(base,0.5), dark=shadeColor(base,-0.42);
-      g.fillStyle(lite,0.55); g.fillRect(x+2,y+2,RECT-4,3); g.fillRect(x+2,y+2,3,RECT-4);                 // 上/左 亮邊(斜角高光)
-      g.fillStyle(dark,0.5);  g.fillRect(x+2,y+RECT-5,RECT-4,3); g.fillRect(x+RECT-5,y+2,3,RECT-4);       // 下/右 暗邊(斜角陰影)
+    for(let r=0;r<N;r++)for(let c=0;c<N;c++){if(!(this.board[r]&&this.board[r][c]))continue;
+      const x=BX0+c*CS, y=BY0+r*CS;
       g.fillStyle(0xffffff,0.2); g.fillRect(x+5,y+5,Math.round(RECT*0.34),Math.round(RECT*0.14));}        // 左上 玻璃高光
   }
   // 放塊:查克拉凝聚成形 —— 屬色凝聚體由略大半透明收實 + 粒子向中心收束 + 格子淡入(只演「放下後仍在盤上」的格)
