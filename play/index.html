@@ -1709,7 +1709,9 @@ class GameScene extends Phaser.Scene{
     const steps=[
       {ic:'🧩',t:'拼塊 × 打怪',b:'把方塊拖進 9×9 盤面,\n填滿一整「列 / 行 / 宮(3×3)」\n就會消除 → 攻擊敵人!'},
       {ic:'⭐',t:'屬塊保存(招牌玩法)',b:'消除一個「宮」會生成屬塊,\n存到對應的忍卡上。\n把它拖到盤面湊更多消除,\n還能囤到 boss 一次狂放!'},
+      {ic:'💧',t:'打傷害 vs 回血',b:'盤面分「五屬區」和中間的「無屬區」。\n清屬性區 = 打傷害,\n清「無屬區」= 回血(隊伍回復力)!\n血少時記得去清中間那圈。'},
       {ic:'⚡',t:'相剋 & 大招',b:'帶相剋屬性更強:\n火→風→雷→土→水→火。\n卡片「上方的小鈕」蓄滿會發亮,\n點一下放大招!'},
+      {ic:'🛡',t:'看懂敵人腳下徽章',b:'高難度敵人有招牌行為:\n🛡=要清夠大/連夠久才打得到,\n🔥灼燒=每手扣血、⚡麻痺=鎖你一塊,\n💚=會回血。魔王還會隨血量變身!'},
     ];
     let i=0;
     const show=()=>{
@@ -2029,7 +2031,8 @@ class HomeScene extends Phaser.Scene{
   bOther(){const pr=getProgress();
     this.txt(CX,92,'⚙️ 其他','18px','#f3e9d8',0.5,true);
     this.txt(CX,150,'🏆 序章通關 ×'+pr.clears+'    📖 收集 '+ownedCount()+'/'+ROSTER.length,'13px','#ffd56a',0.5);
-    this.btn(CX,224,360,48,'📖 卡片圖鑑',()=>this.go('collection'),{col:0x2e2a3a,stroke:0x5a6a8a,color:'#cfe0ff'});
+    this.btn(CX-92,224,172,48,'📖 卡片圖鑑',()=>this.go('collection'),{col:0x2e2a3a,stroke:0x5a6a8a,color:'#cfe0ff',fs:'14px'});
+    this.btn(CX+92,224,172,48,'📖 重看教學',()=>{mutSave(s=>{if(!s.settings)s.settings={};s.settings.tut=false;});this.toast('下次進關會重看教學');},{col:0x2e2a3a,stroke:0x5a6a8a,color:'#cfe0ff',fs:'14px'});
     this.btn(CX,290,360,48,'🔄 重置存檔(測試用)',()=>{localStorage.removeItem('ninja_save');localStorage.removeItem('ninja_owned');this.toast('已重置');this.switchTab('dungeon');},{col:0x3a201a,stroke:0x8a4a3a,color:'#ffb0a0'});
     this.txt(CX,344,'🧪 測試工具(上架前移除)','12px','#9a8a6a',0.5);
     const dev=(lv)=>{devSetAllLv(lv);this.toast('全卡 → LV'+lv);this.rebuild();};
