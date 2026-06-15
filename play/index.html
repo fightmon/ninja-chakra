@@ -116,18 +116,18 @@ const DUNGEONS = {
     ],drops:[[{el:'water',rate:0.8}],[{el:'water',rate:1.0}],[{el:'water',rate:1.0},{rank:'jonin',rate:0.2}]]},
   thunder:{id:'thunder',name:'雷之高原',emoji:'⚡',el:'thunder',cost:12,stages:[
       {es:[{el:'thunder',hp:720,atk:110,turns:3}]},
-      {es:[{el:'thunder',hp:600,atk:100,turns:2},{el:'thunder',hp:600,atk:100,turns:2}]},
-      {es:[{el:'thunder',hp:500,atk:100,turns:2},{el:'thunder',hp:2000,atk:210,turns:3,boss:true},{el:'thunder',hp:500,atk:100,turns:2}]},
+      {es:[{el:'thunder',hp:600,atk:100,turns:2,arch:'artillery'},{el:'thunder',hp:600,atk:100,turns:2}]},
+      {es:[{el:'thunder',hp:500,atk:100,turns:2,arch:'healer'},{el:'thunder',hp:2000,atk:210,turns:3,boss:true},{el:'thunder',hp:500,atk:100,turns:2,arch:'artillery'}]},
     ],drops:[[{el:'thunder',rate:0.8}],[{el:'thunder',rate:1.0}],[{el:'thunder',rate:1.0},{rank:'jonin',rate:0.2}]]},
   earth:{id:'earth',name:'土之山岳',emoji:'⛰️',el:'earth',cost:12,stages:[
       {es:[{el:'earth',hp:700,atk:100,turns:2}]},
-      {es:[{el:'earth',hp:580,atk:90,turns:2},{el:'earth',hp:580,atk:90,turns:2}]},
-      {es:[{el:'earth',hp:520,atk:90,turns:2},{el:'earth',hp:2000,atk:200,turns:3,boss:true},{el:'earth',hp:520,atk:90,turns:2}]},
+      {es:[{el:'earth',hp:580,atk:90,turns:2,arch:'artillery'},{el:'earth',hp:580,atk:90,turns:2}]},
+      {es:[{el:'earth',hp:520,atk:90,turns:2,arch:'archmage'},{el:'earth',hp:2000,atk:200,turns:3,boss:true},{el:'earth',hp:520,atk:90,turns:2,arch:'healer'}]},
     ],drops:[[{el:'earth',rate:0.8}],[{el:'earth',rate:1.0}],[{el:'earth',rate:1.0},{rank:'jonin',rate:0.2}]]},
   wind:{id:'wind',name:'風之峽谷',emoji:'🌪️',el:'wind',cost:12,stages:[
       {es:[{el:'wind',hp:680,atk:100,turns:2}]},
-      {es:[{el:'wind',hp:580,atk:90,turns:2},{el:'wind',hp:580,atk:90,turns:2}]},
-      {es:[{el:'wind',hp:500,atk:90,turns:2},{el:'wind',hp:1900,atk:200,turns:3,boss:true},{el:'wind',hp:500,atk:90,turns:2}]},
+      {es:[{el:'wind',hp:580,atk:90,turns:2,arch:'caster'},{el:'wind',hp:580,atk:90,turns:2}]},
+      {es:[{el:'wind',hp:500,atk:90,turns:2,arch:'caster'},{el:'wind',hp:1900,atk:200,turns:3,boss:true},{el:'wind',hp:500,atk:90,turns:2,arch:'artillery'}]},
     ],drops:[[{el:'wind',rate:0.8}],[{el:'wind',rate:1.0}],[{el:'wind',rate:1.0},{rank:'jonin',rate:0.2}]]},
   tower:{id:'tower',name:'結印之塔',emoji:'🗼',cost:20,stages:[
       {es:[{el:'fire',hp:800,atk:120,turns:2},{el:'water',hp:800,atk:120,turns:2}]},
