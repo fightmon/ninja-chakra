@@ -304,8 +304,8 @@ function activeSkill(el){return ACTIVE_SKILLS[el]||null;}
 /* F6 統一存檔:持有卡 / 編隊 / 進度 / 設定 一個物件全自動存 localStorage */
 const SAVE_KEY='ninja_save';
 function defaultMeta(){return {rank:1,exp:0,coins:0,stones:30,stamina:50,staminaMax:50,staTs:null,pity:0,boxBuy:0};}   // 首登送 30 鑽;pity=結印保底;boxBuy=魔法石擴背包次數
-function defaultSave(){const cards=STARTER.map((id,i)=>({u:'k'+(i+1),id}));return {cards,uidSeq:STARTER.length,team:STARTER.slice(),cardLv:{},cardEvo:{},gems:{fire:0,water:0,thunder:0,earth:0,wind:0},progress:{cleared:false,clears:0,bestStage:0},meta:defaultMeta(),settings:{welcome:true}};}   // 個體制:每張卡=cards 陣列裡一個獨立個體(各佔一背包格)
-function writeSave(s){try{localStorage.setItem(SAVE_KEY,JSON.stringify(s));}catch(e){}}
+function defaultSave(){const cards=STARTER.map((id,i)=>({u:'k'+(i+1),id}));return {ver:1,cards,uidSeq:STARTER.length,team:STARTER.slice(),cardLv:{},cardEvo:{},gems:{fire:0,water:0,thunder:0,earth:0,wind:0},progress:{cleared:false,clears:0,bestStage:0},meta:defaultMeta(),settings:{welcome:true}};}   // 個體制:每張卡=cards 陣列裡一個獨立個體(各佔一背包格)
+function writeSave(s){try{s.updatedAt=Date.now();localStorage.setItem(SAVE_KEY,JSON.stringify(s));}catch(e){}}   // 每次寫入蓋時間戳(雲端衝突解決:新覆舊)
 function loadSave(){let s=null;try{s=JSON.parse(localStorage.getItem(SAVE_KEY));}catch(e){}
   if(!s||typeof s!=='object'){s=defaultSave();
     let old=null;try{old=JSON.parse(localStorage.getItem('ninja_owned'));}catch(e){}   // 遷移更舊版持有卡(計數map)
@@ -317,6 +317,7 @@ function loadSave(){let s=null;try{s=JSON.parse(localStorage.getItem(SAVE_KEY));
     if(!s.cards.length)STARTER.forEach(id=>s.cards.push({u:'k'+(++seq),id}));
     s.uidSeq=seq;}
   if(s.uidSeq==null)s.uidSeq=s.cards.length;
+  if(s.ver==null)s.ver=1;   // schema 版號:之後改結構就升版+寫遷移(雲存遷移用)
   delete s.owned;   // 不再以 owned 為來源(改由 cards 派生)
   if(!Array.isArray(s.team)||s.team.length!==5)s.team=STARTER.slice();
   if(!s.progress)s.progress={cleared:false,clears:0,bestStage:0};
@@ -422,6 +423,7 @@ function addRewards(exp,coins,stones){return mutSave(s=>{const m=s.meta;m.coins=
   let need=expForLevel(m.rank),ups=0;while(m.exp>=need){m.exp-=need;m.rank++;m.staminaMax+=2;m.stamina=m.staminaMax;ups++;need=expForLevel(m.rank);}m._ups=ups;}).meta;}
 function spendStones(n){let ok=false;mutSave(s=>{if((s.meta.stones||0)>=n){s.meta.stones-=n;ok=true;}});return ok;}
 function refillStamina(){mutSave(s=>{s.meta.stamina=s.meta.staminaMax;s.meta.staTs=Date.now();});}
+function devSetAllLv(lv){lv=Math.max(1,Math.min(MAXLV,lv));mutSave(s=>{const ids={};s.cards.forEach(c=>ids[c.id]=1);Object.keys(ids).forEach(id=>{s.cardLv[id]={lv:lv,exp:0};});});}   // 測試:全持有卡設成指定等級
 const RANK_POOL={genin:ROSTER.filter(c=>c.rank==='genin'),chunin:ROSTER.filter(c=>c.rank==='chunin'),jonin:ROSTER.filter(c=>c.rank==='jonin'),kage:ROSTER.filter(c=>c.rank==='kage')};
 function pickDrop(spec){let pool=ROSTER;if(spec.el)pool=pool.filter(c=>c.el===spec.el);
   if(spec.rank)pool=pool.filter(c=>c.rank===spec.rank); else pool=pool.filter(c=>c.rank!=='kage');   // 影忍只能抽卡取得,不從刷關掉落
@@ -675,10 +677,18 @@ class GameScene extends Phaser.Scene{
     const df=this.diff||DIFFS_BY.normal;
     // 反制混搭:上級以上 + 元素關 → 把一隻「主屬非王敵」換成「剋你剋牌」的懲罰屬(逼你不能帶純剋牌)
     let pun=null; if(df.counter&&this.dungeon.el){const C=counterOf(this.dungeon.el); pun=counterOf(C);} let punished=false;
+    // 另類護盾門檻:上級↑;土/風關自己的招牌,地獄時全屬關全敵(土/火/水/雷=HIT15、風=combo2/3)
+    const dk=df.key, sig=(this.dungeon.el==='earth'||this.dungeon.el==='wind');
     this.enemies=defs.map(d=>{
       let el=d.el; if(pun&&!punished&&d.el===this.dungeon.el&&!d.boss){el=pun;punished=true;}
       const hp=Math.max(1,Math.round(d.hp*df.hp)), atk=Math.max(1,Math.round(d.atk*df.atk)), turns=Math.max(1,d.turns+(df.dt||0));
-      return {el,max:hp,hp:hp,atk:atk,interval:turns,timer:turns,burn:0,dead:false,boss:!!d.boss};
+      let gate=false;
+      if(dk==='advanced')gate=sig&&!!d.boss;            // 上級:只有最終王
+      else if(dk==='super')gate=sig&&this.stage>=2;     // 超級:第2、3關全敵
+      else if(dk==='hell')gate=!!this.dungeon.el;       // 地獄:全屬關全敵
+      let hitGate=0,comboGate=0;
+      if(gate){ if(this.dungeon.el==='wind')comboGate=2; else hitGate=15; }   // 逐塊 combo 較難維持→風關門檻統一 2(清要跨≥2宮或連續清)
+      return {el,max:hp,hp:hp,atk:atk,interval:turns,timer:turns,burn:0,dead:false,boss:!!d.boss,hitGate:hitGate,comboGate:comboGate};
     });
     const n=this.enemies.length, slot=380/n;
     this.enemies.forEach((e,i)=>{
@@ -704,13 +714,15 @@ class GameScene extends Phaser.Scene{
       e.mark=this.add.text(x,cy-szc/2-9,'▼',{fontFamily:EMOJIFONT,fontSize:'14px',color:'#ffd56a',fontStyle:'bold'}).setOrigin(0.5).setVisible(false);   // 目標指標(取代黃框)
       e.restY=e.sprite.y;   // 受擊擊退/回位的基準 y
       e.bob=this.tweens.add({targets:e.sprite,y:e.sprite.y-4,duration:1200,yoyo:true,repeat:-1,ease:'Sine.inOut'});
+      if(e.hitGate||e.comboGate){const gt=e.hitGate?('🛡'+e.hitGate+' HIT'):('🛡'+e.comboGate+' COMBO');   // 護盾門檻提示(教學:要清多大/連多久才打得到)
+        e.gateTx=this.add.text(x,cy+szc/2+9,gt,{fontFamily:EMOJIFONT,fontSize:'10px',color:'#cfe0ff',fontStyle:'bold',stroke:'#0a1420',strokeThickness:3}).setOrigin(0.5);}
     });
     // 敵方同層 z 序:敵中 > 敵左 > 敵右(越靠中央畫越上;同距時左>右)。依此由後往前加入容器
     const zorder=this.enemies.map((e,i)=>i).sort((a,b)=>{
       const da=Math.abs(this.enemies[a].card.x-CX), db=Math.abs(this.enemies[b].card.x-CX);
       return da!==db ? db-da : this.enemies[b].card.x-this.enemies[a].card.x;
     });
-    zorder.forEach(i=>{const e=this.enemies[i];[e.card,e.sprite,e.turnG,e.hpBg,e.hpFill,e.mark].forEach(o=>this.enemyG.add(o));});
+    zorder.forEach(i=>{const e=this.enemies[i];[e.card,e.sprite,e.turnG,e.hpBg,e.hpFill,e.mark,e.gateTx].filter(Boolean).forEach(o=>this.enemyG.add(o));});
     this.enemies.forEach((e,i)=>this.enemyEnter(e, i*120));   // 自遠方逼近入場(交錯)
     this.target=0;
   }
@@ -1040,7 +1052,8 @@ class GameScene extends Phaser.Scene{
   afterAction(fromBlock){
     this.stopStuckFX();   // 玩家一行動就收掉卡死循環提示(若仍卡死,handleStuck 會再開)
     this.refreshBoard(); this.renderTray();
-    this.fromBlock=!!fromBlock; try{this.resolve();}catch(err){console.error('resolve error',err);} this.fromBlock=false;   // 防遞迴:塊清出的消除不再生塊;try 防展演例外卡死整手
+    this.fromBlock=!!fromBlock; this._placeCleared=false; try{this.resolve();}catch(err){console.error('resolve error',err);} this.fromBlock=false;   // 防遞迴:塊清出的消除不再生塊;try 防展演例外卡死整手
+    if(!this._placeCleared)this.combo=0;   // 逐塊:這塊放下去沒清到任何東西→連段斷、combo 歸零
     if(this.tray.every(t=>t.used)){this.endHand();return;}  // 一手(3塊)放完→endHand 負責「等展演完才敵攻+補手+解鎖+卡死檢查」
     if(!this.anyPlaceable()){this.time.delayedCall(420,()=>this.handleStuck());}
     this.updateAll();
@@ -1159,7 +1172,7 @@ class GameScene extends Phaser.Scene{
       const seal=this.add.circle(cx,cy,14,hot,1).setBlendMode(ADD).setDepth(DEPTH.proj); this.tweens.add({targets:seal,scale:2.8,alpha:0,duration:200,ease:'Quad.out',onComplete:()=>seal.destroy()});
       if(shakeBig)this.cameras.main.shake(180,0.007);
       victims.forEach((v,k)=>{if(!v.sprite)return; this.time.delayedCall(k*45,()=>this.chakraBolt(cx,cy,v.sprite.x,v.sprite.y,color,v,dmg,1,hot));});
-      this.time.delayedCall(330,()=>{victims.forEach(v=>{v.hp=Math.max(0,v.hp-dmg);}); this.updateEnemies(); this.combo++; this.showCombo();});   // 彈著→扣血 + combo++
+      this.time.delayedCall(330,()=>{victims.forEach(v=>{if(v._blocked){if(v.sprite&&!v.dead)this.floatText(v.sprite.x,v.sprite.y-18,'🛡 擋下','#cfe0ff');}else{v.hp=Math.max(0,v.hp-dmg);}}); this.updateEnemies();});   // 彈著→扣血(被擋則只演盾);combo 已改在 resolve 同步加
     });
   }
   // combo 顯示在目標敵右上;數字越大字越大
@@ -1194,6 +1207,11 @@ class GameScene extends Phaser.Scene{
     if(this.firstClear){this.firstClear=false;track('first_clear');}
     data.cells.forEach(([r,c])=>{this.board[r][c]=null;});  // 立即從模型移除,避免重複觸發
     const n=data.cells.length;
+    this._placeCleared=true;   // 逐塊 combo:這塊有清到(沒清的塊由 afterAction 把 combo 歸零)
+    this.combo+=(data.hits&&data.hits.length)||0; this.showCombo();   // 連段同步累加(改在放塊當下,不再延遲到彈著→避免和歸零打架)
+    // 另類護盾:本手 HIT / 連段沒達門檻的敵人,這手不扣其 HP(演「🛡擋下」)
+    this.enemies.forEach(e=>{e._blocked=false;});
+    victims.forEach(v=>{v._blocked=((v.hitGate&&n<v.hitGate)||(v.comboGate&&this.combo<v.comboGate));});
     this.countFX(n);   // 盤面中央只留「n HIT」(清的格數);招式名/盤面 combo 已取消
     Object.keys(data.fx).forEach(e=>this.glowTeam(e));   // 參戰屬性的卡發亮
     const LEAD=460;   // 先讓 n HIT 跳出來
@@ -1326,7 +1344,8 @@ class GameScene extends Phaser.Scene{
 
   /* UI */
   updateAll(){this.updateEnemies();this.updateBars();}
-  updateEnemies(){this.enemies.forEach((e,i)=>{if(e.dead)return;
+  updateEnemies(){this.enemies.forEach((e,i)=>{if(e.gateTx)e.gateTx.setVisible(!e.dead);   // 死了藏護盾門檻徽章
+    if(e.dead)return;
     const tw=e.hpW*Math.max(0,e.hp/e.max);   // 血條動畫慢慢扣(不瞬間跳)
     if(Math.abs((e.hpFill.displayWidth||0)-tw)>0.5){if(e.hpTw)e.hpTw.stop();e.hpTw=this.tweens.add({targets:e.hpFill,displayWidth:tw,duration:480,ease:'Quart.out'});}   // 扣血先快後慢(Quart.out)
     else e.hpFill.displayWidth=tw;
@@ -1912,6 +1931,12 @@ class HomeScene extends Phaser.Scene{
     this.txt(CX,150,'🏆 序章通關 ×'+pr.clears+'    📖 收集 '+ownedCount()+'/'+ROSTER.length,'13px','#ffd56a',0.5);
     this.btn(CX,224,360,48,'📖 卡片圖鑑',()=>this.go('collection'),{col:0x2e2a3a,stroke:0x5a6a8a,color:'#cfe0ff'});
     this.btn(CX,290,360,48,'🔄 重置存檔(測試用)',()=>{localStorage.removeItem('ninja_save');localStorage.removeItem('ninja_owned');this.toast('已重置');this.switchTab('dungeon');},{col:0x3a201a,stroke:0x8a4a3a,color:'#ffb0a0'});
+    this.txt(CX,344,'🧪 測試工具(上架前移除)','12px','#9a8a6a',0.5);
+    const dev=(lv)=>{devSetAllLv(lv);this.toast('全卡 → LV'+lv);this.rebuild();};
+    this.btn(CX-120,384,112,42,'全卡 LV1',()=>dev(1),{col:0x24303a,stroke:0x4a6a8a,color:'#cfe0ff',fs:'13px'});
+    this.btn(CX,384,112,42,'全卡 LV10',()=>dev(10),{col:0x24303a,stroke:0x4a6a8a,color:'#cfe0ff',fs:'13px'});
+    this.btn(CX+120,384,112,42,'全卡 LV20',()=>dev(20),{col:0x24303a,stroke:0x4a6a8a,color:'#cfe0ff',fs:'13px'});
+    this.btn(CX,436,360,44,'⚡ 體力補滿(免費)',()=>{refillStamina();this.toast('體力補滿!');this.rebuild();},{col:0x2e3a22,stroke:0x6aaa4c,color:'#eafce0',bold:true,fs:'14px'});
   }
 }
 
