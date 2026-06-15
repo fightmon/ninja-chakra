@@ -303,7 +303,7 @@ const ACTIVE_SKILLS={
 function activeSkill(el){return ACTIVE_SKILLS[el]||null;}
 /* F6 統一存檔:持有卡 / 編隊 / 進度 / 設定 一個物件全自動存 localStorage */
 const SAVE_KEY='ninja_save';
-function defaultMeta(){return {rank:1,exp:0,coins:0,stones:30,stamina:50,staminaMax:50,staTs:null,pity:0,boxBuy:0};}   // 首登送 30 鑽;pity=結印保底;boxBuy=魔法石擴背包次數
+function defaultMeta(){return {rank:1,exp:0,coins:0,stones:30,stamina:50,staminaMax:50,staTs:null,pity:0,boxBuy:0,dayKey:null,dailyN:0};}   // 首登送 30 鑽;pity=結印保底;boxBuy=魔法石擴背包次數;dayKey/dailyN=每日登入
 function defaultSave(){const cards=STARTER.map((id,i)=>({u:'k'+(i+1),id}));return {ver:1,cards,uidSeq:STARTER.length,team:STARTER.slice(),cardLv:{},cardEvo:{},gems:{fire:0,water:0,thunder:0,earth:0,wind:0},progress:{cleared:false,clears:0,bestStage:0},meta:defaultMeta(),settings:{welcome:true}};}   // 個體制:每張卡=cards 陣列裡一個獨立個體(各佔一背包格)
 function writeSave(s){try{s.updatedAt=Date.now();localStorage.setItem(SAVE_KEY,JSON.stringify(s));}catch(e){}}   // 每次寫入蓋時間戳(雲端衝突解決:新覆舊)
 function loadSave(){let s=null;try{s=JSON.parse(localStorage.getItem(SAVE_KEY));}catch(e){}
@@ -424,6 +424,28 @@ function addRewards(exp,coins,stones){return mutSave(s=>{const m=s.meta;m.coins=
 function spendStones(n){let ok=false;mutSave(s=>{if((s.meta.stones||0)>=n){s.meta.stones-=n;ok=true;}});return ok;}
 function refillStamina(){mutSave(s=>{s.meta.stamina=s.meta.staminaMax;s.meta.staTs=Date.now();});}
 function devSetAllLv(lv){lv=Math.max(1,Math.min(MAXLV,lv));mutSave(s=>{const ids={};s.cards.forEach(c=>ids[c.id]=1);Object.keys(ids).forEach(id=>{s.cardLv[id]={lv:lv,exp:0};});});}   // 測試:全持有卡設成指定等級
+// 每日登入獎勵:7 天循環,寬鬆(每個歷天可領一次、漏天不歸零、循環)
+const DAILY=[
+  {t:'stones',v:1,ic:'💎',label:'魔法石 ×1'},
+  {t:'stones',v:1,ic:'💎',label:'魔法石 ×1'},
+  {t:'stones',v:1,ic:'💎',label:'魔法石 ×1'},
+  {t:'stones',v:1,ic:'💎',label:'魔法石 ×1'},
+  {t:'stones',v:1,ic:'💎',label:'魔法石 ×1'},
+  {t:'stones',v:1,ic:'💎',label:'魔法石 ×1'},
+  {t:'stones',v:6,ic:'🎁',label:'魔法石 ×6(全勤+5)'},
+];
+function todayKey(){const d=new Date();return d.getFullYear()+'-'+(d.getMonth()+1)+'-'+d.getDate();}
+function dailyAvailable(){return loadSave().meta.dayKey!==todayKey();}
+function dailyIndex(){return (loadSave().meta.dailyN||0)%7;}
+function claimDaily(){let res=null;mutSave(s=>{const m=s.meta;if(m.dayKey===todayKey())return;
+  const n=(m.dailyN||0)%7, rw=DAILY[n]; let gemEl=null;
+  if(rw.t==='coins')m.coins=(m.coins||0)+rw.v;
+  else if(rw.t==='stones')m.stones=(m.stones||0)+rw.v;
+  else if(rw.t==='stamina'){m.stamina=m.staminaMax;m.staTs=Date.now();}
+  else if(rw.t==='gem'){const e=['fire','water','thunder','earth','wind'][rnd(5)];s.gems[e]=(s.gems[e]||0)+rw.v;gemEl=e;}
+  m.dailyN=n+1; m.dayKey=todayKey();
+  res={day:n+1,ic:rw.ic,label:rw.label,gemEl};});
+  return res;}
 const RANK_POOL={genin:ROSTER.filter(c=>c.rank==='genin'),chunin:ROSTER.filter(c=>c.rank==='chunin'),jonin:ROSTER.filter(c=>c.rank==='jonin'),kage:ROSTER.filter(c=>c.rank==='kage')};
 function pickDrop(spec){let pool=ROSTER;if(spec.el)pool=pool.filter(c=>c.el===spec.el);
   if(spec.rank)pool=pool.filter(c=>c.rank===spec.rank); else pool=pool.filter(c=>c.rank!=='kage');   // 影忍只能抽卡取得,不從刷關掉落
@@ -1802,6 +1824,7 @@ class HomeScene extends Phaser.Scene{
   constructor(){super('home');}
   init(d){this.tab=(d&&d.tab)||this.tab||'dungeon';}
   create(){this.add.rectangle(CX,H/2,W,H,0x160f18);this.rebuild();
+    if(dailyAvailable())this.time.delayedCall(350,()=>this.showDaily());   // 每日登入獎勵(進大廳自動彈,領了才不再彈)
     this.scale.on('resize',()=>{const o=H;recomputeLayout();if(Math.abs(H-o)>3){this.scale.setGameSize(W,H);this.rebuild();}});}
   rebuild(){this.tweens.killAll();if(this.layer)this.layer.destroy();this.layer=this.add.container(0,0);this.topBar();this.body();this.nav();}
   L(o){this.layer.add(o);return o;}
@@ -1811,6 +1834,25 @@ class HomeScene extends Phaser.Scene{
     this.txt(x,y,label,o.fs||'15px',o.color||'#f3e9d8',0.5,o.bold);r.on('pointerup',cb);return r;}
   toast(msg){const t=this.add.text(CX,H/2,msg,{fontFamily:EMOJIFONT,fontSize:'15px',color:'#ffd56a',fontStyle:'bold',backgroundColor:'#000000cc',padding:{x:12,y:8}}).setOrigin(0.5).setDepth(2000);
     this.tweens.add({targets:t,alpha:0,delay:900,duration:400,onComplete:()=>t.destroy()});}
+  showDaily(){
+    if(this._dailyG)this._dailyG.destroy();
+    const g=this.add.container(0,0).setDepth(1600); this._dailyG=g; const cur=dailyIndex();
+    g.add(this.add.rectangle(CX,H/2,W,H,0x000000,0.86).setInteractive());
+    g.add(this.add.text(CX,H*0.20,'🎁 每日登入獎勵',{fontFamily:EMOJIFONT,fontSize:'19px',color:'#ffd56a',fontStyle:'bold'}).setOrigin(0.5));
+    g.add(this.add.text(CX,H*0.20+24,'每天登入可領一次',{fontFamily:EMOJIFONT,fontSize:'11px',color:'#bfb0a0'}).setOrigin(0.5));
+    const step=56, x0=CX-3*step, y=Math.round(H*0.40);
+    DAILY.forEach((rw,i)=>{const x=x0+i*step, on=i===cur, done=i<cur;
+      g.add(this.add.rectangle(x,y,50,70,on?0x3a3416:0x1f1810).setStrokeStyle(2,on?0xffd56a:0x4a3824));
+      g.add(this.add.text(x,y-23,'D'+(i+1),{fontFamily:EMOJIFONT,fontSize:'10px',color:on?'#ffd56a':'#9a8a6a'}).setOrigin(0.5));
+      g.add(this.add.text(x,y+2,rw.ic,{fontFamily:EMOJIFONT,fontSize:'22px'}).setOrigin(0.5).setAlpha(done?0.35:1));
+      if(done)g.add(this.add.text(x,y+20,'✓',{fontFamily:EMOJIFONT,fontSize:'12px',color:'#8fe08f',fontStyle:'bold'}).setOrigin(0.5));});
+    g.add(this.add.text(CX,y+60,'今天:'+DAILY[cur].ic+' '+DAILY[cur].label,{fontFamily:EMOJIFONT,fontSize:'15px',color:'#ffe08a',fontStyle:'bold'}).setOrigin(0.5));
+    const b=this.add.rectangle(CX,y+104,250,50,0x2e3a22).setStrokeStyle(2,0x6aaa4c).setInteractive();
+    g.add(b); g.add(this.add.text(CX,y+104,'領取',{fontFamily:EMOJIFONT,fontSize:'18px',color:'#eafce0',fontStyle:'bold'}).setOrigin(0.5));
+    b.on('pointerup',()=>{const r=claimDaily();g.destroy();this._dailyG=null;
+      if(r)this.toast('🎁 領到 '+r.ic+' '+r.label+(r.gemEl?'('+EL[r.gemEl].name+'屬)':''));this.rebuild();});
+    const cl=this.add.text(W-22,H*0.13,'✕',{fontFamily:EMOJIFONT,fontSize:'18px',color:'#cfc0a8',fontStyle:'bold'}).setOrigin(0.5).setInteractive();
+    cl.on('pointerup',()=>{g.destroy();this._dailyG=null;}); g.add(cl);}
   go(key){this.scene.manager.start(key);this.scene.manager.stop('home');}
   switchTab(t){this.tab=t;this.gachaResult=null;this.rebuild();}
   topBar(){const m=getMeta();
