@@ -25,6 +25,7 @@ const EL = {
   thunder:{name:'雷', color:0xe6c12f, dark:0x473f1d, beats:'earth',   face:'🐲', fx:'⚡'},
   earth:  {name:'土', color:0xc8803a, dark:0x43331f, beats:'water',   face:'🗿', fx:'🪨'},
   water:  {name:'水', color:0x3a9be8, dark:0x1f3447, beats:'fire',    face:'🐙', fx:'💧'},
+  junk:   {name:'封', color:0x35323a, dark:0x1c1a20, beats:'',        face:'⬛', fx:'🔒'},   // 詛咒塊:敵人塞的封鎖塊(填滿不能放、清線才除)
 };
 const KEYS = ['fire','wind','thunder','earth','water'];
 const MONSTER_IMG = { water:'art/monsters/slime_water.png', fire:'art/monsters/slime_fire.png', thunder:'art/monsters/slime_thunder.png', earth:'art/monsters/slime_earth.png', wind:'art/monsters/slime_wind.png' };   // 元素→怪物圖(五屬史萊姆);無對應則用 emoji 臉。圖檔放 001_website/art/monsters/
@@ -130,7 +131,7 @@ const DUNGEONS = {
     ],drops:[[{el:'wind',rate:0.8}],[{el:'wind',rate:1.0}],[{el:'wind',rate:1.0},{rank:'jonin',rate:0.2}]]},
   tower:{id:'tower',name:'結印之塔',emoji:'🗼',cost:20,stages:[
       {es:[{el:'fire',hp:800,atk:120,turns:2},{el:'water',hp:800,atk:120,turns:2}]},
-      {es:[{el:'thunder',hp:750,atk:110,turns:2},{el:'earth',hp:750,atk:110,turns:2},{el:'wind',hp:750,atk:110,turns:2}]},
+      {es:[{el:'thunder',hp:750,atk:110,turns:2,arch:'archmage'},{el:'earth',hp:750,atk:110,turns:2},{el:'wind',hp:750,atk:110,turns:2}]},
       {es:[{el:'fire',hp:5000,atk:210,turns:3,boss:true,phases:[{el:'fire',beh:'burn'},{el:'water',beh:'regen'},{el:'thunder',beh:'paralyze'},{el:'earth',beh:'hit'},{el:'wind',beh:'combo'}]}]},   // 魔王:五屬階段變身(每 20% 血換屬+換招牌行為,逼平衡隊)
     ],drops:[[{rank:'chunin',rate:1.0}],[{rank:'chunin',rate:1.0}],[{rank:'jonin',rate:1.0},{rank:'kage',rate:0.2}]]},
 };
@@ -156,6 +157,7 @@ const ARCH={
   caster:   {n:'術士',  atkM:0.9, hpM:0.9, beh:'paralyze'},  // 盤面技:麻痺鎖塊
   healer:   {n:'補師',  atkM:0.7, hpM:1.2, beh:'healAlly'},  // 治療全體友軍→先秒它
   hexer:    {n:'咒術士',atkM:0.95,hpM:0.95,beh:'burn'},      // 灼燒 DoT
+  archmage: {n:'大術士',atkM:0.9, hpM:1.3, beh:'junk'},      // 封鎖:在盤面塞詛咒塊(填滿不能放,清線才除)
 };
 // 純查克拉(水塊)形狀:大小=水等級。可重疊放置(只填空格、重疊處忽略)
 const WILD_SHAPES = {1:[[0,0]], 2:[[0,0],[0,1]], 3:[[0,0],[0,1],[0,2]], 4:[[0,0],[0,1],[1,0],[1,1]], 5:[[0,1],[1,0],[1,1],[1,2],[2,1]],
@@ -712,7 +714,7 @@ class GameScene extends Phaser.Scene{
       mk(15,ld.desc,'14px','#ffeec4',4);
     });
     this.spawnEnemies(); this.refreshBoard(); this.renderTray(); this.updateAll(); this.renderCharges(); this.renderStored(); this.syncMoraleState();   // 進關依目前鬥志同步「極」脈動(跨關帶來的極要持續演)
-    this.paraTick=0; this.applyParalyze();   // ⚡雷·麻痺:首手就可能鎖塊
+    this.paraTick=0; this.junkTick=0; this.applyParalyze(); this.applyJunk();   // ⚡麻痺/🔒封鎖:首手就可能觸發
     if(this.stage===1 && !tutSeen() && !this.hitLab)this.showTutorial();   // 首次遊玩→3 步教學
   }
   spawnEnemies(){
@@ -736,14 +738,15 @@ class GameScene extends Phaser.Scene{
       else if(A)beh=behOn?A.beh:null;                    // 有兵種→用兵種行為
       else if(myBeh&&covered(d))beh=myBeh;               // 無兵種→元素預設行為
       else if(dk==='hell'&&dEl&&!myBeh)beh='hit';        // 無招牌屬(塔)地獄→通用 HIT15
-      let hitGate=0,comboGate=0,dot=0,regen=0,paralyze=0,healAlly=0;
+      let hitGate=0,comboGate=0,dot=0,regen=0,paralyze=0,healAlly=0,junk=0;
       if(beh==='hit')hitGate=15;
       else if(beh==='combo')comboGate=2;
       else if(beh==='burn')dot=({advanced:0.02,super:0.03,hell:0.04}[dk])||0.03;     // 灼燒:每手扣玩家 maxHP×率
       else if(beh==='regen')regen=({advanced:0.04,super:0.06,hell:0.08}[dk])||0.06;  // 自我回血:每手回自身 max×率
       else if(beh==='paralyze')paralyze=(dk==='advanced')?2:1;                       // 麻痺:每 N 手鎖 1 塊托盤
       else if(beh==='healAlly')healAlly=({advanced:0.04,super:0.06,hell:0.08}[dk])||0.05;  // 補師:每手治療全體友軍 max×率
-      return {el,max:hp,hp:hp,atk:atk,interval:turns,timer:turns,burn:0,dead:false,boss:!!d.boss,hitGate:hitGate,comboGate:comboGate,dot:dot,regen:regen,paralyze:paralyze,healAlly:healAlly,phases:phases,phaseIdx:0,arch:d.arch||null};
+      else if(beh==='junk')junk=(dk==='advanced')?3:2;                               // 封鎖:每 N 手在盤面塞 1 條詛咒塊
+      return {el,max:hp,hp:hp,atk:atk,interval:turns,timer:turns,burn:0,dead:false,boss:!!d.boss,hitGate:hitGate,comboGate:comboGate,dot:dot,regen:regen,paralyze:paralyze,healAlly:healAlly,junk:junk,phases:phases,phaseIdx:0,arch:d.arch||null};
     });
     const n=this.enemies.length, slot=380/n;
     this.enemies.forEach((e,i)=>{
@@ -771,7 +774,7 @@ class GameScene extends Phaser.Scene{
       e.bob=this.tweens.add({targets:e.sprite,y:e.sprite.y-4,duration:1200,yoyo:true,repeat:-1,ease:'Sine.inOut'});
       let gt=null,gc='#cfe0ff';   // 招牌行為徽章(教學)
       if(e.hitGate){gt='🛡'+e.hitGate+' HIT';} else if(e.comboGate){gt='🛡'+e.comboGate+' COMBO';}
-      else if(e.dot){gt='🔥 灼燒';gc='#ffb09a';} else if(e.regen){gt='💚 回血';gc='#9ae0a8';} else if(e.paralyze){gt='⚡ 麻痺';gc='#ffe98a';} else if(e.healAlly){gt='💚 補師';gc='#9ae0a8';}
+      else if(e.dot){gt='🔥 灼燒';gc='#ffb09a';} else if(e.regen){gt='💚 回血';gc='#9ae0a8';} else if(e.paralyze){gt='⚡ 麻痺';gc='#ffe98a';} else if(e.healAlly){gt='💚 補師';gc='#9ae0a8';} else if(e.junk){gt='🔒 封鎖';gc='#c4a8e0';}
       if(gt){e.gateTx=this.add.text(x,cy+szc/2+9,gt,{fontFamily:EMOJIFONT,fontSize:'10px',color:gc,fontStyle:'bold',stroke:'#0a1420',strokeThickness:3}).setOrigin(0.5);}
     });
     // 敵方同層 z 序:敵中 > 敵左 > 敵右(越靠中央畫越上;同距時左>右)。依此由後往前加入容器
@@ -1142,7 +1145,7 @@ class GameScene extends Phaser.Scene{
         if(healR>0)this.enemies.forEach(e=>{if(!e.dead){const hh=Math.max(1,Math.round(e.max*healR));e.hp=Math.min(e.max,e.hp+hh);if(e.sprite)this.floatText(e.sprite.x,e.sprite.y-24,'💚+'+hh,'#74e09a');}});
         this.charge=this.charge.map((c,i)=>{const a=activeSkill(this.teamCards[i].el);return a?Math.min(a.cd,(c||0)+1):c;});   // 主動技蓄力+1
         this.renderCharges();
-        this.refill(); this.renderTray(); this.updateAll(); this.applyParalyze();   // ⚡雷·麻痺:補新手後可能再鎖 1 塊
+        this.refill(); this.renderTray(); this.updateAll(); this.applyParalyze(); this.applyJunk();   // ⚡麻痺/🔒封鎖:補新手後可能觸發
       }catch(err){console.error('endHand error',err);}
       finally{ this.locked=false; }   // ★ 無論如何都解鎖,杜絕卡死
       if(!this.anyPlaceable())this.time.delayedCall(420,()=>this.handleStuck());
@@ -1230,6 +1233,17 @@ class GameScene extends Phaser.Scene{
     if(cand.length<2)return;   // 至少留 1 塊,不會鎖到沒得玩
     const li=cand[rnd(cand.length)]; this.tray[li].locked=true; this.renderTray();
     this.tonFloat('⚡ 麻痺!1 塊被鎖','#ffe98a');}
+  // 🔒 封鎖(大術士/魔王):每 N 手在盤面找一條 1×3/3×1 空格,塞詛咒塊(填滿不能放,清掉那條線才除)
+  applyJunk(){if(this.hitLab)return;
+    const ivs=this.enemies.filter(e=>!e.dead&&e.junk>0).map(e=>e.junk); if(!ivs.length)return;
+    this.junkTick=(this.junkTick||0)+1; if(this.junkTick<Math.min(...ivs))return; this.junkTick=0;
+    const horiz=rnd(2)===0, cands=[];
+    if(horiz){for(let r=0;r<N;r++)for(let c=0;c<=N-3;c++)if(!this.board[r][c]&&!this.board[r][c+1]&&!this.board[r][c+2])cands.push([[r,c],[r,c+1],[r,c+2]]);}
+    else{for(let c=0;c<N;c++)for(let r=0;r<=N-3;r++)if(!this.board[r][c]&&!this.board[r+1][c]&&!this.board[r+2][c])cands.push([[r,c],[r+1,c],[r+2,c]]);}
+    if(!cands.length)return;   // 沒連續空格可塞就跳過
+    cands[rnd(cands.length)].forEach(([r,c])=>{this.board[r][c]={el:'junk'};});
+    this.refreshBoard(); this.tonFloat('🔒 封鎖!一條被詛咒(清掉那線才除)','#c4a8e0');
+    if(!this.anyPlaceable())this.time.delayedCall(420,()=>this.handleStuck());}
   // 👑 魔王階段變身:隨血量切到下一屬,換屬+換招牌行為+演出
   bossTransform(e){const ph=e.phases[e.phaseIdx]; if(!ph)return; e.el=ph.el;
     const dk=(this.diff&&this.diff.key)||'normal', beh=ph.beh;
@@ -1241,7 +1255,7 @@ class GameScene extends Phaser.Scene{
     if(e.sprite&&e.sprite.setText)e.sprite.setText(EL[e.el].face);   // emoji 臉換屬
     let gt='',gc='#cfe0ff';
     if(e.hitGate)gt='🛡'+e.hitGate+' HIT'; else if(e.comboGate)gt='🛡'+e.comboGate+' COMBO';
-    else if(e.dot){gt='🔥 灼燒';gc='#ffb09a';} else if(e.regen){gt='💚 回血';gc='#9ae0a8';} else if(e.paralyze){gt='⚡ 麻痺';gc='#ffe98a';} else if(e.healAlly){gt='💚 補師';gc='#9ae0a8';}
+    else if(e.dot){gt='🔥 灼燒';gc='#ffb09a';} else if(e.regen){gt='💚 回血';gc='#9ae0a8';} else if(e.paralyze){gt='⚡ 麻痺';gc='#ffe98a';} else if(e.healAlly){gt='💚 補師';gc='#9ae0a8';} else if(e.junk){gt='🔒 封鎖';gc='#c4a8e0';}
     if(e.gateTx)e.gateTx.setText(gt).setColor(gc);
     if(e.hpFill)e.hpFill.setFillStyle(EL[e.el].color);   // 血條換屬色
     this.bossPhaseFX(e);}
