@@ -631,7 +631,7 @@ class GameScene extends Phaser.Scene{
     this.input.on('gameobjectdown',(p,obj)=>{
       const si=obj.getData('store'); if(si!=null && this.stored && this.stored[si]){this.startStoredDrag(si,p);return;}   // 卡上有屬塊→拖
       const i=obj.getData('slot');
-      if(i!=null && this.tray[i] && !this.tray[i].used) this.startDrag(i,p);});
+      if(i!=null && this.tray[i] && !this.tray[i].used && !this.tray[i].locked) this.startDrag(i,p);});
     this.input.on('pointermove',p=>{this.updateDrag(p);this.updateEarthMove(p);});
     this.input.on('pointerup',p=>{this.endDrag(p);this.endEarthMove(p);});
     this.input.on('pointerdown',p=>{if(this.earthSel&&!this.earthDrag)this.startEarthMove(p);});
@@ -701,6 +701,7 @@ class GameScene extends Phaser.Scene{
       mk(15,ld.desc,'14px','#ffeec4',4);
     });
     this.spawnEnemies(); this.refreshBoard(); this.renderTray(); this.updateAll(); this.renderCharges(); this.renderStored(); this.syncMoraleState();   // 進關依目前鬥志同步「極」脈動(跨關帶來的極要持續演)
+    this.paraTick=0; this.applyParalyze();   // ⚡雷·麻痺:首手就可能鎖塊
     if(this.stage===1 && !tutSeen() && !this.hitLab)this.showTutorial();   // 首次遊玩→3 步教學
   }
   spawnEnemies(){
@@ -711,20 +712,21 @@ class GameScene extends Phaser.Scene{
     // 反制混搭:上級以上 + 元素關 → 把一隻「主屬非王敵」換成「剋你剋牌」的懲罰屬(逼你不能帶純剋牌)
     let pun=null; if(df.counter&&this.dungeon.el){const C=counterOf(this.dungeon.el); pun=counterOf(C);} let punished=false;
     // 敵人招牌行為(上級↑):每屬關自己的招牌(土=HIT護盾/風=combo護盾/火=灼燒/水=自我回血;雷未做→地獄通用HIT)
-    const dk=df.key, dEl=this.dungeon.el, SIG={earth:'hit',wind:'combo',fire:'burn',water:'regen'}, myBeh=SIG[dEl];
+    const dk=df.key, dEl=this.dungeon.el, SIG={earth:'hit',wind:'combo',fire:'burn',water:'regen',thunder:'paralyze'}, myBeh=SIG[dEl];
     const covered=(d)=>{ if(dk==='advanced')return !!d.boss; if(dk==='super')return this.stage>=2; if(dk==='hell')return true; return false; };   // 覆蓋:上級僅王/超級第2,3關/地獄全敵
     this.enemies=defs.map(d=>{
       let el=d.el; if(pun&&!punished&&d.el===dEl&&!d.boss){el=pun;punished=true;}
       const hp=Math.max(1,Math.round(d.hp*df.hp)), atk=Math.max(1,Math.round(d.atk*df.atk)), turns=Math.max(1,d.turns+(df.dt||0));
       let beh=null;
       if(myBeh&&covered(d))beh=myBeh;
-      else if(dk==='hell'&&dEl&&!myBeh)beh='hit';        // 雷關地獄→通用 HIT15
-      let hitGate=0,comboGate=0,dot=0,regen=0;
+      else if(dk==='hell'&&dEl&&!myBeh)beh='hit';        // 無招牌屬(塔)地獄→通用 HIT15
+      let hitGate=0,comboGate=0,dot=0,regen=0,paralyze=0;
       if(beh==='hit')hitGate=15;
       else if(beh==='combo')comboGate=2;
       else if(beh==='burn')dot=({advanced:0.02,super:0.03,hell:0.04}[dk])||0;     // 灼燒:每手扣玩家 maxHP×率
       else if(beh==='regen')regen=({advanced:0.04,super:0.06,hell:0.08}[dk])||0;  // 自我回血:每手回自身 max×率(試用版保守)
-      return {el,max:hp,hp:hp,atk:atk,interval:turns,timer:turns,burn:0,dead:false,boss:!!d.boss,hitGate:hitGate,comboGate:comboGate,dot:dot,regen:regen};
+      else if(beh==='paralyze')paralyze=(dk==='advanced')?2:1;                    // 麻痺:每 N 手鎖 1 塊托盤(上級每2手、超級↑每手)
+      return {el,max:hp,hp:hp,atk:atk,interval:turns,timer:turns,burn:0,dead:false,boss:!!d.boss,hitGate:hitGate,comboGate:comboGate,dot:dot,regen:regen,paralyze:paralyze};
     });
     const n=this.enemies.length, slot=380/n;
     this.enemies.forEach((e,i)=>{
@@ -752,7 +754,7 @@ class GameScene extends Phaser.Scene{
       e.bob=this.tweens.add({targets:e.sprite,y:e.sprite.y-4,duration:1200,yoyo:true,repeat:-1,ease:'Sine.inOut'});
       let gt=null,gc='#cfe0ff';   // 招牌行為徽章(教學)
       if(e.hitGate){gt='🛡'+e.hitGate+' HIT';} else if(e.comboGate){gt='🛡'+e.comboGate+' COMBO';}
-      else if(e.dot){gt='🔥 灼燒';gc='#ffb09a';} else if(e.regen){gt='💚 回血';gc='#9ae0a8';}
+      else if(e.dot){gt='🔥 灼燒';gc='#ffb09a';} else if(e.regen){gt='💚 回血';gc='#9ae0a8';} else if(e.paralyze){gt='⚡ 麻痺';gc='#ffe98a';}
       if(gt){e.gateTx=this.add.text(x,cy+szc/2+9,gt,{fontFamily:EMOJIFONT,fontSize:'10px',color:gc,fontStyle:'bold',stroke:'#0a1420',strokeThickness:3}).setOrigin(0.5);}
     });
     // 敵方同層 z 序:敵中 > 敵左 > 敵右(越靠中央畫越上;同距時左>右)。依此由後往前加入容器
@@ -961,6 +963,10 @@ class GameScene extends Phaser.Scene{
     // 特殊工具塊:亮色脈動光暈邊框 + 功能漢字(填/消/搬)→ 一眼看出是特殊塊
     const SP={water:{c:0x62b8f0,glow:0x8fd6ff,label:'填'},wind:{c:0x6ad06a,glow:0xb6ffae,label:'消'},earth:{c:0xd49a4a,glow:0xffc24a,label:'搬'}};
     this.tray.forEach((p,i)=>{if(p.used)return;
+      if(p.locked){const cont=this.add.container(this.traySlots[i],TRAY_Y,[]).setDepth(DEPTH.tray);   // ⚡麻痺鎖住:灰底+🔒,本手不能用
+        cont.add(this.add.rectangle(0,0,58,58,0x2a2620).setStrokeStyle(2,0x6a5a3a,0.8));
+        cont.add(this.add.text(0,0,'🔒',{fontFamily:EMOJIFONT,fontSize:'26px'}).setOrigin(0.5).setAlpha(0.85));
+        this.trayIcons.push(cont);return;}
       let maxr=0,maxc=0;p.c.forEach(([r,c])=>{maxr=Math.max(maxr,r);maxc=Math.max(maxc,c);});
       const span=Math.max(maxr,maxc)+1, s=Math.min(24,Math.floor(78/span)), pw=(maxc+1)*s, ph=(maxr+1)*s;   // 依最長邊連續縮放,塞進約 78px 高托盤格:小塊維持 24px,4/5 格長塊自動縮到一致高度、不頂出畫面
       const sp=SP[p.kind], cont=this.add.container(this.traySlots[i],TRAY_Y,[]).setDepth(DEPTH.tray);
@@ -1092,7 +1098,7 @@ class GameScene extends Phaser.Scene{
     this.refreshBoard(); this.renderTray();
     this.fromBlock=!!fromBlock; this._placeCleared=false; try{this.resolve();}catch(err){console.error('resolve error',err);} this.fromBlock=false;   // 防遞迴:塊清出的消除不再生塊;try 防展演例外卡死整手
     if(!this._placeCleared)this.combo=0;   // 逐塊:這塊放下去沒清到任何東西→連段斷、combo 歸零
-    if(this.tray.every(t=>t.used)){this.endHand();return;}  // 一手(3塊)放完→endHand 負責「等展演完才敵攻+補手+解鎖+卡死檢查」
+    if(this.tray.every(t=>t.used||t.locked)){this.endHand();return;}  // 一手放完(鎖住塊算跳過)→endHand 負責「等展演完才敵攻+補手+解鎖+卡死檢查」
     if(!this.anyPlaceable()){this.time.delayedCall(420,()=>this.handleStuck());}
     this.updateAll();
   }
@@ -1117,7 +1123,7 @@ class GameScene extends Phaser.Scene{
         this.enemies.forEach(e=>{if(!e.dead&&e.regen>0){const hh=Math.max(1,Math.round(e.max*e.regen));e.hp=Math.min(e.max,e.hp+hh);if(e.sprite)this.floatText(e.sprite.x,e.sprite.y-24,'💚+'+hh,'#74e09a');}});   // 💚水關自我回血:每隻回血敵每手回自身血
         this.charge=this.charge.map((c,i)=>{const a=activeSkill(this.teamCards[i].el);return a?Math.min(a.cd,(c||0)+1):c;});   // 主動技蓄力+1
         this.renderCharges();
-        this.refill(); this.renderTray(); this.updateAll();
+        this.refill(); this.renderTray(); this.updateAll(); this.applyParalyze();   // ⚡雷·麻痺:補新手後可能再鎖 1 塊
       }catch(err){console.error('endHand error',err);}
       finally{ this.locked=false; }   // ★ 無論如何都解鎖,杜絕卡死
       if(!this.anyPlaceable())this.time.delayedCall(420,()=>this.handleStuck());
@@ -1195,8 +1201,16 @@ class GameScene extends Phaser.Scene{
       this.tray[d.i].used=true; this.afterAction(true);
     } else { d.orig.forEach(s=>{this.board[s.r][s.c]={el:s.el};}); this.refreshBoard(); this.updateAll(); }
   }
-  anyPlaceable(){return this.tray.some(p=>{if(p.used)return false;
+  anyPlaceable(){return this.tray.some(p=>{if(p.used||p.locked)return false;
     for(let r=0;r<N;r++)for(let c=0;c<N;c++)if(canPlace(this.board,p.c,r,c,p.kind))return true;return false;});}
+  // ⚡雷·麻痺:有麻痺敵活著→每 interval 手鎖 1 塊托盤(留 ≥2 塊可用,不全鎖)
+  applyParalyze(){if(this.hitLab)return;
+    const ivs=this.enemies.filter(e=>!e.dead&&e.paralyze>0).map(e=>e.paralyze); if(!ivs.length)return;
+    this.paraTick=(this.paraTick||0)+1; if(this.paraTick<Math.min(...ivs))return; this.paraTick=0;
+    const cand=this.tray.map((t,i)=>i).filter(i=>this.tray[i]&&!this.tray[i].used&&!this.tray[i].locked);
+    if(cand.length<2)return;   // 至少留 1 塊,不會鎖到沒得玩
+    const li=cand[rnd(cand.length)]; this.tray[li].locked=true; this.renderTray();
+    this.tonFloat('⚡ 麻痺!1 塊被鎖','#ffe98a');}
 
   // 各屬區攻擊:該宮格子收束到「宮中心」→ 結印 → 射向敵人;彈著→該段扣血 + combo++(被彈著一次)
   zoneStrike(cx,cy,cells,color,dmg,victims,shakeBig){const ADD=Phaser.BlendModes.ADD, hot=shadeColor(color,0.18);   // hot=略提亮的屬色(不洗白)→ 攻擊明顯帶屬性色
