@@ -131,8 +131,8 @@ const DUNGEONS = {
   tower:{id:'tower',name:'結印之塔',emoji:'🗼',cost:20,stages:[
       {es:[{el:'fire',hp:800,atk:120,turns:2},{el:'water',hp:800,atk:120,turns:2}]},
       {es:[{el:'thunder',hp:750,atk:110,turns:2},{el:'earth',hp:750,atk:110,turns:2},{el:'wind',hp:750,atk:110,turns:2}]},
-      {es:[{el:'thunder',hp:1200,atk:140,turns:2},{el:'water',hp:3000,atk:240,turns:3,boss:true},{el:'fire',hp:1200,atk:140,turns:2}]},
-    ],drops:[[{rank:'chunin',rate:1.0}],[{rank:'chunin',rate:1.0}],[{rank:'jonin',rate:0.5},{rank:'chunin',rate:1.0}]]},
+      {es:[{el:'fire',hp:5000,atk:210,turns:3,boss:true,phases:[{el:'fire',beh:'burn'},{el:'water',beh:'regen'},{el:'thunder',beh:'paralyze'},{el:'earth',beh:'hit'},{el:'wind',beh:'combo'}]}]},   // 魔王:五屬階段變身(每 20% 血換屬+換招牌行為,逼平衡隊)
+    ],drops:[[{rank:'chunin',rate:1.0}],[{rank:'chunin',rate:1.0}],[{rank:'jonin',rate:1.0},{rank:'kage',rate:0.2}]]},
 };
 const STAGES = DUNGEONS.prologue.stages;   // 相容舊引用
 const ELEM_DUNGEONS=['fire','water','thunder','earth','wind'];
@@ -424,6 +424,7 @@ function addRewards(exp,coins,stones){return mutSave(s=>{const m=s.meta;m.coins=
 function spendStones(n){let ok=false;mutSave(s=>{if((s.meta.stones||0)>=n){s.meta.stones-=n;ok=true;}});return ok;}
 function refillStamina(){mutSave(s=>{s.meta.stamina=s.meta.staminaMax;s.meta.staTs=Date.now();});}
 function devSetAllLv(lv){lv=Math.max(1,Math.min(MAXLV,lv));mutSave(s=>{const ids={};s.cards.forEach(c=>ids[c.id]=1);Object.keys(ids).forEach(id=>{s.cardLv[id]={lv:lv,exp:0};});});}   // 測試:全持有卡設成指定等級
+function devUnlockAll(){mutSave(s=>{['prologue','fire','water','thunder','earth','wind','tower'].forEach(id=>{s.progress.dungeonsCleared[id]=true;});s.progress.cleared=true;});}   // 測試:解鎖全關(含塔)
 // 每日登入獎勵:7 天循環,寬鬆(每個歷天可領一次、漏天不歸零、循環)
 const DAILY=[
   {t:'stones',v:1,ic:'💎',label:'魔法石 ×1'},
@@ -717,16 +718,18 @@ class GameScene extends Phaser.Scene{
     this.enemies=defs.map(d=>{
       let el=d.el; if(pun&&!punished&&d.el===dEl&&!d.boss){el=pun;punished=true;}
       const hp=Math.max(1,Math.round(d.hp*df.hp)), atk=Math.max(1,Math.round(d.atk*df.atk)), turns=Math.max(1,d.turns+(df.dt||0));
+      const phases=d.phases||null;
       let beh=null;
-      if(myBeh&&covered(d))beh=myBeh;
+      if(phases){el=phases[0].el;beh=phases[0].beh;}     // 魔王:初始用 phase[0] 的屬+行為(之後隨血量變身)
+      else if(myBeh&&covered(d))beh=myBeh;
       else if(dk==='hell'&&dEl&&!myBeh)beh='hit';        // 無招牌屬(塔)地獄→通用 HIT15
       let hitGate=0,comboGate=0,dot=0,regen=0,paralyze=0;
       if(beh==='hit')hitGate=15;
       else if(beh==='combo')comboGate=2;
-      else if(beh==='burn')dot=({advanced:0.02,super:0.03,hell:0.04}[dk])||0;     // 灼燒:每手扣玩家 maxHP×率
-      else if(beh==='regen')regen=({advanced:0.04,super:0.06,hell:0.08}[dk])||0;  // 自我回血:每手回自身 max×率(試用版保守)
-      else if(beh==='paralyze')paralyze=(dk==='advanced')?2:1;                    // 麻痺:每 N 手鎖 1 塊托盤(上級每2手、超級↑每手)
-      return {el,max:hp,hp:hp,atk:atk,interval:turns,timer:turns,burn:0,dead:false,boss:!!d.boss,hitGate:hitGate,comboGate:comboGate,dot:dot,regen:regen,paralyze:paralyze};
+      else if(beh==='burn')dot=({advanced:0.02,super:0.03,hell:0.04}[dk])||0.03;     // 灼燒:每手扣玩家 maxHP×率
+      else if(beh==='regen')regen=({advanced:0.04,super:0.06,hell:0.08}[dk])||0.06;  // 自我回血:每手回自身 max×率
+      else if(beh==='paralyze')paralyze=(dk==='advanced')?2:1;                       // 麻痺:每 N 手鎖 1 塊托盤
+      return {el,max:hp,hp:hp,atk:atk,interval:turns,timer:turns,burn:0,dead:false,boss:!!d.boss,hitGate:hitGate,comboGate:comboGate,dot:dot,regen:regen,paralyze:paralyze,phases:phases,phaseIdx:0};
     });
     const n=this.enemies.length, slot=380/n;
     this.enemies.forEach((e,i)=>{
@@ -1211,6 +1214,27 @@ class GameScene extends Phaser.Scene{
     if(cand.length<2)return;   // 至少留 1 塊,不會鎖到沒得玩
     const li=cand[rnd(cand.length)]; this.tray[li].locked=true; this.renderTray();
     this.tonFloat('⚡ 麻痺!1 塊被鎖','#ffe98a');}
+  // 👑 魔王階段變身:隨血量切到下一屬,換屬+換招牌行為+演出
+  bossTransform(e){const ph=e.phases[e.phaseIdx]; if(!ph)return; e.el=ph.el;
+    const dk=(this.diff&&this.diff.key)||'normal', beh=ph.beh;
+    e.hitGate=0;e.comboGate=0;e.dot=0;e.regen=0;e.paralyze=0;
+    if(beh==='hit')e.hitGate=15; else if(beh==='combo')e.comboGate=2;
+    else if(beh==='burn')e.dot=({advanced:0.02,super:0.03,hell:0.04}[dk])||0.03;
+    else if(beh==='regen')e.regen=({advanced:0.04,super:0.06,hell:0.08}[dk])||0.06;
+    else if(beh==='paralyze')e.paralyze=(dk==='advanced')?2:1;
+    if(e.sprite&&e.sprite.setText)e.sprite.setText(EL[e.el].face);   // emoji 臉換屬
+    let gt='',gc='#cfe0ff';
+    if(e.hitGate)gt='🛡'+e.hitGate+' HIT'; else if(e.comboGate)gt='🛡'+e.comboGate+' COMBO';
+    else if(e.dot){gt='🔥 灼燒';gc='#ffb09a';} else if(e.regen){gt='💚 回血';gc='#9ae0a8';} else if(e.paralyze){gt='⚡ 麻痺';gc='#ffe98a';}
+    if(e.gateTx)e.gateTx.setText(gt).setColor(gc);
+    if(e.hpFill)e.hpFill.setFillStyle(EL[e.el].color);   // 血條換屬色
+    this.bossPhaseFX(e);}
+  bossPhaseFX(e){const col=EL[e.el].color;
+    const t=this.add.text(CX,BATTLE_CY,'👑 魔王變身 · '+EL[e.el].name+'!',{fontFamily:EMOJIFONT,fontSize:'24px',color:'#fff',fontStyle:'bold',stroke:'#1a0d05',strokeThickness:6}).setOrigin(0.5).setDepth(DEPTH.fx).setScale(0.4);
+    this.tweens.add({targets:t,scale:1,duration:320,ease:'Back.out'}); this.tweens.add({targets:t,alpha:0,delay:1100,duration:420,onComplete:()=>t.destroy()});
+    const f=this.add.rectangle(CX,H/2,W,H,col,0.32).setDepth(DEPTH.flash); this.tweens.add({targets:f,alpha:0,duration:450,onComplete:()=>f.destroy()});
+    if(e.sprite)this.tweens.add({targets:e.sprite,scaleX:e.baseScale*1.3,scaleY:e.baseScale*1.3,duration:160,yoyo:true});
+    this.cameras.main.shake(160,0.006);}
 
   // 各屬區攻擊:該宮格子收束到「宮中心」→ 結印 → 射向敵人;彈著→該段扣血 + combo++(被彈著一次)
   zoneStrike(cx,cy,cells,color,dmg,victims,shakeBig){const ADD=Phaser.BlendModes.ADD, hot=shadeColor(color,0.18);   // hot=略提亮的屬色(不洗白)→ 攻擊明顯帶屬性色
@@ -1401,6 +1425,7 @@ class GameScene extends Phaser.Scene{
   updateAll(){this.updateEnemies();this.updateBars();}
   updateEnemies(){this.enemies.forEach((e,i)=>{if(e.gateTx)e.gateTx.setVisible(!e.dead);   // 死了藏護盾門檻徽章
     if(e.dead)return;
+    if(e.phases){const idx=Math.min(e.phases.length-1,Math.max(0,Math.floor((1-e.hp/e.max)*e.phases.length))); if(idx>e.phaseIdx){e.phaseIdx=idx;this.bossTransform(e);}}   // 👑 魔王:血量過門檻→變身下一屬
     const tw=e.hpW*Math.max(0,e.hp/e.max);   // 血條動畫慢慢扣(不瞬間跳)
     if(Math.abs((e.hpFill.displayWidth||0)-tw)>0.5){if(e.hpTw)e.hpTw.stop();e.hpTw=this.tweens.add({targets:e.hpFill,displayWidth:tw,duration:480,ease:'Quart.out'});}   // 扣血先快後慢(Quart.out)
     else e.hpFill.displayWidth=tw;
@@ -2011,7 +2036,8 @@ class HomeScene extends Phaser.Scene{
     this.btn(CX-120,384,112,42,'全卡 LV1',()=>dev(1),{col:0x24303a,stroke:0x4a6a8a,color:'#cfe0ff',fs:'13px'});
     this.btn(CX,384,112,42,'全卡 LV10',()=>dev(10),{col:0x24303a,stroke:0x4a6a8a,color:'#cfe0ff',fs:'13px'});
     this.btn(CX+120,384,112,42,'全卡 LV20',()=>dev(20),{col:0x24303a,stroke:0x4a6a8a,color:'#cfe0ff',fs:'13px'});
-    this.btn(CX,436,360,44,'⚡ 體力補滿(免費)',()=>{refillStamina();this.toast('體力補滿!');this.rebuild();},{col:0x2e3a22,stroke:0x6aaa4c,color:'#eafce0',bold:true,fs:'14px'});
+    this.btn(CX-92,436,172,44,'⚡ 體力補滿',()=>{refillStamina();this.toast('體力補滿!');this.rebuild();},{col:0x2e3a22,stroke:0x6aaa4c,color:'#eafce0',bold:true,fs:'13px'});
+    this.btn(CX+92,436,172,44,'🔓 解鎖全關',()=>{devUnlockAll();this.toast('已解鎖全關(含塔魔王)');this.rebuild();},{col:0x2a2440,stroke:0x8c6aff,color:'#e0d0ff',bold:true,fs:'13px'});
   }
 }
 
