@@ -132,7 +132,7 @@ const DUNGEONS = {
   tower:{id:'tower',name:'結印之塔',emoji:'🗼',cost:20,stages:[
       {es:[{el:'fire',hp:800,atk:120,turns:2},{el:'water',hp:800,atk:120,turns:2}]},
       {es:[{el:'thunder',hp:750,atk:110,turns:2,arch:'archmage'},{el:'earth',hp:750,atk:110,turns:2},{el:'wind',hp:750,atk:110,turns:2}]},
-      {es:[{el:'fire',hp:5000,atk:210,turns:3,boss:true,phases:[{el:'fire',beh:'burn'},{el:'water',beh:'regen'},{el:'thunder',beh:'paralyze'},{el:'earth',beh:'hit'},{el:'wind',beh:'combo'}]}]},   // 魔王:五屬階段變身(每 20% 血換屬+換招牌行為,逼平衡隊)
+      {es:[{el:'fire',hp:3200,atk:210,turns:3,boss:true,phases:[{el:'fire',beh:'burn'},{el:'water',beh:'regen'},{el:'thunder',beh:'paralyze'},{el:'earth',beh:'hit'},{el:'wind',beh:'combo'}]}]},   // 魔王:五屬階段變身(每 20% 血換屬+換招牌行為,逼平衡隊);血砍3200讓強隊在超級/地獄打得死(模擬5000時連★3LV20都0%)
     ],drops:[[{rank:'chunin',rate:1.0}],[{rank:'chunin',rate:1.0}],[{rank:'jonin',rate:1.0},{rank:'kage',rate:0.2}]]},
 };
 const STAGES = DUNGEONS.prologue.stages;   // 相容舊引用
@@ -143,7 +143,7 @@ const DIFFS=[
   {key:'beginner', name:'初級',emoji:'🌱',hp:0.7, atk:0.7, dt:+1, staM:0.7, rwd:0.7, rec:'別全帶被剋',           col:0x8fd16a},
   {key:'normal',   name:'中級',emoji:'⚔️',hp:1.0, atk:1.0, dt:0,  staM:1.0, rwd:1.0, rec:'對屬 2 張',            col:0x6ab0e0},
   {key:'advanced', name:'上級',emoji:'🔥',hp:1.35,atk:1.2, dt:0,  staM:1.3, rwd:1.5, rec:'卡 LV5+', counter:true, col:0xe0a64a},
-  {key:'super',    name:'超級',emoji:'💀',hp:1.8, atk:1.45,dt:-1, staM:1.6, rwd:2.2, rec:'卡 LV10+',counter:true, col:0xe0653a},
+  {key:'super',    name:'超級',emoji:'💀',hp:1.65,atk:1.45,dt:-1, staM:1.6, rwd:2.2, rec:'卡 LV10+',counter:true, col:0xe0653a},
   {key:'hell',     name:'地獄',emoji:'☠️',hp:2.4, atk:1.8, dt:-1, staM:2.0, rwd:3.5, rec:'卡 LV20', counter:true, col:0xb44ae0},
 ];
 const DIFFS_BY={}; DIFFS.forEach(d=>DIFFS_BY[d.key]=d);
@@ -740,9 +740,9 @@ class GameScene extends Phaser.Scene{
       else if(dk==='hell'&&dEl&&!myBeh)beh='hit';        // 無招牌屬(塔)地獄→通用 HIT15
       let hitGate=0,comboGate=0,dot=0,regen=0,paralyze=0,healAlly=0,junk=0;
       if(beh==='hit')hitGate=15;
-      else if(beh==='combo')comboGate=2;
+      else if(beh==='combo')comboGate=(dk==='advanced')?2:3;   // 風combo護盾:上級2、超級/地獄3(逼維持更長連段)
       else if(beh==='burn')dot=({advanced:0.02,super:0.03,hell:0.04}[dk])||0.03;     // 灼燒:每手扣玩家 maxHP×率
-      else if(beh==='regen')regen=({advanced:0.04,super:0.06,hell:0.08}[dk])||0.06;  // 自我回血:每手回自身 max×率
+      else if(beh==='regen')regen=({advanced:0.04,super:0.06,hell:0.06}[dk])||0.06;  // 自我回血:每手回自身 max×率
       else if(beh==='paralyze')paralyze=(dk==='advanced')?2:1;                       // 麻痺:每 N 手鎖 1 塊托盤
       else if(beh==='healAlly')healAlly=({advanced:0.04,super:0.06,hell:0.08}[dk])||0.05;  // 補師:每手治療全體友軍 max×率
       else if(beh==='junk')junk=(dk==='advanced')?3:2;                               // 封鎖:每 N 手在盤面塞 1 條詛咒塊
@@ -1248,9 +1248,9 @@ class GameScene extends Phaser.Scene{
   bossTransform(e){const ph=e.phases[e.phaseIdx]; if(!ph)return; e.el=ph.el;
     const dk=(this.diff&&this.diff.key)||'normal', beh=ph.beh;
     e.hitGate=0;e.comboGate=0;e.dot=0;e.regen=0;e.paralyze=0;
-    if(beh==='hit')e.hitGate=15; else if(beh==='combo')e.comboGate=2;
+    if(beh==='hit')e.hitGate=15; else if(beh==='combo')e.comboGate=(dk==='advanced')?2:3;
     else if(beh==='burn')e.dot=({advanced:0.02,super:0.03,hell:0.04}[dk])||0.03;
-    else if(beh==='regen')e.regen=({advanced:0.04,super:0.06,hell:0.08}[dk])||0.06;
+    else if(beh==='regen')e.regen=({advanced:0.04,super:0.06,hell:0.06}[dk])||0.06;
     else if(beh==='paralyze')e.paralyze=(dk==='advanced')?2:1;
     if(e.sprite&&e.sprite.setText)e.sprite.setText(EL[e.el].face);   // emoji 臉換屬
     let gt='',gc='#cfe0ff';
