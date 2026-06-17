@@ -57,7 +57,7 @@ const ROSTER = [
   {id:'c07', name:'雷獸',   el:'thunder', race:'yokai',  rank:'jonin',  atk:275, hp:300,  rcv:63,  attrs:['thunder']},
   {id:'c08', name:'電光',   el:'thunder', race:'human',  rank:'chunin', atk:176, hp:192,  rcv:40,  attrs:['thunder']},
   {id:'c09', name:'礫',     el:'earth',   race:'human',  rank:'chunin', atk:64,  hp:576,  rcv:32,  attrs:['earth']},
-  {id:'c10', name:'岩助',   el:'earth',   race:'human',  rank:'genin',  atk:40,  hp:360,  rcv:20,  attrs:['earth']},
+  {id:'c10', name:'土丸',   el:'earth',   race:'human',  rank:'genin',  atk:40,  hp:360,  rcv:20,  attrs:['earth']},
   {id:'c11', name:'颯',     el:'wind',    race:'human',  rank:'chunin', atk:122, hp:355,  rcv:40,  attrs:['wind']},
   {id:'c12', name:'疾風',   el:'wind',    race:'human',  rank:'genin',  atk:76,  hp:222,  rcv:25,  attrs:['wind']},
   /* ── 擴充:補滿五屬階梯 + 影忍(kage ★4)SSR 層,共 30 張;★4 靈獸=五屬神主角 ── */
@@ -726,16 +726,15 @@ class GameScene extends Phaser.Scene{
     let pun=null; if(df.counter&&this.dungeon.el){const C=counterOf(this.dungeon.el); pun=counterOf(C);} let punished=false;
     // 敵人招牌行為(上級↑):每屬關自己的招牌(土=HIT護盾/風=combo護盾/火=灼燒/水=自我回血;雷未做→地獄通用HIT)
     const dk=df.key, dEl=this.dungeon.el, SIG={earth:'hit',wind:'combo',fire:'burn',water:'regen',thunder:'paralyze'}, myBeh=SIG[dEl];
-    const covered=(d)=>{ if(dk==='advanced')return !!d.boss; if(dk==='super')return this.stage>=2; if(dk==='hell')return true; return false; };   // 元素預設行為覆蓋:上級僅王/超級第2,3關/地獄全敵
-    const behOn=(dk==='advanced'||dk==='super'||dk==='hell');   // 兵種行為:上級↑就開
+    const covered=(d)=>{ if(dk==='advanced')return !!d.boss; if(dk==='super')return !!d.boss; if(dk==='hell')return true; return false; };   // 特殊能力=魔王專屬:上級/超級僅魔王、地獄全敵(休閒導向,雜兵只給數值不放技)
     this.enemies=defs.map(d=>{
       let el=d.el; if(pun&&!punished&&d.el===dEl&&!d.boss){el=pun;punished=true;}
-      const A=(d.arch&&ARCH[d.arch])||null;   // 兵種:數值倍率永遠套、行為上級↑才開
+      const A=(d.arch&&ARCH[d.arch])||null;   // 兵種:數值倍率永遠套;行為只在 covered()(上級/超級魔王、地獄全敵)才開
       const hp=Math.max(1,Math.round(d.hp*df.hp*(A?A.hpM:1))), atk=Math.max(1,Math.round(d.atk*df.atk*(A?A.atkM:1))), turns=Math.max(1,d.turns+(df.dt||0));
       const phases=d.phases||null;
       let beh=null;
       if(phases){el=phases[0].el;beh=phases[0].beh;}     // 魔王:初始用 phase[0] 的屬+行為(之後隨血量變身)
-      else if(A)beh=behOn?A.beh:null;                    // 有兵種→用兵種行為
+      else if(A)beh=covered(d)?A.beh:null;               // 有兵種→只有 covered(魔王/地獄)才放兵種行為,否則純數值
       else if(myBeh&&covered(d))beh=myBeh;               // 無兵種→元素預設行為
       else if(dk==='hell'&&dEl&&!myBeh)beh='hit';        // 無招牌屬(塔)地獄→通用 HIT15
       let hitGate=0,comboGate=0,dot=0,regen=0,paralyze=0,healAlly=0,junk=0;
