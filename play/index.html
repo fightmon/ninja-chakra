@@ -28,7 +28,12 @@ const EL = {
   junk:   {name:'封', color:0x35323a, dark:0x1c1a20, beats:'',        face:'⬛', fx:'🔒'},   // 詛咒塊:敵人塞的封鎖塊(填滿不能放、清線才除)
 };
 const KEYS = ['fire','wind','thunder','earth','water'];
-const MONSTER_IMG = { water:'art/monsters/slime_water.png', fire:'art/monsters/slime_fire.png', thunder:'art/monsters/slime_thunder.png', earth:'art/monsters/slime_earth.png', wind:'art/monsters/slime_wind.png' };   // 元素→怪物圖(五屬史萊姆);無對應則用 emoji 臉。圖檔放 001_website/art/monsters/
+const MONSTER_IMG = { water:'art/monsters/slime_water.png', fire:'art/monsters/slime_fire.png', thunder:'art/monsters/slime_thunder.png', earth:'art/monsters/slime_earth.png', wind:'art/monsters/slime_wind.png' };   // 舊五屬史萊姆(fallback);無對應則用 emoji 臉。圖檔放 001_website/art/monsters/
+// 方塊敵正式美術:雜兵(grunt)+ 魔王三階(baby/beg/nrm)× 五屬。texture key→路徑;preload 全載,enemyTexKey() 依「是否魔王×難度×元素」挑圖
+const ENEMY_IMG = (()=>{ const m={}; ['fire','water','thunder','earth','wind'].forEach(el=>{ ['grunt','grunt2','guard','boss_baby','boss_beg','boss_nrm'].forEach(c=>{ m[c+'_'+el]='art/monsters/'+c+'_'+el+'.png'; }); }); return m; })();
+// 各敵圖「角色實體」在 320 畫布的高度佔比 h 與底緣 bottom(量測值)。渲染時改以「實體高度」對齊→不同圖體型一致;bottom 用來對齊腳底基準線。魔王再乘 BOSS_MUL 刻意略大。
+const ENEMY_FIT = { grunt:{h:0.65,bottom:0.867}, grunt2:{h:0.65,bottom:0.867}, guard:{h:0.69,bottom:0.869}, boss_baby:{h:0.65,bottom:0.867}, boss_beg:{h:0.69,bottom:0.869}, boss_nrm:{h:0.88,bottom:0.902} };
+const BOSS_MUL = 1.1;   // 魔王體型相對雜兵的刻意放大倍率(看得出是王、又不爆出敵格)
 const ELEMENT_BOXES = [0,2,4,6,8];
 const NEUTRAL_FILL = 0xc8a06a, NEUTRAL_DARK = 0x2c2114;
 const SHAPES = [
@@ -334,6 +339,9 @@ function loadSave(){let s=null;try{s=JSON.parse(localStorage.getItem(SAVE_KEY));
   if(!Array.isArray(s.team)||s.team.length!==5)s.team=STARTER.slice();
   if(!s.progress)s.progress={cleared:false,clears:0,bestStage:0};
   if(!s.progress.dungeonsCleared)s.progress.dungeonsCleared={};
+  if(!s.progress.clearsByDiff)s.progress.clearsByDiff={};   // 「關×難度」完成記錄(排行完成率用)
+  if(!s.records)s.records={bestHit:0,bestCombo:0};          // 我的紀錄(個人最佳)
+  if(!s.ach)s.ach={done:{},title:''};                       // 成就解鎖 + 裝備中的稱號
   if(!s.settings)s.settings={};
   if(!s.meta)s.meta=defaultMeta(); else {const _d=defaultMeta();for(const k in _d)if(s.meta[k]==null)s.meta[k]=_d[k];}
   if(!s.cardLv)s.cardLv={};
@@ -365,6 +373,41 @@ function recordStage(stage,won){mutSave(s=>{s.progress.bestStage=Math.max(s.prog
 function getProgress(){return loadSave().progress;}
 function markDungeonCleared(id){mutSave(s=>{if(!s.progress.dungeonsCleared)s.progress.dungeonsCleared={};s.progress.dungeonsCleared[id]=true;if(id==='prologue')s.progress.cleared=true;});}
 function isDungeonCleared(id){return !!(loadSave().progress.dungeonsCleared||{})[id];}
+/* ===== 排行 / 我的紀錄 / 成就稱號 ===== */
+const RANK_DUNGEONS=['fire','water','thunder','earth','wind','tower'];
+const RANK_DIFFS=['baby','beginner','normal','advanced','super','hell'];
+const KAGE_HEROES=['c15','c18','c22','c26','c30'];   // 5 主角神
+function recordClear(dungeonId,diffKey){mutSave(s=>{s.progress.clearsByDiff=s.progress.clearsByDiff||{};s.progress.clearsByDiff[dungeonId+':'+diffKey]=true;});}
+function bumpRecords(hit,combo){mutSave(s=>{s.records=s.records||{bestHit:0,bestCombo:0};if(hit>(s.records.bestHit||0))s.records.bestHit=hit;if(combo>(s.records.bestCombo||0))s.records.bestCombo=combo;});}
+function completionRate(){const cb=loadSave().progress.clearsByDiff||{};let done=0;RANK_DUNGEONS.forEach(d=>RANK_DIFFS.forEach(f=>{if(cb[d+':'+f])done++;}));const total=RANK_DUNGEONS.length*RANK_DIFFS.length;return {done,total,pct:Math.round(done/total*100)};}
+function highestDiffCleared(){const cb=loadSave().progress.clearsByDiff||{};for(let i=RANK_DIFFS.length-1;i>=0;i--)if(RANK_DUNGEONS.some(d=>cb[d+':'+RANK_DIFFS[i]]))return DIFFS_BY[RANK_DIFFS[i]];return null;}
+const ACHIEVEMENTS=[
+  {id:'fire',   t:'烈焰征服者',d:'通關火屬關',  f:s=>s.progress.dungeonsCleared.fire},
+  {id:'water',  t:'碧波行者',  d:'通關水屬關',  f:s=>s.progress.dungeonsCleared.water},
+  {id:'thunder',t:'雷霆使',    d:'通關雷屬關',  f:s=>s.progress.dungeonsCleared.thunder},
+  {id:'earth',  t:'磐石守護',  d:'通關土屬關',  f:s=>s.progress.dungeonsCleared.earth},
+  {id:'wind',   t:'疾風之子',  d:'通關風屬關',  f:s=>s.progress.dungeonsCleared.wind},
+  {id:'all5',   t:'五行宗師',  d:'五屬關全通',  f:s=>['fire','water','thunder','earth','wind'].every(d=>s.progress.dungeonsCleared[d])},
+  {id:'tower',  t:'登頂者',    d:'登頂魔王塔',  f:s=>s.progress.dungeonsCleared.tower},
+  {id:'adv',    t:'挑戰者',    d:'首破上級',    f:s=>RANK_DUNGEONS.some(d=>(s.progress.clearsByDiff||{})[d+':advanced'])},
+  {id:'super',  t:'超級鬥士',  d:'首破超級',    f:s=>RANK_DUNGEONS.some(d=>(s.progress.clearsByDiff||{})[d+':super'])},
+  {id:'hell',   t:'地獄歸來',  d:'首破地獄',    f:s=>RANK_DUNGEONS.some(d=>(s.progress.clearsByDiff||{})[d+':hell'])},
+  {id:'hit20',  t:'大消除',    d:'單手 HIT ≥ 20',f:s=>(s.records.bestHit||0)>=20},
+  {id:'hit30',  t:'方塊大師',  d:'單手 HIT ≥ 30',f:s=>(s.records.bestHit||0)>=30},
+  {id:'combo6', t:'連鎖之神',  d:'combo ≥ 6',   f:s=>(s.records.bestCombo||0)>=6},
+  {id:'col10',  t:'收藏家Ⅰ',  d:'收集 10 種卡', f:s=>ownedCount()>=10},
+  {id:'col20',  t:'收藏家Ⅱ',  d:'收集 20 種卡', f:s=>ownedCount()>=20},
+  {id:'col30',  t:'收藏家Ⅲ',  d:'收集 30 種卡', f:s=>ownedCount()>=30},
+  {id:'lv20',   t:'育成者',    d:'卡片練到 LV20',f:s=>Object.values(s.cardLv||{}).some(v=>v>=20)},
+  {id:'gods',   t:'五神守護',  d:'集齊 5 主角神',f:s=>KAGE_HEROES.every(id=>s.cards.some(c=>c.id===id))},
+];
+function checkAchievements(){const nw=[];mutSave(s=>{s.ach=s.ach||{done:{},title:''};ACHIEVEMENTS.forEach(a=>{if(!s.ach.done[a.id]&&a.f(s)){s.ach.done[a.id]=true;nw.push(a.t);}});});return nw;}
+function achDone(id){return !!((loadSave().ach||{}).done||{})[id];}
+function getTitle(){return (loadSave().ach||{}).title||'';}
+function setTitle(id){mutSave(s=>{s.ach=s.ach||{done:{},title:''};s.ach.title=id;});}
+function titleName(id){const a=ACHIEVEMENTS.find(x=>x.id===id);return a?a.t:'';}
+/* 幽靈排行(本地假對手,等後端再換真榜):[名字, 完成率%] */
+const GHOSTS=[['炎之楓',97],['水鏡',89],['雷牙',83],['岩窟王',76],['青嵐',68],['小櫻',55],['阿炭',42],['豆乳',31],['見習喵',18],['路人甲',8]];
 function isDungeonUnlocked(id){const dc=loadSave().progress.dungeonsCleared||{};
   if(id==='prologue')return true;
   if(id==='tower')return ELEM_DUNGEONS.every(e=>dc[e]);
@@ -395,6 +438,37 @@ function feedFodder(targetId,fodderId){let res={ok:false,msg:''};
     res={ok:true,reward:reward,lv:cl.lv,ups:ups,same:f.el===t.el};
   });
   return res;}
+const FEED_EXP={genin:60,chunin:150,jonin:400,kage:900};   // 各稀有度素材給的經驗
+// 多素材一次餵入(神魔/龍族式):us=要吃掉的個體 u 陣列;每張扣 FEED_COST、同屬×1.5;升級後回結果
+function feedFodderMany(targetId,us){let res={ok:false,msg:''};
+  mutSave(s=>{
+    if(!us||!us.length){res.msg='未選素材';return;}
+    if(!s.cardLv[targetId])s.cardLv[targetId]={lv:1,exp:0};
+    const cl=s.cardLv[targetId]; if(cl.lv>=MAXLV){res.msg='已達滿級 Lv.'+MAXLV;return;}
+    const t=ROSTER.find(c=>c.id===targetId);
+    // 先全部驗證(找出存在的個體、算經驗/花費)——確認金錢足夠後才真正吃卡,避免半途扣卡
+    const valid=[]; let total=0;
+    us.forEach(u=>{const i=s.cards.findIndex(c=>c.u===u); if(i<0)return; const f=ROSTER.find(c=>c.id===s.cards[i].id);
+      total+=Math.round((FEED_EXP[f.rank]||60)*(f.el===t.el?1.5:1)); valid.push(u);});
+    if(!valid.length){res.msg='素材已不存在';return;}
+    const cost=FEED_COST*valid.length;
+    if((s.meta.coins||0)<cost){res.msg='金錢不足(需'+cost+')';return;}
+    valid.forEach(u=>{const i=s.cards.findIndex(c=>c.u===u); if(i>=0)s.cards.splice(i,1);});   // 通過檢查→才吃卡
+    s.meta.coins-=cost; cl.exp+=total;
+    let ups=0; while(cl.lv<MAXLV && cl.exp>=expToNext(cl.lv)){cl.exp-=expToNext(cl.lv);cl.lv++;ups++;}
+    if(cl.lv>=MAXLV)cl.exp=0;
+    res={ok:true,total:total,lv:cl.lv,ups:ups,eaten:valid.length};
+  });
+  return res;}
+// 合成預覽(不變更存檔):回傳餵入後的 Lv/經驗/花費
+function previewFeed(targetId,us){const s=loadSave(), t=ROSTER.find(c=>c.id===targetId);
+  let lv=getCardLv(targetId), e=getCardExp(targetId)+0, gained=0, eaten=0;
+  (us||[]).forEach(u=>{const c=s.cards.find(x=>x.u===u); if(!c)return; const f=ROSTER.find(r=>r.id===c.id);
+    gained+=Math.round((FEED_EXP[f.rank]||60)*(f.el===t.el?1.5:1)); eaten++;});
+  let l=lv; e+=gained;
+  while(l<MAXLV && e>=expToNext(l)){e-=expToNext(l);l++;}
+  if(l>=MAXLV)e=0;
+  return {fromLv:lv,toLv:l,exp:e,need:expToNext(l),gained:gained,cost:FEED_COST*eaten,willMax:l>=MAXLV,ups:l-lv,eaten:eaten};}
 function dissolveCard(id){let res={ok:false,msg:''};   // 分解重複個體換金幣(保護最後一張)
   mutSave(s=>{const cnt=s.cards.filter(c=>c.id===id).length; if(cnt<2){res.msg='只剩 1 張,無法分解';return;}
     const c=ROSTER.find(x=>x.id===id), gain={genin:50,chunin:150,jonin:400,kage:800}[c.rank]||50;
@@ -499,7 +573,7 @@ class TeamScene extends Phaser.Scene{
     const headBot=300;
     this.add.rectangle(CX,headBot/2,W,headBot,0x191017).setStrokeStyle(1,0x2a2018).setDepth(5);   // 上方固定區底(蓋住捲上來的卡)
     this.add.text(CX,28,'出戰編隊',{fontFamily:EMOJIFONT,fontSize:'22px',color:'#f3e9d8',fontStyle:'bold'}).setOrigin(0.5).setDepth(6);
-    const defs=[{n:'左上',x:128,y:106},{n:'右上',x:292,y:106},{n:'中央',x:CX,y:182},
+    const defs=[{n:'左上',x:128,y:106},{n:'右上',x:292,y:106},{n:'👑 中央·隊長',x:CX,y:182},
                 {n:'左下',x:128,y:258},{n:'右下',x:292,y:258}];
     this.slots=defs.map(d=>{
       this.add.text(d.x,d.y-40,d.n,{fontFamily:EMOJIFONT,fontSize:'12px',color:'#c9b48f'}).setOrigin(0.5).setDepth(6);
@@ -590,7 +664,25 @@ class TeamScene extends Phaser.Scene{
 class GameScene extends Phaser.Scene{
   constructor(){super('game');}
   init(data){ this.presetTeam=(data&&data.team)?data.team:null; this.dungeonId=(data&&data.dungeonId)||'prologue'; this.dungeon=DUNGEONS[this.dungeonId]||DUNGEONS.prologue; this.hitLab=!!(data&&data.lab); this.diff=DIFFS_BY[(data&&data.diff)]||DIFFS_BY.normal; }
-  preload(){ for(const el in MONSTER_IMG){ if(!this.textures.exists('mon_'+el))this.load.image('mon_'+el, MONSTER_IMG[el]); } }   // 載入怪物圖
+  preload(){ for(const el in MONSTER_IMG){ if(!this.textures.exists('mon_'+el))this.load.image('mon_'+el, MONSTER_IMG[el]); }
+    for(const k in ENEMY_IMG){ if(!this.textures.exists(k))this.load.image(k, ENEMY_IMG[k]); } }   // 載入怪物圖 + 方塊敵正式美術
+  // 依「是否魔王×難度×元素」挑敵圖:魔王 baby→m002、beginner→m003、normal及以上→m004(最兇);雜兵 嬰兒/初級→grunt(m001)、中級以上→grunt2(m002 強化版);都沒有再退回舊史萊姆/emoji
+  enemyTexKey(e){ const el=e.el; const dk=(this.diff&&this.diff.key)||'normal';
+    if(e.boss){ const tier=dk==='baby'?'baby':(dk==='beginner'?'beg':'nrm'); const k='boss_'+tier+'_'+el; if(this.textures.exists(k))return k; }
+    else{ const adv=(dk!=='baby'&&dk!=='beginner');
+      if(adv&&this.textures.exists('guard_'+el))return 'guard_'+el; }   // 中級(normal)以上雜兵(含魔王關護衛)→m003
+    if(this.textures.exists('grunt_'+el))return 'grunt_'+el;
+    if(this.textures.exists('mon_'+el))return 'mon_'+el;
+    return null; }
+  // 統一敵圖體型:以「角色實體高度」對齊(各圖實體佔畫布不同→否則同框塞會大小不一)+ 對齊腳底基準線;魔王乘 BOSS_MUL 略大。img 敵專用。
+  fitEnemySprite(e){ if(!e.img||!e.sprite)return; const szc=e.cardW, cy=e.cy, key=e.sprite.texture.key;
+    const pre = key.indexOf('boss_baby')===0?'boss_baby' : key.indexOf('boss_beg')===0?'boss_beg' : key.indexOf('boss_nrm')===0?'boss_nrm' : key.indexOf('guard')===0?'guard' : 'grunt';
+    const fit=ENEMY_FIT[pre]||ENEMY_FIT.grunt, mul=e.boss?BOSS_MUL:1;
+    let D=(szc*0.65*mul)/fit.h;          // 實體高度=szc×0.65×mul → 反推整圖顯示邊長
+    D=Math.min(D, szc*1.12);             // 上限:避免低佔比圖(嬰兒王)放大到爆出敵格
+    e.sprite.setDisplaySize(D,D);
+    e.sprite.y = (cy+szc*0.367) - D*(fit.bottom-0.5);   // 腳底對齊 grunt 原站位的基準線
+    e.baseScale=e.sprite.scaleX; }
 
   create(){
     this.cells=[]; this.boxLabels=[]; this.trayIcons=[]; this.trayTweens=[]; this.teamCards=[]; this.drag=null; this.enemies=[];
@@ -691,7 +783,7 @@ class GameScene extends Phaser.Scene{
     this.boxElement={}; this.boxCard={};
     if(this.presetTeam) ELEMENT_BOXES.forEach((b,i)=>{const card=this.presetTeam[i];this.boxCard[b]=card;this.boxElement[b]=card.el;});
     else ELEMENT_BOXES.forEach(b=>{const card=ROSTER[rnd(ROSTER.length)];this.boxCard[b]=card;this.boxElement[b]=card.el;});
-    this.lead=(this.presetTeam&&this.presetTeam[0]&&LEADER_SKILLS[this.presetTeam[0].id])||null;   // 隊長技=隊首卡
+    this.lead=(this.presetTeam&&this.presetTeam[2]&&LEADER_SKILLS[this.presetTeam[2].id])||null;   // 隊長技=中央位卡(編隊正中央=隊長)
     const teamHp=(this.presetTeam||[]).reduce((s,c)=>s+(c.hp||0),0)||CONFIG.PLAYER_HP_BASE;   // 隊伍血量=隊員 HP 三圍加總
     this.maxHP=Math.round(teamHp*((this.lead&&this.lead.type==='hp')?this.lead.v:1));
     this.teamRcv=(this.presetTeam||[]).reduce((s,c)=>s+(c.rcv||0),0)||0;   // 隊伍回復力總和(清無屬區回血用)
@@ -727,6 +819,7 @@ class GameScene extends Phaser.Scene{
     // 敵人招牌行為(上級↑):每屬關自己的招牌(土=HIT護盾/風=combo護盾/火=灼燒/水=自我回血;雷未做→地獄通用HIT)
     const dk=df.key, dEl=this.dungeon.el, SIG={earth:'hit',wind:'combo',fire:'burn',water:'regen',thunder:'paralyze'}, myBeh=SIG[dEl];
     const covered=(d)=>{ if(dk==='advanced')return !!d.boss; if(dk==='super')return !!d.boss; if(dk==='hell')return true; return false; };   // 特殊能力=魔王專屬:上級/超級僅魔王、地獄全敵(休閒導向,雜兵只給數值不放技)
+    const stageHasBoss=defs.some(x=>x.boss);   // 魔王關→同關的雜兵=護衛(用更兇的圖)
     this.enemies=defs.map(d=>{
       let el=d.el; if(pun&&!punished&&d.el===dEl&&!d.boss){el=pun;punished=true;}
       const A=(d.arch&&ARCH[d.arch])||null;   // 兵種:數值倍率永遠套;行為只在 covered()(上級/超級魔王、地獄全敵)才開
@@ -745,7 +838,7 @@ class GameScene extends Phaser.Scene{
       else if(beh==='paralyze')paralyze=(dk==='advanced')?2:1;                       // 麻痺:每 N 手鎖 1 塊托盤
       else if(beh==='healAlly')healAlly=({advanced:0.04,super:0.06,hell:0.08}[dk])||0.05;  // 補師:每手治療全體友軍 max×率
       else if(beh==='junk')junk=(dk==='advanced')?3:2;                               // 封鎖:每 N 手在盤面塞 1 條詛咒塊
-      return {el,max:hp,hp:hp,atk:atk,interval:turns,timer:turns,burn:0,dead:false,boss:!!d.boss,hitGate:hitGate,comboGate:comboGate,dot:dot,regen:regen,paralyze:paralyze,healAlly:healAlly,junk:junk,phases:phases,phaseIdx:0,arch:d.arch||null};
+      return {el,max:hp,hp:hp,atk:atk,interval:turns,timer:turns,burn:0,dead:false,boss:!!d.boss,guard:(!d.boss&&stageHasBoss),hitGate:hitGate,comboGate:comboGate,dot:dot,regen:regen,paralyze:paralyze,healAlly:healAlly,junk:junk,phases:phases,phaseIdx:0,arch:d.arch||null};
     });
     const n=this.enemies.length, slot=380/n;
     this.enemies.forEach((e,i)=>{
@@ -754,8 +847,10 @@ class GameScene extends Phaser.Scene{
       e.cardW=szc; e.cardH=szc;
       e.card=this.add.rectangle(x,cy,szc,szc,0x000000,0).setInteractive();   // 無底色:透明矩形只當點擊區
       e.card.on('pointerdown',()=>this.selectTarget(i));
-      if(MONSTER_IMG[e.el]&&this.textures.exists('mon_'+e.el)){   // 有怪物圖→滿版置中;否則用 emoji 臉
-        e.sprite=this.add.image(x,cy,'mon_'+e.el).setOrigin(0.5).setInteractive(); e.sprite.setDisplaySize(szc,szc); e.img=true;
+      e.cy=cy;
+      const tk=this.enemyTexKey(e);
+      if(tk){   // 有怪物圖→以實體高度統一體型 + 對齊腳底;否則用 emoji 臉
+        e.sprite=this.add.image(x,cy,tk).setOrigin(0.5).setInteractive(); e.img=true; this.fitEnemySprite(e);
       }else{
         e.sprite=this.add.text(x,cy-Math.round(szc*0.14),EL[e.el].face,{fontFamily:EMOJIFONT,fontSize:Math.round(szc*0.5)+'px'}).setOrigin(0.5).setInteractive();
       }
@@ -1252,6 +1347,7 @@ class GameScene extends Phaser.Scene{
     else if(beh==='regen')e.regen=({advanced:0.04,super:0.06,hell:0.06}[dk])||0.06;
     else if(beh==='paralyze')e.paralyze=(dk==='advanced')?2:1;
     if(e.sprite&&e.sprite.setText)e.sprite.setText(EL[e.el].face);   // emoji 臉換屬
+    else if(e.sprite&&e.img){ const tk=this.enemyTexKey(e); if(tk&&this.textures.exists(tk)){ e.sprite.setTexture(tk); this.fitEnemySprite(e); e.restY=e.sprite.y; } }   // 圖：變身換敵圖(換屬→換該屬魔王圖)+ 重新統一體型/站位
     let gt='',gc='#cfe0ff';
     if(e.hitGate)gt='🛡'+e.hitGate+' HIT'; else if(e.comboGate)gt='🛡'+e.comboGate+' COMBO';
     else if(e.dot){gt='🔥 灼燒';gc='#ffb09a';} else if(e.regen){gt='💚 回血';gc='#9ae0a8';} else if(e.paralyze){gt='⚡ 麻痺';gc='#ffe98a';} else if(e.healAlly){gt='💚 補師';gc='#9ae0a8';} else if(e.junk){gt='🔒 封鎖';gc='#c4a8e0';}
@@ -1317,6 +1413,7 @@ class GameScene extends Phaser.Scene{
     const n=data.cells.length;
     this._placeCleared=true;   // 逐塊 combo:這塊有清到(沒清的塊由 afterAction 把 combo 歸零)
     this.combo+=(data.hits&&data.hits.length)||0; this.showCombo();   // 連段同步累加(改在放塊當下,不再延遲到彈著→避免和歸零打架)
+    this.runMaxHit=Math.max(this.runMaxHit||0,n); this.runMaxCombo=Math.max(this.runMaxCombo||0,this.combo);   // 本局最佳 HIT/combo(我的紀錄/成就用)
     // 另類護盾:本手 HIT / 連段沒達門檻的敵人,這手不扣其 HP(演「🛡擋下」)
     this.enemies.forEach(e=>{e._blocked=false;});
     victims.forEach(v=>{v._blocked=((v.hitGate&&n<v.hitGate)||(v.comboGate&&this.combo<v.comboGate));});
@@ -1441,13 +1538,14 @@ class GameScene extends Phaser.Scene{
       this.time.delayedCall(120,()=>this.tonFloat('🔮 '+EL[this.dungeon.el].name+'寶玉','#c5b0ff'));}
     const xp=Math.round(40*rm), gld=Math.round(300*rm), _rw=addRewards(xp,gld); this.runExp+=xp; this.runCoins+=gld;   // 戰鬥獎勵:EXP/金錢(隨難度放大)
     if(_rw._ups>0)this.tonFloat('🆙 等級提升! Lv.'+_rw.rank,'#ffe04a');
-    if(this.stage>=this.dungeon.stages.length){markDungeonCleared(this.dungeonId);this.chests++;this.finalBlow(this._finalEnemy);return;}   // 最後一關全清→最後一擊特寫演出後才進結果
+    if(this.stage>=this.dungeon.stages.length){markDungeonCleared(this.dungeonId);recordClear(this.dungeonId,(this.diff&&this.diff.key)||'normal');this.creditRun();this.chests++;this.finalBlow(this._finalEnemy);return;}   // 最後一關全清→記完成率+成就→最後一擊特寫演出後才進結果
     this.stage++; this.chests++; this.playerHP=Math.min(this.maxHP,this.playerHP+150);
     this.time.delayedCall(700,()=>{try{this.stageAdvanceFX();}catch(e){} this.time.delayedCall(380,()=>{try{this.startStage(true);}catch(e){console.error('startStage error',e);}});});   // 過關:前進演出 → 下一關敵人自遠方逼近入場(不清盤,盤面累積)
   }
   reshuffle(){if(this.playerHP<=CONFIG.RESHUFFLE_COST){this.gameOver('生命不足、無法再提煉');return;}
     this.playerHP-=CONFIG.RESHUFFLE_COST; this.refill(); this.renderTray(); this.updateAll();}
-  gameOver(reason){if(this.resultOpen)return;this.showResult(false);}
+  gameOver(reason){if(this.resultOpen)return;this.creditRun();this.showResult(false);}
+  creditRun(){bumpRecords(this.runMaxHit||0,this.runMaxCombo||0);const nw=checkAchievements();nw.forEach((t,i)=>this.time.delayedCall(i*320,()=>{try{this.tonFloat('🏅 解鎖稱號:'+t,'#ffe04a');}catch(e){}}));}   // 提交本局紀錄 + 檢查成就解鎖(過關與戰敗都跑)
   restartStage(){this.playerHP=this.maxHP;this.startStage();}
 
   /* UI */
@@ -1801,15 +1899,15 @@ class CollectionScene extends Phaser.Scene{
   }
   draw(){
     const cards=loadSave().cards, cap=boxCap(), cnt=cards.length, full=cnt>=cap;
-    this.txt(CX,30,'🎒 背包(卡冊)','19px','#f3e9d8',0.5,true);
-    this.txt(CX,52,'BOX '+cnt+' / '+cap+'　·　收集 '+ownedCount()+'/'+ROSTER.length+' 種','11px',full?'#ff8f6a':'#b9a584',0.5);
-    const g=loadSave().gems; this.txt(CX,70,'🔮 '+ELEM_DUNGEONS.map(e=>EL[e].name+(g[e]||0)).join(' '),'10px','#b9a0ff',0.5);
+    this.txt(CX,30,'🎒 背包(卡冊)','22px','#f3e9d8',0.5,true);
+    this.txt(CX,54,'BOX '+cnt+' / '+cap+'　·　收集 '+ownedCount()+'/'+ROSTER.length+' 種','13px',full?'#ff8f6a':'#b9a584',0.5);
+    const g=loadSave().gems; this.txt(CX,72,'🔮 '+ELEM_DUNGEONS.map(e=>EL[e].name+(g[e]||0)).join(' '),'13px','#b9a0ff',0.5);
     // 排序 / 擴背包
-    this.btn(108,96,150,26,'↕ 排序:'+SORT_MODES[this.sortMode].name,()=>{this.sortMode=(this.sortMode+1)%SORT_MODES.length;this.boxPage=0;this.rebuild();},{col:0x2b2014,stroke:0x5a6a8a,color:'#cfe0ff',fs:'11px'});
-    this.btn(300,96,150,26,'➕ 擴背包 1💎+5格',()=>{const r=buyBoxSlots();if(r.ok){this.rebuild();this.playExpandFX(r.cap);}else this.toast(r.msg);},{col:0x2e2a3a,stroke:0x7a6aaa,color:'#d8c8ff',fs:'11px'});
+    this.btn(108,98,150,32,'↕ 排序:'+SORT_MODES[this.sortMode].name,()=>{this.sortMode=(this.sortMode+1)%SORT_MODES.length;this.boxPage=0;this.rebuild();},{col:0x2b2014,stroke:0x5a6a8a,color:'#cfe0ff',fs:'14px'});
+    this.btn(300,98,150,32,'➕ 擴背包 1💎+5格',()=>{const r=buyBoxSlots();if(r.ok){this.rebuild();this.playExpandFX(r.cap);}else this.toast(r.msg);},{col:0x2e2a3a,stroke:0x7a6aaa,color:'#d8c8ff',fs:'14px'});
     const chips=[['全',null]].concat(ELEM_DUNGEONS.map(e=>[EL[e].name,e]));
     chips.forEach((ch,i)=>{const x=38+i*64, on=this.filterEl===ch[1];
-      this.btn(x,128,58,26,ch[0],()=>{this.filterEl=ch[1];this.boxPage=0;this.rebuild();},{col:on?(ch[1]?EL[ch[1]].color:0x3a5a2c):0x2b2014,stroke:on?0xffd56a:0x4a3824,color:(on&&ch[1])?'#1a1208':(on?'#cfe8b0':'#b9a584'),fs:'12px',bold:on});});
+      this.btn(x,132,58,32,ch[0],()=>{this.filterEl=ch[1];this.boxPage=0;this.rebuild();},{col:on?(ch[1]?EL[ch[1]].color:0x3a5a2c):0x2b2014,stroke:on?0xffd56a:0x4a3824,color:(on&&ch[1])?'#1a1208':(on?'#cfe8b0':'#b9a584'),fs:'15px',bold:on});});
     // 個體清單:每張卡各佔一格(不疊×N),套元素篩選 + 排序
     let list=cards.map((c,i)=>{const r=ROSTER.find(x=>x.id===c.id)||{};return Object.assign({_i:i,u:c.u},r);});
     if(this.filterEl)list=list.filter(c=>c.el===this.filterEl);
@@ -1830,7 +1928,7 @@ class CollectionScene extends Phaser.Scene{
       this.txt(cx,cy+19,'Lv'+getCardLv(cd.id),'10px','#3a2c12',0.5);});
     if(pages>1){const py=y0+6*gy-6;
       this.btn(CX-74,py,52,28,'◀',()=>{this.boxPage--;this.rebuild();},{fs:'15px'});
-      this.txt(CX,py,(this.boxPage+1)+' / '+pages,'13px','#cfe0e8',0.5);
+      this.txt(CX,py,(this.boxPage+1)+' / '+pages,'15px','#cfe0e8',0.5);
       this.btn(CX+74,py,52,28,'▶',()=>{this.boxPage++;this.rebuild();},{fs:'15px'});}
     this.btn(CX,H-36,220,42,'🏠 返回大廳',()=>{this.scene.manager.start('home');this.scene.manager.stop('collection');},{stroke:0x5a8a3c,color:'#cfe8b0'});
     if(this.sel)this.drawDetail();
@@ -1876,15 +1974,23 @@ class CollectionScene extends Phaser.Scene{
     this.txt(L,py+126,ls?ls.desc:'','10px','#e8d0a8',0);
     this.txt(L,py+150,'🧩 主技 '+(EL_SKILL[cd.el]||'—'),'10px','#cfe0d8',0);
     // ── 按鈕 ──
-    this.btn(CX,py+182,330,32,'⬆️ 強化合成',()=>{this.scene.manager.start('fuse',{target:cd.id});this.scene.manager.stop('collection');},{col:0x2e3a22,stroke:0x6aaa4c,color:'#eafce0',bold:true,fs:'13px'});
-    let eL,eO;
-    if(atMax){eL='✨ 進化已滿 '+starStr(cd.id);eO={col:0x241a10,stroke:0x3a2e1c,color:'#7a6a4a',fs:'12px'};}
-    else if(chk.ok){eL='✨ 進化 → ★'+(cardStars(cd.id)+1)+'(消'+chk.req.gems+'寶玉)';eO={col:0x3a2a4a,stroke:0xb18cff,color:'#e8d8ff',bold:true,fs:'12px'};}
-    else {eL='✨ 進化:'+chk.msg;eO={col:0x241a10,stroke:0x4a3a5a,color:'#9a8aba',fs:'10px'};}
-    this.btn(CX,py+218,330,32,eL,()=>{const r=evolveCard(cd.id);this.toast(r.ok?('✨ 進化成功! '+starStr(cd.id)):r.msg);this.rebuild();},eO);
-    this.btn(CX-86,py+254,158,32,'🛡️ 設為隊長',()=>{setLeader(cd.id);this.toast(cd.name+' → 隊長');this.rebuild();},{col:0x2e2a3a,stroke:0x5a6a8a,color:'#cfe0ff',fs:'12px'});
-    this.btn(CX+86,py+254,158,32,'🗑️ 分解 💰',()=>{const r=dissolveCard(cd.id);this.toast(r.ok?('分解 +'+r.gain+' 金'):r.msg);this.rebuild();},{col:0x3a2a1a,stroke:0x8a6a3a,color:'#ffd9a0',fs:'12px'});
-    this.L(this.add.text(CX+186,py-258,'✕',{fontFamily:EMOJIFONT,fontSize:'18px',color:'#cfc0a8',fontStyle:'bold'}).setOrigin(0.5).setInteractive()).on('pointerup',()=>{this.sel=null;this.rebuild();});
+    // ── 底排按鈕:強化合成 | 關閉(同一排)──
+    this.btn(CX-86,py+232,158,40,'⬆️ 強化合成',()=>{this.scene.manager.start('fuse',{target:cd.id});this.scene.manager.stop('collection');},{col:0x2e3a22,stroke:0x6aaa4c,color:'#eafce0',bold:true,fs:'14px'});
+    this.btn(CX+86,py+232,158,40,'✖ 關閉',()=>{this.sel=null;this.askDis=false;this.rebuild();},{col:0x2a2218,stroke:0x5a4a32,color:'#cfc0a8',bold:true,fs:'14px'});
+    // ── 右上:♻️ 解散(換金幣,需確認)──
+    this.L(this.add.text(CX+186,py-258,'♻️',{fontFamily:EMOJIFONT,fontSize:'20px'}).setOrigin(0.5).setInteractive()).on('pointerup',()=>{
+      if(n<2){this.toast('只剩 1 張,無法解散');return;} this.askDis=true; this.rebuild(); });
+    if(this.askDis)this.drawDissolveConfirm(cd,n);
+  }
+  drawDissolveConfirm(cd,n){
+    const py=Math.round(H/2), gain={genin:50,chunin:150,jonin:400,kage:800}[cd.rank]||50;
+    this.rect(CX,H/2,W,H,0x000000,0.62).setInteractive();
+    this.rect(CX,py,330,184,0x241a10).setStrokeStyle(2,0x8a6a3a);
+    this.txt(CX,py-58,'♻️ 解散這張卡?','16px','#ffd9a0',0.5,true);
+    this.txt(CX,py-26,cd.name+'(持有 '+n+' 張)','12px','#cfc0a8',0.5);
+    this.txt(CX,py+2,'解散可得 💰 '+gain+' 金','15px','#ffe08a',0.5,true);
+    this.btn(CX-80,py+52,144,40,'✖ 取消',()=>{this.askDis=false;this.rebuild();},{col:0x2a2218,stroke:0x5a4a32,color:'#cfc0a8',bold:true,fs:'14px'});
+    this.btn(CX+80,py+52,144,40,'✔ 確認解散',()=>{const r=dissolveCard(cd.id);this.askDis=false;this.toast(r.ok?('解散 +'+r.gain+' 金'):r.msg);this.rebuild();},{col:0x3a2a1a,stroke:0x8a6a3a,color:'#ffd9a0',bold:true,fs:'14px'});
   }
 }
 
@@ -1938,8 +2044,9 @@ class HomeScene extends Phaser.Scene{
     const f=staFullSec();
     this.txt(101,47,m.stamina+'/'+m.staminaMax+(f>0?' ('+Math.floor(f/60)+':'+('0'+f%60).slice(-2)+')':''),'10px','#eafce0',0.5,true);
     this.txt(W-12,47,'💰 '+m.coins.toLocaleString(),'12px','#ffe08a',1,true);
+    if(getTitle())this.txt(CX,33,'🏅 '+titleName(getTitle()),'11px','#ffd56a',0.5);   // 裝備中的稱號(放頂列中段空檔)
   }
-  nav(){const tabs=[['dungeon','🏯','關卡'],['monster','🐲','卡片'],['shop','🛒','商店'],['gacha','🥚','抽卡'],['friend','👥','朋友'],['other','⚙️','其他']];
+  nav(){const tabs=[['dungeon','🏯','關卡'],['monster','🐲','卡片'],['shop','🛒','商店'],['gacha','🥚','抽卡'],['friend','🏆','排行'],['other','⚙️','其他']];
     const bw=W/6, navY=H-30;
     this.rect(CX,navY,W,60,0x1a130b).setStrokeStyle(1,0x4a3824);
     tabs.forEach((t,i)=>{const x=bw*(i+0.5),on=this.tab===t[0];
@@ -1947,7 +2054,54 @@ class HomeScene extends Phaser.Scene{
       this.txt(x,navY-10,t[1],'19px',null,0.5).setAlpha(on?1:0.55);this.txt(x,navY+15,t[2],'10px',on?'#ffd56a':'#9a8a6a',0.5);
       r.on('pointerup',()=>{if(this.tab!==t[0])this.switchTab(t[0]);});});
   }
-  body(){const f={dungeon:this.bDungeon,monster:this.bMonster,shop:this.bShop,gacha:this.bGacha,friend:()=>this.bTodo('👥 朋友'),other:this.bOther}[this.tab];if(f)f.call(this);}
+  body(){const f={dungeon:this.bDungeon,monster:this.bMonster,shop:this.bShop,gacha:this.bGacha,friend:this.bRank,other:this.bOther}[this.tab];if(f)f.call(this);}
+  setRankTab(t){this.rankTab=t;this.rebuild();}
+  bRank(){
+    const tabs=[['board','🏆 排行'],['rec','📊 紀錄'],['ach','🏅 成就']], tab=this.rankTab||'board', tw=W/3, top=82;
+    tabs.forEach((t,i)=>{const x=tw*(i+0.5),on=tab===t[0];
+      const r=this.rect(x,top,tw-6,38,on?0x3a2c1d:0x1f1810).setInteractive().setStrokeStyle(on?2:1,on?0xffd56a:0x4a3824);
+      this.txt(x,top,t[1],'16px',on?'#ffd56a':'#9a8a6a',0.5,on);r.on('pointerup',()=>{if(tab!==t[0])this.setRankTab(t[0]);});});
+    if(tab==='rec')this.bRankRecords(); else if(tab==='ach')this.bRankAch(); else this.bRankBoard();
+  }
+  bRankBoard(){
+    this.txt(CX,116,'🏆 完成率排行','17px','#ffd56a',0.5,true);
+    this.txt(CX,136,'比「關卡完成率」· 純進度,不比戰力','12px','#9a8a6a',0.5);
+    const me=completionRate();
+    const _tt=getTitle();
+    const rows=GHOSTS.map(g=>({name:g[0],pct:g[1],me:false})).concat([{name:'你'+(_tt?' · '+titleName(_tt):''),pct:me.pct,me:true}]).sort((a,b)=>b.pct-a.pct);
+    let y=162;
+    rows.forEach((r,i)=>{const rk=i+1;
+      this.rect(CX,y,392,29,r.me?0x2e3a22:(i%2?0x1a130b:0x201810)).setStrokeStyle(r.me?2:1,r.me?0x6aaa4c:0x3a2c1d);
+      this.txt(34,y,(rk<=3?['🥇','🥈','🥉'][rk-1]:'#'+rk),'14px',rk<=3?'#ffd56a':'#bfb0a0',0.5);
+      this.txt(72,y,r.name+(r.me?' (你)':''),'15px',r.me?'#eafce0':'#e8dcc8',0,r.me);
+      this.rect(238,y,108,9,0x000000,0.5).setOrigin(0,0.5);
+      this.rect(238,y,108*r.pct/100,9,r.me?0x6aca4c:0x6ac0ff).setOrigin(0,0.5);
+      this.txt(W-18,y,r.pct+'%','15px','#ffe08a',1,true); y+=32;});
+    this.txt(CX,y+12,'🔒 線上真榜上線後開放(目前為本地幽靈榜)','12px','#7a6a50',0.5);
+  }
+  bRankRecords(){
+    const hd=highestDiffCleared(), me=completionRate(), rec=loadSave().records||{}, pr=loadSave().progress||{}, tt=getTitle();
+    this.txt(CX,114,'📊 我的紀錄','17px','#ffd56a',0.5,true);
+    let y=146; const row=(ic,lab,val)=>{this.rect(CX,y,392,44,0x201810).setStrokeStyle(1,0x4a3824);this.txt(28,y,ic+' '+lab,'16px','#cfe0d8',0);this.txt(W-22,y,String(val),'19px','#ffffff',1,true);y+=52;};
+    row('🗺️','完成率',me.pct+'%  ('+me.done+'/'+me.total+')');
+    row('🏁','通關場數',pr.clears||0);
+    row('💀','最高難度通關',hd?hd.emoji+' '+hd.name:'—');
+    row('💥','最大單手 HIT',rec.bestHit||0);
+    row('🔗','最長 combo',rec.bestCombo||0);
+    this.txt(CX,y+8,'🏅 目前稱號:'+(tt?titleName(tt):'(未裝備)'),'15px','#ffe08a',0.5,true);
+  }
+  bRankAch(){
+    this.txt(CX,102,'🏅 成就 / 稱號','17px','#ffd56a',0.5,true);
+    this.txt(CX,122,'點已解鎖的成就 → 裝備為稱號','12px','#9a8a6a',0.5);
+    const cur=getTitle(); let y=146;
+    ACHIEVEMENTS.forEach(a=>{const got=achDone(a.id),eq=cur===a.id;
+      const r=this.rect(CX,y,392,30,eq?0x2e3a22:(got?0x241a10:0x140f0a)).setStrokeStyle(eq?2:1,eq?0x6aaa4c:(got?0x8a6a3a:0x2a2018));
+      this.txt(26,y,got?(eq?'★':'✓'):'🔒','15px',got?(eq?'#ffd56a':'#8fd16a'):'#5a4a38',0.5);
+      this.txt(50,y,a.t,'15px',got?'#ffe08a':'#7a6a50',0,got);
+      this.txt(W-18,y,a.d,'12px',got?'#bfb0a0':'#5a4a38',1);
+      if(got)r.setInteractive().on('pointerup',()=>{setTitle(eq?'':a.id);this.toast(eq?'已卸下稱號':('裝備稱號:'+a.t));this.rebuild();});
+      y+=33;});
+  }
   mapNode(x,y,r,emoji,label,sub,cb,locked){
     const c=this.L(this.add.circle(x,y,r,locked?0x2a2a3a:0x2e4a2e).setStrokeStyle(3,locked?0x55556a:0xffd56a));
     c.setInteractive(new Phaser.Geom.Circle(0,0,r),Phaser.Geom.Circle.Contains);
@@ -1991,19 +2145,33 @@ class HomeScene extends Phaser.Scene{
   showDiffPicker(id){const d=DUNGEONS[id]||DUNGEONS.prologue, m=getMeta();
     if(this._diffG)this._diffG.destroy();
     const g=this.add.container(0,0).setDepth(1500); this._diffG=g;
+    let ready=false;                                   // 登場動畫期間鎖輸入→上一層連點不會誤入關卡
     const close=()=>{g.destroy();this._diffG=null;};
-    g.add(this.add.rectangle(CX,H/2,W,H,0x000000,0.84).setInteractive().on('pointerup',close));
-    g.add(this.add.text(CX,H*0.10,d.emoji+' '+d.name,{fontFamily:EMOJIFONT,fontSize:'18px',color:'#f3e9d8',fontStyle:'bold'}).setOrigin(0.5));
-    g.add(this.add.text(CX,H*0.10+24,'選擇難度(體力越高、獎勵越多)',{fontFamily:EMOJIFONT,fontSize:'11px',color:'#bfb0a0'}).setOrigin(0.5));
-    const y0=H*0.10+50, rh=Math.min(60,(H*0.86-y0)/DIFFS.length);
-    DIFFS.forEach((df,i)=>{const y=y0+rh*i+rh/2, cost=this.diffCost(id,df), afford=m.stamina>=cost;
-      const r=this.add.rectangle(CX,y,W-36,rh-7,df.col,afford?0.20:0.08).setStrokeStyle(2,df.col,afford?1:0.35).setInteractive();
-      g.add(r);
-      g.add(this.add.text(CX-W/2+24,y,df.emoji+' '+df.name,{fontFamily:EMOJIFONT,fontSize:'17px',color:afford?'#fff':'#7a7068',fontStyle:'bold'}).setOrigin(0,0.5));
-      g.add(this.add.text(CX-W/2+118,y,'推薦 '+df.rec,{fontFamily:EMOJIFONT,fontSize:'11px',color:afford?'#d8cfc4':'#6a625a'}).setOrigin(0,0.5));
-      g.add(this.add.text(CX+W/2-24,y-9,'⚡'+cost,{fontFamily:EMOJIFONT,fontSize:'14px',color:afford?'#9fe0b0':'#c46a5a',fontStyle:'bold'}).setOrigin(1,0.5));
-      g.add(this.add.text(CX+W/2-24,y+10,'🎁×'+df.rwd,{fontFamily:EMOJIFONT,fontSize:'11px',color:afford?'#ffd56a':'#7a7060'}).setOrigin(1,0.5));
-      r.on('pointerup',()=>{if(!afford){this.toast('體力不足!去商店回復');return;} close(); this.startBattle(id,df);});});
+    const bg=this.add.rectangle(CX,H/2,W,H,0x000000,0).setInteractive().on('pointerup',()=>{if(ready)close();});
+    g.add(bg); this.tweens.add({targets:bg,fillAlpha:{from:0,to:0.85},duration:170});
+    const title=this.add.text(CX,H*0.085,d.emoji+' '+d.name,{fontFamily:EMOJIFONT,fontSize:'24px',color:'#f3e9d8',fontStyle:'bold'}).setOrigin(0.5);
+    const sub=this.add.text(CX,H*0.085+28,'選擇難度 — 體力越高、獎勵越多',{fontFamily:EMOJIFONT,fontSize:'14px',color:'#c9bcaa'}).setOrigin(0.5);
+    g.add(title); g.add(sub);
+    const backH=48, backY=H-36;
+    const areaTop=H*0.085+58, areaBot=backY-backH/2-14, areaH=areaBot-areaTop;
+    const rh=Math.min(74, areaH/DIFFS.length), blockTop=areaTop+(areaH-rh*DIFFS.length)/2;   // 列高加大 + 垂直置中(高螢幕不擠下方)
+    DIFFS.forEach((df,i)=>{const y=blockTop+rh*i+rh/2, cost=this.diffCost(id,df), afford=m.stamina>=cost;
+      const rect=this.add.rectangle(0,0,W-28,rh-9,df.col,afford?0.22:0.08).setStrokeStyle(2.5,df.col,afford?1:0.35).setInteractive();
+      const name=this.add.text(-W/2+22,0,df.emoji+' '+df.name,{fontFamily:EMOJIFONT,fontSize:'22px',color:afford?'#fff':'#7a7068',fontStyle:'bold'}).setOrigin(0,0.5);
+      const rec=this.add.text(-W/2+132,0,df.rec,{fontFamily:EMOJIFONT,fontSize:'14px',color:afford?'#d8cfc4':'#6a625a'}).setOrigin(0,0.5);
+      const cst=this.add.text(W/2-22,-12,'⚡'+cost,{fontFamily:EMOJIFONT,fontSize:'19px',color:afford?'#9fe0b0':'#c46a5a',fontStyle:'bold'}).setOrigin(1,0.5);
+      const rwd=this.add.text(W/2-22,13,'🎁×'+df.rwd,{fontFamily:EMOJIFONT,fontSize:'14px',color:afford?'#ffd56a':'#7a7060'}).setOrigin(1,0.5);
+      const rc=this.add.container(CX,y,[rect,name,rec,cst,rwd]); g.add(rc);
+      rc.alpha=0; rc.y=y+18;
+      this.tweens.add({targets:rc,alpha:1,y:y,delay:70+i*55,duration:240,ease:'Cubic.out'});   // 逐列滑入淡入
+      rect.on('pointerup',()=>{if(!ready)return; if(!afford){this.toast('體力不足!去商店回復');return;} close(); this.startBattle(id,df);});});
+    // 底部:返回大廳(關閉難度選單回到關卡地圖)
+    const bb=this.add.rectangle(CX,backY,W-28,backH,0x2a2630,1).setStrokeStyle(2,0x6a6276).setInteractive();
+    const bt=this.add.text(CX,backY,'← 返回大廳',{fontFamily:EMOJIFONT,fontSize:'18px',color:'#d8d0e0',fontStyle:'bold'}).setOrigin(0.5);
+    g.add(bb); g.add(bt); bb.alpha=0; bt.alpha=0;
+    this.tweens.add({targets:[bb,bt],alpha:1,delay:70+DIFFS.length*55,duration:200});
+    bb.on('pointerup',()=>{if(ready)close();});
+    this.time.delayedCall(320,()=>{ready=true;});   // ~0.3s 後才接受點擊
   }
   startBattle(id,df){const d=DUNGEONS[id]||DUNGEONS.prologue;
     const tm=leveledTeam(loadTeam().filter(x=>isOwned(x)));   // 帶升級後 atk
@@ -2011,36 +2179,36 @@ class HomeScene extends Phaser.Scene{
     if(!spendStamina(this.diffCost(id,df))){this.toast('體力不足!去商店回復');this.rebuild();return;}
     this.scene.manager.start('game',{team:tm,dungeonId:id,diff:df.key});this.scene.manager.stop('home');}
   bMonster(){
-    this.txt(CX,92,'🐲 卡片管理','18px','#f3e9d8',0.5,true);
-    this.btn(CX,150,360,52,'🛡️ 隊伍編成',()=>this.go('team'),{col:0x2e2a3a,stroke:0x5a6a8a,color:'#cfe0ff',bold:true});
-    this.btn(CX,212,360,52,'📦 卡片 BOX('+ownedCount()+'/'+ROSTER.length+')',()=>this.go('collection'),{col:0x2e2a3a,stroke:0x5a6a8a,color:'#cfe0ff',bold:true});
-    this.btn(CX,274,360,48,'⬆️ 強化合成',()=>this.go('fuse'),{col:0x2e2a3a,stroke:0x5a6a8a,color:'#cfe0ff',fs:'14px',bold:true});
-    this.btn(CX,330,360,48,'✨ 進化合成(卡片詳細頁)',()=>this.go('collection'),{col:0x2e2a3a,stroke:0x5a6a8a,color:'#cfe0ff',fs:'13px'});
-    this.btn(CX,386,360,48,'💰 卡片售出 — 待做',()=>this.toast('卡片售出 — 待做'),{col:0x241a10,stroke:0x3a2e1c,color:'#7a6a4a',fs:'13px'});
+    this.txt(CX,92,'🐲 卡片管理','22px','#f3e9d8',0.5,true);
+    this.btn(CX,154,360,54,'🛡️ 隊伍編成',()=>this.go('team'),{col:0x2e2a3a,stroke:0x5a6a8a,color:'#cfe0ff',fs:'18px',bold:true});
+    this.btn(CX,218,360,54,'📦 卡片 BOX('+ownedCount()+'/'+ROSTER.length+')',()=>this.go('collection'),{col:0x2e2a3a,stroke:0x5a6a8a,color:'#cfe0ff',fs:'18px',bold:true});
+    this.btn(CX,282,360,50,'⬆️ 強化合成',()=>this.go('fuse'),{col:0x2e2a3a,stroke:0x5a6a8a,color:'#cfe0ff',fs:'18px',bold:true});
+    this.btn(CX,340,360,50,'✨ 進化合成(卡片詳細頁)',()=>this.go('collection'),{col:0x2e2a3a,stroke:0x5a6a8a,color:'#cfe0ff',fs:'16px'});
+    this.btn(CX,398,360,50,'💰 卡片售出 — 待做',()=>this.toast('卡片售出 — 待做'),{col:0x241a10,stroke:0x3a2e1c,color:'#7a6a4a',fs:'16px'});
   }
   bShop(){const m=getMeta();
-    this.txt(CX,92,'🛒 商店','18px','#f3e9d8',0.5,true);
-    this.btn(CX,160,360,56,'⚡ 體力全回復(💎1)',()=>{if(m.stamina>=m.staminaMax){this.toast('體力已滿');return;}if(spendStones(1)){refillStamina();this.toast('體力回滿!');this.rebuild();}else this.toast('魔法石不足');},{col:0x2e3a22,stroke:0x6aaa4c,color:'#eafce0',bold:true});
-    this.btn(CX,228,360,48,'💎 魔法石商店 — 待做',()=>this.toast('魔法石商店 — 待做'),{col:0x241a10,stroke:0x3a2e1c,color:'#7a6a4a',fs:'13px'});
-    this.btn(CX,286,360,48,'📦 BOX 擴張 — 待做',()=>this.toast('BOX 擴張 — 待做'),{col:0x241a10,stroke:0x3a2e1c,color:'#7a6a4a',fs:'13px'});
-    this.btn(CX,344,360,48,'👥 好友上限 — 待做',()=>this.toast('好友上限 — 待做'),{col:0x241a10,stroke:0x3a2e1c,color:'#7a6a4a',fs:'13px'});
+    this.txt(CX,92,'🛒 商店','22px','#f3e9d8',0.5,true);
+    this.btn(CX,164,360,56,'⚡ 體力全回復(💎1)',()=>{if(m.stamina>=m.staminaMax){this.toast('體力已滿');return;}if(spendStones(1)){refillStamina();this.toast('體力回滿!');this.rebuild();}else this.toast('魔法石不足');},{col:0x2e3a22,stroke:0x6aaa4c,color:'#eafce0',fs:'18px',bold:true});
+    this.btn(CX,234,360,50,'💎 魔法石商店 — 待做',()=>this.toast('魔法石商店 — 待做'),{col:0x241a10,stroke:0x3a2e1c,color:'#7a6a4a',fs:'16px'});
+    this.btn(CX,294,360,50,'📦 BOX 擴張 — 待做',()=>this.toast('BOX 擴張 — 待做'),{col:0x241a10,stroke:0x3a2e1c,color:'#7a6a4a',fs:'16px'});
+    this.btn(CX,354,360,50,'👥 好友上限 — 待做',()=>this.toast('好友上限 — 待做'),{col:0x241a10,stroke:0x3a2e1c,color:'#7a6a4a',fs:'16px'});
   }
   bTodo(t){this.txt(CX,Math.round(H*0.42),t+' — 待做','20px','#9a8a6a',0.5);}
   bGacha(){
-    this.txt(CX,90,'🥚 轉蛋','18px','#f3e9d8',0.5,true);
-    this.gachaBanner(168,'premium','✨ 影忍 SSR 限定 · 機率 3%',0x2e2440,0xb18cff);
-    this.gachaBanner(326,'normal','金錢轉蛋(無影忍)',0x2e3320,0x6aaa4c);
-    this.txt(CX,H-78,'※ 機率已公示;影忍僅「結印轉蛋」可得','9px','#9a8a6a',0.5);
+    this.txt(CX,90,'🥚 轉蛋','22px','#f3e9d8',0.5,true);
+    this.gachaBanner(172,'premium','✨ 影忍 SSR 限定 · 機率 3%',0x2e2440,0xb18cff);
+    this.gachaBanner(334,'normal','金錢轉蛋(無影忍)',0x2e3320,0x6aaa4c);
+    this.txt(CX,H-74,'※ 機率已公示;影忍僅「結印轉蛋」可得','12px','#9a8a6a',0.5);
     if(this.gachaResult)this.drawGachaResult();
   }
   gachaBanner(y,bankey,tagline,col,stroke){const b=GACHA[bankey];
-    this.rect(CX,y,372,138,col).setStrokeStyle(2,stroke);
-    this.txt(CX,y-50,b.icon+' '+b.name,'16px','#f3e9d8',0.5,true);
-    this.txt(CX,y-29,tagline,'10px','#cfc0e8',0.5);
-    this.txt(CX,y-10,b.rates.map(r=>RANKSTAR[r[0]]+' '+Math.round(r[1]*100)+'%').join(' / '),'9px','#bfb0d0',0.5);
+    this.rect(CX,y,372,146,col).setStrokeStyle(2,stroke);
+    this.txt(CX,y-52,b.icon+' '+b.name,'19px','#f3e9d8',0.5,true);
+    this.txt(CX,y-30,tagline,'13px','#cfc0e8',0.5);
+    this.txt(CX,y-10,b.rates.map(r=>RANKSTAR[r[0]]+' '+Math.round(r[1]*100)+'%').join(' / '),'12px','#bfb0d0',0.5);
     const unit=b.cur==='stones'?'💎':'💰';
-    this.btn(CX-94,y+38,166,42,'單抽 '+unit+b.cost1,()=>this.pull(bankey,1),{col:0x3a2c1d,stroke:stroke,color:'#ffe08a',bold:true,fs:'14px'});
-    this.btn(CX+94,y+38,166,42,'十連 '+unit+b.cost10,()=>this.pull(bankey,10),{col:0x3a2c1d,stroke:stroke,color:'#ffe08a',bold:true,fs:'14px'});
+    this.btn(CX-94,y+40,166,44,'單抽 '+unit+b.cost1,()=>this.pull(bankey,1),{col:0x3a2c1d,stroke:stroke,color:'#ffe08a',bold:true,fs:'17px'});
+    this.btn(CX+94,y+40,166,44,'十連 '+unit+b.cost10,()=>this.pull(bankey,10),{col:0x3a2c1d,stroke:stroke,color:'#ffe08a',bold:true,fs:'17px'});
   }
   pull(bankey,count){
     if(boxFull()){this.toast('背包已滿,請先到卡冊擴充或分解');this.rebuild();return;}   // 背包滿→擋抽(個體制:每張佔一格)
@@ -2058,12 +2226,12 @@ class HomeScene extends Phaser.Scene{
       if(it.isNew)this.txt(cx,cy-27,'✦NEW','9px','#ffe04a',0.5,true);});
     this.btn(CX,Math.min(H-86,y0+Math.ceil(n/cols)*gy+24),200,44,'確定',()=>{this.gachaResult=null;this.rebuild();},{col:0x2e3a22,stroke:0x6aaa4c,color:'#eafce0',bold:true});}
   bOther(){const pr=getProgress();
-    this.txt(CX,92,'⚙️ 其他','18px','#f3e9d8',0.5,true);
-    this.txt(CX,150,'🏆 序章通關 ×'+pr.clears+'    📖 收集 '+ownedCount()+'/'+ROSTER.length,'13px','#ffd56a',0.5);
-    this.btn(CX-92,224,172,48,'📖 卡片圖鑑',()=>this.go('collection'),{col:0x2e2a3a,stroke:0x5a6a8a,color:'#cfe0ff',fs:'14px'});
-    this.btn(CX+92,224,172,48,'📖 重看教學',()=>{mutSave(s=>{if(!s.settings)s.settings={};s.settings.tut=false;});this.toast('下次進關會重看教學');},{col:0x2e2a3a,stroke:0x5a6a8a,color:'#cfe0ff',fs:'14px'});
-    this.btn(CX,290,360,48,'🔄 重置存檔(測試用)',()=>{localStorage.removeItem('ninja_save');localStorage.removeItem('ninja_owned');this.toast('已重置');this.switchTab('dungeon');},{col:0x3a201a,stroke:0x8a4a3a,color:'#ffb0a0'});
-    this.txt(CX,344,'🧪 測試工具(上架前移除)','12px','#9a8a6a',0.5);
+    this.txt(CX,92,'⚙️ 其他','22px','#f3e9d8',0.5,true);
+    this.txt(CX,150,'🏆 序章通關 ×'+pr.clears+'    📖 收集 '+ownedCount()+'/'+ROSTER.length,'15px','#ffd56a',0.5);
+    this.btn(CX-92,224,172,50,'📖 卡片圖鑑',()=>this.go('collection'),{col:0x2e2a3a,stroke:0x5a6a8a,color:'#cfe0ff',fs:'17px'});
+    this.btn(CX+92,224,172,50,'📖 重看教學',()=>{mutSave(s=>{if(!s.settings)s.settings={};s.settings.tut=false;});this.toast('下次進關會重看教學');},{col:0x2e2a3a,stroke:0x5a6a8a,color:'#cfe0ff',fs:'17px'});
+    this.btn(CX,292,360,50,'🔄 重置存檔(測試用)',()=>{localStorage.removeItem('ninja_save');localStorage.removeItem('ninja_owned');this.toast('已重置');this.switchTab('dungeon');},{col:0x3a201a,stroke:0x8a4a3a,color:'#ffb0a0',fs:'17px'});
+    this.txt(CX,346,'🧪 測試工具(上架前移除)','13px','#9a8a6a',0.5);
     const dev=(lv)=>{devSetAllLv(lv);this.toast('全卡 → LV'+lv);this.rebuild();};
     this.btn(CX-120,384,112,42,'全卡 LV1',()=>dev(1),{col:0x24303a,stroke:0x4a6a8a,color:'#cfe0ff',fs:'13px'});
     this.btn(CX,384,112,42,'全卡 LV10',()=>dev(10),{col:0x24303a,stroke:0x4a6a8a,color:'#cfe0ff',fs:'13px'});
@@ -2076,7 +2244,7 @@ class HomeScene extends Phaser.Scene{
 /* ===== 強化合成(養成) ===== */
 class FuseScene extends Phaser.Scene{
   constructor(){super('fuse');}
-  init(d){this.target=(d&&d.target)||this.target||loadTeam()[0];this.mode='feed';if(this.feedPage==null)this.feedPage=0;}
+  init(d){this.target=(d&&d.target)||this.target||loadTeam()[0];this.mode='feed';if(this.feedPage==null)this.feedPage=0;this.sel=[];}   // sel=已選素材個體 u 陣列(進場清空)
   create(){this.add.rectangle(CX,H/2,W,H,0x160f18);this.rebuild();
     this.scale.on('resize',()=>{const o=H;recomputeLayout();if(Math.abs(H-o)>3){this.scale.setGameSize(W,H);this.rebuild();}});}
   rebuild(){if(this.layer)this.layer.destroy();this.layer=this.add.container(0,0);this.draw();}
@@ -2089,55 +2257,88 @@ class FuseScene extends Phaser.Scene{
     this.tweens.add({targets:t,alpha:0,delay:900,duration:400,onComplete:()=>t.destroy()});}
   back(){this.btn(CX,H-42,200,44,'🏠 返回大廳',()=>{this.scene.manager.start('home');this.scene.manager.stop('fuse');},{stroke:0x5a8a3c,color:'#cfe8b0'});}
   draw(){
-    this.txt(CX,36,'⬆️ 強化合成','20px','#f3e9d8',0.5,true);
-    this.txt(CX,62,'💰 '+getMeta().coins+' · 吃重複卡升級(同屬 ×1.5)· 每張 '+FEED_COST+'金','10px','#ffe08a',0.5);
+    this.txt(CX,34,'⬆️ 強化合成','22px','#f3e9d8',0.5,true);
+    this.txt(CX,60,'💰 '+getMeta().coins+' · 同屬×1.5 · 每張 '+FEED_COST+'金','13px','#ffe08a',0.5);
     if(this.mode==='pick')return this.drawPick();
     const t=ROSTER.find(c=>c.id===this.target);
-    if(!t){this.btn(CX,200,200,44,'選擇強化對象',()=>{this.mode='pick';this.rebuild();},{stroke:0x5a6a8a,color:'#cfe0ff'});this.back();return;}
+    if(!t){this.btn(CX,200,220,48,'選擇強化對象',()=>{this.mode='pick';this.rebuild();},{stroke:0x5a6a8a,color:'#cfe0ff',fs:'17px'});this.back();return;}
+    const sel=this.sel||[];
     const lv=getCardLv(this.target),atk=cardAtk(this.target),exp=getCardExp(this.target),need=expToNext(lv),mx=lv>=MAXLV;
-    this.rect(CX,124,360,86,EL[t.el].color).setStrokeStyle(2,0xffd56a);
-    this.txt(44,104,t.name+'  Lv.'+lv+(mx?' MAX':''),'15px','#1a1208',0,true);
-    this.txt(44,128,EL[t.el].name+'·'+RANKSTAR[t.rank]+'  ⚔️atk '+atk+'(基'+t.atk+')','11px','#3a2c12',0);
-    this.rect(44,150,300,10,0x000000,0.4).setOrigin(0,0.5);
-    this.rect(44,150,300*(mx?1:Math.min(1,exp/need)),10,0x6ac0ff).setOrigin(0,0.5);
-    this.txt(344,150,mx?'MAX':(exp+'/'+need),'9px','#10303f',1,true);
-    this.btn(CX,192,150,32,'🔄 換強化對象',()=>{this.mode='pick';this.rebuild();},{col:0x2e2a3a,stroke:0x5a6a8a,color:'#cfe0ff',fs:'12px'});
-    this.txt(CX,232,'點素材餵入(留最後一張保護)↓','11px','#9a8a6a',0.5);
-    // 素材=可餵的「個體」各一格(不疊×N,比照背包):每種留 1 張保護、其餘可餵;正方形 5 欄
+    const pv=(sel.length&&!mx)?previewFeed(this.target,sel):null;   // 選了素材→即時預覽結果
+    // 對象卡 + 經驗條
+    this.rect(CX,118,360,84,EL[t.el].color).setStrokeStyle(2,0xffd56a);
+    this.txt(40,98,t.name+'  Lv.'+(pv?pv.toLv:lv)+(mx?' MAX':(pv&&pv.ups>0?'  ↑'+pv.ups:'')),'16px','#1a1208',0,true);
+    this.txt(40,120,EL[t.el].name+'·'+RANKSTAR[t.rank]+'  ⚔️atk '+atk,'13px','#3a2c12',0);
+    const bw=304, ratio=mx?1:(pv?Math.min(1,pv.exp/pv.need):Math.min(1,exp/need));
+    this.rect(40,144,bw,13,0x000000,0.4).setOrigin(0,0.5);
+    this.rect(40,144,bw*ratio,13,pv?0x6aca4c:0x6ac0ff).setOrigin(0,0.5);
+    this.txt(40+bw,144,mx?'MAX':(pv?('+'+pv.gained+' exp'):(exp+'/'+need)),'13px',pv?'#163f0a':'#10303f',1,true);
+    this.btn(CX,186,150,32,'🔄 換強化對象',()=>{this.mode='pick';this.sel=[];this.rebuild();},{col:0x2e2a3a,stroke:0x5a6a8a,color:'#cfe0ff',fs:'14px'});
+    this.txt(CX-12,216,'點素材選取(可多選,最多 5)','13px','#9a8a6a',0.5);
+    if(sel.length)this.btn(W-46,216,64,26,'清空',()=>{this.sel=[];this.rebuild();},{col:0x3a201a,stroke:0x8a4a3a,color:'#ffb0a0',fs:'12px'});
+    // 素材格(toggle 選取;每種留 1 張保護;同屬優先排序)
     const cards=loadSave().cards, byType={}; cards.forEach(c=>{(byType[c.id]=byType[c.id]||[]).push(c);});
     let feedList=[];
-    Object.keys(byType).forEach(id=>{const arr=byType[id]; if(arr.length>=2){const cd=ROSTER.find(x=>x.id===id); for(let k=1;k<arr.length;k++)feedList.push(cd);}});
-    feedList.sort((a,b)=>((b.el===t.el?1:0)-(a.el===t.el?1:0))||a.id.localeCompare(b.id));   // 同屬優先
-    const cols=5, perPage=30, cw=64, gx=76, gy=74, x0=CX-2*gx, y0=270;
+    Object.keys(byType).forEach(id=>{const arr=byType[id]; if(arr.length>=2){const cd=ROSTER.find(x=>x.id===id); for(let k=1;k<arr.length;k++)feedList.push({cd,u:arr[k].u});}});
+    feedList.sort((a,b)=>((b.cd.el===t.el?1:0)-(a.cd.el===t.el?1:0))||a.cd.id.localeCompare(b.cd.id));
+    const cols=5, perPage=20, cw=62, gx=74, gy=70, x0=CX-2*gx, y0=252;
     const pages=Math.max(1,Math.ceil(feedList.length/perPage));
     if(this.feedPage>=pages)this.feedPage=pages-1; if(this.feedPage<0)this.feedPage=0;
     const pageList=feedList.slice(this.feedPage*perPage,(this.feedPage+1)*perPage);
-    if(!feedList.length){this.txt(CX,318,'目前沒有多餘的卡可當素材','12px','#9a8a6a',0.5);this.txt(CX,340,'(去元素關多收幾張同卡)','10px','#7a6a4a',0.5);}
-    pageList.forEach((c,k)=>{const cx=x0+(k%cols)*gx, cy=y0+Math.floor(k/cols)*gy, same=c.el===t.el;
-      this.rect(cx,cy,cw,cw,EL[c.el].color).setStrokeStyle(2,same?0xffd56a:0x000000,same?1:0.3).setInteractive().on('pointerup',()=>this.feed(c.id));
+    if(!feedList.length){this.txt(CX,300,'目前沒有多餘的卡可當素材','13px','#9a8a6a',0.5);this.txt(CX,324,'(去元素關多收幾張同卡)','13px','#7a6a4a',0.5);}
+    pageList.forEach((it,k)=>{const c=it.cd, u=it.u, cx=x0+(k%cols)*gx, cy=y0+Math.floor(k/cols)*gy, same=c.el===t.el, oi=sel.indexOf(u), on=oi>=0;
+      this.rect(cx,cy,cw,cw,EL[c.el].color).setStrokeStyle(on?4:2,on?0x4affd0:(same?0xffd56a:0x000000),on?1:(same?1:0.3)).setInteractive().on('pointerup',()=>this.toggleSel(u));
       this.txt(cx,cy-15,c.name,'10px','#1a1208',0.5,true);
       this.txt(cx,cy+3,starStr(c.id),'9px','#3a2c12',0.5);
-      this.txt(cx,cy+19,same?'同屬×1.5':'素材','9px',same?'#7a3000':'#3a2c12',0.5);});
-    if(pages>1){const py=y0+6*gy-8;
+      this.txt(cx,cy+19,same?'同屬×1.5':'素材','9px',same?'#7a3000':'#3a2c12',0.5);
+      if(on){this.rect(cx+cw/2-12,cy-cw/2+12,20,20,0x12a86a).setStrokeStyle(2,0xffffff);this.txt(cx+cw/2-12,cy-cw/2+12,String(oi+1),'13px','#ffffff',0.5,true);}});   // 選取序號角標
+    if(pages>1){const py=y0+4*gy+6;
       this.btn(CX-74,py,52,28,'◀',()=>{this.feedPage--;this.rebuild();},{fs:'15px'});
-      this.txt(CX,py,(this.feedPage+1)+' / '+pages,'13px','#cfe0e8',0.5);
+      this.txt(CX,py,(this.feedPage+1)+' / '+pages,'15px','#cfe0e8',0.5);
       this.btn(CX+74,py,52,28,'▶',()=>{this.feedPage++;this.rebuild();},{fs:'15px'});}
+    // 合成確認 bar(神魔/龍族式:選好才按)
+    const canFuse=sel.length>0 && !mx;
+    this.btn(CX,H-96,330,50, canFuse?('⚡ 合成  '+sel.length+'/5  ·  '+(FEED_COST*sel.length)+'金'):(mx?'已達滿級 Lv.'+MAXLV:'點素材選取後可合成'),
+      ()=>this.tryFuse(),{col:canFuse?0x2e3a22:0x241a10,stroke:canFuse?0x6aaa4c:0x3a2e1c,color:canFuse?'#eafce0':'#7a6a4a',bold:true,fs:'18px'});
     this.back();
   }
+  toggleSel(u){this.sel=this.sel||[]; const i=this.sel.indexOf(u);
+    if(i>=0)this.sel.splice(i,1); else { if(this.sel.length>=5){this.toast('一次最多 5 張');return;} this.sel.push(u); }
+    this.rebuild();}
+  tryFuse(){const sel=this.sel||[]; if(!sel.length){this.toast('先點素材選取');return;}
+    if(getCardLv(this.target)>=MAXLV){this.toast('已達滿級');return;}
+    const s=loadSave(), rare=sel.some(u=>{const c=s.cards.find(x=>x.u===u); const cd=c&&ROSTER.find(r=>r.id===c.id); return cd&&(cd.rank==='jonin'||cd.rank==='kage');});
+    if(rare){this.confirmFuse();return;}   // 防呆:含 ★★★↑ 稀有素材→二次確認
+    this.doFuse();}
+  confirmFuse(){
+    if(this._cfg){this._cfg.destroy();this._cfg=null;}
+    const g=this.add.container(0,0).setDepth(2200); this._cfg=g;
+    g.add(this.add.rectangle(CX,H/2,W,H,0x000000,0.7).setInteractive());
+    const py=H/2; g.add(this.add.rectangle(CX,py,330,184,0x241a10).setStrokeStyle(2,0x8a6a3a));
+    g.add(this.add.text(CX,py-58,'⚠️ 確認合成',{fontFamily:EMOJIFONT,fontSize:'20px',color:'#ffd56a',fontStyle:'bold'}).setOrigin(0.5));
+    g.add(this.add.text(CX,py-14,'素材含 ★★★ 以上稀有卡\n餵入後無法復原,確定?',{fontFamily:EMOJIFONT,fontSize:'15px',color:'#e8dcc8',align:'center'}).setOrigin(0.5));
+    const mk=(x,label,col,stroke,cb)=>{const r=this.add.rectangle(x,py+52,144,46,col).setStrokeStyle(2,stroke).setInteractive(); g.add(r);
+      g.add(this.add.text(x,py+52,label,{fontFamily:EMOJIFONT,fontSize:'17px',color:'#fff',fontStyle:'bold'}).setOrigin(0.5)); r.on('pointerup',cb);};
+    mk(CX-78,'取消',0x2a2630,0x6a6276,()=>{g.destroy();this._cfg=null;});
+    mk(CX+78,'確定合成',0x2e3a22,0x6aaa4c,()=>{g.destroy();this._cfg=null;this.doFuse();});
+  }
+  doFuse(){const sel=(this.sel||[]).slice(), r=feedFodderMany(this.target,sel);
+    if(!r.ok){this.toast(r.msg);return;}
+    this.sel=[]; this.feedPage=0;
+    this.toast(r.ups>0?('🆙 升級! Lv.'+r.lv+'(吃 '+r.eaten+' 張 · +'+r.total+' exp)'):('+'+r.total+' exp(吃 '+r.eaten+' 張)'));
+    this.rebuild();}
   drawPick(){
-    this.txt(CX,98,'選擇強化對象','13px','#ffd56a',0.5,true);
+    this.txt(CX,98,'選擇強化對象','17px','#ffd56a',0.5,true);
     // 強化對象=「種類」(同種共用等級)→ 每種一格,正方形 5 欄
     const owned=loadOwned(), list=ROSTER.filter(c=>owned[c.id]);
     const cols=5, cw=64, gx=76, gy=74, x0=CX-2*gx, y0=150;
     list.forEach((c,k)=>{const cx=x0+(k%cols)*gx, cy=y0+Math.floor(k/cols)*gy, on=c.id===this.target;
-      this.rect(cx,cy,cw,cw,EL[c.el].color).setStrokeStyle(2,on?0xffd56a:0x000000,on?1:0.3).setInteractive().on('pointerup',()=>{this.target=c.id;this.mode='feed';this.feedPage=0;this.rebuild();});
+      this.rect(cx,cy,cw,cw,EL[c.el].color).setStrokeStyle(2,on?0xffd56a:0x000000,on?1:0.3).setInteractive().on('pointerup',()=>{this.target=c.id;this.mode='feed';this.feedPage=0;this.sel=[];this.rebuild();});   // 換對象→清空已選素材(同屬加成會變)
       this.txt(cx,cy-15,c.name,'10px','#1a1208',0.5,true);
       this.txt(cx,cy+3,'Lv'+getCardLv(c.id),'10px','#3a2c12',0.5);
       this.txt(cx,cy+19,'持有'+owned[c.id],'9px','#3a2c12',0.5);});
-    this.btn(CX,H-42,200,44,'返回',()=>{this.mode='feed';this.rebuild();},{stroke:0x5a6a8a,color:'#cfe0ff'});
+    this.btn(CX,H-42,200,44,'返回',()=>{this.mode='feed';this.rebuild();},{stroke:0x5a6a8a,color:'#cfe0ff',fs:'16px'});
   }
-  feed(fid){const r=feedFodder(this.target,fid);if(!r.ok){this.toast(r.msg);return;}
-    this.toast(r.ups>0?('🆙 升級! Lv.'+r.lv+(r.same?'(同屬)':'')):('+'+r.reward+' exp'+(r.same?'(同屬×1.5)':'')));this.rebuild();}
 }
 
 window.GAME = new Phaser.Game({
