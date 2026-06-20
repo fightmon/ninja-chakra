@@ -34,11 +34,15 @@ const ENEMY_IMG = (()=>{ const m={}; ['fire','water','thunder','earth','wind'].f
 // 各敵圖「角色實體」在 320 畫布的高度佔比 h 與底緣 bottom(量測值)。渲染時改以「實體高度」對齊→不同圖體型一致;bottom 用來對齊腳底基準線。魔王再乘 BOSS_MUL 刻意略大。
 const ENEMY_FIT = { grunt:{h:0.65,bottom:0.867}, grunt2:{h:0.65,bottom:0.867}, guard:{h:0.69,bottom:0.869}, boss_baby:{h:0.65,bottom:0.867}, boss_beg:{h:0.69,bottom:0.869}, boss_nrm:{h:0.88,bottom:0.902} };
 const BOSS_MUL = 1.1;   // 魔王體型相對雜兵的刻意放大倍率(看得出是王、又不爆出敵格)
-const DUNGEON_BG = { fire:{back:'art/bg/fire_back.webp', front:'art/bg/fire_front.webp'} };   // 關卡戰鬥背景(後景/前景兩層 WebP;中間插程式做的中景火光)。無對應→漸層底
+const DUNGEON_BG = { fire:{back:'art/bg/fire_back.webp', front:'art/bg/fire_front.webp'},
+                     water:{back:'art/bg/water_back.webp', front:'art/bg/water_front.webp'},
+                     thunder:{back:'art/bg/thunder_back.webp', front:'art/bg/thunder_front.webp'} };   // 關卡戰鬥背景(後景/前景兩層 WebP;中間插中景:火=餘燼/水=水泡/雷=電光)。無對應→漸層底
 const BG_PLATFORM_FRAC = 0.23;   // 背景圖裡「熔岩台面線」佔圖高的比例(敵人腳底要對齊這條線);微調對齊用
 const BG_GROUND_OFF = 46;        // 敵人腳底線 = BATTLE_CY + 此值(微調敵人站在台面的高低)
+const BG_FRONT_Y_OFF = 0;        // 前景 Y 微調:+往下、−往上(0=台面剛好貼敵腳底)
 const HP_BAR_W = 0.32;           // 敵 HP 條寬度 = 敵格邊長 × 此值(集中站位時不重疊)
 const ENEMY_SPREAD = 0.75;       // 敵人橫向集中係數:1=鋪滿、越小越往中央靠攏
+const BOSS_ATK_MUL = 1.3;        // 魔王攻擊力額外倍率(魔王一拳更痛、和小兵拉開差距)
 const ELEMENT_BOXES = [0,2,4,6,8];
 const NEUTRAL_FILL = 0xc8a06a, NEUTRAL_DARK = 0x2c2114;
 const SHAPES = [
@@ -734,8 +738,9 @@ class GameScene extends Phaser.Scene{
     this.bgBack = hasBG?this.add.image(CX,0,'bg_'+this.dungeonId+'_back').setOrigin(0.5,0).setDepth(DEPTH.bg-3):null;
     this.bgFront= hasBG&&this.textures.exists('bg_'+this.dungeonId+'_front')?this.add.image(CX,0,'bg_'+this.dungeonId+'_front').setOrigin(0.5,0).setDepth(DEPTH.bg-1):null;
     if(hasBG)this.makeEmbers();   // 中景:熔岩火光/餘燼上升動畫
-    this.bgGfx=this.add.graphics().setDepth(DEPTH.bg); this.drawBG();
-    this.bgLine=this.add.rectangle(CX,BG_H,W,2,0x000000,0.3).setDepth(DEPTH.bg);
+    this.bgGfx=this.add.graphics().setDepth(DEPTH.bg);
+    this.bgLine=this.add.rectangle(CX,BG_H,W,2,0x000000,0.3).setDepth(DEPTH.bg);   // 先建好,drawBG 才能依關卡顯示/隱藏它
+    this.drawBG();
 
     // nav(最高層;無背景條,文字加深色描邊保可讀)
     this.goldTxt=this.add.text(10,13,'💰 0',{fontFamily:EMOJIFONT,fontSize:'14px',color:'#ffe08a'}).setOrigin(0,0.5).setStroke('#1a1208',4).setDepth(DEPTH.nav);
@@ -796,23 +801,39 @@ class GameScene extends Phaser.Scene{
     if(!this.textures.exists('ember')){ const gg=this.make.graphics({x:0,y:0,add:false});
       gg.fillStyle(0xffffff,0.5);gg.fillCircle(8,8,8); gg.fillStyle(0xffffff,1);gg.fillCircle(8,8,4.5);
       gg.generateTexture('ember',16,16); gg.destroy(); }
-    this.embers=this.add.particles(CX,0,'ember',{
+    const dg=this.dungeonId; let cfg;
+    if(dg==='water') cfg={   // 水關=水泡(慢慢上升、淡藍白)
+      x:{min:-135,max:135}, y:{min:-6,max:6},
+      speedY:{min:-42,max:-14}, speedX:{min:-10,max:10}, accelerationY:-4,
+      scale:{min:0.25,max:0.62}, alpha:{start:0.6,end:0},
+      lifespan:{min:2200,max:4000}, frequency:120, quantity:1,
+      tint:[0xbfefff,0x9fe0ff,0xffffff,0xa8e8ff], blendMode:'ADD' };
+    else if(dg==='thunder') cfg={   // 雷關=電光火花(快、亂竄、閃爍黃白)
+      x:{min:-140,max:140}, y:{min:-10,max:10},
+      speedY:{min:-80,max:-20}, speedX:{min:-26,max:26}, accelerationY:-6,
+      scale:{min:0.14,max:0.42}, alpha:{start:0.95,end:0},
+      lifespan:{min:600,max:1500}, frequency:55, quantity:1,
+      tint:[0xffff88,0xfff4a0,0xffffff,0xeaff6a], blendMode:'ADD' };
+    else cfg={   // 火關=火光餘燼
       x:{min:-135,max:135}, y:{min:-6,max:6},
       speedY:{min:-58,max:-22}, speedX:{min:-14,max:14}, accelerationY:-8,
       scale:{min:0.2,max:0.55}, alpha:{start:0.85,end:0},
       lifespan:{min:1600,max:3200}, frequency:80, quantity:1,
-      tint:[0xffd24a,0xffae3a,0xff8a2e,0xffc25a], blendMode:'ADD'
-    }).setDepth(DEPTH.bg-2); }
+      tint:[0xffd24a,0xffae3a,0xff8a2e,0xffc25a], blendMode:'ADD' };
+    this.embers=this.add.particles(CX,0,'ember',cfg).setDepth(DEPTH.bg-2); }
   drawBG(){const g=this.bgGfx;g.clear();const M=Math.round(H);   // M=往四周多畫一圈背景→特寫鏡頭推近/平移不會露出世界外的黑邊
-    if(this.bgBack){   // 有關卡背景:背景「熔岩台線」對齊敵人腳底(背景追敵人,跨機型都站台上)+ cover 縮放不露空;盤面區深底蓋圖下半
-      const r=this.bgBack.width/this.bgBack.height;   // 1080/1920=0.5625
+    if(this.bgBack){   // 有關卡背景:後景 cover 撐滿(遠景,可裁);前景 滿寬等比不裁、台面對齊敵腳底(可微調)
+      const pw=this.bgBack.width, ph=this.bgBack.height, r=pw/ph;   // 1080/1920=0.5625
       const pf=BG_PLATFORM_FRAC, groundY=BATTLE_CY+BG_GROUND_OFF;   // 台面在圖高比例 / 敵人腳底線
-      const dh=Math.max(Math.round(W/r), Math.ceil(groundY/pf));    // cover:撐滿寬度 + 台面落腳底且上方不露空
-      const dw=Math.round(dh*r), topY=Math.round(groundY-dh*pf);    // topY≤0;dw>W 時左右裁切(置中)
-      [this.bgBack,this.bgFront].forEach(im=>{ if(im)im.setDisplaySize(dw,dh).setPosition(CX,topY).setVisible(true); });
-      if(this.embers)this.embers.setPosition(CX, groundY-4);                         // 火光從台面升起
-      g.fillStyle(0x160f18,1);g.fillRect(-W,BG_H,W*3,H-BG_H+M);                      // 盤面區底色(蓋圖下半 + 延伸外圍)
-      g.fillStyle(0x000000,0.22);g.fillEllipse(CX,BATTLE_CY+54,W*0.82,42);           // 敵人腳下陰影
+      // 後景:cover 撐滿整個畫面(頂端對齊保留遠景上緣、左右置中、可裁;往下多延一截避免鏡頭推近露空)
+      const sc=Math.max(W/pw, (H+Math.round(H*0.1))/ph);
+      this.bgBack.setDisplaySize(Math.round(pw*sc), Math.round(ph*sc)).setPosition(CX,0).setVisible(true);
+      // 前景:寬 100%(左右不裁)、高度等比 auto、Y 對齊敵腳底(+BG_FRONT_Y_OFF 微調)
+      if(this.bgFront){ const dhF=Math.round(W/r), topF=Math.round(groundY-dhF*pf+BG_FRONT_Y_OFF);
+        this.bgFront.setDisplaySize(W,dhF).setPosition(CX,topF).setVisible(true); }
+      if(this.embers)this.embers.setPosition(CX, groundY-4);                         // 中景火光從台面升起
+      if(this.bgLine)this.bgLine.setVisible(false);                                  // 有背景圖→隱藏盤面上緣分隔線(否則背景透出時變一條橫槓)
+      // 可見區 100%:不畫盤面區底色,背景透到全高(盤面格子維持原本不透明,在背景上)
       return;
     }
     const g1=Math.round(H*0.34);
@@ -820,7 +841,7 @@ class GameScene extends Phaser.Scene{
     g.fillGradientStyle(0x4a6788,0x4a6788,0x223524,0x223524,1);g.fillRect(0,0,W,g1);  // 真正的漸層帶(盤上)
     g.fillStyle(0x223524,1);g.fillRect(-W,g1,W*3,Math.max(0,BG_H-g1));               // 中段深底(延伸兩側外)
     g.fillStyle(0x160f18,1);g.fillRect(-W,BG_H,W*3,H-BG_H+M);                        // 盤面區底色(延伸下緣外、兩側外)
-    g.fillStyle(0x000000,0.22);g.fillEllipse(CX,BATTLE_CY+54,W*0.82,42);}            // 敵人腳下陰影
+    if(this.bgLine)this.bgLine.setVisible(true);}                                    // 無背景圖(漸層底)→ 顯示盤面上緣分隔線
   relayout(){
     this.cameras.main.setBounds(0,0,W,H);   // H 隨視窗變,鏡頭範圍同步
     this.drawBG();
@@ -837,7 +858,7 @@ class GameScene extends Phaser.Scene{
     if(this.tray)this.renderTray();
     this.enemies.forEach(e=>{if(!e.card||e.dead)return;const x=e.card.x,cy=BATTLE_CY,sz=e.cardH;
       e.card.setPosition(x,cy);
-      e.turnG.setPosition(x-sz/2+12,cy-sz/2+11);if(e.hpGfx)e.hpGfx.setPosition(e.hpx,cy+sz/2-3);e.mark.setPosition(x,cy-sz/2-9);
+      e.turnG.setPosition(x-sz/2+12,cy-sz/2+11);if(e.hpGfx)e.hpGfx.setPosition(e.hpx,cy+sz/2-3);e.mark.setPosition(x,cy-sz/2-9);if(e.shadow)e.shadow.setPosition(x,cy+BG_GROUND_OFF);
       const fy=e.img?cy:cy-Math.round(sz*0.14);if(e.img)e.sprite.setDisplaySize(sz,sz);e.baseScale=e.sprite.scaleX;if(e.bob)e.bob.stop();e.sprite.setPosition(x,fy);e.restY=fy;e.bob=this.idleAnim(e,fy);});
   }
 
@@ -893,7 +914,7 @@ class GameScene extends Phaser.Scene{
     this.enemies=defs.map(d=>{
       let el=d.el; if(pun&&!punished&&d.el===dEl&&!d.boss){el=pun;punished=true;}
       const A=(d.arch&&ARCH[d.arch])||null;   // 兵種:數值倍率永遠套;行為只在 covered()(上級/超級魔王、地獄全敵)才開
-      const hp=Math.max(1,Math.round(d.hp*df.hp*(A?A.hpM:1))), atk=Math.max(1,Math.round(d.atk*df.atk*(A?A.atkM:1))), turns=Math.max(1,d.turns+(df.dt||0));
+      const hp=Math.max(1,Math.round(d.hp*df.hp*(A?A.hpM:1))), atk=Math.max(1,Math.round(d.atk*df.atk*(A?A.atkM:1)*(d.boss?BOSS_ATK_MUL:1))), turns=Math.max(1,d.turns+(df.dt||0)-1);   // 魔王 atk 再×BOSS_ATK_MUL;全體攻擊CD -1(敵更快出手→難度↑)
       const phases=d.phases||null;
       let beh=null;
       if(phases){el=phases[0].el;beh=phases[0].beh;}     // 魔王:初始用 phase[0] 的屬+行為(之後隨血量變身)
@@ -918,6 +939,7 @@ class GameScene extends Phaser.Scene{
       e.card=this.add.rectangle(x,cy,szc,szc,0x000000,0).setInteractive();   // 無底色:透明矩形只當點擊區
       e.card.on('pointerdown',()=>this.selectTarget(i));
       e.cy=cy;
+      e.shadow=this.add.ellipse(x, cy+BG_GROUND_OFF, Math.round(szc*(e.boss?0.82:0.6)), Math.round(szc*0.16), 0x000000, 0.4);   // 各自腳下陰影(魔王較寬)
       const tk=this.enemyTexKey(e);
       if(tk){   // 有怪物圖→以實體高度統一體型 + 對齊腳底;否則用 emoji 臉
         e.sprite=this.add.image(x,cy,tk).setOrigin(0.5).setInteractive(); e.img=true; this.fitEnemySprite(e);
@@ -941,6 +963,7 @@ class GameScene extends Phaser.Scene{
       else if(e.dot){gt='🔥 灼燒';gc='#ffb09a';} else if(e.regen){gt='💚 回血';gc='#9ae0a8';} else if(e.paralyze){gt='⚡ 麻痺';gc='#ffe98a';} else if(e.healAlly){gt='💚 補師';gc='#9ae0a8';} else if(e.junk){gt='🔒 封鎖';gc='#c4a8e0';}
       if(gt){e.gateTx=this.add.text(x,cy+szc/2+9,gt,{fontFamily:EMOJIFONT,fontSize:'10px',color:gc,fontStyle:'bold',stroke:'#0a1420',strokeThickness:3}).setOrigin(0.5);}
     });
+    this.enemies.forEach(e=>{if(e.shadow)this.enemyG.add(e.shadow);});   // 影は全 sprite の背面(先に add)
     // 敵方同層 z 序:敵中 > 敵左 > 敵右(越靠中央畫越上;同距時左>右)。依此由後往前加入容器
     const zorder=this.enemies.map((e,i)=>i).sort((a,b)=>{
       const ba=this.enemies[a].boss?0:1, bb=this.enemies[b].boss?0:1;
@@ -952,7 +975,14 @@ class GameScene extends Phaser.Scene{
     this.enemies.forEach((e,i)=>this.enemyEnter(e, i*120));   // 自遠方逼近入場(交錯)
     this.target=0;
   }
-  refill(){if(this.diff&&this.diff.baby){this.tray=this.babyTray();return;} this.tray=[pickShape(),pickShape(),pickShape()].map(c=>({c,used:false}));}
+  refill(){this.tray=[pickShape(),pickShape(),pickShape()].map(c=>({c,used:false}));   // 一般隨機塊
+    if(this.diff&&this.diff.baby&&this.babyNeedsHelp())this.tray=this.babyTray();}      // 嬰兒:快卡住時才換成好解塊(+renderHint 標最佳建議);否則一般塊、不給提示
+  // 嬰兒救援判定:完全放不下、或「盤面已擁擠且這手清不掉任何線/box」→ 快解不出來,該救
+  babyNeedsHelp(){ if(!this.anyPlaceable())return true;
+    let filled=0; for(let r=0;r<N;r++)for(let c=0;c<N;c++)if(this.board[r][c])filled++;
+    if(filled < N*N*0.5)return false;   // 盤面還不擁擠→不救
+    const canClear=this.tray.some(p=>{if(p.used||p.locked)return false; const h=this.bestPlacement(p.c); return h&&h.score>=100000;});   // score≥10萬 = 有清除
+    return !canClear; }
   // 嬰兒級「多HIT工廠」:盡量生出「放下去能同時清最多線/box」的塊(順便保證有解、永不卡死)
   babyTray(){const out=[], targeted=new Set();
     for(let n=0;n<2;n++){const best=this.bestHitSet(targeted); if(!best)break; out.push({c:best.shape,used:false,hint:best.origin}); best.clears.forEach(id=>targeted.add(id));}
@@ -974,6 +1004,20 @@ class GameScene extends Phaser.Scene{
       if(!best||score>best.score){const mr=Math.min(...s.empties.map(p=>p[0])), mc=Math.min(...s.empties.map(p=>p[1]));
         best={score,clears,origin:{r:mr,c:mc},shape:s.empties.map(p=>[p[0]-mr,p[1]-mc])};}});
     return best;}
+  // 固定形狀的最佳落點:在所有可放位置裡,挑「清最多線/box;否則最接近完成」者。回傳 {r,c,score}
+  bestPlacement(shape){ if(!shape)return null; let best=null;
+    for(let r=0;r<N;r++)for(let c=0;c<N;c++){
+      if(!canPlace(this.board,shape,r,c))continue;
+      const set={}; shape.forEach(([dr,dc])=>set[(r+dr)+'_'+(c+dc)]=1);
+      const fl=(rr,cc)=> !!this.board[rr][cc] || set[rr+'_'+cc];
+      let clears=0, prog=0;
+      for(let rr=0;rr<N;rr++){let f=true,n=0;for(let cc=0;cc<N;cc++){if(fl(rr,cc))n++;else f=false;} if(f)clears++; else prog+=n*n;}
+      for(let cc=0;cc<N;cc++){let f=true,n=0;for(let rr=0;rr<N;rr++){if(fl(rr,cc))n++;else f=false;} if(f)clears++; else prog+=n*n;}
+      for(let b=0;b<9;b++){const br=((b/3)|0)*3,bc=(b%3)*3; let f=true,n=0;for(let rr=br;rr<br+3;rr++)for(let cc=bc;cc<bc+3;cc++){if(fl(rr,cc))n++;else f=false;} if(f)clears++; else prog+=n*n;}
+      const score=clears*100000+prog;   // 清除優先;否則填得越接近完成(n²)越好
+      if(!best||score>best.score)best={r,c,score};
+    }
+    return best; }
   aliveCount(){return this.enemies.filter(e=>!e.dead).length;}
   targetEnemy(){let e=this.enemies[this.target];if(e&&!e.dead)return e;
     const i=this.enemies.findIndex(x=>!x.dead);this.target=i;return i<0?null:this.enemies[i];}
@@ -1167,8 +1211,13 @@ class GameScene extends Phaser.Scene{
   // 嬰兒級:把多HIT塊的建議落點畫成脈動金色格(放這裡就爆 HIT)
   renderHint(){const g=this.hintG; if(!g)return; g.clear(); if(this._hintTw){this._hintTw.remove();this._hintTw=null;}
     if(!this.diff||!this.diff.baby)return;
-    const cells=[]; this.tray.forEach(p=>{if(p.used||!p.hint)return; p.c.forEach(([dr,dc])=>cells.push([p.hint.r+dr,p.hint.c+dc]));});
-    if(!cells.length)return;
+    const helping=this.tray.some(p=>!p.used&&p.hint);   // 只有 babyTray(救援)塊才有 .hint;一般塊→不顯示建議
+    if(!helping)return;
+    // 救援中:從救援塊裡挑「當下最佳一手」(用 bestPlacement 重算,盤面變動後仍準)
+    let best=null, shp=null;
+    this.tray.forEach(p=>{if(p.used||p.locked||!p.hint)return; const h=this.bestPlacement(p.c); if(h&&(!best||h.score>best.score)){best=h;shp=p.c;}});
+    if(!best||!shp)return;
+    const cells=shp.map(([dr,dc])=>[best.r+dr,best.c+dc]);
     g.fillStyle(0xffe04a,0.5); g.lineStyle(2,0xfff3b0,0.95);
     cells.forEach(([r,c])=>{if(r<0||r>=N||c<0||c>=N)return; const cen=this.cellCenter(r,c); g.fillRoundedRect(cen.x-RECT/2,cen.y-RECT/2,RECT,RECT,6); g.strokeRoundedRect(cen.x-RECT/2,cen.y-RECT/2,RECT,RECT,6);});
     this._hintTw=this.tweens.add({targets:g,alpha:{from:0.35,to:0.9},duration:620,yoyo:true,repeat:-1,ease:'Sine.inOut'});
@@ -1454,7 +1503,8 @@ class GameScene extends Phaser.Scene{
   }
   // combo 顯示在目標敵右上;數字越大字越大
   showCombo(){const e=this.targetEnemy(); if(!e||!e.sprite)return;
-    if(this.comboTx){this.tweens.killTweensOf(this.comboTx);this.comboTx.destroy();}
+    if(this.comboTx){this.tweens.killTweensOf(this.comboTx);this.comboTx.destroy();this.comboTx=null;}
+    if(this.combo<2)return;   // 1 combo 不顯示,2 combo 以上才出
     const sz=Math.min(38,16+this.combo*1.6), x=e.sprite.x+e.cardW*0.5, y=Math.max(28,e.sprite.y-e.cardH*0.5);   // 字級上限↓、上緣夾住
     const t=this.comboTx=this.add.text(x,y,this.combo+' COMBO',{fontFamily:HITFONT,fontSize:sz+'px',color:'#ffd24a',fontStyle:'bold',stroke:'#7a2a00',strokeThickness:4}).setOrigin(1,0).setDepth(DEPTH.fx).setScale(0.5);
     this.tweens.add({targets:t,scaleX:1,scaleY:1,duration:200,ease:'Back.out'});
@@ -1550,7 +1600,7 @@ class GameScene extends Phaser.Scene{
       this.playDeath(e);
       this.time.delayedCall(950,()=>{ e.dead=false; e._labDying=false; e.hp=e.max; if(e.hpTw){e.hpTw.stop();e.hpTw=null;}
         const sp=e.sprite; sp.setVisible(true); sp.clearTint&&sp.clearTint();
-        [e.turnG,e.hpGfx].forEach(o=>{if(o)o.setVisible(true);}); if(e.card)e.card.setInteractive();
+        [e.turnG,e.hpGfx,e.shadow].forEach(o=>{if(o)o.setVisible(true);}); if(e.card)e.card.setInteractive();
         this.enemyEnter(e,0); this.updateEnemies(); });
       return;
     }
@@ -1575,7 +1625,7 @@ class GameScene extends Phaser.Scene{
   // 敗陣演出:被打飛(後上)、縮小、旋轉、淡出,縮到很小再炸成光芒
   playDeath(e){const sp=e.sprite, bs=e.baseScale||1, x0=sp.x, y0=(e.restY!=null?e.restY:sp.y);
     if(e.card)e.card.disableInteractive();
-    [e.turnG,e.hpGfx,e.mark].forEach(o=>{if(o)this.tweens.add({targets:o,alpha:0,duration:200,onComplete:()=>{o.setVisible(false);o.setAlpha(1);}});});
+    [e.turnG,e.hpGfx,e.mark,e.shadow].forEach(o=>{if(o)this.tweens.add({targets:o,alpha:0,duration:200,onComplete:()=>{o.setVisible(false);o.setAlpha(1);}});});
     this.tweens.killTweensOf(sp); sp.clearTint&&sp.clearTint();
     this.tweens.add({targets:sp, y:y0-72, x:x0+(x0<CX?-22:22), scaleX:bs*0.12, scaleY:bs*0.12, angle:220, alpha:0.15, duration:560, ease:'Quad.in',
       onComplete:()=>{this.deathLight(x0,y0-64,e.el); sp.setVisible(false);}});
@@ -1593,7 +1643,7 @@ class GameScene extends Phaser.Scene{
     this.tweens.add({targets:sp,alpha:1,duration:220,delay:delay});
     this.tweens.add({targets:sp,scaleX:bs,scaleY:bs,y:ry,duration:460,delay:delay,ease:'Back.out',
       onComplete:()=>{sp.setScale(bs);sp.setY(ry);if(!e.dead)e.bob=this.idleAnim(e,ry);}});
-    [e.turnG,e.hpGfx].forEach(o=>{if(o){o.setAlpha(0);this.tweens.add({targets:o,alpha:1,duration:300,delay:delay+150});}});
+    [e.turnG,e.hpGfx,e.shadow].forEach(o=>{if(o){o.setAlpha(0);this.tweens.add({targets:o,alpha:1,duration:300,delay:delay+150});}});
   }
   // 過關前進:鏡頭往前推一下 + 直向速度線往下刷過(像往深處前進到下一關)
   stageAdvanceFX(){ const cam=this.cameras.main;
