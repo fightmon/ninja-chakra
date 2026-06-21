@@ -36,13 +36,25 @@ const ENEMY_FIT = { grunt:{h:0.65,bottom:0.867}, grunt2:{h:0.65,bottom:0.867}, g
 const BOSS_MUL = 1.1;   // 魔王體型相對雜兵的刻意放大倍率(看得出是王、又不爆出敵格)
 const DUNGEON_BG = { fire:{back:'art/bg/fire_back.webp', front:'art/bg/fire_front.webp'},
                      water:{back:'art/bg/water_back.webp', front:'art/bg/water_front.webp'},
-                     thunder:{back:'art/bg/thunder_back.webp', front:'art/bg/thunder_front.webp'} };   // 關卡戰鬥背景(後景/前景兩層 WebP;中間插中景:火=餘燼/水=水泡/雷=電光)。無對應→漸層底
+                     thunder:{back:'art/bg/thunder_back.webp', front:'art/bg/thunder_front.webp'},
+                     wind:{back:'art/bg/wind_back.webp', front:'art/bg/wind_front.webp'},
+                     earth:{back:'art/bg/earth_back.webp', front:'art/bg/earth_front.webp'},
+                     prologue:{back:'art/bg/prologue_back.webp', front:'art/bg/prologue_front.webp'},
+                     tower:{back:'art/bg/tower_back.webp', front:'art/bg/tower_front.webp'} };   // 關卡戰鬥背景(後景/前景兩層 WebP;中景:火=餘燼/水=水泡/雷=電光/風=葉片/土=沙塵/序章=櫻花/塔=元素方塊上下飄浮)。無對應→漸層底
+// 塔的中景:5 個元素方塊放在合成圖對應位置(畫布比例 rx,ry,自圖檔比對求得)+ 各自上下飄浮(amp 振幅、ph 相位)
+const TOWER_MID = [
+  {key:'tower_mid1', src:'art/bg/tower_mid1.webp', rx:0.943, ry:0.098, amp:9,  ph:0.0},   // 紅(火)最右
+  {key:'tower_mid2', src:'art/bg/tower_mid2.webp', rx:0.167, ry:0.056, amp:8,  ph:1.3},   // 藍(水)左上
+  {key:'tower_mid3', src:'art/bg/tower_mid3.webp', rx:0.745, ry:0.036, amp:10, ph:2.5},   // 金(土)右上
+  {key:'tower_mid4', src:'art/bg/tower_mid4.webp', rx:0.053, ry:0.106, amp:8,  ph:3.7},   // 綠(風)最左
+  {key:'tower_mid5', src:'art/bg/tower_mid5.webp', rx:0.269, ry:0.019, amp:7,  ph:5.0} ]; // 褐(小)上中
 const BG_PLATFORM_FRAC = 0.23;   // 背景圖裡「熔岩台面線」佔圖高的比例(敵人腳底要對齊這條線);微調對齊用
 const BG_GROUND_OFF = 46;        // 敵人腳底線 = BATTLE_CY + 此值(微調敵人站在台面的高低)
-const BG_FRONT_Y_OFF = 0;        // 前景 Y 微調:+往下、−往上(0=台面剛好貼敵腳底)
+const BG_FRONT_Y_OFF = 18;       // 前景 Y 微調:+往下、−往上(0=台面剛好貼敵腳底)
 const HP_BAR_W = 0.32;           // 敵 HP 條寬度 = 敵格邊長 × 此值(集中站位時不重疊)
 const ENEMY_SPREAD = 0.75;       // 敵人橫向集中係數:1=鋪滿、越小越往中央靠攏
 const BOSS_ATK_MUL = 1.3;        // 魔王攻擊力額外倍率(魔王一拳更痛、和小兵拉開差距)
+const NEUTRAL_HEAL_MUL = 0.5;    // 清無屬區回血倍率(回血=隊伍RCV總和×此值;1.0→0.5 砍半,避免續航太強過於簡單)
 const ELEMENT_BOXES = [0,2,4,6,8];
 const NEUTRAL_FILL = 0xc8a06a, NEUTRAL_DARK = 0x2c2114;
 const SHAPES = [
@@ -150,13 +162,13 @@ const DUNGEONS = {
     ],drops:[[{rank:'chunin',rate:1.0}],[{rank:'chunin',rate:1.0}],[{rank:'jonin',rate:1.0},{rank:'kage',rate:0.2}]]},
 };
 const STAGES = DUNGEONS.prologue.stages;   // 相容舊引用
-const ELEM_DUNGEONS=['fire','water','thunder','earth','wind'];
+const ELEM_DUNGEONS=['fire','water','earth','thunder','wind'];   // 地圖五邊形順時針=相剋環(各被順時針鄰居剋:水剋火→土剋水→雷剋土→風剋雷→火剋風)
 // ===== 難度(P&D 式:同一基準表 × 倍率;中級=基準。staM=體力倍率、rwd=獎勵倍率、dt=詠唱手數增減、counter=摻反制屬敵) =====
 const DIFFS=[
   {key:'baby',     name:'嬰兒',emoji:'👶',hp:0.7, atk:0.3, dt:+2, staM:0.5, rwd:0.3, rec:'亂玩都過',baby:true,    col:0xff9ec4},
   {key:'beginner', name:'初級',emoji:'🌱',hp:0.7, atk:0.7, dt:+1, staM:0.7, rwd:0.7, rec:'別全帶被剋',           col:0x8fd16a},
   {key:'normal',   name:'中級',emoji:'⚔️',hp:1.0, atk:1.0, dt:0,  staM:1.0, rwd:1.0, rec:'對屬 2 張',            col:0x6ab0e0},
-  {key:'advanced', name:'上級',emoji:'🔥',hp:1.35,atk:1.2, dt:0,  staM:1.3, rwd:1.5, rec:'卡 LV5+', counter:true, col:0xe0a64a},
+  {key:'advanced', name:'上級',emoji:'🔥',hp:1.35,atk:1.35,dt:0,  staM:1.3, rwd:1.5, rec:'卡 LV5+', counter:true, col:0xe0a64a},
   {key:'super',    name:'超級',emoji:'💀',hp:1.65,atk:1.45,dt:-1, staM:1.6, rwd:2.2, rec:'卡 LV10+',counter:true, col:0xe0653a},
   {key:'hell',     name:'地獄',emoji:'☠️',hp:2.4, atk:1.8, dt:-1, staM:2.0, rwd:3.5, rec:'卡 LV20', counter:true, col:0xb44ae0},
 ];
@@ -678,9 +690,11 @@ class GameScene extends Phaser.Scene{
     for(const k in ENEMY_IMG){ if(!this.textures.exists(k))this.load.image(k, ENEMY_IMG[k]); }
     for(const d in DUNGEON_BG){ const b=DUNGEON_BG[d];
       if(!this.textures.exists('bg_'+d+'_back'))this.load.image('bg_'+d+'_back', b.back);
-      if(!this.textures.exists('bg_'+d+'_front'))this.load.image('bg_'+d+'_front', b.front); } }   // 載入怪物圖 + 方塊敵正式美術 + 關卡背景(前/後)
+      if(!this.textures.exists('bg_'+d+'_front'))this.load.image('bg_'+d+'_front', b.front); }
+    TOWER_MID.forEach(c=>{ if(!this.textures.exists(c.key))this.load.image(c.key, c.src); }); }   // 載入怪物圖 + 方塊敵正式美術 + 關卡背景(前/後)+ 塔中景元素方塊
   // 依「是否魔王×難度×元素」挑敵圖:魔王 baby→m002、beginner→m003、normal及以上→m004(最兇);雜兵 嬰兒/初級→grunt(m001)、中級以上→grunt2(m002 強化版);都沒有再退回舊史萊姆/emoji
-  enemyTexKey(e){ const el=e.el; const dk=(this.diff&&this.diff.key)||'normal';
+  enemyTexKey(e){ const el=e.el; let dk=(this.diff&&this.diff.key)||'normal';
+    if(this.dungeonId==='prologue')dk='baby';   // 序章=新手村:挑圖固定當嬰兒級(只換外觀,不動數值)→ 魔王 boss_baby(m002)+雜兵 grunt(m001),不出 m003 以上兇怪
     if(e.boss){ const tier=dk==='baby'?'baby':(dk==='beginner'?'beg':'nrm'); const k='boss_'+tier+'_'+el; if(this.textures.exists(k))return k; }
     else{ const adv=(dk!=='baby'&&dk!=='beginner');
       if(adv&&this.textures.exists('guard_'+el))return 'guard_'+el; }   // 中級(normal)以上雜兵(含魔王關護衛)→m003
@@ -737,7 +751,8 @@ class GameScene extends Phaser.Scene{
     this.embers=null;
     this.bgBack = hasBG?this.add.image(CX,0,'bg_'+this.dungeonId+'_back').setOrigin(0.5,0).setDepth(DEPTH.bg-3):null;
     this.bgFront= hasBG&&this.textures.exists('bg_'+this.dungeonId+'_front')?this.add.image(CX,0,'bg_'+this.dungeonId+'_front').setOrigin(0.5,0).setDepth(DEPTH.bg-1):null;
-    if(hasBG)this.makeEmbers();   // 中景:熔岩火光/餘燼上升動畫
+    this.towerCubes=null;
+    if(hasBG){ if(this.dungeonId==='tower')this.makeTowerCubes(); else this.makeEmbers(); }   // 中景:塔=元素方塊飄浮、其餘=粒子
     this.bgGfx=this.add.graphics().setDepth(DEPTH.bg);
     this.bgLine=this.add.rectangle(CX,BG_H,W,2,0x000000,0.3).setDepth(DEPTH.bg);   // 先建好,drawBG 才能依關卡顯示/隱藏它
     this.drawBG();
@@ -801,6 +816,12 @@ class GameScene extends Phaser.Scene{
     if(!this.textures.exists('ember')){ const gg=this.make.graphics({x:0,y:0,add:false});
       gg.fillStyle(0xffffff,0.5);gg.fillCircle(8,8,8); gg.fillStyle(0xffffff,1);gg.fillCircle(8,8,4.5);
       gg.generateTexture('ember',16,16); gg.destroy(); }
+    if(!this.textures.exists('smoke')){ const gg=this.make.graphics({x:0,y:0,add:false}); const R=32;   // 柔邊放射煙球(疊圈做漸層,中心濃邊緣透)→ 沙塵/噴煙用
+      for(let r=R;r>0;r--)gg.fillStyle(0xffffff,0.05).fillCircle(R,R,r);
+      gg.generateTexture('smoke',R*2,R*2); gg.destroy(); }
+    if(!this.textures.exists('petal')){ const gg=this.make.graphics({x:0,y:0,add:false});   // 櫻花瓣(橢圓,旋轉飄落時像花瓣)
+      gg.fillStyle(0xffffff,1).fillEllipse(11,8,18,10);
+      gg.generateTexture('petal',22,16); gg.destroy(); }
     const dg=this.dungeonId; let cfg;
     if(dg==='water') cfg={   // 水關=水泡(慢慢上升、淡藍白)
       x:{min:-135,max:135}, y:{min:-6,max:6},
@@ -814,23 +835,48 @@ class GameScene extends Phaser.Scene{
       scale:{min:0.14,max:0.42}, alpha:{start:0.95,end:0},
       lifespan:{min:600,max:1500}, frequency:55, quantity:1,
       tint:[0xffff88,0xfff4a0,0xffffff,0xeaff6a], blendMode:'ADD' };
+    else if(dg==='wind') cfg={   // 風關=順風飄動的葉片/氣流微粒(自左掃向右、上下微擺、淡出)
+      x:{min:-W/2-50,max:-W/2+30}, y:{min:-(BATTLE_CY+BG_GROUND_OFF-26),max:46},
+      speedX:{min:70,max:175}, speedY:{min:-16,max:16}, accelerationX:8,
+      scale:{min:0.16,max:0.52}, alpha:{start:0.75,end:0},
+      lifespan:{min:2600,max:4600}, frequency:70, quantity:1,
+      tint:[0xbfe89a,0xd8ecb0,0xeef3d6,0x9fd07a], blendMode:'ADD' };
+    else if(dg==='earth') cfg={   // 土關=噴煙式沙塵(柔邊煙球、邊飄邊「膨脹」+淡出、隨風橫掃、NORMAL 不發光;參考招式實驗室炮煙)
+      x:{min:-W/2-30,max:W/2+30}, y:{min:-60,max:30},
+      speedX:{min:26,max:95}, speedY:{min:-22,max:6}, accelerationX:8,
+      scale:{start:0.3,end:1.15}, alpha:{start:0.5,end:0},   // 像噴煙:邊飄邊膨脹再散掉
+      lifespan:{min:1700,max:3300}, frequency:46, quantity:1,
+      tint:[0xe2d4ad,0xefe6cd,0xcdb98c,0xd9c9a0] };
+    else if(dg==='prologue') cfg={   // 初始之地=櫻花散落(自上方飄落、左右搖擺、旋轉、緩緩淡出;NORMAL 不發光)
+      x:{min:-W/2-20,max:W/2+20}, y:{min:-(BATTLE_CY+BG_GROUND_OFF)-12,max:-(BATTLE_CY+BG_GROUND_OFF)+44},
+      speedY:{min:28,max:70}, speedX:{min:-30,max:30},
+      rotate:{min:0,max:360}, scale:{min:0.5,max:1.0}, alpha:{start:0.9,end:0},
+      lifespan:{min:3600,max:6400}, frequency:120, quantity:1,
+      tint:[0xffd2e2,0xffe2ee,0xffc2da,0xfff0f6] };
     else cfg={   // 火關=火光餘燼
       x:{min:-135,max:135}, y:{min:-6,max:6},
       speedY:{min:-58,max:-22}, speedX:{min:-14,max:14}, accelerationY:-8,
       scale:{min:0.2,max:0.55}, alpha:{start:0.85,end:0},
       lifespan:{min:1600,max:3200}, frequency:80, quantity:1,
       tint:[0xffd24a,0xffae3a,0xff8a2e,0xffc25a], blendMode:'ADD' };
-    this.embers=this.add.particles(CX,0,'ember',cfg).setDepth(DEPTH.bg-2); }
+    this.embers=this.add.particles(CX,0,(dg==='earth')?'smoke':(dg==='prologue')?'petal':'ember',cfg).setDepth(DEPTH.bg-2); }
+  makeTowerCubes(){ this.towerCubes=TOWER_MID.map(c=>({ img:this.add.image(0,0,c.key).setDepth(DEPTH.bg-2).setVisible(false), rx:c.rx, ry:c.ry, amp:c.amp, ph:c.ph, baseY:0 })); }   // 塔中景:5 元素方塊(定位+飄浮在 update 驅動)
+  positionTowerCubes(){ if(!this.towerCubes||!this.bgBack)return;   // X 跟後景滿寬;Y 用「會隨螢幕高拉長」的比例(短螢幕=滿寬高、長螢幕=隨台面拉高)→ 方塊在高螢幕跟著往下、不卡頂
+    const pw=this.bgBack.width, ph=this.bgBack.height, sc=W/pw, groundY=BATTLE_CY+BG_GROUND_OFF;
+    const dispH=Math.max(Math.round(W/(pw/ph)), Math.ceil(groundY/BG_PLATFORM_FRAC));   // 比例算高:max(滿寬高, 台面對齊所需高)
+    this.towerCubes.forEach(c=>{ const bx=Math.round(CX+(c.rx-0.5)*W), by=Math.round(c.ry*dispH);
+      c.img.setScale(sc).setPosition(bx,by).setVisible(true); c.baseY=by; }); }
   drawBG(){const g=this.bgGfx;g.clear();const M=Math.round(H);   // M=往四周多畫一圈背景→特寫鏡頭推近/平移不會露出世界外的黑邊
     if(this.bgBack){   // 有關卡背景:後景 cover 撐滿(遠景,可裁);前景 滿寬等比不裁、台面對齊敵腳底(可微調)
       const pw=this.bgBack.width, ph=this.bgBack.height, r=pw/ph;   // 1080/1920=0.5625
       const pf=BG_PLATFORM_FRAC, groundY=BATTLE_CY+BG_GROUND_OFF;   // 台面在圖高比例 / 敵人腳底線
-      // 後景:cover 撐滿整個畫面(頂端對齊保留遠景上緣、左右置中、可裁;往下多延一截避免鏡頭推近露空)
-      const sc=Math.max(W/pw, (H+Math.round(H*0.1))/ph);
-      this.bgBack.setDisplaySize(Math.round(pw*sc), Math.round(ph*sc)).setPosition(CX,0).setVisible(true);
+      // 後景:塔=滿寬等比不裁(整張後景都看得到、頂端對齊);其餘關=cover 撐滿(遠景可裁)
+      if(this.dungeonId==='tower'){ this.bgBack.setDisplaySize(W, Math.round(W/r)).setPosition(CX,0).setVisible(true); }
+      else { const sc=Math.max(W/pw, (H+Math.round(H*0.1))/ph); this.bgBack.setDisplaySize(Math.round(pw*sc), Math.round(ph*sc)).setPosition(CX,0).setVisible(true); }
       // 前景:寬 100%(左右不裁)、高度等比 auto、Y 對齊敵腳底(+BG_FRONT_Y_OFF 微調)
-      if(this.bgFront){ const dhF=Math.round(W/r), topF=Math.round(groundY-dhF*pf+BG_FRONT_Y_OFF);
-        this.bgFront.setDisplaySize(W,dhF).setPosition(CX,topF).setVisible(true); }
+      const dhF=Math.round(W/r), topF=Math.round(groundY-dhF*pf+BG_FRONT_Y_OFF);
+      if(this.bgFront)this.bgFront.setDisplaySize(W,dhF).setPosition(CX,topF).setVisible(true);
+      if(this.towerCubes)this.positionTowerCubes();                                  // 塔中景方塊:跟後景 cover 同變換定位(圍繞塔)
       if(this.embers)this.embers.setPosition(CX, groundY-4);                         // 中景火光從台面升起
       if(this.bgLine)this.bgLine.setVisible(false);                                  // 有背景圖→隱藏盤面上緣分隔線(否則背景透出時變一條橫槓)
       // 可見區 100%:不畫盤面區底色,背景透到全高(盤面格子維持原本不透明,在背景上)
@@ -1085,6 +1131,7 @@ class GameScene extends Phaser.Scene{
       if(this.moralePeak&&this.moraleBg&&this.moraleBg.active){const t=time*0.006;   // 極=絕好調:徽章底色與外環在暗紅↔亮橙間流動(相位差→像能量在圈裡轉)
         this.moraleBg.setFillStyle(lerpColor(0x6e1808,0xff8a1e,0.5+0.5*Math.sin(t)),1);
         this.moraleBg.setStrokeStyle(2,lerpColor(0xff5a2a,0xffd24a,0.5+0.5*Math.sin(t+1.7)));}
+      if(this.towerCubes){for(const c of this.towerCubes){if(c.img&&c.img.active)c.img.y=c.baseY+Math.sin(time*0.0016+c.ph)*c.amp;}}   // 塔中景元素方塊:各自上下飄浮(相位錯開)
     }catch(e){}
   }
   // === 主動技 / 敵攻 共用特效 ===
@@ -1165,12 +1212,20 @@ class GameScene extends Phaser.Scene{
           this.cameras.main.shake(280,0.011);
           this.time.delayedCall(360,()=>{ live.forEach(v=>{v.hp=Math.max(0,v.hp-dmg);}); this.updateEnemies(); live.forEach(v=>{if(v.hp<=0)this.killEnemy(v);}); }); });
         break;}
-      case 'water':{const h=Math.round(this.maxHP*0.3);this.playerHP=Math.min(this.maxHP,this.playerHP+h);   // 用元素把傷口治好:HP 動畫先快後慢增加 + 前端上飄粒子
-        this.floatText(CX,PHP_Y-22,'癒+'+h,'#74e09a'); this.animPlayerHP(true);
-        const au=this.add.circle(ox,oy,16,EL.water.color,0.5).setBlendMode(Phaser.BlendModes.ADD).setDepth(DEPTH.proj);this.tweens.add({targets:au,scale:2.4,alpha:0,duration:500,onComplete:()=>au.destroy()});
+      case 'water':{const col=EL.water.color, h=Math.round(this.maxHP*0.3);   // 聚氣花火 → 用元素把傷口治好
+        this.chargeAt(ox,oy,col,380);
+        this.time.delayedCall(380,()=>{ this.playerHP=Math.min(this.maxHP,this.playerHP+h);
+          this.floatText(CX,PHP_Y-22,'癒+'+h,'#74e09a'); this.animPlayerHP(true);
+          const au=this.add.circle(ox,oy,16,col,0.5).setBlendMode(Phaser.BlendModes.ADD).setDepth(DEPTH.proj);this.tweens.add({targets:au,scale:2.4,alpha:0,duration:500,onComplete:()=>au.destroy()}); });
         break;}
-      case 'thunder':this.enemies.forEach((e,k)=>{if(!e.dead){e.timer+=3; this.time.delayedCall(k*90,()=>this.lightningStrike(e)); if(e.sprite)this.floatText(e.sprite.x,e.sprite.y-24,'封+3','#f4da52');}});break;   // 天落雷 + 麻痺
-      case 'earth':this.tonFloat('重生查克拉塊','#d49a4a'); this.trayRebirth(); break;   // 托盤塊重生演出
+      case 'thunder':{const col=EL.thunder.color;   // 聚氣花火 → 天落雷 + 麻痺
+        this.chargeAt(ox,oy,col,380);
+        this.time.delayedCall(380,()=>this.enemies.forEach((e,k)=>{if(!e.dead){e.timer+=3; this.time.delayedCall(k*90,()=>this.lightningStrike(e)); if(e.sprite)this.floatText(e.sprite.x,e.sprite.y-24,'封+3','#f4da52');}}));
+        break;}
+      case 'earth':{const col=EL.earth.color;   // 聚氣花火 → 托盤塊重生
+        this.chargeAt(ox,oy,col,380);
+        this.time.delayedCall(380,()=>{this.tonFloat('重生查克拉塊','#d49a4a'); this.trayRebirth();});
+        break;}
       case 'wind':{const m0=this.morale, col=EL.wind.color;   // 集氣成能量球 → 大拋物線飛向鬥志胸章 → 胸章充能放大 → 爆開成「極」
         this.chargeAt(ox,oy,col,420);
         this.time.delayedCall(420,()=>{ const bx=this.moraleBg.x, by=this.moraleBg.y;
@@ -1549,7 +1604,7 @@ class GameScene extends Phaser.Scene{
       const col=h.el!=='neutral'?EL[h.el].color:0xbfe6ff, dmg=Math.round(h.dmg*dmgMul);
       const fireAt=LEAD+i*150+Math.random()*120; lastFire=Math.max(lastFire,fireAt);
       this.time.delayedCall(fireAt,()=>{this.zoneStrike(cen.x,cen.y,cellsB,col,dmg,victims,aoe&&i===0);
-        if(h.el==='neutral'&&this.teamRcv>0){const heal=this.teamRcv;   // 清無屬區→回血=隊伍RCV總和(無屬區=愛心珠;傷害照算,回血為加成)
+        if(h.el==='neutral'&&this.teamRcv>0){const heal=Math.max(1,Math.round(this.teamRcv*NEUTRAL_HEAL_MUL));   // 清無屬區→回血=隊伍RCV總和×NEUTRAL_HEAL_MUL(無屬區=愛心珠;傷害照算,回血為加成)
           this.time.delayedCall(330,()=>{this.playerHP=Math.min(this.maxHP,this.playerHP+heal);this.animPlayerHP(true);this.floatText(cen.x,cen.y,'💚+'+heal,'#74e09a');});}});});
     this.updateEnemies();
     this.time.delayedCall(LEAD-80,()=>{   // 清除的格平滑溶解(逐格淡化的波 → 化進各區集氣)
@@ -2287,9 +2342,10 @@ class HomeScene extends Phaser.Scene{
     const sub=this.add.text(CX,H*0.085+28,'選擇難度 — 體力越高、獎勵越多',{fontFamily:EMOJIFONT,fontSize:'14px',color:'#c9bcaa'}).setOrigin(0.5);
     g.add(title); g.add(sub);
     const backH=48, backY=H-36;
+    const list=(id==='tower')?DIFFS.filter(df=>df.key!=='baby'):DIFFS;   // 塔=最終關,難度同五屬關但不開嬰兒級
     const areaTop=H*0.085+58, areaBot=backY-backH/2-14, areaH=areaBot-areaTop;
-    const rh=Math.min(74, areaH/DIFFS.length), blockTop=areaTop+(areaH-rh*DIFFS.length)/2;   // 列高加大 + 垂直置中(高螢幕不擠下方)
-    DIFFS.forEach((df,i)=>{const y=blockTop+rh*i+rh/2, cost=this.diffCost(id,df), afford=m.stamina>=cost;
+    const rh=Math.min(74, areaH/list.length), blockTop=areaTop+(areaH-rh*list.length)/2;   // 列高加大 + 垂直置中(高螢幕不擠下方)
+    list.forEach((df,i)=>{const y=blockTop+rh*i+rh/2, cost=this.diffCost(id,df), afford=m.stamina>=cost;
       const rect=this.add.rectangle(0,0,W-28,rh-9,df.col,afford?0.22:0.08).setStrokeStyle(2.5,df.col,afford?1:0.35).setInteractive();
       const name=this.add.text(-W/2+22,0,df.emoji+' '+df.name,{fontFamily:EMOJIFONT,fontSize:'22px',color:afford?'#fff':'#7a7068',fontStyle:'bold'}).setOrigin(0,0.5);
       const rec=this.add.text(-W/2+132,0,df.rec,{fontFamily:EMOJIFONT,fontSize:'14px',color:afford?'#d8cfc4':'#6a625a'}).setOrigin(0,0.5);
