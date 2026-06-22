@@ -46,11 +46,9 @@ const BG_FRONT_Y_OFF = 18;       // 前景 Y 微調:+往下、−往上(0=台面
 const HP_BAR_W = 0.32;           // 敵 HP 條寬度 = 敵格邊長 × 此值(集中站位時不重疊)
 const ENEMY_SPREAD = 0.75;       // 敵人橫向集中係數:1=鋪滿、越小越往中央靠攏
 const BOSS_ATK_MUL = 1.3;        // 魔王攻擊力額外倍率(魔王一拳更痛、和小兵拉開差距)
-const NEUTRAL_HEAL_MUL = 0.5;    // 清無屬區回血倍率(回血=隊伍RCV總和×此值;1.0→0.5 砍半,避免續航太強過於簡單)
 const ENEMY_HP_MUL = 1.8;        // 全域敵人 HP 倍率(調難度:敵更耐打→打更久→更有壓力。模擬顯示敵太弱,2~3手就死)
 const ENEMY_ATK_MUL = 1.2;       // 全域敵人攻擊倍率(調難度:敵打更痛)。1.5→1.2:配 HP×1.8 戰鬥變長後,1.5 扣血過頭
-const COMBO_K = 0.2;             // combo 傷害係數:傷害×(1+COMBO_K×(combo−1));不封頂(實測combo只到3~6)。也乘回血
-const AOE_HIT = 15;              // 單次清格數 ≥ 此值 → 該次攻擊變全體(全額打每隻)
+// COMBO_K / AOE_HIT / NEUTRAL_HEAL_MUL + comboMultiplier/leadDamageMult → battle-core.js
 // ELEMENT_BOXES / NEUTRAL_FILL/DARK / SHAPES / WSUM → battle-core.js
 // 角色:個人名 + 種族(human/yokai/beast) + 三圍(攻/血/回,同星總量公平、分配不同) + rank(沿用:gacha/掉落/★用,genin=★1…kage=★4)
 const ROSTER = [
@@ -1160,7 +1158,7 @@ class GameScene extends Phaser.Scene{
     const br=Math.floor(b/3)*3,bc=(b%3)*3, cellsB=[];
     for(let r=br;r<br+3;r++)for(let c=bc;c<bc+3;c++)if(this.board[r][c])cellsB.push([r,c]);
     if(!cellsB.length)return;
-    this.combo+=1; const ck=COMBO_K+((this.lead&&this.lead.type==='comboBoost')?this.lead.v:0), comboMult=1+ck*(this.combo-1);
+    this.combo+=1; const comboMult=comboMultiplier(this.combo,this.lead);   // battle-core 共用 combo 倍率
     const tgt=this.targetEnemy()||this.enemies.find(e=>!e.dead);
     const wmul=tgt?(EL.wind.beats===tgt.el?CONFIG.ADV_MULT:((EL[tgt.el]&&EL[tgt.el].beats==='wind')?CONFIG.WEAK_MULT:CONFIG.NORM_MULT)):1;
     const dmg=Math.round((cellsB.length*CONFIG.HIT_BASE+atk*wmul*CONFIG.ELEM_RATE*cellsB.length)*comboMult);
@@ -1506,11 +1504,8 @@ class GameScene extends Phaser.Scene{
     if(!data)return;
     this.handCleared=true;
     this.combo+=1;   // combo 新定義:這塊有清→連續 +1(沒清的塊由 afterAction 歸零);取代舊「擊中次數」
-    const ck=COMBO_K+((this.lead&&this.lead.type==='comboBoost')?this.lead.v:0);   // 隊長技 comboBoost=加大 combo 係數
-    const comboMult=1+ck*(this.combo-1);   // combo 傷害倍率(不封頂);也乘回血
-    let leadMult=1; if(this.lead){const L=this.lead;   // 隊長技:傷害類加成
-      if(L.type==='allAtk')leadMult=L.v;
-      else if(L.type==='elemAtk'&&data.fx[L.el])leadMult=L.v;}
+    const comboMult=comboMultiplier(this.combo,this.lead);   // combo 傷害倍率(battle-core 共用;不封頂、也乘回血)
+    const leadMult=leadDamageMult(this.lead,data.fx);        // 隊長技傷害加成(allAtk/elemAtk)
     const dmgMul=comboMult*leadMult;   // 每段傷害 × combo倍率 × 隊長技
     const hitN=data.cells.length;
     const aoe=(hitN>=AOE_HIT), victims=aoe?this.enemies.filter(e=>!e.dead):[tgt];   // 單次 15 HIT↑ = 全體(全額打每隻)

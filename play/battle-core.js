@@ -35,6 +35,20 @@ const CONFIG = {
   PLAYER_HP_BASE:1000, RESHUFFLE_COST:120,
   ATTR:{ fire_burn_rate:0.4, wind_immune:1, earth_dr:0.3, yang_heal_rate:0.25, yin_amp:1.5 },   // 陽回血砍到已驗證平衡值(1.2→0.5→0.25);陰改傷害×2(見 fireAttr)
 };
+// === combo / 傷害倍率(resolve 與風主動技共用的同一套數學;伺服器重算傷害靠這些)===
+const COMBO_K = 0.2;             // combo 傷害係數:傷害×(1+COMBO_K×(combo−1));不封頂(實測combo只到3~6)。也乘回血
+const AOE_HIT = 15;              // 單次清格數 ≥ 此值 → 該次攻擊變全體(全額打每隻)
+const NEUTRAL_HEAL_MUL = 0.5;    // 清無屬區回血倍率(回血=隊伍RCV總和×此值;砍半避免續航太強過於簡單)
+function comboMultiplier(combo, lead){   // 連段傷害倍率;隊長技 comboBoost = 加大 combo 係數
+  const ck = COMBO_K + ((lead && lead.type==='comboBoost') ? lead.v : 0);
+  return 1 + ck*(combo-1);
+}
+function leadDamageMult(lead, fx){       // 隊長技傷害加成:allAtk=全體、elemAtk=該屬有參戰才吃
+  if(!lead)return 1;
+  if(lead.type==='allAtk')return lead.v;
+  if(lead.type==='elemAtk' && fx && fx[lead.el])return lead.v;
+  return 1;
+}
 const SHAPES_BY_EL = {
   water:  {1:[[0,0]], 2:[[0,0],[1,0]], 3:[[0,0],[1,0],[2,0]], 4:[[0,0],[1,0],[2,0],[3,0]], 5:[[0,0],[1,0],[2,0],[3,0],[4,0]]},   // 直落
   wind:   {1:[[0,0]], 2:[[0,0],[0,1]], 3:[[0,0],[0,1],[0,2]], 4:[[0,0],[0,1],[0,2],[0,3]], 5:[[0,0],[0,1],[0,2],[0,3],[0,4]]},   // 橫吹
@@ -105,6 +119,7 @@ function computeClears(board, boxElement, boxCard, enemyEl, ampMult){
 // Node(headless/回放)用:export 同一份。瀏覽器 classic script 無 module → 跳過,定義仍是共用全域。
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = { N, EL, ELEMENT_BOXES, NEUTRAL_FILL, NEUTRAL_DARK, SHAPES, WSUM, CONFIG, SHAPES_BY_EL,
+    COMBO_K, AOE_HIT, NEUTRAL_HEAL_MUL, comboMultiplier, leadDamageMult,
     chakraShape, normCells, rot90, randOrient, rnd, mulberry32, brnd, startBattleSeed, pickShape, boxOf, canPlace, computeClears,
     _setBRNG:(fn)=>{BRNG=fn;} };
 }
