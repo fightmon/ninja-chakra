@@ -205,12 +205,17 @@ function normCells(cells){const mr=Math.min(...cells.map(c=>c[0])),mc=Math.min(.
 function rot90(cells){return normCells(cells.map(([r,c])=>[c,-r]));}
 // 火/土/雷=生成時就隨機旋轉+鏡像(玩家不必手動轉);水/風=固定方向(直落/橫吹,可預測)
 function randOrient(cells,el){if(el==='water'||el==='wind')return cells;
-  let out=cells.map(x=>x.slice());const t=rnd(4);for(let k=0;k<t;k++)out=rot90(out);
-  if(rnd(2))out=normCells(out.map(([r,c])=>[r,-c]));   // 隨機鏡像
+  let out=cells.map(x=>x.slice());const t=brnd(4);for(let k=0;k<t;k++)out=rot90(out);
+  if(brnd(2))out=normCells(out.map(([r,c])=>[r,-c]));   // 隨機鏡像(走戰鬥種子流)
   return out;}
 
-function rnd(n){return Math.floor(Math.random()*n);}
-function pickShape(){let r=rnd(WSUM);for(const s of SHAPES){r-=s.w;if(r<0)return s.c.map(x=>x.slice());}}
+function rnd(n){return Math.floor(Math.random()*n);}   // 一般/視覺隨機(非決定性,用在 UI/gacha)
+// === 種子亂數:回放驗證地基。同種子→同序列。BRNG=戰鬥隨機流(每場開始播種),brnd=整數版。影響戰鬥結果的隨機(出塊/轉向/敵技)走它;純視覺仍用 rnd/Math.random ===
+function mulberry32(seed){let a=seed>>>0;return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;};}
+let BRNG=Math.random;   // 預設真隨機;開戰時 startBattleSeed() 換成種子版
+function brnd(n){return Math.floor(BRNG()*n);}
+function startBattleSeed(seed){seed=(seed!=null)?(seed>>>0):((Math.random()*4294967296)>>>0);BRNG=mulberry32(seed);return seed;}   // 回傳實際種子(存起來給回放)
+function pickShape(){let r=brnd(WSUM);for(const s of SHAPES){r-=s.w;if(r<0)return s.c.map(x=>x.slice());}}
 function boxOf(r,c){return Math.floor(r/3)*3+Math.floor(c/3);}
 function canPlace(board,cells,r,c,kind){
   const inB=cells.every(([dr,dc])=>{const rr=r+dr,cc=c+dc;return rr>=0&&rr<N&&cc>=0&&cc<N;});
@@ -686,7 +691,8 @@ class TeamScene extends Phaser.Scene{
 /* ===== 戰鬥(多敵 + 自由查克拉) ===== */
 class GameScene extends Phaser.Scene{
   constructor(){super('game');}
-  init(data){ this.presetTeam=(data&&data.team)?data.team:null; this.dungeonId=(data&&data.dungeonId)||'prologue'; this.dungeon=DUNGEONS[this.dungeonId]||DUNGEONS.prologue; this.hitLab=!!(data&&data.lab); this.diff=DIFFS_BY[(data&&data.diff)]||DIFFS_BY.normal; }
+  init(data){ this.presetTeam=(data&&data.team)?data.team:null; this.dungeonId=(data&&data.dungeonId)||'prologue'; this.dungeon=DUNGEONS[this.dungeonId]||DUNGEONS.prologue; this.hitLab=!!(data&&data.lab); this.diff=DIFFS_BY[(data&&data.diff)]||DIFFS_BY.normal;
+    this.battleSeed=startBattleSeed((data&&data.seed)!=null?data.seed:null); }   // 種子亂數:開戰播種(可由外部給種子=回放用),存 battleSeed
   preload(){ this.load.maxParallelDownloads=6;   // 限制同時下載數→對弱伺服器/弱網路更穩(避免一次塞太多卡住)
     for(const el in MONSTER_IMG){ if(!this.textures.exists('mon_'+el))this.load.image('mon_'+el, MONSTER_IMG[el]); }
     for(const k in ENEMY_IMG){ if(!this.textures.exists(k))this.load.image(k, ENEMY_IMG[k]); }
@@ -1515,17 +1521,17 @@ class GameScene extends Phaser.Scene{
     this.paraTick=(this.paraTick||0)+1; if(this.paraTick<Math.min(...ivs))return; this.paraTick=0;
     const cand=this.tray.map((t,i)=>i).filter(i=>this.tray[i]&&!this.tray[i].used&&!this.tray[i].locked);
     if(cand.length<2)return;   // 至少留 1 塊,不會鎖到沒得玩
-    const li=cand[rnd(cand.length)]; this.tray[li].locked=true; this.renderTray();
+    const li=cand[brnd(cand.length)]; this.tray[li].locked=true; this.renderTray();
     this.tonFloat('⚡ 麻痺!1 塊被鎖','#ffe98a');}
   // 🔒 封鎖(大術士/魔王):每 N 手在盤面找一條 1×3/3×1 空格,塞詛咒塊(填滿不能放,清掉那條線才除)
   applyJunk(){if(this.hitLab)return;
     const ivs=this.enemies.filter(e=>!e.dead&&e.junk>0).map(e=>e.junk); if(!ivs.length)return;
     this.junkTick=(this.junkTick||0)+1; if(this.junkTick<Math.min(...ivs))return; this.junkTick=0;
-    const horiz=rnd(2)===0, cands=[];
+    const horiz=brnd(2)===0, cands=[];
     if(horiz){for(let r=0;r<N;r++)for(let c=0;c<=N-3;c++)if(!this.board[r][c]&&!this.board[r][c+1]&&!this.board[r][c+2])cands.push([[r,c],[r,c+1],[r,c+2]]);}
     else{for(let c=0;c<N;c++)for(let r=0;r<=N-3;r++)if(!this.board[r][c]&&!this.board[r+1][c]&&!this.board[r+2][c])cands.push([[r,c],[r+1,c],[r+2,c]]);}
     if(!cands.length)return;   // 沒連續空格可塞就跳過
-    cands[rnd(cands.length)].forEach(([r,c])=>{this.board[r][c]={el:'junk'};});
+    cands[brnd(cands.length)].forEach(([r,c])=>{this.board[r][c]={el:'junk'};});
     this.refreshBoard(); this.tonFloat('🔒 封鎖!一條被詛咒(清掉那線才除)','#c4a8e0');
     if(!this.anyPlaceable())this.time.delayedCall(420,()=>this.handleStuck());}
   // 👑 魔王階段變身:隨血量切到下一屬,換屬+換招牌行為+演出
