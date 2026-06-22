@@ -1058,12 +1058,13 @@ class GameScene extends Phaser.Scene{
     this.tonFloat('★ '+a.name,colHex);
     const cardObj=this.boxCard[ELEMENT_BOXES[i]], atk=cardObj?cardObj.atk:200, ox=card.rect.x, oy=card.rect.y;
     switch(card.el){
-      case 'fire':{const dmg=Math.round(atk*3), col=EL.fire.color, hot=shadeColor(col,0.55);   // 集氣蓄力 → 從火卡發弧線彈攻擊全體;hot=暖亮火色(不摻白→全火色)
+      case 'fire':{const col=EL.fire.color, hot=shadeColor(col,0.55);   // 集氣蓄力 → 從火卡發弧線彈攻擊全體;每隻按自己屬性吃相剋(與風技/盤面一致)
+        const fdmg=(v)=>Math.round(atk*3*(EL.fire.beats===v.el?CONFIG.ADV_MULT:((EL[v.el]&&EL[v.el].beats==='fire')?CONFIG.WEAK_MULT:CONFIG.NORM_MULT)));   // 火相剋:打風(被火剋)×1.6、打水(剋火)×0.7、其餘×1.0
         this.chargeAt(ox,oy,col,420,hot);
         this.time.delayedCall(420,()=>{ const live=this.enemies.filter(e=>!e.dead);
-          live.forEach((v,k)=>this.time.delayedCall(k*60,()=>this.chakraBolt(ox,oy,v.sprite.x,v.sprite.y,col,v,dmg,3,hot)));
+          live.forEach((v,k)=>this.time.delayedCall(k*60,()=>this.chakraBolt(ox,oy,v.sprite.x,v.sprite.y,col,v,fdmg(v),3,hot)));
           this.cameras.main.shake(280,0.011);
-          this.time.delayedCall(360,()=>{ live.forEach(v=>{v.hp=Math.max(0,v.hp-dmg);}); this.updateEnemies(); live.forEach(v=>{if(v.hp<=0)this.killEnemy(v);}); }); });
+          this.time.delayedCall(360,()=>{ live.forEach(v=>{v.hp=Math.max(0,v.hp-fdmg(v));}); this.updateEnemies(); live.forEach(v=>{if(v.hp<=0)this.killEnemy(v);}); }); });
         break;}
       case 'water':{const col=EL.water.color, h=Math.round(this.maxHP*0.3);   // 聚氣花火 → 用元素把傷口治好
         this.chargeAt(ox,oy,col,380);
