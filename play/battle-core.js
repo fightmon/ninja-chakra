@@ -129,9 +129,74 @@ function computeClears(board, boxElement, boxCard, enemyEl, ampMult){
   return {groups,cells:[...cellSet].map(k=>k.split('_').map(Number)),parts,total,hitWeak,fx,hits};
 }
 // Node(headless/回放)用:export 同一份。瀏覽器 classic script 無 module → 跳過,定義仍是共用全域。
+// ===== BattleSim:headless 戰鬥模型(純狀態 + 同步運算,無 Phaser)=====
+// #16-2b③:把「狀態 + 放塊/resolve」收成一個可在 Node/Worker 重跑的類別。
+// 範圍(③):玩家清除這條 authoritative 路徑 — combo 推進 / 每宮傷害(逐宮累加,_blocked 擋下=0)/
+//           AoE / 陰陽(yin amp×2、yang 回血)/ 無屬區回血 / 死亡 / 清盤。
+// 尚未收(留 ③b/④):storeBlock(影響未來形狀)、endHand 敵回合、技能(water/wind/earth)、勝負/獎勵。
+// 敵人用「純模型」物件(無 sprite):{hp,max,atk,el,timer,interval,dead,hitGate,comboGate,...}。
+class BattleSim {
+  constructor(s){
+    s = s || {};
+    this.board = s.board;                 // 9×9,格 = {el} 或 null
+    this.boxElement = s.boxElement || {};
+    this.boxCard = s.boxCard || {};
+    this.enemies = s.enemies || [];
+    this.target = s.target || 0;
+    this.playerHP = s.playerHP|0;
+    this.maxHP = s.maxHP|0;
+    this.teamRcv = s.teamRcv|0;
+    this.lead = s.lead || null;
+    this.amp = s.amp || 1;
+    this.combo = s.combo || 0;
+  }
+  targetEnemy(){
+    let e = this.enemies[this.target];
+    if (e && !e.dead) return e;
+    const i = this.enemies.findIndex(x=>!x.dead); this.target = i;
+    return i < 0 ? null : this.enemies[i];
+  }
+  // 同步套用一次「放塊後的清除」。回傳事件包(給 view 演動畫);無清除回 null。與場景 resolve() 的狀態效果等價。
+  applyResolve(){
+    const tgt = this.targetEnemy(); if(!tgt) return null;
+    const data = computeClears(this.board, this.boxElement, this.boxCard, tgt.el, this.amp);
+    if(!data) return null;
+    this.combo += 1;                                            // 逐塊 combo:這塊有清→+1
+    const plan = planResolve(data, this.lead, this.teamRcv, this.combo);
+    const n = data.cells.length, aoe = plan.aoe;
+    const victims = aoe ? this.enemies.filter(e=>!e.dead) : [tgt];
+    // 陰陽子屬性(fireAttr):yang 回血、yin 本手起傷害×2(amp 給下一手用)
+    let yangHeal = 0;
+    Object.keys(data.fx).forEach(el=>{ const f = data.fx[el]; (f.attrs||[]).forEach(a=>{
+      if(a==='yang'){ const v=Math.round(f.atk*CONFIG.ATTR.yang_heal_rate*f.level); this.playerHP=Math.min(this.maxHP,this.playerHP+v); yangHeal+=v; }
+      else if(a==='yin'){ this.amp=Math.max(this.amp,2); }
+    });});
+    if(data.hitWeak) tgt.timer += 1;                           // 打到弱點→敵出手延後一手
+    data.cells.forEach(([r,c])=>{ this.board[r][c]=null; });   // 立即清盤
+    // 護盾門檻:本手 HIT/連段沒達標的 victim 這手不扣血
+    this.enemies.forEach(e=>{ e._blocked=false; });
+    victims.forEach(v=>{ v._blocked = ((v.hitGate&&n<v.hitGate)||(v.comboGate&&this.combo<v.comboGate)); });
+    // 傷害:每宮 dmg 對每個未被擋的 victim 逐宮累加
+    const perVictim = plan.hits.reduce((s,h)=>s+h.dmg, 0);
+    victims.forEach(v=>{ if(!v._blocked) v.hp=Math.max(0, v.hp-perVictim); });
+    // 無屬區回血:每個 neutral 宮各回 plan.heal(teamRcv>0 才有)
+    let neutralHeal = 0;
+    if(this.teamRcv>0) plan.hits.forEach(h=>{ if(h.el==='neutral'){ this.playerHP=Math.min(this.maxHP,this.playerHP+plan.heal); neutralHeal+=plan.heal; } });
+    // 死亡標記(獎勵留 ④)
+    const deaths=[];
+    this.enemies.forEach((e,idx)=>{ if(!e.dead && e.hp<=0){ e.dead=true; deaths.push(idx); } });
+    return { data, plan, combo:this.combo, n, aoe,
+             victims: victims.map(v=>this.enemies.indexOf(v)),
+             perVictim, neutralHeal, yangHeal, deaths,
+             playerHP:this.playerHP, amp:this.amp };
+  }
+  snapshot(){ return { combo:this.combo, amp:this.amp, playerHP:this.playerHP,
+    enemies:this.enemies.map(e=>({hp:e.hp,dead:!!e.dead,timer:e.timer})) }; }
+}
+
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = { N, EL, ELEMENT_BOXES, NEUTRAL_FILL, NEUTRAL_DARK, SHAPES, WSUM, CONFIG, SHAPES_BY_EL,
-    COMBO_K, AOE_HIT, NEUTRAL_HEAL_MUL, comboMultiplier, leadDamageMult, planResolve,
+    COMBO_K, AOE_HIT, NEUTRAL_HEAL_MUL, comboMultiplier, leadDamageMult, planResolve, BattleSim,
     chakraShape, normCells, rot90, randOrient, rnd, mulberry32, brnd, startBattleSeed, pickShape, boxOf, canPlace, computeClears,
     _setBRNG:(fn)=>{BRNG=fn;} };
 }
