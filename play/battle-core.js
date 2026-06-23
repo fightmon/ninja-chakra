@@ -36,12 +36,17 @@ const CONFIG = {
   ATTR:{ fire_burn_rate:0.4, wind_immune:1, earth_dr:0.3, yang_heal_rate:0.25, yin_amp:1.5 },   // 陽回血砍到已驗證平衡值(1.2→0.5→0.25);陰改傷害×2(見 fireAttr)
 };
 // === combo / 傷害倍率(resolve 與風主動技共用的同一套數學;伺服器重算傷害靠這些)===
-const COMBO_K = 0.2;             // combo 傷害係數:傷害×(1+COMBO_K×(combo−1));不封頂(實測combo只到3~6)。也乘回血
+const COMBO_K = 0.25;            // combo 傷害係數(線性段斜率)。也乘回血
+const COMBO_RAMP = 0.5;          // combo「越高越爆」二次加速:sim 實測 combo 真實頂在 3~4(6幾乎不出現)→ 把獎勵堆到 3~4,6 當傳說 jackpot
 const AOE_HIT = 15;              // 單次清格數 ≥ 此值 → 該次攻擊變全體(全額打每隻)
-const NEUTRAL_HEAL_MUL = 0.5;    // 清無屬區回血倍率(回血=隊伍RCV總和×此值;砍半避免續航太強過於簡單)
-function comboMultiplier(combo, lead){   // 連段傷害倍率;隊長技 comboBoost = 加大 combo 係數
+const WIND_SKILL_MUL = 1.8;     // 風主動技傷害倍率:(底傷+卡攻段)×combo ×此值。1.8 讓風@combo3≈火單發、又抬高開局地板(火主動技=atk×3,風靠這個追)
+const NEUTRAL_HEAL_MUL = 0.8;    // 清無屬區回血倍率(回血=隊伍RCV總和×此值×combo)。0.5→0.8:無屬改成「= 屬·普通傷害 + 回血」,要讓清無屬有感(配合未來清無屬關)
+// 連段倍率(傷害+回血共用):1 + ck×[ (c-1) + RAMP×(c-1)(c-2)/2 ]。線性段給基礎、二次段讓 3↑ 越疊越猛。
+// 對照:c1=×1.0 c2=×1.25 c3=×1.625 c4=×2.125 c5=×2.75 c6=×3.5(隊長技 comboBoost 再加大 ck)
+function comboMultiplier(combo, lead){
   const ck = COMBO_K + ((lead && lead.type==='comboBoost') ? lead.v : 0);
-  return 1 + ck*(combo-1);
+  const c = Math.max(1, combo);
+  return 1 + ck*((c-1) + COMBO_RAMP*(c-1)*(c-2)/2);
 }
 function leadDamageMult(lead, fx){       // 隊長技傷害加成:allAtk=全體、elemAtk=該屬有參戰才吃
   if(!lead)return 1;
@@ -92,7 +97,8 @@ function canPlace(board,cells,r,c,kind){
   if(kind==='earth')return cells.some(([dr,dc])=> board[r+dr][c+dc]);   // 土塊:界內 + 至少一格有方塊(可抓取搬移)
   return cells.every(([dr,dc])=>!board[r+dr][c+dc]);                    // 一般塊:全空
 }
-function computeClears(board, boxElement, boxCard, enemyEl, ampMult){
+function computeClears(board, boxElement, boxCard, enemyEl, ampMult, neutralAtk){
+  neutralAtk = neutralAtk||0;   // 無屬攻擊基準(= 隊伍最高攻);0=不給無屬傷害(向後相容/偵測用)
   let rows=[],cols=[],boxes=[];
   for(let r=0;r<N;r++)if(board[r].every(x=>x))rows.push(r);
   for(let c=0;c<N;c++){let f=true;for(let r=0;r<N;r++)if(!board[r][c])f=false;if(f)cols.push(c);}
@@ -113,6 +119,8 @@ function computeClears(board, boxElement, boxCard, enemyEl, ampMult){
     const d=Math.round(card.atk*mult(e)*ampMult*CONFIG.ELEM_RATE*n); total+=d;   // 屬區格再額外加:n × 卡攻擊 × 相剋 × ELEM_RATE
     if(EL[e].beats===enemyEl)hitWeak=true;
     const br=Math.floor(b/3)*3,bc=(b%3)*3; parts.push({el:e,d,r:br+1,c:bc+1});});
+  if(neutralAtk>0){ const nC=cellSet.size-Object.values(elemCells).reduce((a,b)=>a+b,0);   // 無屬格數=清除總格-屬區格
+    if(nC>0)total+=Math.round(neutralAtk*CONFIG.NORM_MULT*ampMult*CONFIG.ELEM_RATE*nC); }   // 無屬傷害 = 隊伍最高攻×普通×0.08(=屬·普通公式)
   const fx={};
   ELEMENT_BOXES.forEach(b=>{const card=boxCard[b];if(!card)return;const br=Math.floor(b/3)*3,bc=(b%3)*3;
     let hit=false;for(let r=br;r<br+3&&!hit;r++)for(let c=bc;c<bc+3;c++)if(cellSet.has(r+'_'+c))hit=true;
@@ -125,6 +133,7 @@ function computeClears(board, boxElement, boxCard, enemyEl, ampMult){
     if(!cn)continue;
     const el=boxElement[b],card=boxCard[b];let d=cn*CONFIG.HIT_BASE,hel='neutral';
     if(el!=null&&card){d+=Math.round(card.atk*mult(el)*ampMult*CONFIG.ELEM_RATE*cn);hel=el;}
+    else if(neutralAtk>0){d+=Math.round(neutralAtk*CONFIG.NORM_MULT*ampMult*CONFIG.ELEM_RATE*cn);}   // 無屬宮:= 屬·普通(隊伍最高攻×1.0)
     hits.push({b,el:hel,cells:cn,dmg:Math.round(d)});}
   return {groups,cells:[...cellSet].map(k=>k.split('_').map(Number)),parts,total,hitWeak,fx,hits};
 }
@@ -196,7 +205,7 @@ class BattleSim {
 
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = { N, EL, ELEMENT_BOXES, NEUTRAL_FILL, NEUTRAL_DARK, SHAPES, WSUM, CONFIG, SHAPES_BY_EL,
-    COMBO_K, AOE_HIT, NEUTRAL_HEAL_MUL, comboMultiplier, leadDamageMult, planResolve, BattleSim,
+    COMBO_K, COMBO_RAMP, AOE_HIT, WIND_SKILL_MUL, NEUTRAL_HEAL_MUL, comboMultiplier, leadDamageMult, planResolve, BattleSim,
     chakraShape, normCells, rot90, randOrient, rnd, mulberry32, brnd, startBattleSeed, pickShape, boxOf, canPlace, computeClears,
     _setBRNG:(fn)=>{BRNG=fn;} };
 }

@@ -67,6 +67,125 @@ const ARCH={
   archmage: {n:'大術士',atkM:0.9, hpM:1.3, beh:'junk'},      // 封鎖:在盤面塞詛咒塊(填滿不能放,清線才除)
 };
 
+// ===== (b) 難度「結構」修飾引擎:base stages 套規則 → 各難度連「關數/每關怪數」都不同,不只 hp/atk 倍率 =====
+// 數值倍率(hp/atk/dt)仍在 DIFFS;這裡只管「結構」。base = DUNGEONS[x].stages(= 中級基準)。
+// ⚠️ slice1:DIFF_RULES 全 identity(stageDelta/swarmAdd=0)→ resolveStages 回傳 = base 全等,行為不變;slice2 再填真規則。
+const DIFF_RULES = {
+  baby:     { stageDelta:0, swarmAdd:0 },                      // 維持 base(序章固定走這,S1=1 S2=2)
+  beginner: { stageDelta:0, swarmAdd:0 },                      // 維持 base
+  normal:   { stageDelta:0, swarmAdd:0, stageCounts:[2,3,null] },  // 中級:S1=2雜兵、S2=3雜兵、S3(王關)不變
+  advanced: { stageDelta:0, swarmAdd:0, stageCounts:[2,5,null] },  // 上級:S1=2雜兵、S2=5雜兵、S3(王關)不變
+  super:    { stageDelta:0, swarmAdd:0 },                      // 先不變
+  hell:     { stageDelta:0, swarmAdd:0 },                      // 先不變
+};
+// 單關覆寫逃生口:OVERRIDES['dungeonId:diffKey'] = 完整 stages 陣列 → 完全取代(特例手調用,九成關卡用不到)
+const OVERRIDES = {};
+
+function _cloneStages(stages){ return stages.map(st=>({...st, es:st.es.map(e=>({...e}))})); }   // 深拷貝,避免改到原始 base
+function _bossIndex(stages){ for(let i=stages.length-1;i>=0;i--) if(stages[i].es.some(e=>e.boss)) return i; return stages.length-1; }
+
+// 解析某 (dungeon, 難度) 的有效 stages:① 覆寫優先 → ② 否則 base 深拷貝套 DIFF_RULES
+function resolveStages(dungeon, diffKey){
+  const ov = OVERRIDES[dungeon.id + ':' + diffKey];
+  if(ov) return _cloneStages(ov);
+  const rule = DIFF_RULES[diffKey] || {};
+  let stages = _cloneStages(dungeon.stages);
+  // ① 群怪追加:標 swarm:true 的關,每關 +swarmAdd 隻(複製該關非王雜兵)
+  if(rule.swarmAdd>0) stages.forEach(st=>{ if(st.swarm){ const proto=st.es.find(e=>!e.boss)||st.es[0]; for(let i=0;i<rule.swarmAdd;i++) st.es.push({...proto}); } });
+  // ② 關數:>0 在王關前插「群怪關」(複製最後一個非王關);<0 移除最前面的非王關(王關永留)
+  const bi=_bossIndex(stages);
+  if(rule.stageDelta>0){ const tmpl=stages[Math.max(0,bi-1)]; const extra=[]; for(let i=0;i<rule.stageDelta;i++) extra.push(_cloneStages([tmpl])[0]); stages.splice(bi,0,...extra); }
+  else if(rule.stageDelta<0){ let rm=-rule.stageDelta; for(let i=0;i<stages.length&&rm>0;){ if(!stages[i].es.some(e=>e.boss)&&stages.length>1){ stages.splice(i,1); rm--; } else i++; } }
+  // ③ 每關「雜兵數」(僅標準五屬關):stageCounts[i]=該關非王總雜兵數(null=不變)。
+  //    保留原本兵種安排(含重炮兵/術士等 arch),只「補純雜兵」到目標數;王關不動。
+  if(rule.stageCounts && ELEM_DUNGEONS.indexOf(dungeon.id)>=0){
+    stages.forEach((st,i)=>{
+      const want=rule.stageCounts[i]; if(want==null) return;
+      const bosses=st.es.filter(e=>e.boss);
+      const mobs=st.es.filter(e=>!e.boss);                          // 保留原本雜兵(含 arch)
+      if(mobs.length<want){
+        const ref=mobs.find(e=>!e.arch)||mobs[0]||st.es[0];          // 純雜兵原型(優先無 arch 那隻)
+        const plain={el:ref.el, hp:ref.hp, atk:ref.atk, turns:ref.turns};   // 只複製數值,不帶 arch
+        for(let k=mobs.length;k<want;k++) mobs.push({...plain});      // 補純雜兵到目標數
+      }
+      st.es=[...mobs, ...bosses];
+    });
+  }
+  return stages;
+}
+
+// ===== headless 生敵(#16 ④):與場景 spawnEnemies 同一份 model 數學(無 Phaser)→ 場景與 sim 共用同一份生敵 =====
+const BOSS_ATK_MUL = 1.3;    // 魔王攻擊額外倍率(魔王一拳更痛)
+const ENEMY_HP_MUL = 1.8;    // 全域敵 HP 倍率(敵更耐打)
+const ENEMY_ATK_MUL = 1.0;   // 全域敵 atk 倍率(1.0=純資料值×難度,不灌水;高難靠 df.atk 疊)
+
+// 招牌行為 → 護盾/DoT 數值(依難度 dk);spawnStage 與 phaseCheck 共用同一份
+function behGates(beh, dk){
+  const g={hitGate:0,comboGate:0,dot:0,regen:0,paralyze:0,healAlly:0,junk:0};
+  if(beh==='hit')g.hitGate=15;
+  else if(beh==='combo')g.comboGate=(dk==='advanced')?2:3;
+  else if(beh==='burn')g.dot=({advanced:0.02,super:0.03,hell:0.04}[dk])||0.03;
+  else if(beh==='regen')g.regen=({advanced:0.04,super:0.06,hell:0.06}[dk])||0.06;
+  else if(beh==='paralyze')g.paralyze=(dk==='advanced')?2:1;
+  else if(beh==='healAlly')g.healAlly=({advanced:0.04,super:0.06,hell:0.08}[dk])||0.05;
+  else if(beh==='junk')g.junk=(dk==='advanced')?3:2;
+  return g;
+}
+
+// 生成某 (dungeon, 難度, 第 stageIdx 關;0 起) 的敵人模型陣列。timer 寬限:開局第1關(stageIdx0)+2。
+function spawnStage(dungeonId, diffKey, stageIdx){
+  const dungeon=DUNGEONS[dungeonId]; if(!dungeon) return [];
+  const df=DIFFS_BY[diffKey]||DIFFS_BY.normal;
+  const defs=resolveStages(dungeon, diffKey)[stageIdx].es;
+  let pun=null; if(df.counter&&dungeon.el){const C=counterOf(dungeon.el); pun=counterOf(C);} let punished=false;   // 反制混搭:上級↑元素關塞一隻懲罰屬
+  const dk=df.key, dEl=dungeon.el, SIG={earth:'hit',wind:'combo',fire:'burn',water:'regen',thunder:'paralyze'}, myBeh=SIG[dEl];
+  const covered=(d)=>{ if(dk==='advanced')return !!d.boss; if(dk==='super')return !!d.boss; if(dk==='hell')return true; return false; };   // 特殊能力:上級/超級僅魔王、地獄全敵
+  const stageHasBoss=defs.some(x=>x.boss);
+  return defs.map(d=>{
+    let el=d.el; if(pun&&!punished&&d.el===dEl&&!d.boss){el=pun;punished=true;}
+    const A=(d.arch&&ARCH[d.arch])||null;
+    const hp=Math.max(1,Math.round(d.hp*df.hp*(A?A.hpM:1)*ENEMY_HP_MUL)),
+          atk=Math.max(1,Math.round(d.atk*df.atk*(A?A.atkM:1)*(d.boss?BOSS_ATK_MUL:1)*ENEMY_ATK_MUL)),
+          turns=Math.max(1,d.turns+(df.dt||0)-1);
+    const phases=d.phases||null;
+    let beh=null;
+    if(phases){el=phases[0].el;beh=phases[0].beh;}
+    else if(A)beh=covered(d)?A.beh:null;
+    else if(myBeh&&covered(d))beh=myBeh;
+    else if(dk==='hell'&&dEl&&!myBeh)beh='hit';
+    const g=behGates(beh, dk);
+    return {el,max:hp,hp:hp,atk:atk,interval:turns,timer:Math.max(2,turns),burn:0,dead:false,boss:!!d.boss,guard:(!d.boss&&stageHasBoss),...g,phases,phaseIdx:0,arch:d.arch||null};   // 每關初始 timer≥2:每關開場至少 2 手才挨第一拳(防上關清空盤面、下關一進場就連挨);interval(之後頻率)不變
+  });
+}
+
+// 魔王變身:血量過門檻 → 換屬 + 換招牌行為(回傳是否變身)。與場景 bossTransform 的 model 部分等價。
+function phaseCheck(e, dk){
+  if(!e.phases || e.hp<=0) return false;
+  const idx=Math.min(e.phases.length-1, Math.max(0, Math.floor((1-e.hp/e.max)*e.phases.length)));
+  if(idx>e.phaseIdx){
+    e.phaseIdx=idx; const ph=e.phases[idx]; e.el=ph.el;
+    Object.assign(e, {hitGate:0,comboGate:0,dot:0,regen:0,paralyze:0,healAlly:0,junk:0}, behGates(ph.beh, dk));
+    return true;
+  }
+  return false;
+}
+
+// headless 敵回合(一手):我方燒傷DoT → 敵出手 → 灼燒光環 → 自我回血 → 補師全體 → 變身檢查。
+// state={enemies,playerHP,maxHP};就地改 state 並回傳。無 immune/armor 時敵傷=e.atk(與場景 enemyAttack 一致)。
+function enemyTurn(state, dk){
+  const E=state.enemies;
+  E.forEach(e=>{ if(!e.dead&&e.burn>0){ e.hp=Math.max(0,e.hp-e.burn); if(e.hp<=0)e.dead=true; } });   // 我方燒傷 DoT(endHand 開頭)
+  E.forEach(e=>{ if(e.dead||e.hp<=0)return; if((e.sealed||0)>0)e.sealed--; e.timer--; if(e.timer<=0){ state.playerHP=Math.max(0,state.playerHP-e.atk); e.timer=e.interval; e.burn=0; } });   // 敵出手
+  const dotRate=Math.max(0,...E.filter(e=>!e.dead&&e.hp>0).map(e=>e.dot||0));   // 灼燒光環(取最大、不疊)
+  if(dotRate>0) state.playerHP=Math.max(0,state.playerHP-Math.max(1,Math.round(state.maxHP*dotRate)));
+  E.forEach(e=>{ if(!e.dead&&e.hp>0&&e.regen>0) e.hp=Math.min(e.max,e.hp+Math.max(1,Math.round(e.max*e.regen))); });   // 自我回血
+  const healR=Math.max(0,...E.filter(e=>!e.dead&&e.hp>0&&e.healAlly>0).map(e=>e.healAlly));   // 補師治療全體
+  if(healR>0) E.forEach(e=>{ if(!e.dead&&e.hp>0) e.hp=Math.min(e.max,e.hp+Math.max(1,Math.round(e.max*healR))); });
+  E.forEach(e=>{ if(e.hp<=0)e.dead=true; phaseCheck(e, dk); });   // 變身(自我回血/燒傷後血量也可能跨門檻)
+  return state;
+}
+
 if (typeof module !== 'undefined' && module.exports) {
-  module.exports = { DUNGEONS, STAGES, ELEM_DUNGEONS, DIFFS, DIFFS_BY, counterOf, ARCH };
+  module.exports = { DUNGEONS, STAGES, ELEM_DUNGEONS, DIFFS, DIFFS_BY, counterOf, ARCH, DIFF_RULES, OVERRIDES, resolveStages,
+    BOSS_ATK_MUL, ENEMY_HP_MUL, ENEMY_ATK_MUL, behGates, spawnStage, phaseCheck, enemyTurn };
 }
