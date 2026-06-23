@@ -108,9 +108,9 @@ function cardDetailPanel(scene, add, cd, opt){
   }
 }
 // 方塊敵正式美術:雜兵(grunt)+ 魔王三階(baby/beg/nrm)× 五屬。texture key→路徑;preload 全載,enemyTexKey() 依「是否魔王×難度×元素」挑圖
-const ENEMY_IMG = (()=>{ const m={}; ['fire','water','thunder','earth','wind'].forEach(el=>{ ['grunt','grunt2','guard','boss_baby','boss_beg','boss_nrm'].forEach(c=>{ m[c+'_'+el]='art/monsters/'+c+'_'+el+'.png'; }); }); return m; })();
+const ENEMY_IMG = (()=>{ const m={}; ['fire','water','thunder','earth','wind'].forEach(el=>{ ['grunt','grunt2','guard','caster','boss_baby','boss_beg','boss_nrm'].forEach(c=>{ m[c+'_'+el]='art/monsters/'+c+'_'+el+'.png'; }); }); return m; })();   // caster=術士兵(尖帽法杖,麻痺)
 // 各敵圖「角色實體」在 320 畫布的高度佔比 h 與底緣 bottom(量測值)。渲染時改以「實體高度」對齊→不同圖體型一致;bottom 用來對齊腳底基準線。魔王再乘 BOSS_MUL 刻意略大。
-const ENEMY_FIT = { grunt:{h:0.65,bottom:0.867}, grunt2:{h:0.65,bottom:0.867}, guard:{h:0.69,bottom:0.869}, boss_baby:{h:0.65,bottom:0.867}, boss_beg:{h:0.69,bottom:0.869}, boss_nrm:{h:0.88,bottom:0.902} };
+const ENEMY_FIT = { grunt:{h:0.65,bottom:0.867}, grunt2:{h:0.65,bottom:0.867}, guard:{h:0.69,bottom:0.869}, caster:{h:0.72,bottom:0.867}, boss_baby:{h:0.65,bottom:0.867}, boss_beg:{h:0.69,bottom:0.869}, boss_nrm:{h:0.88,bottom:0.902} };   // caster 略含尖帽→h 高一點
 const BOSS_MUL = 1.1;   // 魔王體型相對雜兵的刻意放大倍率(看得出是王、又不爆出敵格)
 const DUNGEON_BG = { fire:{back:'art/bg/fire_back.webp', front:'art/bg/fire_front.webp'},
                      water:{back:'art/bg/water_back.webp', front:'art/bg/water_front.webp'},
@@ -651,14 +651,16 @@ class GameScene extends Phaser.Scene{
   enemyTexKey(e){ const el=e.el; let dk=(this.diff&&this.diff.key)||'normal';
     if(this.dungeonId==='prologue')dk='baby';   // 序章=新手村:挑圖固定當嬰兒級(只換外觀,不動數值)→ 魔王 boss_baby(m002)+雜兵 grunt(m001),不出 m003 以上兇怪
     if(e.boss){ const tier=dk==='baby'?'baby':(dk==='beginner'?'beg':'nrm'); const k='boss_'+tier+'_'+el; if(this.textures.exists(k))return k; }
-    else{ const adv=(dk!=='baby'&&dk!=='beginner');
+    else{
+      if(e.arch==='caster'&&this.textures.exists('caster_'+el))return 'caster_'+el;   // 術士兵(麻痺)→法師圖,兵種一眼分得出
+      const adv=(dk!=='baby'&&dk!=='beginner');
       if(adv&&this.textures.exists('guard_'+el))return 'guard_'+el; }   // 中級(normal)以上雜兵(含魔王關護衛)→m003
     if(this.textures.exists('grunt_'+el))return 'grunt_'+el;
     if(this.textures.exists('mon_'+el))return 'mon_'+el;
     return null; }
   // 敵圖體型/站位參數(純計算):魔王=登場就 1.4× 且略往後(Y-2、站護衛後面);護衛/雜兵=實體高度正規化(護衛Y+5站前面)
   enemyFitParams(e){ const szc=e.cardW, cy=e.cy, key=e.sprite.texture.key;
-    const pre = key.indexOf('boss_baby')===0?'boss_baby' : key.indexOf('boss_beg')===0?'boss_beg' : key.indexOf('boss_nrm')===0?'boss_nrm' : key.indexOf('guard')===0?'guard' : 'grunt';
+    const pre = key.indexOf('boss_baby')===0?'boss_baby' : key.indexOf('boss_beg')===0?'boss_beg' : key.indexOf('boss_nrm')===0?'boss_nrm' : key.indexOf('guard')===0?'guard' : key.indexOf('caster')===0?'caster' : 'grunt';
     const fit=ENEMY_FIT[pre]||ENEMY_FIT.grunt;
     let D, yNudge;
     if(e.boss){ D=szc*1.4; yNudge=-2; }   // 魔王:登場即 1.4×、略往後
