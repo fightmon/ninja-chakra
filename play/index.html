@@ -26,19 +26,19 @@ const CARD_ART = { c03:1, c06:1, c19:1, c12:1, c10:1 };   // 有角色圖的卡(
 function cardArtKey(id, size){ return (id&&CARD_ART[id]) ? ('card_'+id+'_'+size) : null; }   // 回傳 texture key(thumb/full),無圖回 null→退回 emoji
 // 角色詳細頁的「各屬環境動畫」:在 (cx,cy,w,h) 區域疊屬性色粒子(疊在圖上、additive)。parent=要掛的容器(modal 容器或 layer)。
 // 用 yoyo+repeat:-1(Phaser 會在物件 destroy 時自動清,無 onComplete 遞迴破圖風險)。
-function elementBgFX(scene, parent, el, cx, cy, w, h){
-  const col = (EL[el] && EL[el].color) || 0xffffff, ADD = Phaser.BlendModes.ADD, N = 8;
+function elementBgFX(scene, add, el, cx, cy, w, h){   // add(o)=把粒子掛到對的層並回傳
+  const col = (EL[el] && EL[el].color) || 0xffffff, ADD = Phaser.BlendModes.ADD, N = 14;
   for(let i=0;i<N;i++){
     const sx = cx - w/2 + 8 + Math.random()*(w-16), sy = cy - h/2 + 8 + Math.random()*(h-16);
-    const p = scene.add.circle(sx, sy, 2 + Math.round(Math.random()*3), col, 0.5).setBlendMode(ADD);
-    parent.add(p);
-    let dx=0, dy=-22, dur=1500;
-    if(el==='fire'){ dy=-26; dur=1300; } else if(el==='water'){ dy=-18; dur=2300; }
-    else if(el==='wind'){ dx=28; dy=5; dur=2000; } else if(el==='earth'){ dy=20; dur=2300; }
-    else if(el==='thunder'){ dx=0; dy=0; dur=600; }   // 雷=原地閃
-    scene.tweens.add({ targets:p, x:sx+dx+(Math.random()-0.5)*14, y:sy+dy,
-      alpha:{ from:0.5, to: el==='thunder'?0.95:0.08 }, duration:dur+Math.random()*800,
-      delay:Math.random()*900, yoyo:true, repeat:-1, ease:'Sine.inOut' });
+    const p = scene.add.circle(sx, sy, 2.5 + Math.round(Math.random()*4), col, 0.7).setBlendMode(ADD);
+    add(p);
+    let dx=0, dy=-48, dur=1400;
+    if(el==='fire'){ dy=-56; dur=1200; } else if(el==='water'){ dy=-40; dur=2200; }
+    else if(el==='wind'){ dx=64; dy=8; dur=1900; } else if(el==='earth'){ dy=44; dur=2200; }
+    else if(el==='thunder'){ dx=0; dy=0; dur=520; }   // 雷=原地閃
+    scene.tweens.add({ targets:p, x:sx+dx+(Math.random()-0.5)*22, y:sy+dy,
+      alpha:{ from:0.75, to: el==='thunder'?1:0.06 }, duration:dur+Math.random()*700,
+      delay:Math.random()*800, yoyo:true, repeat:-1, ease:'Sine.inOut' });
   }
 }
 // 在 scene 的 (x,y) 疊上卡片角色圖(size 邊長;kind thumb/full)。有圖回 image(掛 scene.L 層,rebuild 會清)、無圖回 null。
@@ -46,6 +46,66 @@ function cardImgOn(scene, x, y, size, cardId, kind){
   const ak=cardArtKey(cardId, kind||'thumb');
   if(ak && scene.textures.exists(ak)){ const im=scene.add.image(x,y,ak).setDisplaySize(size,size).setOrigin(0.5); return scene.L?scene.L(im):im; }
   return null;
+}
+// ===== 共用卡片詳細頁(卡冊與編隊共用同一份;以卡冊版為準)=====
+// scene=場景;add(o)=把物件掛到對的層(this.L 或 container.add)並回傳;cd=卡;opt={manage,onClose,onFuse,onDissolve}
+function cardDetailPanel(scene, add, cd, opt){
+  opt = opt || {};
+  const py=Math.round(H/2), PH=Math.min(H-30,680), T=py-PH/2, L=CX-176;
+  const elc=EL[cd.el].color, ac=activeSkill(cd.el), ls=leadSkill(cd.id);
+  const lv=getCardLv(cd.id), n=(loadOwned()[cd.id]||0), atk=cardAtk(cd.id);
+  const exp=getCardExp(cd.id), need=expToNext(lv), mx=lv>=MAXLV;
+  const RI={human:{n:'人忍',e:'🥷',c:'#7fc1ff',bg:0x16314d},yokai:{n:'妖怪',e:'👹',c:'#e0905a',bg:0x3a2418},beast:{n:'靈獸',e:'🐾',c:'#8fd16a',bg:0x1d3a1f}};
+  const ri=RI[cd.race]||RI.human;
+  const txt=(x,y,s,fs,col,ox,bold)=>add(scene.add.text(x,y,s,{fontFamily:EMOJIFONT,fontSize:fs,color:col||'#f3e9d8',fontStyle:bold?'bold':'normal'}).setOrigin(ox==null?0.5:ox,0.5));
+  const rect=(x,y,w,h,col,a)=>add(scene.add.rectangle(x,y,w,h,col,a==null?1:a));
+  const mkbtn=(x,y,w,h,label,fill,stroke,col,fs,cb)=>{const r=add(scene.add.rectangle(x,y,w,h,fill).setStrokeStyle(2,stroke).setInteractive());r.on('pointerup',cb);add(scene.add.text(x,y,label,{fontFamily:EMOJIFONT,fontSize:fs,color:col,fontStyle:'bold'}).setOrigin(0.5));return r;};
+  // 遮罩(點背景關閉)+ 面板
+  rect(CX,H/2,W,H,0x000000,0.82).setInteractive().on('pointerup',()=>opt.onClose&&opt.onClose());
+  rect(CX,py,406,PH,0x1c140c).setStrokeStyle(2,0xffd56a).setInteractive();
+  // 標頭
+  txt(CX,T+22,'No.'+cd.id.replace(/\D/g,'').padStart(3,'0')+'   '+starStr(cd.id),'13px','#ffd56a',0.5);
+  txt(CX,T+46,(cd.hero?'👑 ':'')+cd.name,'25px','#f3e9d8',0.5,true);
+  // 滿版角色圖(3:2)+ 各屬環境動畫
+  const aCY=T+190, fk=cardArtKey(cd.id,'full');
+  rect(CX,aCY,378,252,0x0a0a12).setStrokeStyle(2,0x000000,0.3);   // 暗色底(角色圖是透明背景,底用暗色)
+  rect(CX,aCY,378,252,EL[cd.el].dark,0.45);   // 疊一層該屬暗色調 → 各屬有自己的暗背景氛圍
+  if(fk&&scene.textures.exists(fk))add(scene.add.image(CX,aCY,fk).setDisplaySize(378,252).setOrigin(0.5));   // 透明背景的角色疊在暗底之上→角色清楚
+  else txt(CX,aCY,EL[cd.el].name,'64px','#1a1208',0.5,true);
+  elementBgFX(scene, add, cd.el, CX, aCY, 378, 252);   // 環境動畫粒子疊在角色「之上」(additive 氛圍)→ 滿版立繪會擋住背後的粒子,故疊在上層才看得見
+  // 屬性 + 種族 徽章(疊左上、種族在屬性下)
+  rect(CX-126,T+76,112,28,EL[cd.el].dark,0.92).setStrokeStyle(1,elc); txt(CX-126,T+76,EL[cd.el].fx+' '+EL[cd.el].name+'屬','15px','#f3e9d8',0.5,true);
+  rect(CX-126,T+108,112,28,ri.bg,0.92).setStrokeStyle(1,Phaser.Display.Color.HexStringToColor(ri.c).color); txt(CX-126,T+108,ri.e+' '+ri.n,'15px',ri.c,0.5,true);
+  // 主技形狀圖示(右疊、深色底):5×5 格,LV1→LV5 循環變形演示主技生成的形狀塊
+  { const BC=CX+126, BY=T+104, GS=5, cs=14, half=(GS-1)/2*cs;
+    rect(BC,BY,82,82,0x0a0a14,0.82).setStrokeStyle(1,elc);
+    const cells=[];
+    for(let r=0;r<GS;r++)for(let c=0;c<GS;c++){ cells.push(rect(BC-half+c*cs, BY-half+r*cs, cs-2, cs-2, 0x000000, 0.18).setStrokeStyle(1,0x3a3a3a,0.35)); }
+    const setLv=(lv)=>{ const nc=normCells(chakraShape(cd.el,lv));
+      const maxR=Math.max(...nc.map(c=>c[0])), maxC=Math.max(...nc.map(c=>c[1]));
+      const offR=Math.floor((GS-1-maxR)/2), offC=Math.floor((GS-1-maxC)/2), occ=new Set(nc.map(([r,c])=>(r+offR)+','+(c+offC)));
+      for(let r=0;r<GS;r++)for(let c=0;c<GS;c++){ const cell=cells[r*GS+c], on=occ.has(r+','+c); cell.setFillStyle(on?elc:0x000000, on?1:0.18).setStrokeStyle(1, on?0xffffff:0x3a3a3a, on?0.5:0.35); } };
+    let lastLv=0; setLv(1); const drv={v:0};
+    const tw=scene.tweens.add({targets:drv, v:5, duration:3600, repeat:-1, ease:'Linear', onUpdate:()=>{ if(!cells[0]||!cells[0].active){tw.stop();return;} const L2=Math.max(1,Math.min(5,Math.floor(drv.v)+1)); if(L2!==lastLv){lastLv=L2;setLv(L2);} }});   // LV1→5 循環變形;面板銷毀(格子失效)即自動停
+  }
+  // 數值區塊:左 生命/攻擊/回復,右 Lv/持有
+  rect(CX,T+374,378,92,0x120d07).setStrokeStyle(1,0x4a3a22); rect(CX+20,T+374,1,76,0x4a3a22);
+  const row=(yy,ic,lab,val,lc)=>{txt(L,yy,ic+' '+lab,'16px',lc,0);txt(CX-4,yy,String(val),'21px','#ffffff',1,true);};
+  row(T+348,'❤️','生命',cardHp(cd.id),'#ff9a9a'); row(T+374,'⚔️','攻擊',atk,'#ffcf9a'); row(T+400,'💚','回復',cardRcv(cd.id),'#9ae0a0');
+  txt(CX+36,T+356,'Lv.'+lv+(mx?'  最大':' / '+MAXLV),'16px','#cfe0e8',0,true); txt(CX+36,T+394,'持有 ×'+n,'16px','#cfe0e8',0);
+  // EXP 條
+  rect(L,T+426,352,6,0x000000,0.4).setOrigin(0,0.5); rect(L,T+426,352*(mx?1:Math.min(1,exp/need)),6,0x6ac0ff).setOrigin(0,0.5);
+  // 主動技 / 隊長技 / 主技
+  rect(CX,T+478,378,48,0x16202c).setStrokeStyle(1,0x3a5a7a); txt(L,T+466,'⚡ 主動技 '+(ac?ac.name+'  (CD'+ac.cd+')':'—'),'15px','#a8d8ff',0,true); txt(L,T+490,ac?ac.desc:'','13px','#bcd4e8',0);
+  rect(CX,T+532,378,48,0x2a2416).setStrokeStyle(1,0x6a5a2a); txt(L,T+520,'🎖 隊長技 '+(ls?ls.name:'—'),'15px','#ffd9a0',0,true); txt(L,T+544,ls?ls.desc:'','13px','#e8d0a8',0);
+  // 底排按鈕(manage=卡冊→強化/解散;否則=只關閉)
+  if(opt.manage){
+    mkbtn(CX-86,T+602,158,44,'⬆️ 強化合成',0x2e3a22,0x6aaa4c,'#eafce0','15px',()=>opt.onFuse&&opt.onFuse());
+    mkbtn(CX+86,T+602,158,44,'✖ 關閉',0x2a2218,0x5a4a32,'#cfc0a8','15px',()=>opt.onClose&&opt.onClose());
+    const dz=add(scene.add.text(CX+186,T+22,'♻️',{fontFamily:EMOJIFONT,fontSize:'22px'}).setOrigin(0.5).setInteractive()); dz.on('pointerup',()=>opt.onDissolve&&opt.onDissolve());
+  }else{
+    mkbtn(CX,T+602,210,46,'✖ 關閉',0x2a2218,0x5a4a32,'#cfc0a8','17px',()=>opt.onClose&&opt.onClose());
+  }
 }
 // 方塊敵正式美術:雜兵(grunt)+ 魔王三階(baby/beg/nrm)× 五屬。texture key→路徑;preload 全載,enemyTexKey() 依「是否魔王×難度×元素」挑圖
 const ENEMY_IMG = (()=>{ const m={}; ['fire','water','thunder','earth','wind'].forEach(el=>{ ['grunt','grunt2','guard','boss_baby','boss_beg','boss_nrm'].forEach(c=>{ m[c+'_'+el]='art/monsters/'+c+'_'+el+'.png'; }); }); return m; })();
@@ -557,37 +617,10 @@ class TeamScene extends Phaser.Scene{
     slot.el=null;slot.cardId=null;slot.uid=null;slot.rect.setFillStyle(0x2b2014);slot.txt.setText('＋').setColor('#6a5a40').setFontSize('20px');
     if(slot.img)slot.img.setVisible(false); slot.txt.setVisible(true);
     this.refreshStart();}
-  showCardDetail(cd){   // 久按卡片→就地詳細(版面同背包詳細頁,不離開編隊)
+  showCardDetail(cd){   // 久按卡片→就地詳細(共用 cardDetailPanel,版面與卡冊完全一致,只少管理鈕)
     if(this._detailG)this._detailG.destroy();
     const g=this._detailG=this.add.container(0,0).setDepth(100), close=()=>{if(this._detailG){this._detailG.destroy();this._detailG=null;}};
-    const A=o=>{g.add(o);return o;};
-    const py=Math.round(H/2), PH=Math.min(H-30,680), T=py-PH/2, L=CX-176;
-    const RI={human:{n:'人忍',e:'🥷',c:'#7fc1ff',bg:0x16314d},yokai:{n:'妖怪',e:'👹',c:'#e0905a',bg:0x3a2418},beast:{n:'靈獸',e:'🐾',c:'#8fd16a',bg:0x1d3a1f}};
-    const ri=RI[cd.race]||RI.human, ac=activeSkill(cd.el), ls=leadSkill(cd.id), elc=EL[cd.el].color, lv=getCardLv(cd.id), n=(loadOwned()[cd.id]||0);
-    const tx=(x,y,s,fs,col,ox,bold)=>A(this.add.text(x,y,s,{fontFamily:EMOJIFONT,fontSize:fs,color:col,fontStyle:bold?'bold':'normal'}).setOrigin(ox==null?0.5:ox,0.5));
-    A(this.add.rectangle(CX,H/2,W,H,0x000000,0.86).setInteractive().on('pointerup',close));
-    A(this.add.rectangle(CX,py,406,PH,0x1c140c).setStrokeStyle(2,0xffd56a).setInteractive());
-    tx(CX,T+30,'No.'+cd.id.replace(/\D/g,'').padStart(3,'0')+'   '+RANKSTAR[cd.rank],'11px','#ffd56a');
-    tx(CX,T+52,(cd.hero?'👑 ':'')+cd.name,'20px','#f3e9d8',0.5,true);
-    // 滿版角色圖(3:2)
-    const aCY=T+198, fk=cardArtKey(cd.id,'full');
-    A(this.add.rectangle(CX,aCY,378,252,elc).setStrokeStyle(2,0x000000,0.3));
-    if(fk&&this.textures.exists(fk))A(this.add.image(CX,aCY,fk).setDisplaySize(378,252).setOrigin(0.5));
-    else tx(CX,aCY,EL[cd.el].name,'64px','#1a1208',0.5,true);
-    elementBgFX(this, g, cd.el, CX, aCY, 378, 252);   // 各屬環境動畫粒子
-    // 屬性+種族(左疊、種族在屬性下)
-    A(this.add.rectangle(CX-128,T+86,104,26,EL[cd.el].dark,0.92).setStrokeStyle(1,elc)); tx(CX-128,T+86,EL[cd.el].fx+' '+EL[cd.el].name+'屬','13px','#f3e9d8',0.5,true);
-    A(this.add.rectangle(CX-128,T+116,104,26,ri.bg,0.92).setStrokeStyle(1,Phaser.Display.Color.HexStringToColor(ri.c).color)); tx(CX-128,T+116,ri.e+' '+ri.n,'13px',ri.c,0.5,true);
-    // 數值區塊:左 生命/攻擊/回復,右 Lv/持有
-    A(this.add.rectangle(CX,T+372,378,86,0x120d07).setStrokeStyle(1,0x4a3a22)); A(this.add.rectangle(CX+20,T+372,1,72,0x4a3a22));
-    const row=(yy,ic,lab,val,lc)=>{tx(L,yy,ic+' '+lab,'13px',lc,0);tx(CX-4,yy,String(val),'17px','#ffffff',1,true);};
-    row(T+348,'❤️','生命',cardHp(cd.id),'#ff9a9a'); row(T+372,'⚔️','攻擊',cardAtk(cd.id),'#ffcf9a'); row(T+396,'💚','回復',cardRcv(cd.id),'#9ae0a0');
-    tx(CX+36,T+356,'Lv.'+lv+(lv>=MAXLV?'  最大':' / '+MAXLV),'13px','#cfe0e8',0,true); tx(CX+36,T+392,'持有 ×'+n,'13px','#cfe0e8',0);
-    // 主動技 / 隊長技
-    A(this.add.rectangle(CX,T+478,378,40,0x16202c).setStrokeStyle(1,0x3a5a7a)); tx(L,T+468,'⚡ 主動技 '+(ac?ac.name+'  (CD'+ac.cd+')':'—'),'12px','#a8d8ff',0,true); tx(L,T+486,ac?ac.desc:'','10px','#bcd4e8',0);
-    A(this.add.rectangle(CX,T+522,378,40,0x2a2416).setStrokeStyle(1,0x6a5a2a)); tx(L,T+512,'🎖 隊長技 '+(ls?ls.name:'—'),'12px','#ffd9a0',0,true); tx(L,T+530,ls?ls.desc:'','10px','#e8d0a8',0);
-    // 關閉
-    A(this.add.rectangle(CX,T+592,200,44,0x2a2218).setStrokeStyle(2,0x5a4a32).setInteractive().on('pointerup',close)); tx(CX,T+592,'✖ 關閉','15px','#cfc0a8',0.5,true);}
+    cardDetailPanel(this, o=>{g.add(o);return o;}, cd, {manage:false, onClose:close});}
   randomFill(){this.slots.forEach(s=>this.clearSlot(s));
     const avail=this.instances.filter(x=>!this.cardUsed[x.u]);
     this.slots.forEach(slot=>{if(avail.length){const inst=avail.splice(rnd(avail.length),1)[0];this.assign(slot,inst,ROSTER.find(c=>c.id===inst.id));}});
@@ -2046,55 +2079,13 @@ class CollectionScene extends Phaser.Scene{
   }
   drawDetail(){
     const cd=ROSTER.find(c=>c.id===this.sel); if(!cd)return;
-    const owned=loadOwned(), n=owned[cd.id]||0, lv=getCardLv(cd.id), atk=cardAtk(cd.id), exp=getCardExp(cd.id), need=expToNext(lv), mx=lv>=MAXLV;
-    const no='No.'+cd.id.replace(/\D/g,'').padStart(3,'0'), ev=getCardEvo(cd.id), atMax=ev>=EVO_MAX, chk=canEvolve(cd.id);
-    this.rect(CX,H/2,W,H,0x000000,0.78).setInteractive();   // 遮罩(擋住後方網格)
-    const py=Math.round(H/2);                                // 視窗上下置中
-    const RI={human:{n:'人忍',e:'🥷',c:'#7fc1ff',bg:0x16314d},yokai:{n:'妖怪',e:'👹',c:'#e0905a',bg:0x3a2418},beast:{n:'靈獸',e:'🐾',c:'#8fd16a',bg:0x1d3a1f}};
-    const ri=RI[cd.race]||RI.human, ac=activeSkill(cd.el), ls=leadSkill(cd.id), elc=EL[cd.el].color;
-    const L=CX-176, R=CX+176;
-    const PH=Math.min(H-30,680), T=py-PH/2;   // 面板加高放滿版立繪;T=面板頂緣
-    this.rect(CX,py,406,PH,0x1c140c).setStrokeStyle(2,0xffd56a);
-    // ── 標頭:No+★ / 名字 ──
-    this.txt(CX,T+22,no+'   '+starStr(cd.id),'11px','#ffd56a',0.5);
-    this.txt(CX,T+44,(cd.hero?'👑 ':'')+cd.name,'20px','#f3e9d8',0.5,true);
-    // ── 滿版角色圖(100% 寬,3:2 照原圖;無立繪→屬色底+大屬字)──
-    const aCY=T+190, _fk=cardArtKey(cd.id,'full');
-    this.rect(CX,aCY,378,252,elc).setStrokeStyle(2,0x000000,0.3);
-    if(_fk&&this.textures.exists(_fk)) this.L(this.add.image(CX,aCY,_fk).setDisplaySize(378,252).setOrigin(0.5));
-    else this.txt(CX,aCY,EL[cd.el].name,'64px','#1a1208',0.5,true);
-    elementBgFX(this, this.layer, cd.el, CX, aCY, 378, 252);   // 各屬環境動畫粒子(疊在圖上)
-    // ── 屬性 + 種族 徽章(疊在角色圖左上、種族在屬性下方)──
-    this.rect(CX-128,T+74,104,26,EL[cd.el].dark,0.92).setStrokeStyle(1,elc);
-    this.L(this.add.text(CX-128,T+74,EL[cd.el].fx+' '+EL[cd.el].name+'屬',{fontFamily:EMOJIFONT,fontSize:'13px',color:'#f3e9d8',fontStyle:'bold'}).setOrigin(0.5));
-    this.rect(CX-128,T+104,104,26,ri.bg,0.92).setStrokeStyle(1,Phaser.Display.Color.HexStringToColor(ri.c).color);
-    this.L(this.add.text(CX-128,T+104,ri.e+' '+ri.n,{fontFamily:EMOJIFONT,fontSize:'13px',color:ri.c,fontStyle:'bold'}).setOrigin(0.5));
-    // ── 數值區塊(龍族式):左=生命/攻擊/回復一組,右=Lv/持有 同排 ──
-    this.rect(CX,T+360,378,86,0x120d07).setStrokeStyle(1,0x4a3a22);
-    this.rect(CX+20,T+360,1,72,0x4a3a22);   // 中間細分隔線
-    const row=(yy,ic,lab,val,lc)=>{this.txt(L,yy,ic+' '+lab,'13px',lc,0);this.txt(CX-4,yy,String(val),'17px','#ffffff',1,true);};
-    row(T+336,'❤️','生命',cardHp(cd.id),'#ff9a9a');
-    row(T+360,'⚔️','攻擊',atk,'#ffcf9a');
-    row(T+384,'💚','回復',cardRcv(cd.id),'#9ae0a0');
-    this.txt(CX+36,T+344,'Lv.'+lv+(mx?'  最大':' / '+MAXLV),'13px','#cfe0e8',0,true);
-    this.txt(CX+36,T+380,'持有 ×'+n,'13px','#cfe0e8',0);
-    // ── EXP 條(數值區塊下方)──
-    this.rect(L,T+420,352,6,0x000000,0.4).setOrigin(0,0.5);
-    this.rect(L,T+420,352*(mx?1:Math.min(1,exp/need)),6,0x6ac0ff).setOrigin(0,0.5);
-    // ── 主動技 / 隊長技 ──
-    this.rect(CX,T+470,378,40,0x16202c).setStrokeStyle(1,0x3a5a7a);
-    this.txt(L,T+460,'⚡ 主動技 '+(ac?ac.name+'  (CD'+ac.cd+')':'—'),'12px','#a8d8ff',0,true);
-    this.txt(L,T+478,ac?ac.desc:'','10px','#bcd4e8',0);
-    this.rect(CX,T+514,378,40,0x2a2416).setStrokeStyle(1,0x6a5a2a);
-    this.txt(L,T+504,'🎖 隊長技 '+(ls?ls.name:'—'),'12px','#ffd9a0',0,true);
-    this.txt(L,T+522,ls?ls.desc:'','10px','#e8d0a8',0);
-    this.txt(L,T+546,'🧩 主技 '+(EL_SKILL[cd.el]||'—'),'10px','#cfe0d8',0);
-    // ── 底排按鈕:強化合成 | 關閉 ──
-    this.btn(CX-86,T+592,158,40,'⬆️ 強化合成',()=>{this.scene.manager.start('fuse',{target:cd.id});this.scene.manager.stop('collection');},{col:0x2e3a22,stroke:0x6aaa4c,color:'#eafce0',bold:true,fs:'14px'});
-    this.btn(CX+86,T+592,158,40,'✖ 關閉',()=>{this.sel=null;this.askDis=false;this.rebuild();},{col:0x2a2218,stroke:0x5a4a32,color:'#cfc0a8',bold:true,fs:'14px'});
-    // ── 右上:♻️ 解散 ──
-    this.L(this.add.text(CX+186,T+22,'♻️',{fontFamily:EMOJIFONT,fontSize:'20px'}).setOrigin(0.5).setInteractive()).on('pointerup',()=>{
-      if(n<2){this.toast('只剩 1 張,無法解散');return;} this.askDis=true; this.rebuild(); });
+    const n=(loadOwned()[cd.id]||0);
+    cardDetailPanel(this, o=>this.L(o), cd, {   // 共用詳細頁(卡冊版=manage:true→含強化/解散)
+      manage:true,
+      onClose:()=>{this.sel=null;this.askDis=false;this.rebuild();},
+      onFuse:()=>{this.scene.manager.start('fuse',{target:cd.id});this.scene.manager.stop('collection');},
+      onDissolve:()=>{ if(n<2){this.toast('只剩 1 張,無法解散');return;} this.askDis=true; this.rebuild(); },
+    });
     if(this.askDis)this.drawDissolveConfirm(cd,n);
   }
   drawDissolveConfirm(cd,n){
@@ -2124,9 +2115,9 @@ class HomeScene extends Phaser.Scene{
   rect(x,y,w,h,col,a){return this.L(this.add.rectangle(x,y,w,h,col,a==null?1:a));}
   btn(x,y,w,h,label,cb,o){o=o||{};const r=this.L(this.add.rectangle(x,y,w,h,o.col==null?0x2b2014:o.col).setStrokeStyle(2,o.stroke==null?0x5a4128:o.stroke).setInteractive());
     this.txt(x,y,label,o.fs||'15px',o.color||'#f3e9d8',0.5,o.bold);r.on('pointerup',cb);return r;}
-  toast(msg){const t=this.add.text(CX,Math.round(H*0.42),msg,{fontFamily:EMOJIFONT,fontSize:'24px',color:'#ffe9b0',fontStyle:'bold',stroke:'#000000',strokeThickness:5,backgroundColor:'#000000e6',padding:{x:28,y:22},align:'center',lineSpacing:6,wordWrap:{width:W-32}}).setOrigin(0.5).setDepth(2000).setScale(0.7);
-    this.tweens.add({targets:t,scaleX:1,scaleY:1,duration:220,ease:'Back.out'});   // 彈入
-    this.tweens.add({targets:t,alpha:0,delay:2200,duration:600,onComplete:()=>t.destroy()});}   // 停 ~2.2 秒再慢慢淡出
+  toast(msg){const t=this.add.text(CX,Math.round(H*0.42),msg,{fontFamily:EMOJIFONT,fontSize:'30px',color:'#ffe9b0',fontStyle:'bold',stroke:'#000000',strokeThickness:6,backgroundColor:'#000000ee',padding:{x:40,y:32},align:'center',lineSpacing:8,wordWrap:{width:W-20}}).setOrigin(0.5).setDepth(2000).setScale(0.65);
+    this.tweens.add({targets:t,scaleX:1,scaleY:1,duration:260,ease:'Back.out'});   // 彈入
+    this.tweens.add({targets:t,alpha:0,delay:4600,duration:600,onComplete:()=>t.destroy()});}   // 停 ~4.6 秒再淡出(出現後約 5 秒消失)
   showDaily(){
     if(this._dailyG)this._dailyG.destroy();
     const g=this.add.container(0,0).setDepth(1600); this._dailyG=g; const cur=dailyIndex();
@@ -2343,7 +2334,8 @@ class HomeScene extends Phaser.Scene{
     if(n===1){   // ── 單抽:大立繪置中 ──
       const it=res[0], cd=it.cd, hi=cd.rank==='kage'||cd.rank==='jonin', cy=Math.round(H*0.42);
       const cont=this.L(this.add.container(CX,cy));
-      cont.add(this.add.rectangle(0,0,324,216,EL[cd.el].color).setStrokeStyle(4,cd.rank==='kage'?0xffd54a:(hi?0xffffff:0x000000),hi?1:0.4));
+      cont.add(this.add.rectangle(0,0,324,216,0x0a0a12).setStrokeStyle(4,cd.rank==='kage'?0xffd54a:(hi?0xffffff:0x000000),hi?1:0.4));   // 暗色底(角色透明背景)
+      cont.add(this.add.rectangle(0,0,324,216,EL[cd.el].dark,0.45));   // 該屬暗色調
       const fk=cardArtKey(cd.id,'full'); if(fk&&this.textures.exists(fk))cont.add(this.add.image(0,0,fk).setDisplaySize(324,216).setOrigin(0.5));
       else cont.add(this.add.text(0,0,EL[cd.el].name,{fontFamily:EMOJIFONT,fontSize:'56px',color:'#1a1208',fontStyle:'bold'}).setOrigin(0.5));
       cont.add(this.add.rectangle(-108,-88,108,26,EL[cd.el].dark,0.92).setStrokeStyle(1,EL[cd.el].color));
@@ -2364,7 +2356,8 @@ class HomeScene extends Phaser.Scene{
       const cols=5, gx=74, gy=92, x0=CX-2*gx, y0=Math.round(H*0.28);
       res.forEach((it,i)=>{const cx=x0+(i%cols)*gx, cy=y0+Math.floor(i/cols)*gy, cd=it.cd, hi=cd.rank==='kage'||cd.rank==='jonin';
         const cont=this.L(this.add.container(cx,cy));
-        cont.add(this.add.rectangle(0,0,66,66,EL[cd.el].color).setStrokeStyle(3,cd.rank==='kage'?0xffd54a:(hi?0xffffff:0x000000),hi?1:0.3));
+        cont.add(this.add.rectangle(0,0,66,66,0x0a0a12).setStrokeStyle(3,cd.rank==='kage'?0xffd54a:(hi?0xffffff:0x000000),hi?1:0.3));   // 暗色底
+        cont.add(this.add.rectangle(0,0,66,66,EL[cd.el].dark,0.55));   // 該屬暗色調(小格仍保留一點屬性辨識)
         const dk=cardArtKey(cd.id,'thumb'); if(dk&&this.textures.exists(dk))cont.add(this.add.image(0,0,dk).setDisplaySize(66,66).setOrigin(0.5));
         else cont.add(this.add.text(0,0,cd.name,{fontFamily:EMOJIFONT,fontSize:'10px',color:'#1a1208',fontStyle:'bold'}).setOrigin(0.5));
         cont.add(this.add.text(0,25,starStr(cd.id),{fontFamily:EMOJIFONT,fontSize:'9px',color:'#ffffff',stroke:'#000000',strokeThickness:3}).setOrigin(0.5));
@@ -2388,7 +2381,8 @@ class HomeScene extends Phaser.Scene{
     this.rect(CX,py,360,430,0x1c140c).setStrokeStyle(2,0xffd56a).setInteractive();   // 攔截點擊(避免穿透關閉)
     this.txt(CX,py-186,(cd.hero?'👑 ':'')+cd.name,'20px','#f3e9d8',0.5,true);
     this.txt(CX,py-160,EL[cd.el].name+' · '+RANKSTAR[cd.rank],'13px','#ffd56a',0.5);
-    this.rect(CX,py-58,184,124,EL[cd.el].color).setStrokeStyle(2,0x000000,0.3);   // 3:2 照原圖比例
+    this.rect(CX,py-58,184,124,0x0a0a12).setStrokeStyle(2,0x000000,0.3);   // 暗色底(角色透明背景)
+    this.rect(CX,py-58,184,124,EL[cd.el].dark,0.45);   // 該屬暗色調 · 3:2 照原圖比例
     const fk=cardArtKey(cd.id,'full'); if(fk&&this.textures.exists(fk))this.L(this.add.image(CX,py-58,fk).setDisplaySize(180,120).setOrigin(0.5)); else this.txt(CX,py-58,EL[cd.el].name,'56px','#1a1208',0.5,true);
     this.txt(CX,py+54,'⚔️ 攻 '+cardAtk(cd.id)+'    ❤️ 血 '+cardHp(cd.id)+'    💚 '+cardRcv(cd.id),'14px','#f3e9d8',0.5);
     const ac=activeSkill(cd.el);
