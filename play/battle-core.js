@@ -180,7 +180,7 @@ class BattleSim {
       if(a==='yang'){ const v=Math.round(f.atk*CONFIG.ATTR.yang_heal_rate*f.level); this.playerHP=Math.min(this.maxHP,this.playerHP+v); yangHeal+=v; }
       else if(a==='yin'){ this.amp=Math.max(this.amp,2); }
     });});
-    if(data.hitWeak) tgt.timer += 1;                           // 打到弱點→敵出手延後一手
+    { const atkEls=Object.keys(data.fx); victims.forEach(en=>{ if(!en.dead && atkEls.some(e=>EL[e]&&EL[e].beats===en.el)) en.timer+=1; }); }   // 相剋打弱點→該敵延後出手:AoE(15HIT↑)對每隻被剋敵生效,單體只判鎖定目標
     data.cells.forEach(([r,c])=>{ this.board[r][c]=null; });   // 立即清盤
     // 護盾門檻:本手 HIT/連段沒達標的 victim 這手不扣血
     this.enemies.forEach(e=>{ e._blocked=false; });
