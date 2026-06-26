@@ -1458,7 +1458,9 @@ class GameScene extends Phaser.Scene{
         this.chargeAt(ox,oy,col,420,hot);
         this.time.delayedCall(420,()=>{ this.labSnd(['s_fire1','s_fire2','s_fire3'][Math.floor(Math.random()*3)],0.6); this.chakraBolt(ox,oy,tgt.sprite.x,tgt.sprite.y,col,tgt,dmg,3,hot);   // 火主動技發射(隨機)
           this.cameras.main.shake(240,0.009);
-          this.time.delayedCall(360,()=>{ this.labSnd('s_hit_fire',0.75); tgt.hp=Math.max(0,tgt.hp-dmg); this.updateEnemies(); if(tgt.hp<=0)this.killEnemy(tgt); }); });   // 火主動技彈著(damage1)
+          this.time.delayedCall(360,()=>{ this.labSnd('s_hit_fire',0.75); tgt.hp=Math.max(0,tgt.hp-dmg);
+            if(tgt.hp>0 && EL.fire.beats===tgt.el){ tgt.timer+=1; if(tgt.sprite)this.floatText(tgt.sprite.x,tgt.sprite.y-24,'延+1','#ffb070'); }   // 相剋(火剋風)→該敵出手延後一手,同一般解宮
+            this.updateEnemies(); if(tgt.hp<=0)this.killEnemy(tgt); }); });   // 火主動技彈著(damage1)
         break;}
       case 'water':{const col=EL.water.color, h=Math.round(this.maxHP*0.3);   // 聚氣花火 → 用元素把傷口治好
         this.chargeAt(ox,oy,col,380);
