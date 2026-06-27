@@ -63,7 +63,7 @@ function planResolve(data, lead, teamRcv, combo){
   const hitN      = data.cells.length;                      // 本次清的格數
   const aoe        = hitN >= AOE_HIT;                        // ≥AOE_HIT → 全體
   const hits      = (data.hits||[]).map(h => ({ b:h.b, el:h.el, cells:h.cells, dmg: Math.round(h.dmg*dmgMul) }));   // 各宮最終傷害
-  const heal      = Math.max(1, Math.round(teamRcv * NEUTRAL_HEAL_MUL * comboMult));   // 清無屬區回血(combo 也加成)
+  const heal      = Math.max(1, Math.round(teamRcv * NEUTRAL_HEAL_MUL * comboMult));   // 清無屬「每3格」回血基準(combo加成);實際每宮回 heal×格數/3 → 同攻擊按格數,拆不拆宮一樣多
   return { comboMult, leadMult, dmgMul, hitN, aoe, hits, heal };
 }
 const SHAPES_BY_EL = {
@@ -188,9 +188,9 @@ class BattleSim {
     // 傷害:每宮 dmg 對每個未被擋的 victim 逐宮累加
     const perVictim = plan.hits.reduce((s,h)=>s+h.dmg, 0);
     victims.forEach(v=>{ if(!v._blocked) v.hp=Math.max(0, v.hp-perVictim); });
-    // 無屬區回血:每個 neutral 宮各回 plan.heal(teamRcv>0 才有)
+    // 無屬區回血:每個 neutral 宮按「被清格數」回血(heal×格數/3),teamRcv>0 才有
     let neutralHeal = 0;
-    if(this.teamRcv>0) plan.hits.forEach(h=>{ if(h.el==='neutral'){ this.playerHP=Math.min(this.maxHP,this.playerHP+plan.heal); neutralHeal+=plan.heal; } });
+    if(this.teamRcv>0) plan.hits.forEach(h=>{ if(h.el==='neutral'){ const hv=Math.max(1,Math.round(plan.heal*h.cells/3)); this.playerHP=Math.min(this.maxHP,this.playerHP+hv); neutralHeal+=hv; } });
     // 死亡標記(獎勵留 ④)
     const deaths=[];
     this.enemies.forEach((e,idx)=>{ if(!e.dead && e.hp<=0){ e.dead=true; deaths.push(idx); } });
