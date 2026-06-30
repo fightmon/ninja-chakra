@@ -12,7 +12,7 @@
   html,body{margin:0;height:100%;background:#160f18;overflow:hidden;}
   #game{width:100vw;height:100vh;height:100dvh;}   /* dvh=動態視口高(實際可見區),100vh 留作舊瀏覽器 fallback */
 </style>
-<script src="https://cdn.jsdelivr.net/npm/phaser@3.80.1/dist/phaser.min.js"></script>
+<script src="phaser.min.js"></script><!-- Phaser 打包進本地(原 CDN;弱網/CDN被擋時 CDN 版會整個起不來) -->
 </head>
 <body>
 <div id="game"></div>
@@ -28,19 +28,23 @@ function cardArtKey(id, size){ return (id&&CARD_ART[id]) ? ('card_'+id+'_'+size)
 const SPECIES_TEAMS=[
   {emoji:'🐱',name:'貓系',  color:'#8fd16a',cards:{fire:'c02',water:'c05',thunder:'c08',earth:'c09',wind:'c11'}},
   {emoji:'🐶',name:'犬系',  color:'#e0c890',cards:{fire:'c03',water:'c06',thunder:'c19',earth:'c10',wind:'c12'}},
-  {emoji:'🐦',name:'鳥系',  color:'#c79bff',cards:null},
+  {emoji:'🐦',name:'鳥系',  color:'#c79bff',cards:{fire:'c01',water:'c04',thunder:'c07',earth:'c25',wind:'c29'}},   // 百鬼眾(圖待補)
   {emoji:'🐹',name:'鼠系',  color:'#d8b890',cards:{fire:'c13',water:'c16',thunder:'c20',earth:'c23',wind:'c27'}},
-  {emoji:'🐰',name:'兔系',  color:'#e89ab0',cards:null},
+  {emoji:'🐰',name:'兔系',  color:'#e89ab0',cards:{fire:'c31',water:'c32',thunder:'c33',earth:'c34',wind:'c35'}},   // 占位(圖/名待補)
+  {emoji:'🐟',name:'魚系',  color:'#7fc8e8',cards:{fire:'c14',water:'c17',thunder:'c21',earth:'c24',wind:'c28'}},   // 獸魂隊(圖/名待補)
   {emoji:'🇹🇼',name:'台灣特有種',color:'#8fe0a8',cards:{fire:'c15',water:'c18',thunder:'c22',earth:'c26',wind:'c30'}},
 ];
 const DEX_EL5=['fire','water','thunder','earth','wind'];
-const DEX_ASSIGNED=new Set(['c03','c06','c19','c10','c12','c02','c05','c08','c09','c11','c13','c16','c20','c23','c27','c15','c18','c22','c26','c30']);   // 已歸物種隊(犬/貓/鼠/台灣)的卡 → 不重複進「未歸隊」
+const DEX_ASSIGNED=new Set(['c03','c06','c19','c10','c12','c02','c05','c08','c09','c11','c13','c16','c20','c23','c27','c15','c18','c22','c26','c30','c14','c17','c21','c24','c28','c31','c32','c33','c34','c35','c01','c04','c07','c25','c29']);   // 已歸物種隊(犬/貓/鳥/鼠/魚/兔/台灣)的卡 → 不重複進「未歸隊」
 // 物種「種族」顯示(覆蓋詳細頁的人忍/妖怪/靈獸;只改顯示,不動底層 race)→ 已歸隊的卡顯示其物種
 const CARD_SPECIES={};
 [['🐱','貓','#8fd16a',0x1d3a1f,['c02','c05','c08','c09','c11']],
  ['🐶','犬','#e0c890',0x3a2e1a,['c03','c06','c19','c10','c12']],
  ['🐹','鼠','#d8b890',0x33291a,['c13','c16','c20','c23','c27']],
- ['🇹🇼','台灣特有','#8fe0a8',0x1a2a1f,['c15','c18','c22','c26','c30']]
+ ['🇹🇼','台灣特有','#8fe0a8',0x1a2a1f,['c15','c18','c22','c26','c30']],
+ ['🐟','魚','#7fc8e8',0x16314d,['c14','c17','c21','c24','c28']],
+ ['🐰','兔','#e89ab0',0x3a1f2a,['c31','c32','c33','c34','c35']],
+ ['🐦','鳥','#c79bff',0x231a26,['c01','c04','c07','c25','c29']]
 ].forEach(([e,n,c,bg,ids])=>ids.forEach(id=>CARD_SPECIES[id]={e,n,c,bg}));
 // ===== 程序化音效(WebAudio 即時合成,零檔案/零版權/離線)=====
 const SFX=(()=>{
@@ -211,13 +215,13 @@ const ENEMY_SPREAD = 0.75;       // 敵人橫向集中係數:1=鋪滿、越小�
 // ELEMENT_BOXES / NEUTRAL_FILL/DARK / SHAPES / WSUM → battle-core.js
 // 角色:個人名 + 種族(human/yokai/beast) + 三圍(攻/血/回,同星總量公平、分配不同) + rank(沿用:gacha/掉落/★用,genin=★1…kage=★4)
 const ROSTER = [
-  {id:'c01', name:'灼鬼',   el:'fire',    race:'yokai',  rank:'jonin',  atk:300, hp:375,  rcv:38,  attrs:['fire']},
+  {id:'c01', name:'朱',     el:'fire',    race:'yokai',  rank:'jonin',  atk:300, hp:375,  rcv:38,  attrs:['fire']},
   {id:'c02', name:'茜',     el:'fire',    race:'human',  rank:'chunin', atk:192, hp:240,  rcv:24,  attrs:['fire']},
   {id:'c03', name:'炎助',   el:'fire',    race:'human',  rank:'genin',  atk:120, hp:150,  rcv:15,  attrs:['fire']},
-  {id:'c04', name:'淵姬',   el:'water',   race:'yokai',  rank:'jonin',  atk:125, hp:525,  rcv:100, attrs:['water']},
+  {id:'c04', name:'凪',     el:'water',   race:'yokai',  rank:'jonin',  atk:125, hp:525,  rcv:100, attrs:['water']},
   {id:'c05', name:'雫',     el:'water',   race:'human',  rank:'chunin', atk:80,  hp:336,  rcv:64,  attrs:['water']},
   {id:'c06', name:'水無',   el:'water',   race:'human',  rank:'genin',  atk:50,  hp:210,  rcv:40,  attrs:['water']},
-  {id:'c07', name:'雷獸',   el:'thunder', race:'yokai',  rank:'jonin',  atk:275, hp:300,  rcv:63,  attrs:['thunder']},
+  {id:'c07', name:'鳴',     el:'thunder', race:'yokai',  rank:'jonin',  atk:275, hp:300,  rcv:63,  attrs:['thunder']},
   {id:'c08', name:'響',     el:'thunder', race:'human',  rank:'chunin', atk:176, hp:192,  rcv:40,  attrs:['thunder']},
   {id:'c09', name:'椿',     el:'earth',   race:'human',  rank:'chunin', atk:64,  hp:576,  rcv:32,  attrs:['earth']},
   {id:'c10', name:'土丸',   el:'earth',   race:'human',  rank:'genin',  atk:40,  hp:360,  rcv:20,  attrs:['earth']},
@@ -226,22 +230,28 @@ const ROSTER = [
   /* ── 擴充:補滿五屬階梯 + 影忍(kage ★4)SSR 層,共 30 張;★4 靈獸=五屬神主角 ── */
   {id:'c13', name:'豆',     el:'fire',    race:'yokai',  rank:'genin',  atk:120, hp:150,  rcv:15,  attrs:['fire']},
   {id:'c14', name:'緋貂',   el:'fire',    race:'beast',  rank:'chunin', atk:192, hp:240,  rcv:24,  attrs:['fire']},
-  {id:'c15', name:'臺灣雲豹', el:'fire',    race:'beast',  rank:'kage',   atk:420, hp:525,  rcv:53,  attrs:['fire'], hero:true},
+  {id:'c15', name:'臺灣雲豹', el:'fire',    race:'beast',  rank:'kage',   atk:360, hp:445,  rcv:45,  attrs:['fire'], hero:true},
   {id:'c16', name:'露',     el:'water',   race:'yokai',  rank:'genin',  atk:50,  hp:210,  rcv:40,  attrs:['water']},
   {id:'c17', name:'蒼蛟',   el:'water',   race:'beast',  rank:'chunin', atk:80,  hp:336,  rcv:64,  attrs:['water']},
-  {id:'c18', name:'櫻花鉤吻鮭', el:'water',   race:'beast',  rank:'kage',   atk:175, hp:735,  rcv:140, attrs:['water'], hero:true},
+  {id:'c18', name:'櫻花鉤吻鮭', el:'water',   race:'beast',  rank:'kage',   atk:150, hp:625,  rcv:120, attrs:['water'], hero:true},
   {id:'c19', name:'雷太',   el:'thunder', race:'human',  rank:'genin',  atk:110, hp:120,  rcv:25,  attrs:['thunder']},
   {id:'c20', name:'智',     el:'thunder', race:'yokai',  rank:'genin',  atk:110, hp:120,  rcv:25,  attrs:['thunder']},
   {id:'c21', name:'紫豹',   el:'thunder', race:'beast',  rank:'chunin', atk:176, hp:192,  rcv:40,  attrs:['thunder']},
-  {id:'c22', name:'臺灣藍鵲', el:'thunder', race:'beast',  rank:'kage',   atk:385, hp:420,  rcv:88,  attrs:['thunder'], hero:true},
+  {id:'c22', name:'臺灣藍鵲', el:'thunder', race:'beast',  rank:'kage',   atk:330, hp:355,  rcv:75,  attrs:['thunder'], hero:true},
   {id:'c23', name:'栗',     el:'earth',   race:'yokai',  rank:'genin',  atk:40,  hp:360,  rcv:20,  attrs:['earth']},
   {id:'c24', name:'石龜',   el:'earth',   race:'beast',  rank:'chunin', atk:64,  hp:576,  rcv:32,  attrs:['earth']},
-  {id:'c25', name:'埴輪鬼', el:'earth',   race:'yokai',  rank:'jonin',  atk:100, hp:900,  rcv:50,  attrs:['earth']},
-  {id:'c26', name:'臺灣黑熊', el:'earth',   race:'beast',  rank:'kage',   atk:140, hp:1260, rcv:70,  attrs:['earth'], hero:true},
+  {id:'c25', name:'梟',     el:'earth',   race:'yokai',  rank:'jonin',  atk:100, hp:900,  rcv:50,  attrs:['earth']},
+  {id:'c26', name:'臺灣黑熊', el:'earth',   race:'beast',  rank:'kage',   atk:120, hp:1070, rcv:60,  attrs:['earth'], hero:true},
   {id:'c27', name:'楓',     el:'wind',    race:'yokai',  rank:'genin',  atk:76,  hp:222,  rcv:25,  attrs:['wind']},
   {id:'c28', name:'風隼',   el:'wind',    race:'beast',  rank:'chunin', atk:122, hp:355,  rcv:40,  attrs:['wind']},
-  {id:'c29', name:'天狗',   el:'wind',    race:'yokai',  rank:'jonin',  atk:190, hp:555,  rcv:63,  attrs:['wind']},
-  {id:'c30', name:'臺灣獼猴', el:'wind',    race:'beast',  rank:'kage',   atk:266, hp:777,  rcv:88,  attrs:['wind'], hero:true},
+  {id:'c29', name:'翔',     el:'wind',    race:'yokai',  rank:'jonin',  atk:190, hp:555,  rcv:63,  attrs:['wind']},
+  {id:'c30', name:'臺灣獼猴', el:'wind',    race:'beast',  rank:'kage',   atk:226, hp:660,  rcv:75,  attrs:['wind'], hero:true},
+  /* ── 🐰 兔家族(占位:名/圖/三圍待補,★3 暫用現值;技能=家族扛「化境/繁殖增幅」)── */
+  {id:'c31', name:'莓',     el:'fire',    race:'beast',  rank:'jonin',  atk:300, hp:375,  rcv:38,  attrs:['fire']},
+  {id:'c32', name:'雪',     el:'water',   race:'beast',  rank:'jonin',  atk:125, hp:525,  rcv:100, attrs:['water']},
+  {id:'c33', name:'鈴',     el:'thunder', race:'beast',  rank:'jonin',  atk:275, hp:300,  rcv:63,  attrs:['thunder']},
+  {id:'c34', name:'餅',     el:'earth',   race:'beast',  rank:'jonin',  atk:100, hp:900,  rcv:50,  attrs:['earth']},
+  {id:'c35', name:'萌',     el:'wind',    race:'beast',  rank:'jonin',  atk:190, hp:555,  rcv:63,  attrs:['wind']},
 ];
 // CONFIG → battle-core.js
 const KATA = ['一之型','二之型','三之型','四之型','五之型','禁術','奧義'];   // LV1~7(簡單數字,日文漢字通用)
@@ -319,7 +329,7 @@ const LEADER_SKILLS={
   // 擴充卡(隊長技隨稀有度遞強;影忍=各流派核心)
   c13:{name:'小火種',desc:'全體傷害 ×1.08',type:'allAtk',v:1.08},
   c14:{name:'赤焰',desc:'火屬清除那手 全傷害 ×1.2',type:'elemAtk',el:'fire',v:1.2},
-  c15:{name:'掠食者之威',desc:'攻擊力 ×1.2',type:'allAtk',v:1.2},   // 🐆雲豹(台灣隊·起手友善:無條件每次攻擊都×1.2,含基本清宮)
+  c15:{name:'掠食者之威',desc:'攻擊力 ×1.12',type:'allAtk',v:1.12},   // 🐆雲豹(台灣隊·起手友善:無條件每次攻擊;全隊不暴走)
   c16:{name:'滴水',desc:'我方 HP ×1.08',type:'hp',v:1.08},
   c17:{name:'寒霜護',desc:'我方 HP ×1.15',type:'hp',v:1.15},
   c18:{name:'冰河迴生',desc:'HP≤10%(含致死)自動回 50%,過 9 輪再生',type:'revive',v:9},   // 🐟鮭魚(台灣隊)
@@ -334,9 +344,11 @@ const LEADER_SKILLS={
   c27:{name:'輕風',desc:'出擊體力 −5%',type:'stamina',v:0.95},
   c28:{name:'烈風',desc:'全體傷害 ×1.15',type:'allAtk',v:1.15},
   c29:{name:'風遁',desc:'全體傷害 ×1.2',type:'allAtk',v:1.2},
-  c30:{name:'猴群偷襲',desc:'每塊有清→隊長偷打(攻×0.5)+1 combo',type:'steal',v:0.5},   // 🐒獼猴(台灣隊)
+  c30:{name:'猴群偷襲',desc:'每塊有清→隊長偷打(攻×0.25)+1 combo',type:'steal',v:0.25},   // 🐒獼猴(台灣隊)
 };
-function leadSkill(id){return LEADER_SKILLS[id]||null;}
+const TW_IDS=new Set(['c15','c18','c22','c26','c30']);   // 台灣隊:各卡專屬技能,即使被標家族 synergy 也優先
+function leadSkill(id){ if(TW_IDS.has(id))return LEADER_SKILLS[id]||null;   // 台灣優先
+  const f=CARD_FAMILY[id]; if(f&&FAMILY_LEADER[f]){ const c=ROSTER.find(x=>x.id===id); return {...FAMILY_LEADER[f], el:c?c.el:null, fam:f, id}; } return LEADER_SKILLS[id]||null; }   // 家族隊長技(el 填卡屬性,fam=家族給 famFrac)
 /* 主動技:戰鬥中蓄力(每出滿一手+1),蓄滿點該卡發動;依卡片屬性給效果(玩家主動決策層) */
 const ACTIVE_SKILLS={
   fire:   {name:'業火奔流',cd:5,icon:'🔥',desc:'對鎖定的單一敵人造成 攻擊×3 傷害'},
@@ -353,7 +365,35 @@ const CARD_ACTIVE={
   c26:{name:'巨塊',cd:5,icon:'🐻',desc:'清空托盤→生成 1 個 3×3 疊塊,放上去補滿一宮→大清(教高 HIT)'},
   c30:{name:'靈猴造塊',cd:4,icon:'🐒',desc:'托盤 3 塊變成可覆蓋的 2×2 塊,易解宮'},
 };
-function activeSkill(el,id){return (id&&CARD_ACTIVE[id])||ACTIVE_SKILLS[el]||null;}
+// 動物家族(2026-06-29:技能綁家族,同家族 5 屬共用一套、各套自己屬性;台灣=各卡專屬例外)
+const CARD_FAMILY={};
+[['cat',['c02','c05','c08','c09','c11']],['dog',['c03','c06','c19','c10','c12']],['bird',['c01','c04','c07','c25','c29']],['rat',['c13','c16','c20','c23','c27']],['fish',['c14','c17','c21','c24','c28']],['rabbit',['c31','c32','c33','c34','c35']],
+ ['cat',['c15']],['fish',['c18']],['bird',['c22']]   // 台灣卡標家族 synergy:雲豹=貓/鮭魚=魚/藍鵲=鳥(吃同家族隊長 buff;技能仍各卡專屬,黑熊/獼猴無對應家族)
+].forEach(([f,ids])=>ids.forEach(id=>CARD_FAMILY[id]=f));
+// 三圍家族化(2026-06-29):全 ★3、戰力 450,分配 = 平均(家族檔, 屬性檔);台灣用 taiwan 檔。後處理覆蓋 ROSTER 三圍
+const STAT_BUD=450, STAT_WT={atk:1,hp:0.1,rcv:2};
+const STAT_EL={fire:[.73,.09,.18],water:[.33,.14,.53],thunder:[.64,.07,.29],earth:[.34,.31,.34],wind:[.51,.15,.34]};
+const STAT_FAM={cat:[.62,.16,.22],dog:[.45,.22,.33],bird:[.62,.10,.28],rat:[.48,.20,.32],fish:[.22,.28,.50],rabbit:[.32,.28,.40],taiwan:[.52,.18,.30]};
+function famStat(fam,el){ const f=STAT_FAM[fam],e=STAT_EL[el]; if(!f||!e)return null; const s=[0,1,2].map(i=>(f[i]+e[i])/2),sum=s[0]+s[1]+s[2],sh=s.map(x=>x/sum);
+  return {atk:Math.round(sh[0]*STAT_BUD), hp:Math.round(sh[1]*STAT_BUD/STAT_WT.hp/10)*10, rcv:Math.round(sh[2]*STAT_BUD/STAT_WT.rcv)}; }
+ROSTER.forEach(c=>{ const fam=TW_IDS.has(c.id)?'taiwan':CARD_FAMILY[c.id]; if(!fam)return; const s=famStat(fam,c.el); if(!s)return; c.atk=s.atk; c.hp=s.hp; c.rcv=s.rcv; c.rank='jonin'; });   // 全 ★3(jonin)+ 重算三圍(攻血回);台灣一起降到 450
+const FAMILY_ACTIVE={   // 家族主動技(套用到該卡屬性);效果見 _familyActive
+  cat: {name:'疾風連擊',cd:4,icon:'🐱',desc:'對單敵 攻×1 連打 3 下(吃相剋)'},
+  dog: {name:'群擊',  cd:5,icon:'🐶',desc:'對全體敵 攻×2(吃相剋)'},
+  bird:{name:'亂鳴',  cd:4,icon:'🐦',desc:'全體敵出手延遲 +2'},
+  rat: {name:'鼠潮',  cd:6,icon:'🐭',desc:'填滿該卡屬性宮並消除 → 大 HIT'},
+  fish:{name:'活水',  cd:5,icon:'🐟',desc:'6 手內清該屬宮也按格數回血'},
+  rabbit:{name:'化境',cd:7,icon:'🐰',desc:'全盤屬性宮 1 回合內變成自己同屬(相剋爆發 setup)'},
+};
+const FAMILY_LEADER={   // 家族隊長技(el 由卡屬性填);傷害型在 battle-core leadDamageMult
+  cat: {name:'貓·自我爆發',type:'elemAtk',v:1.5,         desc:'同屬攻 ×1.5'},
+  dog: {name:'犬·攻守雙修',type:'dog',v:1.2,             desc:'同屬 HP×1.2 + 攻×1.2'},
+  bird:{name:'鳥·控敵先制',type:'counterDelay',v:2,      desc:'開局剋屬敵 CD+2'},
+  rat: {name:'鼠·成群',type:'famAtk',v:1.5,    desc:'同鼠系攻 ×1.5(成群才猛)'},
+  fish:{name:'魚·群游',type:'famAtk',v:1.5,    desc:'同魚系攻 ×1.5(魚群增幅)'},
+  rabbit:{name:'兔·繁殖',type:'famAtk',v:1.5,  desc:'同兔系攻 ×1.5(越多越旺)'},
+};
+function activeSkill(el,id){ if(id&&CARD_ACTIVE[id])return CARD_ACTIVE[id]; const f=id&&CARD_FAMILY[id]; if(f&&FAMILY_ACTIVE[f])return FAMILY_ACTIVE[f]; return ACTIVE_SKILLS[el]||null; }   // 台灣各卡 > 家族 > 屬性預設
 /* F6 統一存檔:持有卡 / 編隊 / 進度 / 設定 一個物件全自動存 localStorage */
 const SAVE_KEY='ninja_save';
 function defaultMeta(){return {name:'忍者',rank:1,exp:0,coins:0,stones:30,stamina:50,staminaMax:50,staTs:null,pity:0,boxBuy:0,dayKey:null,dailyN:0};}   // 首登送 30 鑽;name=用戶名稱(其他可改);pity=結印保底;boxBuy=魔法石擴背包次數;dayKey/dailyN=每日登入
@@ -844,10 +884,21 @@ class GameScene extends Phaser.Scene{
       if(!this.textures.exists('bg_'+d+'_back'))this.load.image('bg_'+d+'_back', b.back);
       if(!this.textures.exists('bg_'+d+'_front'))this.load.image('bg_'+d+'_front', b.front); }
     TOWER_MID.forEach(c=>{ if(!this.textures.exists(c.key))this.load.image(c.key, c.src); });   // 載入怪物圖 + 方塊敵正式美術 + 關卡背景(前/後)+ 塔中景元素方塊
-    { const bk='bgm_'+this.dungeonId; if(!this.cache.audio.exists(bk))this.load.audio(bk,'snd/'+bk+'.mp3'); }   // 只載當前關的背景音樂(各關專屬;序章/教學共用 bgm_prologue)
-    if(!this.cache.audio.exists('place_align'))this.load.audio('place_align','snd/place_align.mp3');   // 拖塊對準格音
-    if(!this.cache.audio.exists('place_drop'))this.load.audio('place_drop','snd/place_drop.mp3');   // 放塊落下音
-    ['s_fall','s_hit_fire','s_hit_earth','s_hit_wind','s_hit_thunder','s_hit_water','s_boom','s_punch','s_player','s_block','s_clear_n','s_clear15','s_clear18','s_clear21','s_fire1','s_fire2','s_fire3','s_pick','s_heal','s_earth_skill'].forEach(k=>{ if(!this.cache.audio.exists(k))this.load.audio(k,'snd/'+k+'.mp3'); }); }   // HIT 實驗室戰鬥配音(打飛/各屬彈著/重擊/擋下/我方被打/解宮/發射/主動技/取塊/回血)
+  }   // ⚠️ 音訊(BGM 3~8MB + 音效)改「非阻塞」載入(見 _startStageAudio):不放阻塞 preload,否則弱網卡關甚至開不了
+  // 非阻塞載入本關 BGM + 戰鬥音效(在 create 之後動態載;關卡已可玩,聲音背景串流→弱網不卡關)
+  _startStageAudio(){
+    const bk='bgm_'+this.dungeonId;
+    const playBgm=()=>{ if(this.bgmMp3)return; if(this.cache.audio.exists(bk)){ this._bgmBase=0.5; this.bgmMp3=this.sound.add(bk,{loop:true,volume:0.5*(SFX.bgmVol?SFX.bgmVol():1)}); try{this.bgmMp3.play();}catch(e){} } else SFX.startBgm(); };
+    const need=[];
+    if(!this.cache.audio.exists(bk))need.push([bk,'snd/'+bk+'.mp3']);
+    if(!this.cache.audio.exists('place_align'))need.push(['place_align','snd/place_align.mp3']);
+    if(!this.cache.audio.exists('place_drop'))need.push(['place_drop','snd/place_drop.mp3']);
+    ['s_fall','s_hit_fire','s_hit_earth','s_hit_wind','s_hit_thunder','s_hit_water','s_boom','s_punch','s_player','s_block','s_clear_n','s_clear15','s_clear18','s_clear21','s_fire1','s_fire2','s_fire3','s_pick','s_heal','s_earth_skill'].forEach(k=>{ if(!this.cache.audio.exists(k))need.push([k,'snd/'+k+'.mp3']); });   // 音效:labSnd 會先檢查 cache.exists,沒載好就靜默略過→不報錯
+    if(!need.length){ playBgm(); return; }
+    need.forEach(([k,u])=>this.load.audio(k,u));
+    this.load.once('complete',()=>playBgm());
+    try{ this.load.start(); }catch(e){ playBgm(); }   // 動態啟動載入(非阻塞)
+  }
   // 依「是否魔王×難度×元素」挑敵圖:魔王 baby→m002、beginner→m003、normal及以上→m004(最兇);雜兵 嬰兒/初級→grunt(m001)、中級以上→grunt2(m002 強化版);都沒有再退回舊史萊姆/emoji
   enemyTexKey(e){ const el=e.el; let dk=(this.diff&&this.diff.key)||'normal';
     if(this.dungeonId==='prologue')dk='baby';   // 序章=新手村:挑圖固定當嬰兒級(只換外觀,不動數值)→ 魔王 boss_baby(m002)+雜兵 grunt(m001),不出 m003 以上兇怪
@@ -948,6 +999,10 @@ class GameScene extends Phaser.Scene{
     // combo 指示器:疊在 HP 條左端(原鬥志胸章位置);combo≥2 才亮、隨連擊變熱、斷了熄掉
     this.comboBg=this.add.circle(BX0+16,PHP_Y,16,0x1a140c,0.92).setStrokeStyle(2.5,0x6a5a3a).setDepth(DEPTH.morale).setVisible(false);
     this.comboTxt=this.add.text(BX0+16,PHP_Y,'',{fontFamily:EMOJIFONT,fontSize:'15px',color:'#fff',fontStyle:'bold'}).setOrigin(0.5).setDepth(DEPTH.morale).setVisible(false);
+    // 隊長技狀態徽章(借原 combo/鬥志位置:HP 左端):黑熊🛡 / 鮭魚❄️,亮=就緒、灰+數字=冷卻中
+    this.leadBg=this.add.circle(BX0+16,PHP_Y,16,0x1a140c,0.92).setStrokeStyle(2.5,0x6a5a3a).setDepth(DEPTH.morale).setVisible(false);
+    this.leadIc=this.add.text(BX0+16,PHP_Y,'',{fontFamily:EMOJIFONT,fontSize:'16px'}).setOrigin(0.5).setDepth(DEPTH.morale).setVisible(false);
+    this.leadNum=this.add.text(BX0+27,PHP_Y+9,'',{fontFamily:EMOJIFONT,fontSize:'11px',color:'#ffd24a',fontStyle:'bold',stroke:'#000000',strokeThickness:3}).setOrigin(0.5).setDepth(DEPTH.morale+1).setVisible(false);
 
     // 結印區
     for(let r=0;r<N;r++)for(let c=0;c<N;c++)
@@ -1082,10 +1137,11 @@ class GameScene extends Phaser.Scene{
     this.boxElement={}; this.boxCard={};
     if(this.presetTeam) ELEMENT_BOXES.forEach((b,i)=>{const card=this.presetTeam[i];this.boxCard[b]=card;this.boxElement[b]=card.el;});
     else ELEMENT_BOXES.forEach(b=>{const card=ROSTER[rnd(ROSTER.length)];this.boxCard[b]=card;this.boxElement[b]=card.el;});
-    this.lead=(this.presetTeam&&this.presetTeam[2]&&LEADER_SKILLS[this.presetTeam[2].id])||null;   // 隊長技=中央位卡(編隊正中央=隊長)
-    this._reviveReady=true; this._reviveCD=0; this._shield=!!(this.lead&&this.lead.type==='shield'); this._shieldCD=0; this._salmonHeal=false; this._salmonHealed=0;   // 🇹🇼台灣隊隊長技狀態(鮭魚救命/黑熊護盾/鮭魚回血旗標)
+    this.lead=(this.presetTeam&&this.presetTeam[2]&&leadSkill(this.presetTeam[2].id))||null;   // 隊長技=中央位卡(編隊正中央=隊長);走 leadSkill→家族/台灣
+    if(this.lead&&this.lead.type==='famAtk'){ const fam=this.lead.fam, n=(this.presetTeam||[]).filter(c=>CARD_FAMILY[c.id]===fam).length; this.lead.famFrac=n/5; }   // 同家族比例(純家族隊=1=吃滿;台灣同家族卡也算進)
+    this._reviveReady=true; this._reviveCD=0; this._shield=!!(this.lead&&this.lead.type==='shield'); this._shieldCD=0; this._salmonHeal=false; this._salmonHealed=0; this._fishHeal=null; this._huajing=null;   // 隊長技/主動技狀態(救命/護盾/溯流/魚活水/兔化境)
     const teamHp=(this.presetTeam||[]).reduce((s,c)=>s+(c.hp||0),0)||CONFIG.PLAYER_HP_BASE;   // 隊伍血量=隊員 HP 三圍加總
-    this.maxHP=Math.round(teamHp*((this.lead&&this.lead.type==='hp')?this.lead.v:1));
+    this.maxHP=Math.round(teamHp*((this.lead&&(this.lead.type==='hp'||this.lead.type==='dog'))?this.lead.v:1));   // 🐶犬攻守雙修:也吃 HP×v
     this.teamRcv=(this.presetTeam||[]).reduce((s,c)=>s+(c.rcv||0),0)||0;   // 隊伍回復力總和(清無屬區回血用)
     this.teamMaxAtk=(this.presetTeam||[]).reduce((m,c)=>Math.max(m,c.atk||0),0)||0;   // 隊伍最高攻擊(無屬傷害基準=此值×普通×0.08,= 屬·普通)
     this.playerHP=this.maxHP; this.stage=1; this.resultOpen=false; this.chests=0; this.gold=0; this.runDrops=[]; this.runExp=0; this.runCoins=0; this.runGems=0;
@@ -1093,7 +1149,7 @@ class GameScene extends Phaser.Scene{
     this.stored=[null,null,null,null,null];   // 每卡存放的屬塊 {el,lv}(跨關保留,新局/重挑才清)
     this.firstClear=true;   // 新手鉤子:本場第一次消除=隆重慶祝
     this.renderTeam(); this.startStage();
-    { const bk='bgm_'+this.dungeonId; if(this.cache.audio.exists(bk)){ this._bgmBase=0.5; this.bgmMp3=this.sound.add(bk,{loop:true,volume:0.5*(SFX.bgmVol?SFX.bgmVol():1)}); this.bgmMp3.play(); } else SFX.startBgm(); }   // 各關專屬背景音樂(bgm_<關卡id>,×背景主音量;無對應檔→退回程序化)
+    this._startStageAudio();   // 各關 BGM + 戰鬥音效:非阻塞載入(關卡先開玩,聲音背景串流→弱網不卡關)
     this.events.once('shutdown',()=>{ SFX.stopBgm(); if(this.bgmMp3){this.bgmMp3.stop();this.bgmMp3.destroy();this.bgmMp3=null;} });   // 離開戰鬥(任何方式)→停背景音
   }
   // ===== 新手教學(事件推進式教練;全程 if(this.tut) 包住,不影響正常戰鬥)=====
@@ -1237,6 +1293,7 @@ class GameScene extends Phaser.Scene{
     this.enemyG=this.add.container(0,0).setDepth(DEPTH.enemy);   // 敵方整層在「我方卡」之下、背景之上
     this.enemies = this.tut ? this.tutEnemies() : spawnStage(this.dungeonId, this.diff.key, this.stage-1);   // headless 生敵 → data-stages.spawnStage(場景與 sim 共用同一份 model 數學);教學=固定 3 火敵
     if(this.lead && this.lead.type==='enemyDelay') this.enemies.forEach(e=>{ e.timer=(e.timer||e.interval||5)+this.lead.v; });   // 🐦藍鵲隊長:每關開場全敵延遲 +v(一次性,不改 interval)
+    if(this.lead && this.lead.type==='counterDelay' && this.lead.el){ const tEl=EL[this.lead.el]&&EL[this.lead.el].beats; if(tEl)this.enemies.forEach(e=>{ if(e.el===tEl)e.timer=(e.timer||e.interval||5)+this.lead.v; }); }   // 🐦鳥·控敵先制:開局「被本屬相剋」的敵 CD+v
     const n=this.enemies.length, slot=380/n;
     this.enemies.forEach((e,i)=>{
       const x=Math.round(CX+((20+slot*(i+0.5))-CX)*ENEMY_SPREAD), cy=BATTLE_CY;   // 往中央集中(ENEMY_SPREAD)
@@ -1466,11 +1523,12 @@ class GameScene extends Phaser.Scene{
     this.stopStuckFX();
     const card=this.teamCards[i], cid=(this.presetTeam&&this.presetTeam[i])?this.presetTeam[i].id:null, a=activeSkill(card.el,cid); if(!a)return;
     if((this.charge[i]||0)<a.cd){this.tonFloat('蓄力中 '+(this.charge[i]||0)+'/'+a.cd,'#9fb0c0');return;}
-    this.charge[i]=0; SFX.skill(); if(!(card.el==='wind'&&!CARD_ACTIVE[cid]))this.labSnd('s_clear18',0.7); if(this.tut)this.tutEvent('active');   // 主動技發動音(powerup08);純風技(無專屬)例外→改在 windDoPick 播解宮音
+    this.charge[i]=0; SFX.skill(); if(!(card.el==='wind'&&!CARD_ACTIVE[cid]&&!CARD_FAMILY[cid]))this.labSnd('s_clear18',0.7); if(this.tut)this.tutEvent('active');   // 主動技發動音(powerup08);純風技(無專屬/無家族)例外→改在 windDoPick 播解宮音
     const colHex='#'+EL[card.el].color.toString(16).padStart(6,'0');
     this.tonFloat('★ '+a.name,colHex);
     const cardObj=this.boxCard[ELEMENT_BOXES[i]], atk=cardObj?cardObj.atk:200, ox=card.rect.x, oy=card.rect.y;
-    if(cid&&CARD_ACTIVE[cid]){ this._taiwanActive(cid,i,ox,oy,atk,card); }   // 物種招牌卡:走專屬主動技,不吃屬性預設
+    if(cid&&CARD_ACTIVE[cid]){ this._taiwanActive(cid,i,ox,oy,atk,card); }   // 台灣各卡專屬
+    else if(cid&&CARD_FAMILY[cid]){ this._familyActive(CARD_FAMILY[cid],i,ox,oy,atk,card); }   // 家族扛(貓/犬/鳥/鼠/魚)
     else switch(card.el){
       case 'fire':{const col=EL.fire.color, hot=shadeColor(col,0.55), tgt=this.targetEnemy(); if(!tgt)break;   // 集氣蓄力 → 對「鎖定單敵」大招(AoE 留給拼圖 15 HIT 去賺,不給便宜按鈕);吃相剋
         const dmg=Math.round(atk*3*(EL.fire.beats===tgt.el?CONFIG.ADV_MULT:((EL[tgt.el]&&EL[tgt.el].beats==='fire')?CONFIG.WEAK_MULT:CONFIG.NORM_MULT)));   // 火相剋:打風×1.6、打水×0.7、其餘×1.0
@@ -1501,6 +1559,58 @@ class GameScene extends Phaser.Scene{
     if(this.hitLab)this.charge=this.teamCards.map((c,k)=>{const a=activeSkill(c.el,this.presetTeam&&this.presetTeam[k]&&this.presetTeam[k].id);return a?a.cd:0;});   // 實驗室:主動技恆滿
     this.updateAll();this.renderCharges();}
   // 物種招牌卡專屬主動技(台灣隊…)→ 逐卡分支
+  // 家族主動技(套用到該卡屬性 card.el)→ 貓單體3連 / 犬全體×2 / 鳥全體延遲 / 鼠填屬宮大清 / 魚屬宮回血
+  _familyActive(fam,i,ox,oy,atk,card){
+    const el=card.el, col=EL[el].color, hot=shadeColor(col,0.55);
+    const relM=(tel)=>(EL[el].beats===tel)?CONFIG.ADV_MULT:((EL[tel]&&EL[tel].beats===el)?CONFIG.WEAK_MULT:CONFIG.NORM_MULT);
+    if(fam==='cat'){   // 🐱疾風連擊:單體 攻×1 連打 3 下(吃相剋)
+      const tgt=this.targetEnemy(); if(!tgt)return; const dmg=Math.round(atk*relM(tgt.el));
+      this.chargeAt(ox,oy,col,280,hot);
+      for(let k=0;k<3;k++)this.time.delayedCall(280+k*170,()=>{ if(tgt.dead)return; this.labSnd('s_hit_'+el,0.7); this.chakraBolt(ox,oy,tgt.sprite.x,tgt.sprite.y,col,tgt,dmg,2,hot); this.cameras.main.shake(110,0.005);
+        this.time.delayedCall(300,()=>{ tgt.hp=Math.max(0,tgt.hp-dmg); if(tgt.hp>0&&EL[el].beats===tgt.el)tgt.timer+=1; this.updateEnemies(); if(tgt.hp<=0)this.killEnemy(tgt); }); });
+      return;
+    }
+    if(fam==='dog'){   // 🐶群擊:全體敵 攻×2(吃相剋)
+      const alive=this.enemies.filter(e=>!e.dead&&e.hp>0); if(!alive.length)return;
+      this.chargeAt(ox,oy,col,340,hot);
+      this.time.delayedCall(340,()=>{ this.cameras.main.shake(240,0.009); this.labSnd('s_hit_'+el,0.7);
+        alive.forEach((e,k)=>{ if(e.dead)return; const dmg=Math.round(atk*2*relM(e.el)); this.chakraBolt(ox,oy,e.sprite.x,e.sprite.y,col,e,dmg,2,hot);
+          this.time.delayedCall(360+k*40,()=>{ e.hp=Math.max(0,e.hp-dmg); if(e.hp>0&&EL[el].beats===e.el)e.timer+=1; this.updateEnemies(); if(e.hp<=0)this.killEnemy(e); }); }); });
+      return;
+    }
+    if(fam==='bird'){   // 🐦亂鳴:只對「剋屬」的敵人→出手延遲+2 且 CD+1(focused 控敵)
+      this.chargeAt(ox,oy,col,360);
+      this.time.delayedCall(360,()=>{ this.cameras.main.shake(200,0.005); this.labSnd('s_boom',0.55); let any=false;
+        this.enemies.forEach(e=>{ if(!e.dead && EL[card.el] && EL[card.el].beats===e.el){ any=true; e.timer+=2; e.interval=(e.interval||5)+1; if(e.sprite)this.floatText(e.sprite.x,e.sprite.y-24,'延+2 慢','#f4da52'); } });
+        if(!any)this.tonFloat('場上無剋屬敵','#9fb0c0'); this.updateEnemies(); });
+      return;
+    }
+    if(fam==='rat'){   // 🐭鼠潮:填滿該卡屬性宮並消除→大 HIT
+      const b=ELEMENT_BOXES[i], br=Math.floor(b/3)*3, bc=(b%3)*3;
+      this.chargeAt(ox,oy,col,300);
+      this.time.delayedCall(300,()=>{ this.labSnd('s_pick',0.6);
+        for(let r=br;r<br+3;r++)for(let c=bc;c<bc+3;c++){ if(!this.board[r][c])this.board[r][c]={el:this.boxElement[boxOf(r,c)]||el}; }   // 填滿自家屬性宮
+        this.refreshBoard();
+        this.time.delayedCall(160,()=>{ this.fromBlock=true; this._placeCleared=false; try{this.resolve();}catch(e){console.error('鼠潮 resolve',e);} this.fromBlock=false; this.refreshBoard(); }); });
+      return;
+    }
+    if(fam==='fish'){   // 🐟活水:之後 6 手內,清「該屬宮」也按格數回血
+      this._fishHeal={el:el,turns:6};
+      this.chargeAt(ox,oy,col,300);
+      const au=this.add.circle(ox,oy,16,col,0.5).setBlendMode(Phaser.BlendModes.ADD).setDepth(DEPTH.proj); this.tweens.add({targets:au,scale:2.8,alpha:0,duration:560,onComplete:()=>au.destroy()});
+      this.floatText(CX,PHP_Y-30,'🐟 活水!'+EL[el].n+'宮清除回血 6 手','#7fe0ff');
+      return;
+    }
+    if(fam==='rabbit'){   // 🐰化境:全盤「有屬的宮」1 回合內變成自己同屬→相剋爆發 setup(高 CD)
+      this._huajing={turns:1, saved:{...this.boxElement}};
+      ELEMENT_BOXES.forEach(b=>{ if(this.boxElement[b]!=null)this.boxElement[b]=el; });
+      this.renderTeam(); this.refreshBoard();
+      this.chargeAt(ox,oy,col,300);
+      this.cameras.main.shake(220,0.008);
+      this.tonFloat('★ 化境 · 全盤化'+EL[el].n,'#e89ab0');
+      return;
+    }
+  }
   _taiwanActive(cid,i,ox,oy,atk,card){
     if(cid==='c15'){   // 🐆雲豹 裂空撲殺:總傷≈攻×2,敵單隻→集中、多隻→均分全體,各吃相剋,CD3
       const col=EL.fire.color, hot=shadeColor(col,0.55);
@@ -1794,6 +1904,8 @@ class GameScene extends Phaser.Scene{
     const showed=this.handCleared;   // 本手有清除展演→敵攻多等一下;空手→快一點
     this.handCleared=false;   // combo 已改逐塊處理(放塊有清+1/沒清歸零),這裡不再動 combo/鬥志
     this._salmonHeal=false; this._salmonHealed=0;   // 🐟溯流之癒只持續本手 → 收手清旗標
+    if(this._fishHeal&&this._fishHeal.turns>0)this._fishHeal.turns--;   // 🐟活水:每手倒數,歸 0 失效
+    if(this._huajing){ this._huajing.turns--; if(this._huajing.turns<=0){ Object.assign(this.boxElement,this._huajing.saved); this._huajing=null; this.renderTeam&&this.renderTeam(); this.refreshBoard&&this.refreshBoard(); } }   // 🐰化境:回合到→還原各宮屬性
     this.enemies.forEach(e=>{if(!e.dead&&e.burn>0){e.hp=Math.max(0,e.hp-e.burn);   // 燒傷=我方 DoT,屬展演,立即
       this.floatText(e.sprite.x,e.sprite.y-24,'🔥'+e.burn,'#ff7a63'); if(e.hp<=0)this.killEnemy(e);}});
     this.updateAll();   // 立即反映鬥志字/燒傷後血量(別等延遲回呼)
@@ -1967,13 +2079,15 @@ class GameScene extends Phaser.Scene{
     this.tweens.add({targets:t,alpha:0,delay:1300,duration:400,onComplete:()=>{t.destroy();if(this.comboTx===t)this.comboTx=null;}});
   }
   // 常駐 combo 指示器(HP 條左端):combo≥2 才亮,顏色隨連擊變熱;pop=升 combo 時彈一下
-  renderCombo(pop){ if(!this.comboBg)return; const c=this.combo||0;
-    if(c<2){ this.comboBg.setVisible(false); this.comboTxt.setVisible(false); return; }
-    const cols=[0x9ac4e0,0xffe066,0xffae3a,0xff7a3a,0xff4a2a], col=cols[Math.min(cols.length-1,c-2)];   // 2/3/4/5/6+ 越來越熱
-    this.comboBg.setVisible(true).setStrokeStyle(2.5,col);
-    this.comboTxt.setVisible(true).setText(''+c).setColor('#'+col.toString(16).padStart(6,'0'));
-    if(pop){ this.tweens.killTweensOf([this.comboBg,this.comboTxt]); [this.comboBg,this.comboTxt].forEach(o=>o.setScale(1.45));
-      this.tweens.add({targets:[this.comboBg,this.comboTxt],scaleX:1,scaleY:1,duration:240,ease:'Back.out'}); } }
+  renderCombo(pop){ if(this.comboBg){this.comboBg.setVisible(false);this.comboTxt.setVisible(false);} }   // combo 常駐圓圈已移除(該位置改放隊長技徽章);combo 仍靠 showCombo 敵上方浮字呈現
+  // 隊長技狀態徽章(HP 左端):黑熊🛡=有護盾/灰+n=再生倒數;鮭魚❄️=救命待命/灰+n=冷卻;其他隊長不顯示
+  updLeadBadge(){ if(!this.leadBg)return; const ld=this.lead; let ic=null,ready=false,cd=0;
+    if(ld&&ld.type==='shield'){ ic='🛡'; ready=!!this._shield; cd=this._shieldCD||0; }
+    else if(ld&&ld.type==='revive'){ ic='❄️'; ready=!!this._reviveReady; cd=this._reviveCD||0; }
+    if(!ic){ this.leadBg.setVisible(false); this.leadIc.setVisible(false); this.leadNum.setVisible(false); return; }
+    this.leadBg.setVisible(true).setStrokeStyle(2.5, ready?0x8fd6ff:0x5a5048);
+    this.leadIc.setVisible(true).setText(ic).setAlpha(ready?1:0.32);
+    this.leadNum.setVisible(!ready&&cd>0).setText(cd>0?(''+cd):''); }
   resolve(){
     const tgt=this.targetEnemy(); if(!tgt)return;
     const data=computeClears(this.board,this.boxElement,this.boxCard,tgt.el,this.amp,this.teamMaxAtk);   // 傳隊伍最高攻→無屬宮也吃「= 屬·普通」傷害
@@ -2017,12 +2131,16 @@ class GameScene extends Phaser.Scene{
       const cap=Math.round(this.maxHP*0.55)-(this._salmonHealed||0);
       let bonus=hits.reduce((s,h)=>s+Math.max(1,Math.round(heal*h.cells/3)),0); bonus=Math.min(bonus,Math.max(0,cap));
       if(bonus>0){ this._salmonHealed=(this._salmonHealed||0)+bonus; this.time.delayedCall(LEAD+220,()=>{ this.labSnd('s_heal',0.7); this.playerHP=Math.min(this.maxHP,this.playerHP+bonus); this.animPlayerHP(true); this.floatText(CX,PHP_Y-30,'🐟 溯流 +'+bonus,'#7fe0ff'); }); } }
+    if(this._fishHeal&&this._fishHeal.turns>0){   // 🐟活水:這 N 手內,清「該屬宮」按格數回血
+      const fb=hits.filter(h=>h.el===this._fishHeal.el).reduce((s,h)=>s+Math.max(1,Math.round(heal*h.cells/3)),0);
+      if(fb>0)this.time.delayedCall(LEAD+240,()=>{ this.labSnd('s_heal',0.7); this.playerHP=Math.min(this.maxHP,this.playerHP+fb); this.animPlayerHP(true); this.floatText(CX,PHP_Y-44,'🐟 活水 +'+fb,'#7fe0ff'); }); }
     if(this.lead&&this.lead.type==='steal'){   // 🐒猴群偷襲:每塊有清→隊長(中央卡)偷打目標 1 次 +1 combo
       const t2=this.targetEnemy()||this.enemies.find(e=>!e.dead&&e.hp>0);
       if(t2){ this.combo+=1; this.renderCombo(true); const lc=this.presetTeam&&this.presetTeam[2], latk=(lc&&lc.atk)||200, lcard=this.teamCards[2];
         const m=(EL.wind.beats===t2.el)?CONFIG.ADV_MULT:((EL[t2.el]&&EL[t2.el].beats==='wind')?CONFIG.WEAK_MULT:CONFIG.NORM_MULT), sd=Math.round(latk*(this.lead.v||1)*m);
-        this.time.delayedCall(LEAD+120,()=>{ this.chakraBolt(lcard?lcard.rect.x:CX,lcard?lcard.rect.y:CARDS_Y,t2.sprite.x,t2.sprite.y,EL.wind.color,t2,sd,2);
-          this.time.delayedCall(360,()=>{ this.labSnd('s_hit_wind',0.6); t2.hp=Math.max(0,t2.hp-sd); this.updateEnemies(); if(t2.hp<=0)this.killEnemy(t2); }); }); } }
+        this.time.delayedCall(LEAD+120,()=>{ if(lcard)this.floatText(lcard.rect.x,lcard.rect.y-28,'🐾','#b6ffae');   // 隊長卡冒猴爪→看得出是它偷打
+          this.chakraBolt(lcard?lcard.rect.x:CX,lcard?lcard.rect.y:CARDS_Y,t2.sprite.x,t2.sprite.y,EL.wind.color,t2,sd,2);
+          this.time.delayedCall(360,()=>{ this.labSnd('s_hit_wind',0.6); t2.hp=Math.max(0,t2.hp-sd); if(t2.sprite)this.floatText(t2.sprite.x,t2.sprite.y-30,'偷襲 +1','#b6ffae'); this.updateEnemies(); if(t2.hp<=0)this.killEnemy(t2); }); }); } }
     this.updateEnemies();
     this.time.delayedCall(LEAD-80,()=>{   // 清除的格平滑溶解(逐格淡化的波 → 化進各區集氣)
       this.drawGloss();   // 被清的格(board 已 null)→ 立刻收掉玻璃光澤,塊乾淨淡出
@@ -2037,6 +2155,7 @@ class GameScene extends Phaser.Scene{
   }}
   // 存放屬塊到「該屬性的卡」:優先填空卡,否則升級最低階那張;每卡最多1塊、留最高LV(上限LV5)
   storeBlock(el,lv){if(!this.stored)this.stored=[null,null,null,null,null];
+    if(this.lead&&this.lead.type==='breed'&&el===this.lead.el)lv+=1;   // 🐰繁殖增幅:解隊長屬宮→該屬塊 +1 LV
     lv=Math.max(1,Math.min(5,lv));
     const slots=[]; this.teamCards.forEach((c,i)=>{if(c.el===el)slots.push(i);});
     if(!slots.length)return;
@@ -2170,7 +2289,7 @@ class GameScene extends Phaser.Scene{
   restartStage(){this.playerHP=this.maxHP;this.startStage();}
 
   /* UI */
-  updateAll(){this.updateEnemies();this.updateBars();}
+  updateAll(){this.updateEnemies();this.updateBars();this.updLeadBadge&&this.updLeadBadge();}
   updateEnemies(){this.enemies.forEach((e,i)=>{if(e.gateTx)e.gateTx.setVisible(!e.dead);   // 死了藏護盾門檻徽章
     if(e.dead)return;
     if(e.phases&&e.hp>0){const idx=Math.min(e.phases.length-1,Math.max(0,Math.floor((1-e.hp/e.max)*e.phases.length))); if(idx>e.phaseIdx){e.phaseIdx=idx;this.bossTransform(e);}}   // 👑 魔王:血量過門檻→變身下一屬(hp>0 才變,致命一擊不再噴變身)
@@ -2929,6 +3048,9 @@ class HomeScene extends Phaser.Scene{
     this.btn(CX+92,505,172,42,'🐱 貓隊',  ()=>giveTeam('貓隊',  ['c02','c05','c08','c09','c11']),{col:0x2e3a22,stroke:0x8fd16a,color:'#e2ffd2',bold:true,fs:'14px'});
     this.btn(CX-92,549,172,42,'🐹 鼠隊',  ()=>giveTeam('鼠隊',  ['c13','c16','c20','c23','c27']),{col:0x33291a,stroke:0xd8b890,color:'#f2e4c8',bold:true,fs:'14px'});
     this.btn(CX+92,549,172,42,'🇹🇼 台灣隊',()=>giveTeam('台灣隊',['c15','c18','c22','c26','c30']),{col:0x1a2a1f,stroke:0x8fe0a8,color:'#d2ffe2',bold:true,fs:'14px'});
+    this.btn(CX-92,593,172,42,'🐟 魚隊',  ()=>giveTeam('魚隊',  ['c14','c17','c21','c24','c28']),{col:0x16314d,stroke:0x7fc8e8,color:'#d2f0ff',bold:true,fs:'14px'});
+    this.btn(CX+92,593,172,42,'🐰 兔隊',  ()=>giveTeam('兔隊',  ['c31','c32','c33','c34','c35']),{col:0x3a1f2a,stroke:0xe89ab0,color:'#ffd2e4',bold:true,fs:'14px'});
+    this.btn(CX,637,172,42,'🐦 鳥隊',     ()=>giveTeam('鳥隊',  ['c01','c04','c07','c25','c29']),{col:0x231a26,stroke:0xc79bff,color:'#ecd2ff',bold:true,fs:'14px'});
   }
 }
 

@@ -48,19 +48,22 @@ function comboMultiplier(combo, lead){
   const c = Math.max(1, combo);
   return 1 + ck*((c-1) + COMBO_RAMP*(c-1)*(c-2)/2);
 }
-function leadDamageMult(lead, fx){       // 隊長技傷害加成:allAtk=全體、elemAtk=該屬有參戰才吃
+function leadDamageMult(lead, fx, hitN, combo){       // 隊長技傷害加成(家族扛):allAtk=全體;其餘多為「該屬有參戰才吃」
   if(!lead)return 1;
   if(lead.type==='allAtk')return lead.v;
-  if(lead.type==='elemAtk' && fx && fx[lead.el])return lead.v;
+  if((lead.type==='elemAtk'||lead.type==='dog') && fx && fx[lead.el])return lead.v;   // 🐱貓/🐶犬:同屬有清→×v(犬另在 maxHP 加血)
+  if(lead.type==='hitAtk' && fx && fx[lead.el] && (hitN||0)>=(lead.gate||15))return lead.v;   // 🐭鼠:HIT≥gate 且同屬有清→×v
+  if(lead.type==='comboAtk' && fx && fx[lead.el] && (combo||0)>=(lead.gate||2))return lead.v; // (舊)combo 條件型
+  if(lead.type==='famAtk')return 1 + (lead.v-1)*(lead.famFrac==null?1:lead.famFrac);   // 🐭鼠/🐟魚/🐰兔:同家族攻×v(famFrac=隊中同家族比例,純家族隊=1=吃滿)
   return 1;
 }
 // resolve 的純傷害計畫:給 computeClears 結果 + 戰鬥情境(隊長技/RCV/combo)→ 全部傷害數字。
 // 場景只「照計畫演」(誰被打、怎麼演留給場景);伺服器重算靠同一份。
 function planResolve(data, lead, teamRcv, combo){
   const comboMult = comboMultiplier(combo, lead);          // combo 倍率(不封頂)
-  const leadMult  = leadDamageMult(lead, data.fx);          // 隊長技傷害加成
-  const dmgMul    = comboMult * leadMult;                   // 每段傷害總倍率
   const hitN      = data.cells.length;                      // 本次清的格數
+  const leadMult  = leadDamageMult(lead, data.fx, hitN, combo);   // 隊長技傷害加成(條件型 鼠HIT/魚combo 需 hitN/combo)
+  const dmgMul    = comboMult * leadMult;                   // 每段傷害總倍率
   const aoe        = hitN >= AOE_HIT;                        // ≥AOE_HIT → 全體
   const hits      = (data.hits||[]).map(h => ({ b:h.b, el:h.el, cells:h.cells, dmg: Math.round(h.dmg*dmgMul) }));   // 各宮最終傷害
   const heal      = Math.max(1, Math.round(teamRcv * NEUTRAL_HEAL_MUL * comboMult));   // 清無屬「每3格」回血基準(combo加成);實際每宮回 heal×格數/3 → 同攻擊按格數,拆不拆宮一樣多
