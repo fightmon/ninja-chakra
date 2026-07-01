@@ -336,7 +336,7 @@ const LEADER_SKILLS={
   c19:{name:'靜電',desc:'全體傷害 ×1.08',type:'allAtk',v:1.08},
   c20:{name:'落雷',desc:'連擊更猛(combo 加成 +0.04)',type:'comboBoost',v:0.04},
   c21:{name:'雷光',desc:'連擊更猛(combo 加成 +0.05)',type:'comboBoost',v:0.05},
-  c22:{name:'鳴聲威懾',desc:'每關開場全敵延遲 +2 手(一次性)',type:'enemyDelay',v:2},   // 🐦藍鵲(台灣隊)
+  c22:{name:'鳴聲威懾',desc:'每關開場全敵延遲 +1 手(一次性)',type:'enemyDelay',v:1},   // 🐦藍鵲(台灣隊·雷);全體敵人→只 +1,與鳥家族(剋屬敵 CD+2)區別
   c23:{name:'礫石',desc:'我方 HP ×1.08',type:'hp',v:1.08},
   c24:{name:'岩壁',desc:'我方 HP ×1.2',type:'hp',v:1.2},
   c25:{name:'山嶽不動',desc:'我方 HP ×1.3',type:'hp',v:1.3},
@@ -370,8 +370,9 @@ const CARD_FAMILY={};
 [['cat',['c02','c05','c08','c09','c11']],['dog',['c03','c06','c19','c10','c12']],['bird',['c01','c04','c07','c25','c29']],['rat',['c13','c16','c20','c23','c27']],['fish',['c14','c17','c21','c24','c28']],['rabbit',['c31','c32','c33','c34','c35']],
  ['cat',['c15']],['fish',['c18']],['bird',['c22']]   // 台灣卡標家族 synergy:雲豹=貓/鮭魚=魚/藍鵲=鳥(吃同家族隊長 buff;技能仍各卡專屬,黑熊/獼猴無對應家族)
 ].forEach(([f,ids])=>ids.forEach(id=>CARD_FAMILY[id]=f));
-// 三圍家族化(2026-06-29):全 ★3、戰力 450,分配 = 平均(家族檔, 屬性檔);台灣用 taiwan 檔。後處理覆蓋 ROSTER 三圍
-const STAT_BUD=450, STAT_WT={atk:1,hp:0.1,rcv:2};
+// 三圍家族化(2026-06-29):全 ★3,分配 = 平均(家族檔, 屬性檔);台灣用 taiwan 檔。後處理覆蓋 ROSTER 三圍
+// 戰力(2026-07-02):STAT_BUD=LV1 基礎戰力=231 → LV20(×1.95)≈450「頂」;450 是滿級上限、不是起始值(避免滿級秒殺高難度)
+const STAT_BUD=231, STAT_WT={atk:1,hp:0.1,rcv:2};
 const STAT_EL={fire:[.73,.09,.18],water:[.33,.14,.53],thunder:[.64,.07,.29],earth:[.34,.31,.34],wind:[.51,.15,.34]};
 const STAT_FAM={cat:[.62,.16,.22],dog:[.45,.22,.33],bird:[.62,.10,.28],rat:[.48,.20,.32],fish:[.22,.28,.50],rabbit:[.32,.28,.40],taiwan:[.52,.18,.30]};
 function famStat(fam,el){ const f=STAT_FAM[fam],e=STAT_EL[el]; if(!f||!e)return null; const s=[0,1,2].map(i=>(f[i]+e[i])/2),sum=s[0]+s[1]+s[2],sh=s.map(x=>x/sum);
@@ -952,12 +953,17 @@ class GameScene extends Phaser.Scene{
     const lag=Math.max(ratio,Math.min(1,this.pHpLag==null?ratio:this.pHpLag));
     g.fillStyle(0x16160c,0.92); g.fillRoundedRect(0,-h/2,w,h,rad);                                   // 空血暗槽
     if(lag>ratio+0.003){ const lw=Math.max(0.001,w*lag), rl=Math.min(rad,lw/2); g.fillStyle(0xfff0b0,0.9); g.fillRoundedRect(0,-h/2,lw,h,rl); }   // 受傷白拖尾
-    if(ratio>0){ const fw=Math.max(0.001,w*ratio), rf=Math.min(rad,fw/2), psn=(this.poison&&this.poison.turns>0), shd=!!this._shieldReady;
-      g.fillStyle(psn?0x9a3ad0:(shd?this._shieldFillCol():0x4f9e42),1); g.fillRoundedRect(0,-h/2,fw,h,rf);   // 綠血(中毒→紫;🐻護盾就緒→藍且呼吸變色)
-      g.fillStyle(0xffffff,shd?0.30:0.20); g.fillRoundedRect(0,-h/2,fw,Math.max(1,h*0.42),rf); }            // 上緣高光(護盾時更亮)
-    g.lineStyle(2,this._shieldReady?0xcdeeff:0xffffff,0.95); g.strokeRoundedRect(0,-h/2,w,h,rad); }         // 白色圓角外框(護盾時亮藍邊)
-  _shieldFillCol(){ const p=this._shieldPhase||0, a=[0x3f,0x8a,0xcc], b=[0x9f,0xe4,0xff];   // 護盾血條:兩藍間呼吸內插
-    return (Math.round(a[0]+(b[0]-a[0])*p)<<16)|(Math.round(a[1]+(b[1]-a[1])*p)<<8)|Math.round(a[2]+(b[2]-a[2])*p); }
+    if(ratio>0){ const fw=Math.max(0.001,w*ratio), rf=Math.min(rad,fw/2), psn=(this.poison&&this.poison.turns>0), sc=this._barStatusCol();
+      g.fillStyle(psn?0x9a3ad0:(sc!=null?sc:0x4f9e42),1); g.fillRoundedRect(0,-h/2,fw,h,rf);   // 綠血(中毒→紫;🐻護盾就緒→藍呼吸;🐟迴生就緒/重生→粉呼吸)
+      g.fillStyle(0xffffff,sc!=null?0.30:0.20); g.fillRoundedRect(0,-h/2,fw,Math.max(1,h*0.42),rf); }        // 上緣高光(狀態色時更亮)
+    g.lineStyle(2,this._barStatusEdge(),0.95); g.strokeRoundedRect(0,-h/2,w,h,rad); }                        // 白色圓角外框(狀態色時亮邊)
+  _lerpCol(a,b,p){ return (Math.round(a[0]+(b[0]-a[0])*p)<<16)|(Math.round(a[1]+(b[1]-a[1])*p)<<8)|Math.round(a[2]+(b[2]-a[2])*p); }
+  _barStatusCol(){ const p=this._barGlowPhase||0, ld=this.lead;   // 血條狀態色:重生中=亮粉;護盾就緒=藍呼吸;迴生就緒=粉呼吸;皆無→null(綠)
+    if(this._reviveGlow) return 0xff5aa0;
+    if(ld&&ld.type==='shield'&&this._shieldReady) return this._lerpCol([0x3f,0x8a,0xcc],[0x9f,0xe4,0xff],p);
+    if(ld&&ld.type==='revive'&&this._reviveReady) return this._lerpCol([0xcf,0x3f,0x86],[0xff,0x9f,0xd0],p);
+    return null; }
+  _barStatusEdge(){ if(this._reviveGlow) return 0xffbde0; const ld=this.lead; if(ld&&ld.type==='shield'&&this._shieldReady) return 0xcdeeff; if(ld&&ld.type==='revive'&&this._reviveReady) return 0xffcbe4; return 0xffffff; }
 
   create(){
     this.cells=[]; this.boxLabels=[]; this.trayIcons=[]; this.trayTweens=[]; this.teamCards=[]; this.drag=null; this.enemies=[];
@@ -1002,6 +1008,7 @@ class GameScene extends Phaser.Scene{
     this.comboBg=this.add.circle(BX0+16,PHP_Y,16,0x1a140c,0.92).setStrokeStyle(2.5,0x6a5a3a).setDepth(DEPTH.morale).setVisible(false);
     this.comboTxt=this.add.text(BX0+16,PHP_Y,'',{fontFamily:EMOJIFONT,fontSize:'15px',color:'#fff',fontStyle:'bold'}).setOrigin(0.5).setDepth(DEPTH.morale).setVisible(false);
     // 隊長技狀態徽章(借原 combo/鬥志位置:HP 左端):黑熊🛡 / 鮭魚❄️,亮=就緒、灰+數字=冷卻中
+    this.leadGlow=this.add.circle(BX0+16,PHP_Y,21,0xff6ab0,0).setBlendMode(Phaser.BlendModes.ADD).setDepth(DEPTH.morale).setVisible(false);   // 隊長徽章「備妥」呼吸光暈(迴生=粉紅,墊在徽章底)
     this.leadBg=this.add.circle(BX0+16,PHP_Y,16,0x1a140c,0.92).setStrokeStyle(2.5,0x6a5a3a).setDepth(DEPTH.morale).setVisible(false);
     this.leadIc=this.add.text(BX0+16,PHP_Y,'',{fontFamily:EMOJIFONT,fontSize:'16px'}).setOrigin(0.5).setDepth(DEPTH.morale).setVisible(false);
     this.leadNum=this.add.text(BX0+27,PHP_Y+9,'',{fontFamily:EMOJIFONT,fontSize:'11px',color:'#ffd24a',fontStyle:'bold',stroke:'#000000',strokeThickness:3}).setOrigin(0.5).setDepth(DEPTH.morale+1).setVisible(false);
@@ -1474,7 +1481,7 @@ class GameScene extends Phaser.Scene{
       if(this.towerCubes){for(const c of this.towerCubes){if(c.img&&c.img.active)c.img.y=c.baseY+Math.sin(time*0.0016+c.ph)*c.amp;}}   // 塔中景元素方塊:各自上下飄浮(相位錯開)
       if(this.drag&&this.drag.prev&&this.drag._shown&&this.drag.tx!=null){const pr=this.drag.prev; pr.x+=(this.drag.tx-pr.x)*0.4; pr.y+=(this.drag.ty-pr.y)*0.4;}   // 拖曳方塊 lerp 滑順跟隨目標格(取代瞬間跳格)
       if(this.poison&&this.poison.turns>0){ this._poiT=(this._poiT||0)+1; if(this._poiT%14===0){ const fx=BX0+(W-2*BX0)*Math.max(0.04,this.playerHP/this.maxHP); const d=this.add.circle(fx-12+Math.random()*24,PHP_Y+4,2.2+Math.random()*1.6,0xc060e8,1).setBlendMode(Phaser.BlendModes.ADD).setDepth(DEPTH.fx); this.tweens.add({targets:d,y:PHP_Y-18-Math.random()*18,alpha:0,scale:0.3,duration:520+Math.random()*220,ease:'Quad.out',onComplete:()=>d.destroy()}); } }   // 中毒:HP 末端持續冒紫氣泡
-      if(this.enemies)for(const e of this.enemies){ if(e.labShield&&e.labShield.active&&e.sprite){e.labShield.x=e.sprite.x;e.labShield.y=e.sprite.y;} if(e._absorbFx&&e._absorbFx.active&&e.sprite){e._absorbFx.x=e.sprite.x;e._absorbFx.y=e.sprite.y;} if(e._finOrb&&e._finOrb.active&&e.sprite){e._finOrb.y=e.sprite.y+(e._finOY||0);} }   // 盾/吸收光環/元氣玉貼合敵人浮動(元氣玉只跟 Y,X 留給 stage3 微顫)
+      if(this.enemies)for(const e of this.enemies){ if(e.labShield&&e.labShield.active&&e.sprite){e.labShield.x=e.sprite.x;e.labShield.y=e.sprite.y;} if(e._absorbFx&&e._absorbFx.active&&e.sprite){e._absorbFx.x=e.sprite.x;e._absorbFx.y=e.sprite.y;} if(e._finOrb&&e._finOrb.active&&e.sprite){ if(e._finShake){ const t=this.time.now; e._finOrb.x=e.sprite.x+Math.sin(t*0.045)*3.2; e._finOrb.y=e.sprite.y+(e._finOY||0)+Math.cos(t*0.037)*3.2; } else { e._finOrb.y=e.sprite.y+(e._finOY||0); } } }   // 盾/吸收光環/元氣玉貼合敵人浮動;將滿(_finShake)→跟隨時疊 sin 波 x/y 雙軸快速微顫(不被 y 跟隨蓋掉)
     }catch(e){}
   }
   // === 主動技 / 敵攻 共用特效 ===
@@ -2209,7 +2216,7 @@ class GameScene extends Phaser.Scene{
         if(healR>0)this.enemies.forEach(e=>{if(!e.dead&&e.hp>0){const hh=Math.max(1,Math.round(e.max*healR));e.hp=Math.min(e.max,e.hp+hh);if(e.sprite)this.floatText(e.sprite.x,e.sprite.y-24,'💚+'+hh,'#74e09a');}});
         if(showed)this.charge=this.charge.map((c,i)=>{const a=activeSkill(this.teamCards[i].el,this.presetTeam&&this.presetTeam[i]&&this.presetTeam[i].id);return a?Math.min(a.cd,(c||0)+1):c;});   // 主動技蓄力:本手有消塊才+1(綁消塊→不能擺爛farm蓄力跳過拼圖)
         this.renderCharges();
-        if(this._reviveCD>0){this._reviveCD--; if(this._reviveCD<=0)this._reviveReady=true;}   // 🐟冰河迴生:過 N 手後再生
+        if(this._reviveCD>0){this._reviveCD--; if(this._reviveCD<=0){this._reviveReady=true; this._syncShieldFx&&this._syncShieldFx(); this.updLeadBadge&&this.updLeadBadge(); const _bx=BX0+16; const _fl=this.add.circle(_bx,PHP_Y,15,0xffd0e6,0.9).setBlendMode(Phaser.BlendModes.ADD).setDepth(DEPTH.morale+2); this.tweens.add({targets:_fl,scale:2.4,alpha:0,duration:420,onComplete:()=>_fl.destroy()}); this.floatText(CX,PHP_Y-30,'💗 迴生就緒','#ff9ecb');}}   // 🐟冰河迴生:過 N 手後再生→血條轉粉呼吸 + 徽章粉閃 +「就緒」
         if(this._shieldCD>0){this._shieldCD--; if(this._shieldCD<=0){this._shield=true; this.time.delayedCall(1800,()=>{ if(this._shield)this._formShieldFx(); });}}   // 🐻熊之守護:邏輯即時就位(保護下一手);盾的成形演示延到本手敵攻落地後約 1 秒才播(集氣→封印成形,見 _formShieldFx)→不會同手看似有盾卻仍掉血
         this.refill(); this.renderTray(); this.updateAll(); this.tickJunk(); this.applyParalyze(); this.applyJunk();   // 🔒鐵塊先倒數→⚡麻痺/🔒封鎖:補新手後可能觸發
       }catch(err){console.error('endHand error',err);}
@@ -2389,13 +2396,27 @@ class GameScene extends Phaser.Scene{
   // 常駐 combo 指示器(HP 條左端):combo≥2 才亮,顏色隨連擊變熱;pop=升 combo 時彈一下
   renderCombo(pop){ if(this.comboBg){this.comboBg.setVisible(false);this.comboTxt.setVisible(false);} }   // combo 常駐圓圈已移除(該位置改放隊長技徽章);combo 仍靠 showCombo 敵上方浮字呈現
   // 隊長技狀態徽章(HP 左端):黑熊🛡=有護盾/灰+n=再生倒數;鮭魚❄️=救命待命/灰+n=冷卻;其他隊長不顯示
-  updLeadBadge(){ if(!this.leadBg)return; const ld=this.lead; let ic=null,ready=false,cd=0;
-    if(ld&&ld.type==='shield'){ ic='🛡'; ready=!!this._shieldReady; cd=this._shieldCD||0; }
-    else if(ld&&ld.type==='revive'){ ic='❄️'; ready=!!this._reviveReady; cd=this._reviveCD||0; }
-    if(!ic){ this.leadBg.setVisible(false); this.leadIc.setVisible(false); this.leadNum.setVisible(false); return; }
-    this.leadBg.setVisible(true).setStrokeStyle(2.5, ready?0x8fd6ff:0x5a5048);
+  updLeadBadge(){ if(!this.leadBg)return; const ld=this.lead; let ic=null,ready=false,cd=0,rc=0x8fd6ff,glow=false;
+    if(ld&&ld.type==='shield'){ ic='🛡'; ready=!!this._shieldReady; cd=this._shieldCD||0; rc=0x8fd6ff; }
+    else if(ld&&ld.type==='revive'){ ic='❄️'; ready=!!this._reviveReady; cd=this._reviveCD||0; rc=0xffaad2; glow=ready; }   // 迴生備妥→粉紅呼吸光暈(避免與黑熊藍撞)
+    if(!ic){ this.leadBg.setVisible(false); this.leadIc.setVisible(false); this.leadNum.setVisible(false); if(this.leadGlow)this.leadGlow.setVisible(false); if(this._leadGlowTw){this._leadGlowTw.stop();this._leadGlowTw=null;} return; }
+    this.leadBg.setVisible(true).setStrokeStyle(2.5, ready?rc:0x5a5048);
     this.leadIc.setVisible(true).setText(ic).setAlpha(ready?1:0.32);
-    this.leadNum.setVisible(!ready&&cd>0).setText(cd>0?(''+cd):''); }
+    this.leadNum.setVisible(!ready&&cd>0).setText(cd>0?(''+cd):'');
+    if(glow&&this.leadGlow){ this.leadGlow.setVisible(true); if(!this._leadGlowTw){ this.leadGlow.setAlpha(0.12).setScale(0.9); this._leadGlowTw=this.tweens.add({targets:this.leadGlow,alpha:0.5,scaleX:1.18,scaleY:1.18,duration:820,yoyo:true,repeat:-1,ease:'Sine.inOut'}); } }
+    else { if(this._leadGlowTw){this._leadGlowTw.stop();this._leadGlowTw=null;} if(this.leadGlow)this.leadGlow.setVisible(false).setAlpha(0).setScale(1); } }
+  _reviveFx(){ const ADD=Phaser.BlendModes.ADD, bx=BX0+16, by=PHP_Y, x0=BX0, bw=W-2*BX0;   // 冰河迴生:血條近空→粉紅回血波湧回50% + 愛心上浮 + 徽章粉閃(粉紅,不含冰藍元素)
+    if(this._barGlowTw){this._barGlowTw.stop();this._barGlowTw=null;} this._reviveGlow=true; this.drawPlayerHp();   // 重生期間血條=亮粉(呼吸停,對稱黑熊藍→綠的破盾;這裡是粉紅回填)
+    const flashBar=this.add.rectangle(CX,by,bw+8,18,0xff8ac0,0.5).setBlendMode(ADD).setDepth(DEPTH.hp+2); this.tweens.add({targets:flashBar,alpha:0,duration:760,onComplete:()=>flashBar.destroy()});   // 整條粉紅波
+    const front={t:0.04}, fg=this.add.circle(x0+bw*0.04,by,13,0xffaad2,0.95).setBlendMode(ADD).setDepth(DEPTH.hp+2); this.tweens.add({targets:front,t:0.5,duration:800,ease:'Cubic.out',onUpdate:()=>{fg.x=x0+bw*front.t;},onComplete:()=>{this.tweens.add({targets:fg,alpha:0,scale:2.2,duration:260,onComplete:()=>fg.destroy()});}});   // 回血波前緣亮點隨填充往右灌到 50%
+    this.time.delayedCall(950,()=>{ this._reviveGlow=false; this._syncShieldFx&&this._syncShieldFx(); this.drawPlayerHp(); });   // 填完→退回綠(此時迴生已進冷卻,不再是粉)
+    if(this.leadBg)this.tweens.add({targets:this.leadBg,scaleX:1.5,scaleY:1.5,duration:180,yoyo:true,ease:'Quad.out'});
+    if(this.leadIc)this.tweens.add({targets:this.leadIc,scaleX:1.5,scaleY:1.5,duration:180,yoyo:true,ease:'Quad.out'});
+    const fl=this.add.circle(bx,by,18,0xffd0e6,0.95).setBlendMode(ADD).setDepth(DEPTH.morale+2); this.tweens.add({targets:fl,scale:2.6,alpha:0,duration:420,onComplete:()=>fl.destroy()});   // 徽章粉閃
+    const ring=this.add.circle(bx,by,14,0xff8ac0,0).setStrokeStyle(3,0xffaad2,0.9).setBlendMode(ADD).setDepth(DEPTH.morale+2); this.tweens.add({targets:ring,scale:3.6,alpha:0,duration:560,ease:'Quad.out',onComplete:()=>ring.destroy()});   // 徽章擴散環
+    for(let k=0;k<18;k++){ this.time.delayedCall(k*55,()=>{ const hx=x0+bw*(0.08+Math.random()*0.84), hy=by+4, h=this.add.text(hx,hy,Math.random()<0.5?'💗':'💕',{fontFamily:EMOJIFONT,fontSize:(12+Math.floor(Math.random()*9))+'px'}).setOrigin(0.5).setDepth(DEPTH.fx).setAlpha(0.95).setScale(0.6);   // 愛心從血條各處分批冒出
+      this.tweens.add({targets:h,y:hy-58-Math.random()*54,x:hx+(Math.random()-0.5)*32,alpha:0,scaleX:1.15,scaleY:1.15,duration:900+Math.random()*420,ease:'Quad.out',onComplete:()=>h.destroy()}); }); }   // 往上飄+淡出(持續約 1 秒)
+    this.labSnd&&this.labSnd('s_heal',0.85); }   // 回血音
   resolve(){
     const tgt=this.targetEnemy(); if(!tgt)return;
     const data=computeClears(this.board,this.boxElement,this.boxCard,tgt.el,this.amp,this.teamMaxAtk);   // 傳隊伍最高攻→無屬宮也吃「= 屬·普通」傷害
@@ -2478,8 +2499,9 @@ class GameScene extends Phaser.Scene{
 
   enemyFinisher(e){   // 🔥終結技:3 段蓄力(每手加強、越後越緊張)→ 放招(元氣玉砸向玩家);蓄力中被攻擊(掉血)/打死=打斷
     const st=(e._finStage||0)+1;
-    if(st<3){ e._finStage=st; e._charging=true; if(st===1)e._finHpAtCharge=e.hp; this._showEnemyOrb(e,st); e.timer=1; }   // 蓄力 3 段,每手 timer=1 逐段加強
-    else { this._launchFinisher(e); }   // 第3段→把蓄好的那顆球「直接甩向玩家」(不重集氣)
+    if(st<3){ e._finStage=st; e._charging=true; if(st===1)e._finHpAtCharge=e.hp; this._showEnemyOrb(e,st); e.timer=1; }   // 蓄力 1、2 段,每手 timer=1 逐段加強
+    else { e._finStage=3; e._charging=false; e.timer=e.interval; this._showEnemyOrb(e,3);   // 第3手:先顯示「將滿」白熱抖動球(同 #enemylab),停一下製造緊張
+      this.time.delayedCall(700,()=>{ if(!e.dead&&e._finOrb)this._launchFinisher(e); }); }   // 0.7 秒後才把這顆球甩向玩家(仍是同一手,維持 3 手放招)
   }
   _launchFinisher(e){   // 放招=把當下蓄好的那顆元氣玉直接甩出去(貝茲弧線),命中才扣血→走真實傷害流程(護甲/迴避/黑熊護盾擋下/迴生/gameOver)
     const ADD=Phaser.BlendModes.ADD, ox=e._finPos?e._finPos.x:e.sprite.x, oy=e._finPos?e._finPos.y:e.sprite.y, col=e._finCol||0xff6a3a, R=e._finR||30, raw=Math.max(1,Math.round(this.maxHP*(e.finisher||0.3)));
@@ -2491,7 +2513,7 @@ class GameScene extends Phaser.Scene{
       onComplete:()=>{ ball.destroy(); bg.destroy(); this._playerImpact(dmg,dodged,tx,ty,col,true,blocked); }});   // 命中→套用傷害演出
   }
   _showEnemyOrb(e,stage){ if(!e.sprite)return;
-    if(e._finPulse){e._finPulse.stop();e._finPulse=null;} if(e._finGather){e._finGather.remove();e._finGather=null;} if(e._finJitter){e._finJitter.stop();e._finJitter=null;} if(e._finJitterY){e._finJitterY.stop();e._finJitterY=null;} if(e._finSpark){e._finSpark.remove();e._finSpark=null;} if(e._finOrb){e._finOrb.destroy();e._finOrb=null;}   // 換 stage:先清舊視覺
+    if(e._finPulse){e._finPulse.stop();e._finPulse=null;} if(e._finGather){e._finGather.remove();e._finGather=null;} e._finShake=false; if(e._finSpark){e._finSpark.remove();e._finSpark=null;} if(e._finOrb){e._finOrb.destroy();e._finOrb=null;}   // 換 stage:先清舊視覺
     const ADD=Phaser.BlendModes.ADD, base=(e.cardW||60)*(e.boss?0.32:0.2);   // 雜兵較小
     const conf = stage>=3 ? {r:base*1.5,col:0xff2a1a,glow:0xff2a1a,pulse:210}
                : stage===2 ? {r:base*1.15,col:0xffb24a,glow:0xff8a2a,pulse:360}
@@ -2504,10 +2526,10 @@ class GameScene extends Phaser.Scene{
     e._finPulse=this.tweens.add({targets:[glow,core],scaleX:1.22,scaleY:1.22,duration:conf.pulse,yoyo:true,repeat:-1,ease:'Sine.inOut'});
     const ring=this.add.circle(ox,oy,conf.r,conf.col,0).setStrokeStyle(3,conf.col,0.9).setBlendMode(ADD).setDepth(DEPTH.fx); this.tweens.add({targets:ring,scale:2.4,alpha:0,duration:400,ease:'Quad.out',onComplete:()=>ring.destroy()});   // 升階衝擊環
     e._finGather=this.time.addEvent({delay:stage>=3?45:80,loop:true,callback:()=>{ if(!cont.active)return; const cx=e.sprite?e.sprite.x:ox, cy=(e.sprite?e.sprite.y:oy)+oyOff, ang=Math.random()*Math.PI*2, d=conf.r*2+Math.random()*22, p=this.add.circle(cx+Math.cos(ang)*d,cy+Math.sin(ang)*d,2+Math.random()*1.6,conf.col,1).setBlendMode(ADD).setDepth(DEPTH.fx); this.tweens.add({targets:p,x:cx,y:cy,alpha:0.2,scale:0.3,duration:conf.pulse,ease:'Quad.in',onComplete:()=>p.destroy()}); }});
-    if(stage>=3){ e._finJitter=this.tweens.add({targets:cont,x:ox+2.5,duration:42,yoyo:true,repeat:-1,ease:'Sine.inOut'}); e._finJitterY=this.tweens.add({targets:cont,y:oy-2.5,duration:56,yoyo:true,repeat:-1,ease:'Sine.inOut'});   // 將滿:x(42ms)/y(56ms) 雙軸快速微顫 + 噴電火花(照搬實驗室)
+    if(stage>=3){ e._finShake=true;   // 將滿:x/y 雙軸快速微顫(交給 update 跟隨時做 sin 波,免被 y 跟隨蓋掉)+ 噴電火花
       e._finSpark=this.time.addEvent({delay:60,loop:true,callback:()=>{ if(!cont.active)return; const cx=e.sprite?e.sprite.x:ox, cy=(e.sprite?e.sprite.y:oy)+oyOff, ang=Math.random()*Math.PI*2, d=conf.r*(0.9+Math.random()*0.8), sp=this.add.circle(cx+Math.cos(ang)*conf.r*0.6,cy+Math.sin(ang)*conf.r*0.6,1.5+Math.random()*1.6,0xfff0c0,1).setBlendMode(ADD).setDepth(DEPTH.fx); this.tweens.add({targets:sp,x:cx+Math.cos(ang)*d,y:cy+Math.sin(ang)*d,alpha:0,scale:0.3,duration:200+Math.random()*160,ease:'Quad.out',onComplete:()=>sp.destroy()}); }}); }
   }
-  _clearEnemyOrb(e){ if(e._finPulse){e._finPulse.stop();e._finPulse=null;} if(e._finGather){e._finGather.remove();e._finGather=null;} if(e._finJitter){e._finJitter.stop();e._finJitter=null;} if(e._finJitterY){e._finJitterY.stop();e._finJitterY=null;} if(e._finSpark){e._finSpark.remove();e._finSpark=null;} if(e._finOrb){e._finOrb.destroy();e._finOrb=null;} e._charging=false; e._finStage=0; e._finBreakPending=false; }
+  _clearEnemyOrb(e){ if(e._finPulse){e._finPulse.stop();e._finPulse=null;} if(e._finGather){e._finGather.remove();e._finGather=null;} e._finShake=false; if(e._finSpark){e._finSpark.remove();e._finSpark=null;} if(e._finOrb){e._finOrb.destroy();e._finOrb=null;} e._charging=false; e._finStage=0; e._finBreakPending=false; }
   _breakEnemyOrb(e){ if(!e._finOrb)return; const ADD=Phaser.BlendModes.ADD, col=e._finCol||0xff7a2a, R=e._finR||16, x=e.sprite?e.sprite.x:(e._finPos?e._finPos.x:CX), y=(e.sprite?e.sprite.y+(e._finOY||0):(e._finPos?e._finPos.y:60)); this._clearEnemyOrb(e); e.timer=Math.max(1,e.interval||3); this.labSnd&&this.labSnd('s_block',0.5);   // 打斷:元氣玉碎散、不放招、進冷卻(由攻擊敵人的那發彈著在 zoneStrike 觸發→彈著後才碎)
     const RR=Math.max(R,(e.cardW||60)*0.6);   // 打斷範圍放大(不受小球半徑限制)
     const fl=this.add.circle(x,y,RR*1.3,0xffffff,0.92).setBlendMode(ADD).setDepth(DEPTH.fx); this.tweens.add({targets:fl,scale:3,alpha:0,duration:460,onComplete:()=>fl.destroy()});
@@ -2550,15 +2572,15 @@ class GameScene extends Phaser.Scene{
     if(!dodged){ const fl2=this.add.circle(tx,ty,16*B,col,0.9).setBlendMode(ADD).setDepth(DEPTH.fx); this.tweens.add({targets:fl2,scale:3.2,alpha:0,duration:300,ease:'Quad.out',onComplete:()=>fl2.destroy()});   // 屬色閃光
       for(let k=0;k<(big?26:18);k++){const ang=Math.random()*Math.PI*2, r0=(34+Math.random()*52)*B, sq=this.add.rectangle(tx,ty,(9+Math.random()*7)*B,(9+Math.random()*7)*B,col,1).setAngle(Math.random()*90).setBlendMode(ADD).setDepth(DEPTH.fx); this.tweens.add({targets:sq,x:tx+Math.cos(ang)*r0,y:ty+Math.sin(ang)*r0,angle:'+=200',alpha:0,scale:0.25,duration:big?(720+Math.random()*480):(400+Math.random()*260),ease:'Quad.out',onComplete:()=>sq.destroy()});} }   // 彈著火花(big=終結技:更多、慢飄)
     this.playerHP=Math.max(0,this.playerHP-dmg);
-    if(dmg>0&&this.lead&&this.lead.type==='revive'&&this._reviveReady&&this.playerHP<=Math.ceil(this.maxHP*0.1)){ this.playerHP=Math.round(this.maxHP*0.5); this._reviveReady=false; this._reviveCD=(this.lead.v||5); this.floatText(CX,PHP_Y-44,'❄️ 冰河迴生!回50%','#9fe8ff'); }   // 🐟血≤10%自動回50%→冷卻
+    if(dmg>0&&this.lead&&this.lead.type==='revive'&&this._reviveReady&&this.playerHP<=Math.ceil(this.maxHP*0.1)){ this.playerHP=Math.round(this.maxHP*0.5); this._reviveReady=false; this._reviveCD=(this.lead.v||5); this.pHpRatio=0.04; this.pHpLag=0.04; this._reviveTick=true; this._reviveFx(); this.updLeadBadge&&this.updLeadBadge(); this.floatText(CX,PHP_Y-40,'💗 冰河迴生!回50%','#ff9ecb'); }   // 🐟血歸0→血條先近空→愛心上浮、慢慢回50%、徽章特效、進冷卻
     if(blocked){ if(!this._shieldBreakShown){this._shieldBreakShown=true; this._shatterShieldFx(tx);} else this._deflectShieldFx(tx); }   // 本手第一個擋下的彈著→整片破盾;其後→輕擋(_shieldBreakShown 每敵回合開始重置)
     else if(dodged)this.floatText(tx-12,PHP_Y-16,'迴避!','#74e09a'); else this.dmgPop(tx,PHP_Y,dmg);   // 迴避/被打數字
-    this.animPlayerHP(false,big);   // HP 掉血動畫(big=終結技→慢而明顯)
+    this.animPlayerHP(false,big||this._reviveTick); this._reviveTick=false;   // HP 動畫(終結技/迴生→慢而明顯;迴生=從近空慢慢回 50%)
     if(this.playerHP<=0){if(this.hitLab||this.enemyLab){this.playerHP=this.maxHP;this.animPlayerHP(false);}else this.gameOver('HP 歸零');}
   }
-  _syncShieldFx(){ const on=!!this._shieldReady;   // 護盾「演示就緒」→血條轉藍且呼吸變色(不再另疊屏障)
-    if(on&&!this._shieldPulse){ this._shieldPhase=0; this._shieldPulse=this.tweens.addCounter({from:0,to:1,duration:900,yoyo:true,repeat:-1,ease:'Sine.inOut',onUpdate:t=>{this._shieldPhase=t.getValue();this.drawPlayerHp();}}); this.drawPlayerHp(); }
-    else if(!on&&this._shieldPulse){ this._shieldPulse.stop(); this._shieldPulse=null; this._shieldPhase=0; this.drawPlayerHp(); } }
+  _syncShieldFx(){ const ld=this.lead, on=(ld&&ld.type==='shield'&&this._shieldReady)||(ld&&ld.type==='revive'&&this._reviveReady);   // 血條狀態色呼吸:護盾(藍)/迴生(粉)就緒共用一個相位驅動
+    if(on&&!this._barGlowTw){ this._barGlowPhase=0; this._barGlowTw=this.tweens.addCounter({from:0,to:1,duration:900,yoyo:true,repeat:-1,ease:'Sine.inOut',onUpdate:t=>{this._barGlowPhase=t.getValue();this.drawPlayerHp();}}); this.drawPlayerHp(); }
+    else if(!on&&this._barGlowTw){ this._barGlowTw.stop(); this._barGlowTw=null; this._barGlowPhase=0; this.drawPlayerHp(); } }
   _formShieldFx(){ const ADD=Phaser.BlendModes.ADD, y=PHP_Y, x0=BX0, bw=W-2*BX0, col=0x7fd8ff;   // 護盾成形:①能量粒子聚到血條 → ②全寬爆亮+橫掃封印光,血條刷地染藍
     for(let k=0;k<16;k++){ const tx=x0+bw*Math.random(), a=Math.random()*Math.PI*2, d=40+Math.random()*46, px=tx+Math.cos(a)*d, py=y+Math.sin(a)*d*0.7;   // ①集氣:四周飛入
       const p=this.add.circle(px,py,2+Math.random()*2,col,1).setBlendMode(ADD).setDepth(DEPTH.fx); this.tweens.add({targets:p,x:tx,y:y,alpha:0.2,scale:0.3,duration:340+Math.random()*170,ease:'Quad.in',onComplete:()=>p.destroy()}); }
@@ -2568,7 +2590,7 @@ class GameScene extends Phaser.Scene{
       const sweep=this.add.rectangle(x0,y,16,24,0xffffff,0.9).setBlendMode(ADD).setDepth(DEPTH.hp+2); this.tweens.add({targets:sweep,x:x0+bw,alpha:0,duration:440,ease:'Quad.out',onComplete:()=>sweep.destroy()});   // 橫掃封印光(左→右)
       const ring=this.add.circle(CX,y,14,col,0).setStrokeStyle(3,0xbdefff,0.9).setBlendMode(ADD).setDepth(DEPTH.fx); this.tweens.add({targets:ring,scaleX:bw/28,scaleY:2.4,alpha:0,duration:520,ease:'Quad.out',onComplete:()=>ring.destroy()});   // 成形擴散環
       this.floatText(CX,PHP_Y-30,'🛡 護盾就緒','#cfe0ff'); }); }
-  _shatterShieldFx(x){ const ADD=Phaser.BlendModes.ADD, y=PHP_Y, col=0x7fd8ff, x0=BX0, bw=W-2*BX0; if(this._shieldPulse){this._shieldPulse.stop();this._shieldPulse=null;} this._shieldReady=false; this._shieldPhase=0; this.drawPlayerHp(); this.updLeadBadge&&this.updLeadBadge();   // 彈著這一刻才:停呼吸→血條藍轉綠+徽章熄,並演整條 HP 護盾碎裂(全寬爆亮 + 沿整條放射半透明三角碎片 + 震屏)
+  _shatterShieldFx(x){ const ADD=Phaser.BlendModes.ADD, y=PHP_Y, col=0x7fd8ff, x0=BX0, bw=W-2*BX0; if(this._barGlowTw){this._barGlowTw.stop();this._barGlowTw=null;} this._shieldReady=false; this._barGlowPhase=0; this.drawPlayerHp(); this.updLeadBadge&&this.updLeadBadge();   // 彈著這一刻才:停呼吸→血條藍轉綠+徽章熄,並演整條 HP 護盾碎裂(全寬爆亮 + 沿整條放射半透明三角碎片 + 震屏)
     const flash=this.add.rectangle(CX,y,bw+8,20,0xffffff,0.9).setBlendMode(ADD).setDepth(DEPTH.hp+2); this.tweens.add({targets:flash,alpha:0,scaleY:3,duration:440,ease:'Quad.out',onComplete:()=>flash.destroy()});   // 整條護盾爆亮(更久)
     const N=6, R=21;   // 沿整條 HP 均勻擺 N 叢六角碎片 → 整片護盾碎裂(碎片更大)
     for(let c=0;c<N;c++){ const cx=x0+bw*(c+0.5)/N;
