@@ -120,15 +120,20 @@ const ENEMY_HP_MUL = 1.8;    // 全域敵 HP 倍率(敵更耐打)
 const ENEMY_ATK_MUL = 1.0;   // 全域敵 atk 倍率(1.0=純資料值×難度,不灌水;高難靠 df.atk 疊)
 
 // 招牌行為 → 護盾/DoT 數值(依難度 dk);spawnStage 與 phaseCheck 共用同一份
-function behGates(beh, dk){
-  const g={hitGate:0,comboGate:0,dot:0,regen:0,paralyze:0,healAlly:0,junk:0};
-  if(beh==='hit')g.hitGate=15;
-  else if(beh==='combo')g.comboGate=(dk==='advanced')?2:3;
-  else if(beh==='burn')g.dot=({advanced:0.02,super:0.03,hell:0.04}[dk])||0.03;
-  else if(beh==='regen')g.regen=({advanced:0.04,super:0.06,hell:0.06}[dk])||0.06;
-  else if(beh==='paralyze')g.paralyze=(dk==='advanced')?2:1;
-  else if(beh==='healAlly')g.healAlly=({advanced:0.04,super:0.06,hell:0.08}[dk])||0.05;
-  else if(beh==='junk')g.junk=(dk==='advanced')?3:2;
+// beh → 敵人數值旗標。full=true 完整版(魔王),false 輕鬆版(小關雜兵);率型再吃難度倍率 dm。
+function behGates(beh, dk, full){
+  const g={hitGate:0,comboGate:0,dot:0,regen:0,paralyze:0,healAlly:0,junk:0,finisher:0,eatStored:0};
+  if(!beh) return g;
+  const lite=!full, dm={baby:0.6,beginner:0.8,normal:1,advanced:1.3,super:1.5,hell:1.8}[dk]||1;
+  if(beh==='hit')          g.hitGate  = lite? 8 : 15;
+  else if(beh==='combo')   g.comboGate= lite? 2 : 3;
+  else if(beh==='burn')    g.dot      = (lite?0.015:0.03)*dm;
+  else if(beh==='regen')   g.regen    = (lite?0.03:0.06)*dm;
+  else if(beh==='paralyze')g.paralyze = lite? 1 : 2;                 // 鎖幾手
+  else if(beh==='healAlly')g.healAlly = (lite?0.025:0.06)*dm;        // 補師:回全體比例
+  else if(beh==='junk')    g.junk     = lite? 4 : 2;                 // 封鎖:間隔(越小越頻;lite 較少)
+  else if(beh==='finisher')g.finisher = (lite?0.4:0.6)*dm;          // 🔥終結:大招傷害佔 maxHP(要有感;lite≈40%、full≈60%)
+  else if(beh==='eatStored')g.eatStored= lite? 1 : 99;              // 🌪️消屬塊:1=−1LV、99=整個消掉
   return g;
 }
 
@@ -138,9 +143,11 @@ function spawnStage(dungeonId, diffKey, stageIdx){
   const df=DIFFS_BY[diffKey]||DIFFS_BY.normal;
   const defs=resolveStages(dungeon, diffKey)[stageIdx].es;
   let pun=null; if(df.counter&&dungeon.el){const C=counterOf(dungeon.el); pun=counterOf(C);} let punished=false;   // 反制混搭:上級↑元素關塞一隻懲罰屬
-  const dk=df.key, dEl=dungeon.el, SIG={earth:'hit',wind:'combo',fire:'burn',water:'regen',thunder:'paralyze'}, myBeh=SIG[dEl];
-  const covered=(d)=>{ if(dk==='advanced')return !!d.boss; if(dk==='super')return !!d.boss; if(dk==='hell')return true; return false; };   // 特殊能力:上級/超級僅魔王、地獄全敵
+  const dk=df.key, dEl=dungeon.el, SIG={fire:'finisher',water:'healAlly',thunder:'paralyze',earth:'junk',wind:'eatStored'}, myBeh=SIG[dEl];   // 五屬城中級魔王技定案(火終結/水補師/雷麻痺/土封鎖/風消屬塊)
+  const covered=(d)=>{ if(dk==='advanced'||dk==='super')return !!d.boss; if(dk==='hell')return true; return false; };   // 上級/超級僅魔王(完整版),地獄全敵。中級的梯度另在下方 beh 指派處理
+  const noSkill=(dk==='baby'||dk==='beginner');   // 嬰兒/初級:純數值,無技
   const stageHasBoss=defs.some(x=>x.boss);
+  let litePicked=false;   // 城內梯度:小關(無魔王)選「一隻雜兵」帶輕鬆版該屬技
   return defs.map(d=>{
     let el=d.el; if(pun&&!punished&&d.el===dEl&&!d.boss){el=pun;punished=true;}
     const A=(d.arch&&ARCH[d.arch])||null;
@@ -148,12 +155,16 @@ function spawnStage(dungeonId, diffKey, stageIdx){
           atk=Math.max(1,Math.round(d.atk*df.atk*(A?A.atkM:1)*(d.boss?BOSS_ATK_MUL:1)*ENEMY_ATK_MUL)),
           turns=Math.max(1,d.turns+(df.dt||0)-1);
     const phases=d.phases||null;
-    let beh=null;
-    if(phases){el=phases[0].el;beh=phases[0].beh;}
-    else if(A)beh=covered(d)?A.beh:null;
-    else if(myBeh&&covered(d))beh=myBeh;
-    else if(dk==='hell'&&dEl&&!myBeh)beh='hit';
-    const g=behGates(beh, dk);
+    let beh=null, full=false;
+    if(phases){ el=phases[0].el; beh=phases[0].beh; full=true; }                          // 魔王變身:完整版
+    else if(A){ full=covered(d); beh=full?A.beh:null; }                                   // 兵種行為:covered(上級魔王/地獄)才開
+    else if(myBeh && !noSkill){                                                           // 屬城招:中級起開(嬰兒/初級無)
+      if(d.boss){ beh=myBeh; full=true; }                                                 // 魔王 = 完整版
+      else if(covered(d)){ beh=myBeh; full=true; }                                        // 地獄雜兵 = 完整
+      else if(!litePicked && !stageHasBoss){ beh=myBeh; full=false; litePicked=true; }    // 小關:一隻雜兵帶輕鬆版
+    }
+    else if(dk==='hell'&&dEl&&!myBeh){ beh='hit'; full=true; }
+    const g=behGates(beh, dk, full);
     return {el,max:hp,hp:hp,atk:atk,interval:turns,timer:Math.max(2,turns),burn:0,dead:false,boss:!!d.boss,guard:(!d.boss&&stageHasBoss),...g,phases,phaseIdx:0,arch:d.arch||null};   // 每關初始 timer≥2:每關開場至少 2 手才挨第一拳(防上關清空盤面、下關一進場就連挨);interval(之後頻率)不變
   });
 }
@@ -164,7 +175,7 @@ function phaseCheck(e, dk){
   const idx=Math.min(e.phases.length-1, Math.max(0, Math.floor((1-e.hp/e.max)*e.phases.length)));
   if(idx>e.phaseIdx){
     e.phaseIdx=idx; const ph=e.phases[idx]; e.el=ph.el;
-    Object.assign(e, {hitGate:0,comboGate:0,dot:0,regen:0,paralyze:0,healAlly:0,junk:0}, behGates(ph.beh, dk));
+    Object.assign(e, {hitGate:0,comboGate:0,dot:0,regen:0,paralyze:0,healAlly:0,junk:0,finisher:0,eatStored:0}, behGates(ph.beh, dk, true));
     return true;
   }
   return false;

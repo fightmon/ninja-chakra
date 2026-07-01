@@ -92,21 +92,22 @@ function brnd(n){return Math.floor(BRNG()*n);}
 function startBattleSeed(seed){seed=(seed!=null)?(seed>>>0):((Math.random()*4294967296)>>>0);BRNG=mulberry32(seed);return seed;}   // 回傳實際種子(存起來給回放)
 function pickShape(){let r=brnd(WSUM);for(const s of SHAPES){r-=s.w;if(r<0)return s.c.map(x=>x.slice());}}
 function boxOf(r,c){return Math.floor(r/3)*3+Math.floor(c/3);}
-function canPlace(board,cells,r,c,kind){
+function canPlace(board,cells,r,c,kind,allowJunk){
   const inB=cells.every(([dr,dc])=>{const rr=r+dr,cc=c+dc;return rr>=0&&rr<N&&cc>=0&&cc<N;});
   if(!inB)return false;
-  if(kind==='water')return cells.some(([dr,dc])=>!board[r+dr][c+dc]);   // 水塊:界內 + 至少一格空(可填)
+  if(kind==='water')return cells.some(([dr,dc])=>{const cell=board[r+dr][c+dc];return !cell||(allowJunk&&cell.el==='junk');});   // 水/卡片屬塊:界內 + 至少一格空(可填)或鐵塊(allowJunk→可抵銷);全鐵塊也能放→一次消多個鐵塊
   if(kind==='wind') return cells.some(([dr,dc])=> board[r+dr][c+dc]);   // 風刃:界內 + 至少一格有方塊(可消)
   if(kind==='earth')return cells.some(([dr,dc])=> board[r+dr][c+dc]);   // 土塊:界內 + 至少一格有方塊(可抓取搬移)
-  return cells.every(([dr,dc])=>!board[r+dr][c+dc]);                    // 一般塊:全空
+  return cells.every(([dr,dc])=>{const cell=board[r+dr][c+dc];return !cell||(allowJunk&&cell.el==='junk');});   // 一般塊:每格空;只有屬塊(allowJunk)才可蓋鐵塊(放上去抵銷碰到的那格)
 }
 function computeClears(board, boxElement, boxCard, enemyEl, ampMult, neutralAtk){
   neutralAtk = neutralAtk||0;   // 無屬攻擊基準(= 隊伍最高攻);0=不給無屬傷害(向後相容/偵測用)
   let rows=[],cols=[],boxes=[];
-  for(let r=0;r<N;r++)if(board[r].every(x=>x))rows.push(r);
-  for(let c=0;c<N;c++){let f=true;for(let r=0;r<N;r++)if(!board[r][c])f=false;if(f)cols.push(c);}
+  const filled=(x)=>x&&x.el!=='junk';   // 鐵塊(封鎖)不算「填滿」→ 含鐵塊的線/宮永遠不能消(不給玩家攻擊)
+  for(let r=0;r<N;r++)if(board[r].every(filled))rows.push(r);
+  for(let c=0;c<N;c++){let f=true;for(let r=0;r<N;r++)if(!filled(board[r][c]))f=false;if(f)cols.push(c);}
   for(let b=0;b<9;b++){const br=Math.floor(b/3)*3,bc=(b%3)*3;let f=true;
-    for(let r=br;r<br+3;r++)for(let c=bc;c<bc+3;c++)if(!board[r][c])f=false;if(f)boxes.push(b);}
+    for(let r=br;r<br+3;r++)for(let c=bc;c<bc+3;c++)if(!filled(board[r][c]))f=false;if(f)boxes.push(b);}
   const groups=rows.length+cols.length+boxes.length;
   if(groups===0)return null;
   const cellSet=new Set();
