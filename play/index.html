@@ -22,7 +22,7 @@
 /* ===== 純邏輯(N/EL/SHAPES/CONFIG/computeClears/種子亂數 等戰鬥核心已抽到 battle-core.js,瀏覽器當共用全域)===== */
 const KEYS = ['fire','wind','thunder','earth','water'];
 const MONSTER_IMG = { water:'art/monsters/slime_water.png', fire:'art/monsters/slime_fire.png', thunder:'art/monsters/slime_thunder.png', earth:'art/monsters/slime_earth.png', wind:'art/monsters/slime_wind.png' };   // 舊五屬史萊姆(fallback);無對應則用 emoji 臉。圖檔放 001_website/art/monsters/
-const CARD_ART = { c03:1,c06:1,c19:1,c10:1,c12:1, c02:1,c05:1,c08:1,c09:1,c11:1, c13:1,c16:1,c20:1,c23:1,c27:1, c15:1,c18:1,c22:1,c26:1,c30:1, c31:1,c32:1,c33:1,c34:1,c35:1 };   // 有角色圖的卡:犬/貓/鼠/台灣/兔(c31~35:火水雷土風),各火水雷土風 → art/cards/<id>_thumb.webp+_full.webp
+const CARD_ART = { c03:1,c06:1,c19:1,c10:1,c12:1, c02:1,c05:1,c08:1,c09:1,c11:1, c13:1,c16:1,c20:1,c23:1,c27:1, c15:1,c18:1,c22:1,c26:1,c30:1, c31:1,c32:1,c33:1,c34:1,c35:1, c14:1,c17:1,c21:1,c24:1,c28:1, c01:1,c04:1,c07:1,c25:1,c29:1 };   // 有角色圖的卡:犬/貓/鼠/台灣/兔/魚(c14,17,21,24,28)/鳥(c01,04,07,25,29),各火水雷土風 → art/cards/<id>_thumb.webp+_full.webp
 function cardArtKey(id, size){ return (id&&CARD_ART[id]) ? ('card_'+id+'_'+size) : null; }   // 回傳 texture key(thumb/full),無圖回 null→退回 emoji
 function _loadCardArt(scene, ids){ (ids||[]).forEach(id=>{ if(!id||!CARD_ART[id])return; ['thumb','full'].forEach(s=>{ const k='card_'+id+'_'+s; if(!scene.textures.exists(k))scene.load.image(k,'art/cards/'+id+'_'+s+'.webp'); }); }); }   // 按需載卡圖(戰鬥/大廳只載出戰隊);繪製端皆有 textures.exists 保護→沒載到退回 emoji
 function _loadAllCardArt(scene){ _loadCardArt(scene, Object.keys(CARD_ART)); }   // 卡冊/編隊/合成/圖鑑=看全部卡→進場才載全部
