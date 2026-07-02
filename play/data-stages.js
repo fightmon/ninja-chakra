@@ -165,7 +165,8 @@ function spawnStage(dungeonId, diffKey, stageIdx){
     }
     else if(dk==='hell'&&dEl&&!myBeh){ beh='hit'; full=true; }
     const g=behGates(beh, dk, full);
-    return {el,max:hp,hp:hp,atk:atk,interval:turns,timer:Math.max(2,turns),burn:0,dead:false,boss:!!d.boss,guard:(!d.boss&&stageHasBoss),...g,phases,phaseIdx:0,arch:d.arch||null};   // 每關初始 timer≥2:每關開場至少 2 手才挨第一拳(防上關清空盤面、下關一進場就連挨);interval(之後頻率)不變
+    const ival=(g.healAlly>0)?1:turns;   // 💚補師 CD=1:每手都出手(補/攻/復活),不再隔手發呆
+    return {el,max:hp,hp:hp,atk:atk,interval:ival,timer:Math.max(2,ival),burn:0,dead:false,boss:!!d.boss,guard:(!d.boss&&stageHasBoss),...g,phases,phaseIdx:0,arch:d.arch||null};   // 每關初始 timer≥2:每關開場至少 2 手才挨第一拳(防上關清空盤面、下關一進場就連挨);interval(之後頻率)不變
   });
 }
 
