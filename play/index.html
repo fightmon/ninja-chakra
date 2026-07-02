@@ -24,6 +24,8 @@ const KEYS = ['fire','wind','thunder','earth','water'];
 const MONSTER_IMG = { water:'art/monsters/slime_water.png', fire:'art/monsters/slime_fire.png', thunder:'art/monsters/slime_thunder.png', earth:'art/monsters/slime_earth.png', wind:'art/monsters/slime_wind.png' };   // 舊五屬史萊姆(fallback);無對應則用 emoji 臉。圖檔放 001_website/art/monsters/
 const CARD_ART = { c03:1,c06:1,c19:1,c10:1,c12:1, c02:1,c05:1,c08:1,c09:1,c11:1, c13:1,c16:1,c20:1,c23:1,c27:1, c15:1,c18:1,c22:1,c26:1,c30:1 };   // 有角色圖的卡:犬(新葉)/貓(白刃)/鼠(魍魎)/台灣(五柱神),各火水雷土風 → art/cards/<id>_thumb.webp+_full.webp
 function cardArtKey(id, size){ return (id&&CARD_ART[id]) ? ('card_'+id+'_'+size) : null; }   // 回傳 texture key(thumb/full),無圖回 null→退回 emoji
+function _loadCardArt(scene, ids){ (ids||[]).forEach(id=>{ if(!id||!CARD_ART[id])return; ['thumb','full'].forEach(s=>{ const k='card_'+id+'_'+s; if(!scene.textures.exists(k))scene.load.image(k,'art/cards/'+id+'_'+s+'.webp'); }); }); }   // 按需載卡圖(戰鬥/大廳只載出戰隊);繪製端皆有 textures.exists 保護→沒載到退回 emoji
+function _loadAllCardArt(scene){ _loadCardArt(scene, Object.keys(CARD_ART)); }   // 卡冊/編隊/合成/圖鑑=看全部卡→進場才載全部
 // 圖鑑分組:6 物種隊(權威藍圖)。目前只有犬隊有對應卡(狗狗隊5張/各屬);其餘隊先占位「即將推出」。未歸隊的卡放底部「未歸隊」區。
 const SPECIES_TEAMS=[
   {emoji:'🐱',name:'貓系',  color:'#8fd16a',cards:{fire:'c02',water:'c05',thunder:'c08',earth:'c09',wind:'c11'}},
@@ -187,7 +189,7 @@ function cardDetailPanel(scene, add, cd, opt){
   }
 }
 // 方塊敵正式美術:雜兵(grunt)+ 魔王三階(baby/beg/nrm)× 五屬。texture key→路徑;preload 全載,enemyTexKey() 依「是否魔王×難度×元素」挑圖
-const ENEMY_IMG = (()=>{ const m={}; ['fire','water','thunder','earth','wind'].forEach(el=>{ ['grunt','grunt2','guard','caster','boss_baby','boss_beg','boss_nrm'].forEach(c=>{ m[c+'_'+el]='art/monsters/'+c+'_'+el+'.png'; }); }); return m; })();   // caster=術士兵(尖帽法杖,麻痺)
+const ENEMY_IMG = (()=>{ const m={}; ['fire','water','thunder','earth','wind'].forEach(el=>{ ['grunt','grunt2','guard','caster','healer','boss_baby','boss_beg','boss_nrm'].forEach(c=>{ m[c+'_'+el]='art/monsters/'+c+'_'+el+'.png'; }); }); return m; })();   // caster=術士兵(麻痺);healer=補師(m006,回血)
 // 各敵圖「角色實體」在 320 畫布的高度佔比 h 與底緣 bottom(量測值)。渲染時改以「實體高度」對齊→不同圖體型一致;bottom 用來對齊腳底基準線。魔王再乘 BOSS_MUL 刻意略大。
 const ENEMY_FIT = { grunt:{h:0.65,bottom:0.867}, grunt2:{h:0.65,bottom:0.867}, guard:{h:0.69,bottom:0.869}, caster:{h:0.72,bottom:0.867}, boss_baby:{h:0.65,bottom:0.867}, boss_beg:{h:0.69,bottom:0.869}, boss_nrm:{h:0.88,bottom:0.902} };   // caster 略含尖帽→h 高一點
 const BOSS_MUL = 1.1;   // 魔王體型相對雜兵的刻意放大倍率(看得出是王、又不爆出敵格)
@@ -373,7 +375,7 @@ const CARD_FAMILY={};
 // 三圍家族化(2026-06-29):全 ★3,分配 = 平均(家族檔, 屬性檔);台灣用 taiwan 檔。後處理覆蓋 ROSTER 三圍
 // 戰力(2026-07-02):STAT_BUD=LV1 基礎戰力=231 → LV20(×1.95)≈450「頂」;450 是滿級上限、不是起始值(避免滿級秒殺高難度)
 const STAT_BUD=231, STAT_WT={atk:1,hp:0.1,rcv:2};
-const STAT_EL={fire:[.73,.09,.18],water:[.33,.14,.53],thunder:[.64,.07,.29],earth:[.34,.31,.34],wind:[.51,.15,.34]};
+const STAT_EL={fire:[.70,.12,.18],water:[.33,.14,.53],thunder:[.59,.12,.29],earth:[.38,.24,.38],wind:[.51,.15,.34]};   // 血 share 收斂(2026-07-02):地板 .12(火.09→.12、雷.07→.12,免紙板血必死)、削土極端 .31→.24;攻補回;每列仍和=1
 const STAT_FAM={cat:[.62,.16,.22],dog:[.45,.22,.33],bird:[.62,.10,.28],rat:[.48,.20,.32],fish:[.22,.28,.50],rabbit:[.32,.28,.40],taiwan:[.52,.18,.30]};
 function famStat(fam,el){ const f=STAT_FAM[fam],e=STAT_EL[el]; if(!f||!e)return null; const s=[0,1,2].map(i=>(f[i]+e[i])/2),sum=s[0]+s[1]+s[2],sh=s.map(x=>x/sum);
   return {atk:Math.round(sh[0]*STAT_BUD), hp:Math.round(sh[1]*STAT_BUD/STAT_WT.hp/10)*10, rcv:Math.round(sh[2]*STAT_BUD/STAT_WT.rcv)}; }
@@ -390,9 +392,9 @@ const FAMILY_LEADER={   // 家族隊長技(el 由卡屬性填);傷害型在 batt
   cat: {name:'貓·自我爆發',type:'elemAtk',v:1.5,         desc:'同屬攻 ×1.5'},
   dog: {name:'犬·攻守雙修',type:'dog',v:1.2,             desc:'同屬 HP×1.2 + 攻×1.2'},
   bird:{name:'鳥·控敵先制',type:'counterDelay',v:2,      desc:'開局剋屬敵 CD+2'},
-  rat: {name:'鼠·成群',type:'famAtk',v:1.5,    desc:'同鼠系攻 ×1.5(成群才猛)'},
-  fish:{name:'魚·群游',type:'famAtk',v:1.5,    desc:'同魚系攻 ×1.5(魚群增幅)'},
-  rabbit:{name:'兔·繁殖',type:'famAtk',v:1.5,  desc:'同兔系攻 ×1.5(越多越旺)'},
+  rat: {name:'鼠·大清爆發',type:'famAtk',v:1.5,boost:{cond:'hit',gate:15,mul:2},    desc:'同鼠系攻 ×1.5;HIT≥15 → 同屬攻 ×2'},
+  fish:{name:'魚·連鎖增幅',type:'famAtk',v:1.5,boost:{cond:'combo',gate:2,mul:1.8}, desc:'同魚系攻 ×1.5;combo≥2 → 同屬攻 ×1.8'},
+  rabbit:{name:'兔·繁殖增幅',type:'famAtk',v:1.5,breed:true, desc:'同兔系攻 ×1.5;同屬宮被解 → 該屬塊 +1 LV'},
 };
 function activeSkill(el,id){ if(id&&CARD_ACTIVE[id])return CARD_ACTIVE[id]; const f=id&&CARD_FAMILY[id]; if(f&&FAMILY_ACTIVE[f])return FAMILY_ACTIVE[f]; return ACTIVE_SKILLS[el]||null; }   // 台灣各卡 > 家族 > 屬性預設
 /* F6 統一存檔:持有卡 / 編隊 / 進度 / 設定 一個物件全自動存 localStorage */
@@ -686,6 +688,7 @@ function freePull10(){ const out=[]; for(let i=0;i<10;i++){ const c=gachaPull('p
 /* ===== 出戰編隊 ===== */
 class TeamScene extends Phaser.Scene{
   constructor(){super('team');}
+  preload(){ _loadAllCardArt(this); }   // 編隊要看全部卡→進場載全部卡圖(guarded,載過不重載)
   create(data){
     this.tutTeam=!!(data&&data.tutorial);   // 從教學完成進來 → 顯示編隊教學
     this.tutTeamArmed=false;   // 重置脈動狀態(避免上次殘留)
@@ -880,11 +883,9 @@ class GameScene extends Phaser.Scene{
   preload(){ this.load.maxParallelDownloads=6;   // 限制同時下載數→對弱伺服器/弱網路更穩(避免一次塞太多卡住)
     for(const el in MONSTER_IMG){ if(!this.textures.exists('mon_'+el))this.load.image('mon_'+el, MONSTER_IMG[el]); }
     for(const k in ENEMY_IMG){ if(!this.textures.exists(k))this.load.image(k, ENEMY_IMG[k]); }
-    for(const id in CARD_ART){ ['thumb','full'].forEach(s=>{ const k='card_'+id+'_'+s; if(!this.textures.exists(k))this.load.image(k, 'art/cards/'+id+'_'+s+'.webp'); }); }   // 狗狗隊角色圖(thumb小/full大)
-    for(const d in DUNGEON_BG){ const b=DUNGEON_BG[d];
-      if(!this.textures.exists('bg_'+d+'_back'))this.load.image('bg_'+d+'_back', b.back);
-      if(!this.textures.exists('bg_'+d+'_front'))this.load.image('bg_'+d+'_front', b.front); }
-    TOWER_MID.forEach(c=>{ if(!this.textures.exists(c.key))this.load.image(c.key, c.src); });   // 載入怪物圖 + 方塊敵正式美術 + 關卡背景(前/後)+ 塔中景元素方塊
+    _loadCardArt(this, (this.presetTeam||[]).map(c=>c&&c.id));   // 只載「出戰 5 張」卡圖(不再一次載全部 40 張)
+    { const d=this.dungeonId, b=DUNGEON_BG[d]; if(b){ if(!this.textures.exists('bg_'+d+'_back'))this.load.image('bg_'+d+'_back', b.back); if(!this.textures.exists('bg_'+d+'_front'))this.load.image('bg_'+d+'_front', b.front); } }   // 只載「當前這關」背景(不再一次載全部地城)
+    if(this.dungeonId==='tower')TOWER_MID.forEach(c=>{ if(!this.textures.exists(c.key))this.load.image(c.key, c.src); });   // 塔中景元素方塊→只在打塔時載
   }   // ⚠️ 音訊(BGM 3~8MB + 音效)改「非阻塞」載入(見 _startStageAudio):不放阻塞 preload,否則弱網卡關甚至開不了
   // 非阻塞載入本關 BGM + 戰鬥音效(在 create 之後動態載;關卡已可玩,聲音背景串流→弱網不卡關)
   _startStageAudio(){
@@ -905,6 +906,7 @@ class GameScene extends Phaser.Scene{
     if(this.dungeonId==='prologue')dk='baby';   // 序章=新手村:挑圖固定當嬰兒級(只換外觀,不動數值)→ 魔王 boss_baby(m002)+雜兵 grunt(m001),不出 m003 以上兇怪
     if(e.boss){ const tier=dk==='baby'?'baby':(dk==='beginner'?'beg':'nrm'); const k='boss_'+tier+'_'+el; if(this.textures.exists(k))return k; }
     else{
+      if(e.healAlly>0&&this.textures.exists('healer_'+el))return 'healer_'+el;   // 補師(回血)→ m006 補師圖
       if(e.arch==='caster'&&this.textures.exists('caster_'+el))return 'caster_'+el;   // 術士兵(麻痺)→法師圖,兵種一眼分得出
       const adv=(dk!=='baby'&&dk!=='beginner');
       if(adv&&this.textures.exists('guard_'+el))return 'guard_'+el; }   // 中級(normal)以上雜兵(含魔王關護衛)→m003
@@ -1614,13 +1616,26 @@ class GameScene extends Phaser.Scene{
         if(!any)this.tonFloat('場上無剋屬敵','#9fb0c0'); this.updateEnemies(); });
       return;
     }
-    if(fam==='rat'){   // 🐭鼠潮:填滿該卡屬性宮並消除→大 HIT
-      const b=ELEMENT_BOXES[i], br=Math.floor(b/3)*3, bc=(b%3)*3;
+    if(fam==='rat'){   // 🐭鼠潮:方塊從上方「掉落填補」該屬性宮的空缺(連鐵塊一起砸穿)→ 大 HIT;中性表現(掉方塊,不綁角色,未來換角也通用)
+      const b=ELEMENT_BOXES[i], br=Math.floor(b/3)*3, bc=(b%3)*3, ADD=Phaser.BlendModes.ADD, cenB=this.cellCenter(br+1,bc+1), boxSz=2*CS+RECT;
       this.chargeAt(ox,oy,col,300);
       this.time.delayedCall(300,()=>{ this.labSnd('s_pick',0.6);
-        for(let r=br;r<br+3;r++)for(let c=bc;c<bc+3;c++){ if(!this.board[r][c])this.board[r][c]={el:this.boxElement[boxOf(r,c)]||el}; }   // 填滿自家屬性宮
-        this.refreshBoard();
-        this.time.delayedCall(160,()=>{ this.fromBlock=true; this._placeCleared=false; try{this.resolve();}catch(e){console.error('鼠潮 resolve',e);} this.fromBlock=false; this.refreshBoard(); }); });
+        const fills=[]; for(let r=br;r<br+3;r++)for(let c=bc;c<bc+3;c++){ const cur=this.board[r][c]; if(!cur||cur.el==='junk')fills.push([r,c,!!(cur&&cur.el==='junk')]); }   // 空格 + 鐵塊都要填(鐵塊會被砸穿)
+        let last=0;
+        fills.forEach(([r,c,isJunk])=>{ const cen=this.cellCenter(r,c), be=this.boxElement[boxOf(r,c)]||el, fcol=EL[be]?EL[be].color:NEUTRAL_FILL, d=Math.random()*220; last=Math.max(last,d+300);
+          this.time.delayedCall(d,()=>{ this.labSnd&&this.labSnd('s_pick',0.28);   // 一顆顆從上方掉入
+            const blk=this.add.rectangle(cen.x,cen.y-150,RECT,RECT,fcol,0.96).setStrokeStyle(2,shadeColor(fcol,0.55),0.8).setDepth(DEPTH.proj);
+            this.tweens.add({targets:blk,y:cen.y,duration:300,ease:'Bounce.out',onComplete:()=>{
+              if(isJunk){ this._junkShatter&&this._junkShatter(cen.x,cen.y,fcol,'break'); this.labSnd&&this.labSnd('s_block',0.4); }   // 砸中鐵塊→屬色爆開砸穿
+              this.board[r][c]={el:be}; this.refreshBoard(); blk.destroy();
+              const pf=this.add.circle(cen.x,cen.y+RECT*0.42,RECT*0.32,0xffffff,0.5).setBlendMode(ADD).setDepth(DEPTH.fx); this.tweens.add({targets:pf,scaleX:2.2,scaleY:0.35,alpha:0,duration:200,onComplete:()=>pf.destroy()});   // 落地塵
+            }}); });
+        });
+        this.time.delayedCall(last+90,()=>{   // 全部落定→滿宮爆閃 + 衝擊環 → 大 HIT 清除
+          const fl=this.add.rectangle(cenB.x,cenB.y,boxSz,boxSz,col,0.5).setBlendMode(ADD).setDepth(DEPTH.fx); this.tweens.add({targets:fl,alpha:0,scaleX:1.18,scaleY:1.18,duration:300,onComplete:()=>fl.destroy()});
+          const ring=this.add.circle(cenB.x,cenB.y,boxSz*0.42,col,0).setStrokeStyle(4,col,0.9).setBlendMode(ADD).setDepth(DEPTH.fx); this.tweens.add({targets:ring,scale:2.4,alpha:0,duration:440,ease:'Quad.out',onComplete:()=>ring.destroy()});
+          this.fromBlock=true; this._placeCleared=false; try{this.resolve();}catch(e){console.error('鼠潮 resolve',e);} this.fromBlock=false; this.refreshBoard(); });
+      });
       return;
     }
     if(fam==='fish'){   // 🐟活水:之後 6 手內,清「該屬宮」也按格數回血
@@ -1845,6 +1860,35 @@ class GameScene extends Phaser.Scene{
   _eneCast(e){ if(!e||!e.sprite)return; const sp=e.sprite,ry=(e.restY!=null?e.restY:sp.y),sc=e.baseScale||sp.scaleX||1;   // 輔助技(補師/自療/護盾):脹大上浮→落回(詠唱感,非俯衝)
     if(e.bob){e.bob.stop();e.bob=null;} this.tweens.killTweensOf(sp); sp.setY(ry);
     this.tweens.add({targets:sp,y:ry-12,scaleX:sc*1.12,scaleY:sc*1.12,duration:230,ease:'Quad.out',yoyo:true,onComplete:()=>{ if(!e.dead)this.refreshBob(e); }}); }
+  _medicAct(e){   // 補師出手決策:魔王=攻擊(+有人受損同手補 20%;小兵全滅→復活)/雜兵=雙模式(全滿→攻擊、受損→補血)
+    const others=this.enemies.filter(x=>x!==e), anyDmg=this.enemies.some(x=>!x.dead&&x.hp>0&&x.hp<x.max);
+    if(e.boss){
+      if(others.length>0 && others.every(x=>x.dead||x.hp<=0)){ this._enemyRevive(e); return; }   // 小兵全滅→這手復活(不攻擊不補)
+      this.enemyAttack(e); if(anyDmg)this._enemyHeal(e);   // 魔王照常攻擊;有人受損→同手補
+    } else {
+      if(anyDmg)this._enemyHeal(e); else this.enemyAttack(e);   // 雜兵補師:受損補、全滿打
+    } }
+  _enemyHeal(medic){   // 補師補血:詠唱+粉紅集氣→全體活著友軍冒愛心+回血(照抄實驗室 demoLabMedic)
+    const rate=medic.healAlly||0.1, sx=medic.sprite?medic.sprite.x:CX, sy=medic.sprite?medic.sprite.y:60;
+    this._eneCast(medic); this.chargeAt(sx,sy,0xe87ab0,360); this.labSnd&&this.labSnd('s_clear15',0.45);
+    this.time.delayedCall(360,()=>{ this.labSnd&&this.labSnd('s_heal',0.7);
+      this.enemies.forEach(a=>{ if(a.dead||a.hp<=0||!a.sprite)return; const hh=Math.max(1,Math.round(a.max*rate)); a.hp=Math.min(a.max,a.hp+hh); this._hearts&&this._hearts(a.sprite.x,a.sprite.y); this.floatText(a.sprite.x,a.sprite.y-24,'💚+'+hh,'#74e09a'); });
+      this.updateEnemies(); }); }
+  _enemyRevive(boss){   // 🌊水魔王:小兵全滅→詠唱大復活(死掉小兵一次回滿血重新入場),炫演出:畫面閃+綠光波+愛心
+    const bx=boss.sprite?boss.sprite.x:CX, by=boss.sprite?boss.sprite.y:60, ADD=Phaser.BlendModes.ADD, dead=this.enemies.filter(m=>m!==boss&&m.dead&&m.sprite);
+    if(!dead.length){ this.enemyAttack(boss); return; }   // 沒有可復活的→退回攻擊
+    this._eneCast(boss); this.chargeAt(bx,by,0x8affc0,460); this.labSnd&&this.labSnd('s_clear15',0.5); this.cameras.main.flash(240,120,255,170,false); this.floatText(bx,by-30,'🌊 潮湧復甦!','#9fffc0');
+    this.time.delayedCall(460,()=>{ this.labSnd&&this.labSnd('s_boom',0.5);
+      dead.forEach((m,k)=>this.time.delayedCall(k*140,()=>{
+        m.dead=false; m.hp=m.max; if(m.hpTw){m.hpTw.stop();m.hpTw=null;}
+        const sp=m.sprite; sp.setVisible(true); sp.clearTint&&sp.clearTint(); [m.turnG,m.hpGfx,m.shadow].forEach(o=>{if(o)o.setVisible(true);}); if(m.card)m.card.setInteractive();
+        this.enemyEnter&&this.enemyEnter(m,0);
+        const mx=sp.x, my=(m.restY!=null?m.restY:sp.y); this.labSnd&&this.labSnd('s_heal',0.5); this._hearts&&this._hearts(mx,my);
+        const fl=this.add.circle(mx,my,28,0xbfffd6,0.9).setBlendMode(ADD).setDepth(DEPTH.fx); this.tweens.add({targets:fl,scale:2.8,alpha:0,duration:440,onComplete:()=>fl.destroy()});
+        const rg=this.add.circle(mx,my,20,0x8affc0,0).setStrokeStyle(4,0x8affc0,0.9).setBlendMode(ADD).setDepth(DEPTH.fx); this.tweens.add({targets:rg,scale:4,alpha:0,duration:560,ease:'Quad.out',onComplete:()=>rg.destroy()});
+        this.floatText(mx,my-30,'復活!','#9fffc0');
+      }));
+      this.time.delayedCall(dead.length*140+420,()=>{ this.targetEnemy&&this.targetEnemy(); this.updateEnemies(); }); }); }
   demoLabBurn(){ const e=this.enemies.find(x=>!x.dead),sx=e&&e.sprite?e.sprite.x:CX,sy=e&&e.sprite?e.sprite.y:60, fx=BX0+(W-2*BX0)*Math.max(0.05,this.playerHP/this.maxHP);   // 🦠中毒:撲+集紫氣→打HP末端→中毒
     this._eneLunge(e); this._eneFly(sx,sy,fx,PHP_Y,0xb060e0,340,()=>{ this.labSnd&&this.labSnd('s_player',0.7); const fl=this.add.circle(fx,PHP_Y,16,0xb060e0,0.9).setBlendMode(Phaser.BlendModes.ADD).setDepth(DEPTH.fx); this.tweens.add({targets:fl,scale:2.6,alpha:0,duration:340,onComplete:()=>fl.destroy()}); this.cameras.main.shake(160,0.006); this.applyPoison(3); this.floatText(CX,PHP_Y-22,'🦠 中毒 3 輪','#c890f0'); }); }
   demoLabMedic(){ const alive=this.enemies.filter(e=>!e.dead); if(alive.length<1)return; const c0=alive[0],sx=c0.sprite?c0.sprite.x:CX,sy=c0.sprite?c0.sprite.y:60;   // ➕補師:施法+集粉紅氣→全體夥伴直接冒愛心(不飛彈)
@@ -2208,12 +2252,11 @@ class GameScene extends Phaser.Scene{
       if(this.resultOpen){this.locked=false;return;}   // 期間已開結算/勝敗畫面→不再推進
       try{
         this._shieldHandActive=false; this._shieldBreakShown=false;   // 🐻本手護盾旗標重置:首次擋下→轉 true→這一手所有敵攻都無效;_shieldBreakShown→本手只演一次整片破盾、其餘輕擋
-        this.enemies.forEach(e=>{if(e.dead||e.hp<=0)return; if((e.sealed||0)>0){e.sealed--; return;} if(e._finInterrupted){e._finInterrupted=false; return;} if(e._charging){this.enemyFinisher(e); this.animTurnGlass(e); return;} e.timer--; if(e.timer<=0){ if(e.finisher>0)this.enemyFinisher(e); else {this.enemyAttack(e); e.timer=e.interval;} } this.animTurnGlass(e);});   // 敵出手;★本手剛被打斷終結技的敵→跳過不動作(免被打飛還 timer--歸零反擊);蓄力中每手固定推進一階;封印=凍結;致死未播完→不出手
+        this.enemies.forEach(e=>{if(e.dead||e.hp<=0)return; if((e.sealed||0)>0){e.sealed--; return;} if(e._finInterrupted){e._finInterrupted=false; return;} if(e._charging){this.enemyFinisher(e); this.animTurnGlass(e); return;} e.timer--; if(e.timer<=0){ if(e.finisher>0)this.enemyFinisher(e); else if(e.healAlly>0){this._medicAct(e); e.timer=e.interval;} else {this.enemyAttack(e); e.timer=e.interval;} } this.animTurnGlass(e);});   // 敵出手;補師=雙模式/魔王補師=攻擊+補+復活(_medicAct);★被打斷終結技的敵→跳過;蓄力中每手推進一階;封印=凍結
         const dotRate=Math.max(0,...this.enemies.filter(e=>!e.dead&&e.hp>0&&!(e.sealed>0)).map(e=>e.dot||0));   // 🔥火關灼燒光環:有灼燒敵活著→每手扣玩家血(取最大率、不疊加);★封印中不灼燒
         if(dotRate>0){const dd=Math.max(1,Math.round(this.maxHP*dotRate));this.playerHP=Math.max(0,this.playerHP-dd);this.floatText(CX,PHP_Y-16,'🔥灼燒 -'+dd,'#ff7a4a');this.animPlayerHP(false);if(this.playerHP<=0)this.gameOver('灼燒焚身');}
         this.enemies.forEach(e=>{if(!e.dead&&e.hp>0&&!(e.sealed>0)&&e.regen>0){const hh=Math.max(1,Math.round(e.max*e.regen));e.hp=Math.min(e.max,e.hp+hh);if(e.sprite)this.floatText(e.sprite.x,e.sprite.y-24,'💚+'+hh,'#74e09a');}});   // 💚水關自我回血:每隻回血敵每手回自身血(致死 hp≤0 不回→不會復活);★封印中不自療
-        const healR=Math.max(0,...this.enemies.filter(e=>!e.dead&&e.hp>0&&!(e.sealed>0)&&e.healAlly>0).map(e=>e.healAlly));   // 💚補師:有補師活著→每手治療全體友軍(逼先秒補師);★封印中的補師不補
-        if(healR>0)this.enemies.forEach(e=>{if(!e.dead&&e.hp>0){const hh=Math.max(1,Math.round(e.max*healR));e.hp=Math.min(e.max,e.hp+hh);if(e.sprite)this.floatText(e.sprite.x,e.sprite.y-24,'💚+'+hh,'#74e09a');}});
+        // 💚補師改為「主動出手」(見上方 forEach → _medicAct):雙模式雜兵 / 攻擊+補+復活魔王,不再被動光環每手補
         if(showed)this.charge=this.charge.map((c,i)=>{const a=activeSkill(this.teamCards[i].el,this.presetTeam&&this.presetTeam[i]&&this.presetTeam[i].id);return a?Math.min(a.cd,(c||0)+1):c;});   // 主動技蓄力:本手有消塊才+1(綁消塊→不能擺爛farm蓄力跳過拼圖)
         this.renderCharges();
         if(this._reviveCD>0){this._reviveCD--; if(this._reviveCD<=0){this._reviveReady=true; this._syncShieldFx&&this._syncShieldFx(); this.updLeadBadge&&this.updLeadBadge(); const _bx=BX0+16; const _fl=this.add.circle(_bx,PHP_Y,15,0xffd0e6,0.9).setBlendMode(Phaser.BlendModes.ADD).setDepth(DEPTH.morale+2); this.tweens.add({targets:_fl,scale:2.4,alpha:0,duration:420,onComplete:()=>_fl.destroy()}); this.floatText(CX,PHP_Y-30,'💗 迴生就緒','#ff9ecb');}}   // 🐟冰河迴生:過 N 手後再生→血條轉粉呼吸 + 徽章粉閃 +「就緒」
@@ -2488,7 +2531,7 @@ class GameScene extends Phaser.Scene{
   }}
   // 存放屬塊到「該屬性的卡」:優先填空卡,否則升級最低階那張;每卡最多1塊、留最高LV(上限LV5)
   storeBlock(el,lv){if(!this.stored)this.stored=[null,null,null,null,null];
-    if(this.lead&&this.lead.type==='breed'&&el===this.lead.el)lv+=1;   // 🐰繁殖增幅:解隊長屬宮→該屬塊 +1 LV
+    if(this.lead&&(this.lead.type==='breed'||this.lead.breed)&&el===this.lead.el)lv+=1;   // 🐰繁殖增幅:解隊長屬宮→該屬塊 +1 LV(兔家族 famAtk 上疊 breed 旗標)
     lv=Math.max(1,Math.min(5,lv));
     const slots=[]; this.teamCards.forEach((c,i)=>{if(c.el===el)slots.push(i);});
     if(!slots.length)return;
@@ -3019,6 +3062,7 @@ class GameScene extends Phaser.Scene{
 /* ===== 卡冊 → 背包(怪物箱):網格 → 點卡進詳細頁 + 操作 ===== */
 class CollectionScene extends Phaser.Scene{
   constructor(){super('collection');}
+  preload(){ _loadAllCardArt(this); }   // 卡冊要看全部卡→進場載全部卡圖
   init(d){this.sel=(d&&d.sel)||null;
     if(this.sortMode==null)this.sortMode=0;
     if(this.filterEl===undefined)this.filterEl=null;
@@ -3134,14 +3178,14 @@ const DUNGEON_COST=10;
 class HomeScene extends Phaser.Scene{
   constructor(){super('home');}
   init(d){this.tab=(d&&d.tab)||this.tab||'dungeon';}
-  preload(){ for(const id in CARD_ART){ ['thumb','full'].forEach(s=>{ const k='card_'+id+'_'+s; if(!this.textures.exists(k))this.load.image(k, 'art/cards/'+id+'_'+s+'.webp'); }); }
-    if(!this.cache.audio.exists('bgm_home'))this.load.audio('bgm_home','snd/bgm_home.mp3'); }   // 大廳背景音樂
+  preload(){ _loadCardArt(this, loadTeam()); }   // 大廳只載「當前隊」卡圖(不再一次載全部);bgm_home 改非阻塞(見 create → _startHomeBgm)→大廳秒開
   create(){this.add.rectangle(CX,H/2,W,H,0x160f18);
     const st=loadSave().settings||{};
     if(st.freePull){ mutSave(s=>{s.settings.freePull=false;}); this.tab='gacha'; this.gachaResult=freePull10(); this.gachaRevealed=false; this._afterPull='team'; }   // 教學完成→免費十連 reveal(看完導向編隊教學)
     this.rebuild();
-    if(this.cache.audio.exists('bgm_home')){ this._bgmBase=0.45; this.bgmMp3=this.sound.add('bgm_home',{loop:true,volume:0.45*(SFX.bgmVol?SFX.bgmVol():1)}); this.bgmMp3.play(); }   // 大廳背景音樂(×背景音量)
-    this.events.once('shutdown',()=>{ if(this.bgmMp3){this.bgmMp3.stop();this.bgmMp3.destroy();this.bgmMp3=null;} });   // 離開大廳(進關等)→停大廳音樂
+    this._homeLeft=false; const _bk='bgm_home', _playHome=()=>{ if(this._homeLeft||this.bgmMp3)return; if(this.cache.audio.exists(_bk)){ this._bgmBase=0.45; this.bgmMp3=this.sound.add(_bk,{loop:true,volume:0.45*(SFX.bgmVol?SFX.bgmVol():1)}); try{this.bgmMp3.play();}catch(e){} } };
+    if(this.cache.audio.exists(_bk))_playHome(); else { this.load.audio(_bk,'snd/bgm_home.mp3'); this.load.once('complete',_playHome); try{this.load.start();}catch(e){} }   // 大廳 BGM 非阻塞:先開畫面,BGM 載好再播→大廳秒開
+    this.events.once('shutdown',()=>{ this._homeLeft=true; if(this.bgmMp3){this.bgmMp3.stop();this.bgmMp3.destroy();this.bgmMp3=null;} });   // 離開大廳(進關等)→停大廳音樂
     this.scale.on('resize',()=>{const o=H;recomputeLayout();if(Math.abs(H-o)>3){this.scale.setGameSize(W,H);this.rebuild();}});
     if(!tutSeen() && ['c03','c06','c19','c10','c12'].every(id=>isOwned(id))){   // 首次啟動 + 有狗狗隊 → 自動進互動教學(先設 tutSeen 保證只跑一次,任何方式離開都不再自動觸發)
       setTutSeen(); this.time.delayedCall(300,()=>{ const team=['c03','c06','c19','c10','c12'].map(id=>ROSTER.find(c=>c.id===id)); this.scene.manager.start('game',{team:team,dungeonId:'prologue',tutorial:true}); this.scene.manager.stop('home'); }); return; }
@@ -3463,6 +3507,7 @@ class HomeScene extends Phaser.Scene{
 /* ===== 強化合成(養成) ===== */
 class FuseScene extends Phaser.Scene{
   constructor(){super('fuse');}
+  preload(){ _loadAllCardArt(this); }   // 合成要看卡→進場載全部卡圖
   init(d){this.target=(d&&d.target)||this.target||loadTeam()[0];this.mode='feed';if(this.feedPage==null)this.feedPage=0;this.sel=[];}   // sel=已選素材個體 u 陣列(進場清空)
   create(){this.add.rectangle(CX,H/2,W,H,0x160f18);this.rebuild();
     bindGridSwipe(this,210,H-92,'feedPage');   // 素材格區拖曳換頁(慣性滑動)
@@ -3570,6 +3615,7 @@ class FuseScene extends Phaser.Scene{
 // ===== 卡片圖鑑(全卡種 · 6 物種隊分組 · 未收集顯示 ❓ · 可滾動)=====
 class DexScene extends Phaser.Scene{
   constructor(){super('dex');}
+  preload(){ _loadAllCardArt(this); }   // 圖鑑要看全部卡→進場載全部卡圖
   create(){ this.add.rectangle(CX,H/2,W,H,0x160f18);
     this.scrollY=0; this.contentH=0; this.dragFrom=null; this.dragMoved=0;
     this.build();

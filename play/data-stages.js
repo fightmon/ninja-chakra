@@ -130,7 +130,7 @@ function behGates(beh, dk, full){
   else if(beh==='burn')    g.dot      = (lite?0.015:0.03)*dm;
   else if(beh==='regen')   g.regen    = (lite?0.03:0.06)*dm;
   else if(beh==='paralyze')g.paralyze = lite? 1 : 2;                 // 鎖幾手
-  else if(beh==='healAlly')g.healAlly = (lite?0.025:0.06)*dm;        // 補師:回全體比例
+  else if(beh==='healAlly')g.healAlly = (lite?0.10:0.20)*dm;        // 補師:回全體比例(雜兵 10% / 完整=魔王 20%)
   else if(beh==='junk')    g.junk     = lite? 4 : 2;                 // 封鎖:間隔(越小越頻;lite 較少)
   else if(beh==='finisher')g.finisher = (lite?0.4:0.6)*dm;          // 🔥終結:大招傷害佔 maxHP(要有感;lite≈40%、full≈60%)
   else if(beh==='eatStored')g.eatStored= lite? 1 : 99;              // 🌪️消屬塊:1=−1LV、99=整個消掉
