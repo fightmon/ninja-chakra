@@ -23,8 +23,8 @@ const DUNGEONS = {
     ],drops:[[{el:'water',rate:0.8}],[{el:'water',rate:1.0}],[{el:'water',rate:1.0},{rank:'jonin',rate:0.2}]]},
   thunder:{id:'thunder',name:'雷之高原',emoji:'⚡',el:'thunder',cost:12,stages:[
       {es:[{el:'thunder',hp:720,atk:110,turns:3}]},
-      {es:[{el:'thunder',hp:600,atk:100,turns:2,arch:'artillery'},{el:'thunder',hp:600,atk:100,turns:2}]},
-      {es:[{el:'thunder',hp:500,atk:100,turns:2,arch:'healer'},{el:'thunder',hp:2000,atk:210,turns:3,boss:true},{el:'thunder',hp:500,atk:100,turns:2,arch:'artillery'}]},
+      {es:[{el:'thunder',hp:600,atk:100,turns:2},{el:'thunder',hp:600,atk:100,turns:2}]},
+      {es:[{el:'thunder',hp:500,atk:100,turns:2},{el:'thunder',hp:2000,atk:210,turns:3,boss:true},{el:'thunder',hp:500,atk:100,turns:2}]},
     ],drops:[[{el:'thunder',rate:0.8}],[{el:'thunder',rate:1.0}],[{el:'thunder',rate:1.0},{rank:'jonin',rate:0.2}]]},
   earth:{id:'earth',name:'土之山岳',emoji:'⛰️',el:'earth',cost:12,stages:[
       {es:[{el:'earth',hp:700,atk:100,turns:2}]},
@@ -33,8 +33,8 @@ const DUNGEONS = {
     ],drops:[[{el:'earth',rate:0.8}],[{el:'earth',rate:1.0}],[{el:'earth',rate:1.0},{rank:'jonin',rate:0.2}]]},
   wind:{id:'wind',name:'風之峽谷',emoji:'🌪️',el:'wind',cost:12,stages:[
       {es:[{el:'wind',hp:680,atk:100,turns:2}]},
-      {es:[{el:'wind',hp:580,atk:90,turns:2,arch:'caster'},{el:'wind',hp:580,atk:90,turns:2}]},
-      {es:[{el:'wind',hp:500,atk:90,turns:2,arch:'caster'},{el:'wind',hp:1900,atk:200,turns:3,boss:true},{el:'wind',hp:500,atk:90,turns:2,arch:'artillery'}]},
+      {es:[{el:'wind',hp:580,atk:90,turns:2},{el:'wind',hp:580,atk:90,turns:2}]},
+      {es:[{el:'wind',hp:500,atk:90,turns:2},{el:'wind',hp:1900,atk:200,turns:3,boss:true},{el:'wind',hp:500,atk:90,turns:2}]},
     ],drops:[[{el:'wind',rate:0.8}],[{el:'wind',rate:1.0}],[{el:'wind',rate:1.0},{rank:'jonin',rate:0.2}]]},
   tower:{id:'tower',name:'結印之塔',emoji:'🗼',cost:20,stages:[
       {es:[{el:'fire',hp:800,atk:120,turns:2},{el:'water',hp:800,atk:120,turns:2}]},
@@ -129,11 +129,12 @@ function behGates(beh, dk, full){
   else if(beh==='combo')   g.comboGate= lite? 2 : 3;
   else if(beh==='burn')    g.dot      = (lite?0.015:0.03)*dm;
   else if(beh==='regen')   g.regen    = (lite?0.03:0.06)*dm;
-  else if(beh==='paralyze')g.paralyze = lite? 1 : 2;                 // 鎖幾手
+  else if(beh==='paralyze')g.paralyze = 1;                 // ⚡麻痺:值=每塊被鎖的回合數(中級=1);CD(術士2/魔王1)由 applyParalyze 依 boss 決定
   else if(beh==='healAlly')g.healAlly = (lite?0.10:0.20)*dm;        // 補師:回全體比例(雜兵 10% / 完整=魔王 20%)
   else if(beh==='junk')    g.junk     = lite? 4 : 2;                 // 封鎖:間隔(越小越頻;lite 較少)
   else if(beh==='finisher')g.finisher = (lite?0.4:0.6)*dm;          // 🔥終結:大招傷害佔 maxHP(要有感;lite≈40%、full≈60%)
   else if(beh==='eatStored')g.eatStored= lite? 1 : 99;              // 🌪️消屬塊:1=−1LV、99=整個消掉
+  else if(beh==='shield')   g.shield   = 1;                        // 🛡土護盾:標記(實際盾型 hit/combo 由 spawnStage 依關卡設)
   return g;
 }
 
@@ -143,12 +144,12 @@ function spawnStage(dungeonId, diffKey, stageIdx){
   const df=DIFFS_BY[diffKey]||DIFFS_BY.normal;
   const defs=resolveStages(dungeon, diffKey)[stageIdx].es;
   let pun=null; if(df.counter&&dungeon.el){const C=counterOf(dungeon.el); pun=counterOf(C);} let punished=false;   // 反制混搭:上級↑元素關塞一隻懲罰屬
-  const dk=df.key, dEl=dungeon.el, SIG={fire:'finisher',water:'healAlly',thunder:'paralyze',earth:'junk',wind:'eatStored'}, myBeh=SIG[dEl];   // 五屬城中級魔王技定案(火終結/水補師/雷麻痺/土封鎖/風消屬塊)
+  const dk=df.key, dEl=dungeon.el, SIG={fire:'finisher',water:'healAlly',thunder:'paralyze',earth:'shield',wind:'eatStored'}, myBeh=SIG[dEl];   // 五屬城中級招定案(火終結/水補師/雷麻痺/土護盾/風消屬塊)
   const covered=(d)=>{ if(dk==='advanced'||dk==='super')return !!d.boss; if(dk==='hell')return true; return false; };   // 上級/超級僅魔王(完整版),地獄全敵。中級的梯度另在下方 beh 指派處理
   const noSkill=(dk==='baby'||dk==='beginner');   // 嬰兒/初級:純數值,無技
   const stageHasBoss=defs.some(x=>x.boss);
-  let litePicked=false;   // 城內梯度:小關(無魔王)選「一隻雜兵」帶輕鬆版該屬技
-  return defs.map(d=>{
+  const specialIdx = stageHasBoss ? -1 : (stageIdx===0 ? defs.length-1 : Math.floor(defs.length/2));   // 城內梯度:小關(無魔王)哪隻雜兵帶特殊技→第1關(S1)最右、其餘小關(S2…)中間
+  return defs.map((d,idx)=>{
     let el=d.el; if(pun&&!punished&&d.el===dEl&&!d.boss){el=pun;punished=true;}
     const A=(d.arch&&ARCH[d.arch])||null;
     const hp=Math.max(1,Math.round(d.hp*df.hp*(A?A.hpM:1)*ENEMY_HP_MUL)),
@@ -161,11 +162,12 @@ function spawnStage(dungeonId, diffKey, stageIdx){
     else if(myBeh && !noSkill){                                                           // 屬城招:中級起開(嬰兒/初級無)
       if(d.boss){ beh=myBeh; full=true; }                                                 // 魔王 = 完整版
       else if(covered(d)){ beh=myBeh; full=true; }                                        // 地獄雜兵 = 完整
-      else if(!litePicked && !stageHasBoss){ beh=myBeh; full=false; litePicked=true; }    // 小關:一隻雜兵帶輕鬆版
+      else if(!stageHasBoss && idx===specialIdx){ beh=myBeh; full=false; }    // 小關:指定位置的雜兵帶輕鬆版(S1右/S2中)
     }
     else if(dk==='hell'&&dEl&&!myBeh){ beh='hit'; full=true; }
     const g=behGates(beh, dk, full);
-    const ival=(g.healAlly>0)?1:turns;   // 💚補師 CD=1:每手都出手(補/攻/復活),不再隔手發呆
+    if(g.shield){ const kind=(stageIdx===0)?'combo':'hit'; if(kind==='combo'){g.comboGate=2;g.hitGate=0;}else{g.hitGate=15;g.comboGate=0;} g.shieldKind=kind; }   // 🛡盾型:S1(stageIdx0)=連段2、S2/魔王=HIT15
+    const ival=(g.healAlly>0||(g.eatStored>0&&d.boss)||(g.paralyze>0&&d.boss))?1:turns;   // 💚補師 CD=1;🌀消塊魔王 CD=1;⚡麻痺魔王 CD=1(每手鎖或攻擊);術士 CD=turns(=2)
     return {el,max:hp,hp:hp,atk:atk,interval:ival,timer:Math.max(2,ival),burn:0,dead:false,boss:!!d.boss,guard:(!d.boss&&stageHasBoss),...g,phases,phaseIdx:0,arch:d.arch||null};   // 每關初始 timer≥2:每關開場至少 2 手才挨第一拳(防上關清空盤面、下關一進場就連挨);interval(之後頻率)不變
   });
 }
