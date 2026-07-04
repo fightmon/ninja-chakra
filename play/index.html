@@ -1885,11 +1885,14 @@ class GameScene extends Phaser.Scene{
   _medicAct(e){   // 補師出手:雜兵雙模式(滿血攻/受損補);魔王=攻擊(+受損補20%);小兵全滅→詠唱復活(下手成、可被剋屬打斷、共2次額度、成功後力竭CD2)
     const anyDmg=this.enemies.some(x=>!x.dead&&x.hp>0&&x.hp<x.max);
     if(!e.boss){ if(anyDmg)this._enemyHeal(e); else this.enemyAttack(e); e.timer=e.interval; return; }
-    if(e._reviveCharges==null)e._reviveCharges=2;
-    if(this._reviveCast && this._reviveCast.boss===e){ this._fireRevive(); e.timer=2; return; }   // 詠唱完成→復活→力竭 CD2
+    // 🌊水魔王=詠唱制:一手只做一件事(不再邊打邊補),補血/復活都不攻擊、都可被土(剋水)打斷
+    if(this._reviveCast && this._reviveCast.boss===e){ if(--this._reviveCast.readyIn<=0)this._fireRevive(); e.timer=e.interval; return; }   // 復活詠唱中(不攻擊)→ 2CD,readyIn 歸0才完成
+    if(this._healCast && this._healCast.boss===e){ if(--this._healCast.readyIn<=0)this._fireHeal(e); e.timer=e.interval; return; }   // 補血詠唱中(不攻擊)→ 1CD,下手完成
     const others=this.enemies.filter(x=>x!==e);
-    if(others.length>0 && others.every(x=>x.dead||x.hp<=0) && e._reviveCharges>0){ e._reviveCharges--; this._buildReviveCast(e); e.timer=e.interval; return; }   // 小兵全滅→開始詠唱(消耗一次額度,下手完成;不攻擊不補)
-    this.enemyAttack(e); if(anyDmg)this._enemyHeal(e); e.timer=e.interval;   // 照常攻擊(+有人受損同手補 20%)
+    if(e._reviveCharges==null)e._reviveCharges=2;
+    if(others.length>0 && others.every(x=>x.dead||x.hp<=0) && e._reviveCharges>0){ e._reviveCharges--; this._buildReviveCast(e); this._reviveCast.readyIn=2; e.timer=e.interval; return; }   // 小兵全滅→起手詠唱復活(2CD,共2次額度,不攻擊)
+    if(anyDmg){ this._buildHealCast(e); e.timer=e.interval; return; }   // 有人受損→起手詠唱補血(1CD,不攻擊)→ 下手完成
+    this.enemyAttack(e); e.timer=e.interval;   // 都不需要→攻擊
   }
   _enemyHeal(medic){   // 補師補血:詠唱+粉紅集氣→全體活著友軍冒愛心+回血(照抄實驗室 demoLabMedic)
     const rate=medic.healAlly||0.1, sx=medic.sprite?medic.sprite.x:CX, sy=medic.sprite?medic.sprite.y:60;
@@ -2012,6 +2015,24 @@ class GameScene extends Phaser.Scene{
       for(let k=0;k<26;k++){const a=Math.random()*Math.PI*2,r0=44+Math.random()*70,sq=this.add.rectangle(bx,by,7+Math.random()*7,7+Math.random()*7,k%2?0x9fd0ff:0xffffff,1).setAngle(Math.random()*90).setBlendMode(ADD).setDepth(DEPTH.fx); this.tweens.add({targets:sq,x:bx+Math.cos(a)*r0,y:by+Math.sin(a)*r0,angle:Phaser.Math.Between(-200,200),alpha:0,scale:0.3,duration:700+Math.random()*400,ease:'Quad.out',onComplete:()=>sq.destroy()});}
       if(rc.cross)rc.cross.destroy(); rc.circles.forEach(c=>{ if(c.tw)c.tw.stop(); if(c.bub)c.bub.remove(); if(c.cross)this.tweens.add({targets:c.cross,alpha:0,scaleX:0.6,scaleY:0.6,duration:260,onComplete:()=>c.cross.destroy()}); });
       this.floatText(bx,by-10,'⚡ 打斷復活!','#fff0c0'); }); }
+  _buildHealCast(boss){ const ADD=Phaser.BlendModes.ADD, bx=boss.sprite.x, by=boss.sprite.y+(boss.cardH||80)*0.06, grn=0x74e0a0;   // 💚詠唱補血:魔王身前綠色醫療十字 + 綠粒子往中心集中(1CD,下手完成;可被土打斷)。這手不攻擊
+    this._eneCast(boss); this.labSnd&&this.labSnd('s_clear15',0.5); this.floatText(bx,by-42,'💚 詠唱補血…','#bfffd0');
+    const cross=this.add.container(bx,by,[]).setDepth(DEPTH.fx), glow=this.add.circle(0,0,30,grn,0.22).setBlendMode(ADD), vBar=this.add.rectangle(0,0,8,40,0xd6ffe4,0.95).setBlendMode(ADD), hBar=this.add.rectangle(0,0,40,8,0xd6ffe4,0.95).setBlendMode(ADD);
+    cross.add([glow,vBar,hBar]); cross.setScale(0.35); this.tweens.add({targets:cross,scaleX:1,scaleY:1,duration:280,ease:'Back.out'});
+    const pulse=this.tweens.add({targets:cross,scaleX:1.16,scaleY:1.16,duration:480,yoyo:true,repeat:-1,ease:'Sine.inOut'});
+    const gather=this.time.addEvent({delay:54,loop:true,callback:()=>{ if(!cross.active)return; const a=Math.random()*Math.PI*2,d=46+Math.random()*40,p=this.add.circle(bx+Math.cos(a)*d,by+Math.sin(a)*d,2.4+Math.random()*2,grn,1).setBlendMode(ADD).setDepth(DEPTH.fx); this.tweens.add({targets:p,x:bx,y:by,alpha:0.25,scale:0.3,duration:440,ease:'Quad.in',onComplete:()=>p.destroy()}); }});
+    this._healCast={boss,cross,pulse,gather,readyIn:1}; }
+  _fireHeal(boss){ const hc=this._healCast; if(!hc)return; this._healCast=null; if(hc.pulse)hc.pulse.stop(); if(hc.gather)hc.gather.remove();   // 詠唱完成→全體活著友軍回 max×20%(魔王 rate=healAlly)
+    if(hc.cross)this.tweens.add({targets:hc.cross,scaleX:1.5,scaleY:1.5,alpha:0,duration:300,onComplete:()=>hc.cross.destroy()});
+    const rate=boss.healAlly||0.2; this.labSnd&&this.labSnd('s_heal',0.75);
+    this.enemies.forEach(a=>{ if(a.dead||a.hp<=0||!a.sprite)return; const hh=Math.max(1,Math.round(a.max*rate)); a.hp=Math.min(a.max,a.hp+hh); this._hearts&&this._hearts(a.sprite.x,a.sprite.y); this.floatText(a.sprite.x,a.sprite.y-24,'💚+'+hh,'#74e09a'); });
+    this.updateEnemies&&this.updateEnemies(); }
+  _breakHealCast(){ const hc=this._healCast; if(!hc||hc._breaking)return; hc._breaking=true; this._healCast=null; const ADD=Phaser.BlendModes.ADD, bx=hc.cross.x, by=hc.cross.y, fromY=by+140, ctrl={x:bx+24,y:(by+fromY)/2};   // 土(剋水)打斷補血:彈著飛向十字→命中碎(同復活打斷語言)
+    this.labSnd&&this.labSnd(['s_fire1','s_fire2','s_fire3'][Math.floor(Math.random()*3)],0.5);
+    this.flyBall(bx,fromY,bx,by,0x9fe0b0,ctrl,340,()=>{ if(hc.pulse)hc.pulse.stop(); if(hc.gather)hc.gather.remove(); this.labSnd&&this.labSnd('s_block',0.6);
+      const fl=this.add.circle(bx,by,32,0xffffff,0.9).setBlendMode(ADD).setDepth(DEPTH.fx); this.tweens.add({targets:fl,scale:2.4,alpha:0,duration:360,onComplete:()=>fl.destroy()});
+      for(let k=0;k<18;k++){const a=Math.random()*Math.PI*2,r0=36+Math.random()*50,sq=this.add.rectangle(bx,by,6+Math.random()*6,6+Math.random()*6,k%2?0x9fe0b0:0xffffff,1).setAngle(Math.random()*90).setBlendMode(ADD).setDepth(DEPTH.fx); this.tweens.add({targets:sq,x:bx+Math.cos(a)*r0,y:by+Math.sin(a)*r0,angle:Phaser.Math.Between(-180,180),alpha:0,scale:0.3,duration:560+Math.random()*300,ease:'Quad.out',onComplete:()=>sq.destroy()});}
+      if(hc.cross)hc.cross.destroy(); this.floatText(bx,by-14,'💚 補血中斷!','#bfffd0'); }); }
   _labBoss(){ return this.enemies&&(this.enemies.find(e=>e.boss&&!e.dead)||this.enemies.find(e=>!e.dead)); }   // 魔王技目標=王(沒王就第一隻)
   demoLabAbsorb(){   // ⭐元素吸收:王身上掛屬色光環(循環換屬,讀得出吸什麼);用屬色而非小徽章→好讀又不破壞「藏小招」
     const e=this._labBoss(); if(!e||!e.sprite)return; const els=['fire','water','thunder','earth','wind'];
@@ -2627,6 +2648,7 @@ class GameScene extends Phaser.Scene{
     if(this._bombBox){ const bb=this._bombBox.b, br=Math.floor(bb/3)*3, bc=(bb%3)*3; let fc=0; for(let r=br;r<br+3;r++)for(let c=bc;c<bc+3;c++)if(this.board[r][c])fc++; const hit=data.hits&&data.hits.find(h=>h.b===bb); if(hit&&fc>0&&hit.cells>=fc)this._defuseBomb(); }
     if(this._finisher)this._breakFinisher();   // 充能中被清行(搶殺)→ 終結招打斷
     if(this._reviveCast && (this.enemyLab || Object.keys(data.fx||{}).some(el=>EL[el]&&EL[el].beats===this._reviveCast.boss.el)))this._breakReviveCast();   // 詠唱復活中:實驗室任意清宮/實戰清到「剋魔王的屬」→ 彈著打斷復活
+    if(this._healCast && (this.enemyLab || Object.keys(data.fx||{}).some(el=>EL[el]&&EL[el].beats===this._healCast.boss.el)))this._breakHealCast();   // 💚詠唱補血中:土(剋水)清宮→打斷補血
     if(this.enemies)for(const en of this.enemies){ if(en._absorbFx){ this._breakAbsorb(en); break; } }   // 吸收盾在時被清行 → 打破   // 炸彈宮「現有的塊被這次消除清光」= 清宮 → 拆彈
     this.handCleared=true;
     this.combo+=1;   // combo 新定義:這塊有清→連續 +1(沒清的塊由 afterAction 歸零);取代舊「擊中次數」
@@ -2824,6 +2846,7 @@ class GameScene extends Phaser.Scene{
   killEnemy(e){if(e.dead)return;
     if(e._finOrb)this._breakEnemyOrb(e);   // 🔥終結蓄力中被打死→搶殺打斷(元氣玉碎散、不放招)
     if(this._reviveCast&&this._reviveCast.boss===e)this._breakReviveCast();   // 🌊魔王詠唱復活中被打死→打斷(搶殺)
+    if(this._healCast&&this._healCast.boss===e)this._breakHealCast();   // 💚魔王詠唱補血中被打死→打斷
     if(this._eatCast&&this._eatCast.boss===e)this._clearEatCast();   // 🌀魔王預告吸屬塊中被打死→清黑洞(搶殺)
     if(this.paraLock&&this.paraLock.e===e)this._clearParaLock(false);   // ⚡麻痺術士被打死→清電花+解鎖托盤格
     if(e.labShield){ if(e.labShield._rip)e.labShield._rip.remove(); e.labShield.destroy(); e.labShield=null; }   // 🛡盾兵/盾王死掉→盾罩一併清掉

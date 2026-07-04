@@ -186,15 +186,28 @@ function phaseCheck(e, dk){
 
 // headless 敵回合(一手):我方燒傷DoT → 敵出手 → 灼燒光環 → 自我回血 → 補師全體 → 變身檢查。
 // state={enemies,playerHP,maxHP};就地改 state 並回傳。無 immune/armor 時敵傷=e.atk(與場景 enemyAttack 一致)。
+function medicBossTurn(state, e){   // 🌊水魔王詠唱制(與遊戲端 _medicAct 一致):一手只做一件事,不再邊打邊補
+  const E=state.enemies, others=E.filter(x=>x!==e);
+  if(e._reviveIn>0){ if(--e._reviveIn<=0)others.forEach(m=>{ if(m.dead||m.hp<=0){m.dead=false;m.hp=m.max;} }); return; }   // 復活詠唱中(不攻擊)→ 2CD,歸0才復活小兵回滿
+  if(e._healIn>0){ if(--e._healIn<=0){ const r=e.healAlly||0.2; E.forEach(a=>{ if(!a.dead&&a.hp>0)a.hp=Math.min(a.max,a.hp+Math.max(1,Math.round(a.max*r))); }); } return; }   // 補血詠唱中(不攻擊)→ 1CD,下手回全體
+  if(e._reviveCharges==null)e._reviveCharges=2;
+  if(others.length>0 && others.every(x=>x.dead||x.hp<=0) && e._reviveCharges>0){ e._reviveCharges--; e._reviveIn=2; return; }   // 小兵全滅→起手詠唱復活(2CD,共2次,不攻擊)
+  if(E.some(x=>!x.dead&&x.hp>0&&x.hp<x.max)){ e._healIn=1; return; }   // 有人受損→起手詠唱補血(1CD,不攻擊)
+  state.playerHP=Math.max(0,state.playerHP-e.atk);   // 都不需要→攻擊
+}
 function enemyTurn(state, dk){
   const E=state.enemies;
   E.forEach(e=>{ if(!e.dead&&e.burn>0){ e.hp=Math.max(0,e.hp-e.burn); if(e.hp<=0)e.dead=true; } });   // 我方燒傷 DoT(endHand 開頭)
-  E.forEach(e=>{ if(e.dead||e.hp<=0)return; if((e.sealed||0)>0)e.sealed--; e.timer--; if(e.timer<=0){ state.playerHP=Math.max(0,state.playerHP-e.atk); e.timer=e.interval; e.burn=0; } });   // 敵出手
+  const anyDmg=()=>E.some(x=>!x.dead&&x.hp>0&&x.hp<x.max);
+  E.forEach(e=>{ if(e.dead||e.hp<=0)return; if((e.sealed||0)>0)e.sealed--; e.timer--; if(e.timer<=0){   // 敵出手
+    if(e.healAlly>0&&e.boss){ medicBossTurn(state,e); }                                                   // 🌊水魔王詠唱制
+    else if(e.healAlly>0){ if(anyDmg()){ const r=e.healAlly; E.forEach(a=>{if(!a.dead&&a.hp>0)a.hp=Math.min(a.max,a.hp+Math.max(1,Math.round(a.max*r)));}); } else state.playerHP=Math.max(0,state.playerHP-e.atk); }   // 補師雜兵雙模式(受損補/滿血攻)
+    else state.playerHP=Math.max(0,state.playerHP-e.atk);                                                 // 一般敵攻擊
+    e.timer=e.interval; e.burn=0;
+  } });
   const dotRate=Math.max(0,...E.filter(e=>!e.dead&&e.hp>0).map(e=>e.dot||0));   // 灼燒光環(取最大、不疊)
   if(dotRate>0) state.playerHP=Math.max(0,state.playerHP-Math.max(1,Math.round(state.maxHP*dotRate)));
   E.forEach(e=>{ if(!e.dead&&e.hp>0&&e.regen>0) e.hp=Math.min(e.max,e.hp+Math.max(1,Math.round(e.max*e.regen))); });   // 自我回血
-  const healR=Math.max(0,...E.filter(e=>!e.dead&&e.hp>0&&e.healAlly>0).map(e=>e.healAlly));   // 補師治療全體
-  if(healR>0) E.forEach(e=>{ if(!e.dead&&e.hp>0) e.hp=Math.min(e.max,e.hp+Math.max(1,Math.round(e.max*healR))); });
   E.forEach(e=>{ if(e.hp<=0)e.dead=true; phaseCheck(e, dk); });   // 變身(自我回血/燒傷後血量也可能跨門檻)
   return state;
 }
