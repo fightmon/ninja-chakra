@@ -175,45 +175,26 @@
       const rect = (x, y, w, h, col, a) => add(scene.add.rectangle(x, y, w, h, col, a == null ? 1 : a));
       const rr = (x, y, w, h, r, fill, fa, stroke, sw) => add(roundRectG(scene, x, y, w, h, r, fill, fa, stroke, sw));
       const pill = (x, y, w, h, label, fill, stroke, col, fs, cb) => { rr(x, y, w, h, h / 2, fill, 1, stroke, 1.5); add(scene.add.text(x, y, label, { fontFamily: EMOJIFONT, fontSize: fs, color: col, fontStyle: 'bold' }).setOrigin(0.5)); if (cb) { const hit = add(scene.add.rectangle(x, y, w, h, 0x000000, 0.001).setInteractive()); tapBind(scene, hit, cb); return hit; } };
-      // ── 上半:屬色漸層藝術區 ──
-      const yC = Math.min(Math.round(H * 0.42), H - 500);   // 白卡頂緣(短螢幕上移保內容)
-      { const g = add(scene.add.graphics()); g.fillGradientStyle(TK.elTint[cd.el], TK.elTint[cd.el], TK.elTint2[cd.el], TK.elTint2[cd.el], 1); g.fillRect(0, 0, W, yC + 26); }
-      rect(CX, (H + yC) / 2, W, H - yC, TK.surf2);   // 白卡下方底色
+      const tint = (c, f) => { const r = (c >> 16) & 255, g = (c >> 8) & 255, b = c & 255, m = x => Math.round(x + (255 - x) * f); return (m(r) << 16) | (m(g) << 8) | m(b); };   // 變亮
+      const shade = (c, f) => { const r = (c >> 16) & 255, g = (c >> 8) & 255, b = c & 255, m = x => Math.round(x * (1 - f)); return (m(r) << 16) | (m(g) << 8) | m(b); };   // 變暗
+      const gpill = (x, y, w, h, label, cTop, cBot, txtCol, fs, cb) => {   // 漸層藥丸(上→下漸層;fillRect 漸層 + 圓角遮罩,因 fillRoundedRect 不吃漸層)
+        const gfx = add(scene.add.graphics()); gfx.fillGradientStyle(cTop, cTop, cBot, cBot, 1); gfx.fillRect(x - w / 2, y - h / 2, w, h);
+        const mk = scene.make.graphics(); mk.fillStyle(0xffffff, 1); mk.fillRoundedRect(x - w / 2, y - h / 2, w, h, h / 2);
+        gfx.setMask(mk.createGeometryMask()); gfx.once('destroy', () => mk.destroy());
+        add(scene.add.text(x, y, label, { fontFamily: EMOJIFONT, fontSize: fs, color: txtCol, fontStyle: 'bold' }).setOrigin(0.5));
+        if (cb) { const hit = add(scene.add.rectangle(x, y, w, h, 0x000000, 0.001).setInteractive()); tapBind(scene, hit, cb); return hit; }
+      };
+      // ── 全畫面屬色漸層底(最底層;寶可夢式)──
+      const yC = Math.min(Math.round(H * 0.42), H - 448);   // 白卡頂緣(確保內容不撞底部按鈕、且留角色探頭空間)
+      { const g = add(scene.add.graphics()); g.fillGradientStyle(tint(TK.elTint[cd.el], 0.14), TK.elTint[cd.el], TK.elTint2[cd.el], shade(TK.elTint2[cd.el], 0.1), 1); g.fillRect(0, 0, W, H); }   // 全畫面對角漸層(左上最亮→右下最深,寶可夢式微變化)
       rect(CX, H / 2, W, H, 0x000000, 0.001).setInteractive();   // 擋住底下場景點擊
-      const aCY = Math.max(150, Math.round(yC * 0.56));
-      { const g = add(scene.add.graphics()); g.lineStyle(3, 0xffffff, 0.55); g.beginPath(); g.arc(CX, aCY + 8, 118, Phaser.Math.DegToRad(-205), Phaser.Math.DegToRad(25)); g.strokePath(); }   // 弧線
-      const fk = cardArtKey(cd.id, 'full');
-      if (fk && scene.textures.exists(fk)) { const art = add(scene.add.image(CX, aCY, fk).setDisplaySize(336, 224).setOrigin(0.5));
-        const twf = scene.tweens.add({ targets: art, y: aCY - 8, duration: 1900, yoyo: true, repeat: -1, ease: 'Sine.inOut', onUpdate: () => { if (!art.active) twf.stop(); } }); }   // 浮動;面板銷毀自動停
-      else txt(CX, aCY, EL[cd.el].name, '64px', TK.ink3, 0.5, true);
-      elementBgFX(scene, add, cd.el, CX, aCY, 336, 224);
-      // 頂列:返回(=關閉)、大星數、分解
-      { const c = add(scene.add.circle(34, 36, 20, TK.surf, 0.92).setInteractive()); tapBind(scene, c, () => opt.onClose && opt.onClose()); txt(34, 35, '‹', '26px', TK.ink, 0.5, true); }
-      txt(CX, 36, starStr(cd.id), '26px', TK.goldTx, 0.5, true);
-      if (opt.manage) { const c = add(scene.add.circle(W - 34, 36, 20, TK.surf, 0.92).setInteractive()); tapBind(scene, c, () => opt.onDissolve && opt.onDissolve()); txt(W - 34, 36, '♻️', '18px', TK.ink, 0.5); }
-      // 主技形狀預覽(右上;深色小盤+「產生方塊」標;LV1→5 循環)
-      {
-        const BC = W - 62, BY = 128, GS = 5, cs = 14, half = (GS - 1) / 2 * cs;
-        rr(BC, BY, 84, 84, 10, 0x12161a, 0.88, elc, 1.5);
-        const cells = [];
-        for (let r = 0; r < GS; r++)for (let c = 0; c < GS; c++) { cells.push(rect(BC - half + c * cs, BY - half + r * cs, cs - 2, cs - 2, 0x000000, 0.18).setStrokeStyle(1, 0x3a3a3a, 0.35)); }
-        const setLv = (lvv) => {
-          const nc = normCells(chakraShape(cd.el, lvv));
-          const maxR = Math.max(...nc.map(c => c[0])), maxC = Math.max(...nc.map(c => c[1]));
-          const offR = Math.floor((GS - 1 - maxR) / 2), offC = Math.floor((GS - 1 - maxC) / 2), occ = new Set(nc.map(([r, c]) => (r + offR) + ',' + (c + offC)));
-          for (let r = 0; r < GS; r++)for (let c = 0; c < GS; c++) { const cell = cells[r * GS + c], on = occ.has(r + ',' + c); cell.setFillStyle(on ? elc : 0x000000, on ? 1 : 0.18).setStrokeStyle(1, on ? 0xffffff : 0x3a3a3a, on ? 0.5 : 0.35); }
-        };
-        let lastLv = 0; setLv(1); const drv = { v: 0 };
-        const tw = scene.tweens.add({ targets: drv, v: 5, duration: 3600, repeat: -1, ease: 'Linear', onUpdate: () => { if (!cells[0] || !cells[0].active) { tw.stop(); return; } const L2 = Math.max(1, Math.min(5, Math.floor(drv.v) + 1)); if (L2 !== lastLv) { lastLv = L2; setLv(L2); } } });
-        rr(BC, BY + 56, 68, 18, 9, 0x12161a, 0.8, null, 0); txt(BC, BY + 56, '產生方塊', '11px', '#ffffff', 0.5, true);
-      }
-      // ── 下半:白色圓角資訊卡 ──
+      // ── 中層:白色圓角資訊卡(蓋在漸層上;角色稍後畫在其上探出頭)──
       rr(CX, (yC + H - 12) / 2, W - 28, H - 12 - yC, 24, TK.surf, 1, TK.divider, 1);
       const Lc = CX - (W - 28) / 2 + 20;   // 卡內左邊界
       txt(CX, yC + 26, 'No.' + cd.id.replace(/\D/g, '').padStart(3, '0'), '14px', TK.ink3, 0.5, true);
       txt(CX, yC + 58, (cd.hero ? '👑 ' : '') + cd.name, '30px', TK.ink, 0.5, true);
       rr(CX, yC + 84, 60, 5, 3, elc, 1, null, 0);   // 名字底線(屬色)
-      pill(CX - 52, yC + 112, 92, 30, EL[cd.el].fx + ' ' + EL[cd.el].name + '屬', TK.elTint[cd.el], null, elcTx, '15px');
+      gpill(CX - 52, yC + 112, 92, 30, EL[cd.el].fx + ' ' + EL[cd.el].name + '屬', tint(TK.elTint[cd.el], 0.1), TK.elTint2[cd.el], elcTx, '15px');
       pill(CX + 52, yC + 112, 84, 30, ri.e + ' ' + ri.n, TK.surf2, TK.divider, TK.ink, '15px');
       // 三圍:大數字在上、標籤在下(直欄分隔線)
       const stats = [['❤️ 生命', cardHp(cd.id)], ['⚔️ 攻擊', atk], ['💚 回復', cardRcv(cd.id)]];
@@ -236,10 +217,39 @@
       sk(yC + 332, '🎖 隊長技', ls ? ls.name : '—', null, ls ? ls.desc : '');
       // 底排按鈕(藥丸:主=屬色、次=白底)
       if (opt.manage) {
-        pill(CX - 88, H - 52, 168, 52, '⬆️ 強化合成', elc, elc, '#ffffff', FS.sub, () => opt.onFuse && opt.onFuse());
+        gpill(CX - 88, H - 52, 168, 52, '⬆️ 強化合成', tint(elc, 0.3), elc, '#ffffff', FS.sub, () => opt.onFuse && opt.onFuse());   // 屬色漸層(上亮下深,寶可夢式)
         pill(CX + 88, H - 52, 168, 52, '✖ 關閉', TK.surf, TK.divider, TK.ink2, FS.sub, () => opt.onClose && opt.onClose());
       } else {
         pill(CX, H - 52, 220, 52, '✖ 關閉', TK.surf, TK.divider, TK.ink2, FS.sub, () => opt.onClose && opt.onClose());
+      }
+      // ── 上層:弧線 + 角色(z 在卡之上→底緣壓在卡頂,探出頭)+ 屬性方塊FX ──
+      const artW = Math.min(W - 30, 300), artH = Math.round(artW * 2 / 3);   // 角色寬 300(更大)
+      const aCY = yC - Math.round(artH / 2) + 30;   // 上緣約 y22(短螢幕)、各螢幕維持 ~30px 探入卡頂
+      { const g = add(scene.add.graphics()); g.lineStyle(3, 0xffffff, 0.5); g.beginPath(); g.arc(CX, aCY + 10, Math.round(artW * 0.36), Phaser.Math.DegToRad(-205), Phaser.Math.DegToRad(25)); g.strokePath(); }   // 弧線
+      const fk = cardArtKey(cd.id, 'full');
+      if (fk && scene.textures.exists(fk)) { const art = add(scene.add.image(CX, aCY, fk).setDisplaySize(artW, artH).setOrigin(0.5));
+        const twf = scene.tweens.add({ targets: art, y: aCY - 8, duration: 1900, yoyo: true, repeat: -1, ease: 'Sine.inOut', onUpdate: () => { if (!art.active) twf.stop(); } }); }   // 浮動;面板銷毀自動停
+      else txt(CX, aCY, EL[cd.el].name, '60px', TK.ink3, 0.5, true);
+      elementBgFX(scene, add, cd.el, CX, aCY, artW, artH);
+      // ── 最上層:角落鈕(返回/星/分解)+ 主技形狀預覽(壓在角色之上,不被蓋)──
+      { const c = add(scene.add.circle(34, 36, 20, TK.surf, 0.95).setStrokeStyle(1.5, TK.divider).setInteractive()); tapBind(scene, c, () => opt.onClose && opt.onClose()); txt(34, 35, '‹', '26px', TK.ink, 0.5, true); }
+      txt(CX, 36, starStr(cd.id), '26px', TK.goldTx, 0.5, true);   // 星在頂中央原位;因畫在角色之後→z 疊在角色上,不需移位
+      if (opt.manage) { const c = add(scene.add.circle(W - 34, 36, 20, TK.surf, 0.95).setStrokeStyle(1.5, TK.divider).setInteractive()); tapBind(scene, c, () => opt.onDissolve && opt.onDissolve()); txt(W - 34, 36, '♻️', '18px', TK.ink, 0.5); }
+      // 主技形狀預覽(右上;深色小盤+「產生方塊」標;LV1→5 循環)
+      {
+        const BC = W - 56, BY = 100, GS = 5, cs = 13, half = (GS - 1) / 2 * cs;
+        rr(BC, BY, 78, 78, 10, 0x12161a, 0.88, elc, 1.5);
+        const cells = [];
+        for (let r = 0; r < GS; r++)for (let c = 0; c < GS; c++) { cells.push(rect(BC - half + c * cs, BY - half + r * cs, cs - 2, cs - 2, 0x000000, 0.18).setStrokeStyle(1, 0x3a3a3a, 0.35)); }
+        const setLv = (lvv) => {
+          const nc = normCells(chakraShape(cd.el, lvv));
+          const maxR = Math.max(...nc.map(c => c[0])), maxC = Math.max(...nc.map(c => c[1]));
+          const offR = Math.floor((GS - 1 - maxR) / 2), offC = Math.floor((GS - 1 - maxC) / 2), occ = new Set(nc.map(([r, c]) => (r + offR) + ',' + (c + offC)));
+          for (let r = 0; r < GS; r++)for (let c = 0; c < GS; c++) { const cell = cells[r * GS + c], on = occ.has(r + ',' + c); cell.setFillStyle(on ? elc : 0x000000, on ? 1 : 0.18).setStrokeStyle(1, on ? 0xffffff : 0x3a3a3a, on ? 0.5 : 0.35); }
+        };
+        let lastLv = 0; setLv(1); const drv = { v: 0 };
+        const tw = scene.tweens.add({ targets: drv, v: 5, duration: 3600, repeat: -1, ease: 'Linear', onUpdate: () => { if (!cells[0] || !cells[0].active) { tw.stop(); return; } const L2 = Math.max(1, Math.min(5, Math.floor(drv.v) + 1)); if (L2 !== lastLv) { lastLv = L2; setLv(L2); } } });
+        rr(BC, BY + 52, 64, 18, 9, 0x12161a, 0.8, null, 0); txt(BC, BY + 52, '產生方塊', '11px', '#ffffff', 0.5, true);
       }
     }
     function _cardDetailPanel_legacy(scene, add, cd, opt) {   // 舊版彈窗(已停用,保留可回退;確認新版後可刪)
@@ -671,12 +681,12 @@
       scene.events.once('shutdown', () => scene.scale.off('resize', h));
       return h;
     }
-    function volBar(scene, add, cx, y, w, icon, getVal, setVal) {   // 音量條:可點可拖的分段條(7 格);點哪設到哪、可拖;最左=靜音
-      const SEG = 7, x0 = cx - w / 2, gap = 3, segW = (w - (SEG - 1) * gap) / SEG, h = 20;
+    function volBar(scene, add, cx, y, w, icon, getVal, setVal) {   // 音量條:可點可拖的分段條(7 格);點哪設到哪、可拖;最左=靜音。空格色跟主題(亮/暗)
+      const SEG = 7, x0 = cx - w / 2, gap = 3, segW = (w - (SEG - 1) * gap) / SEG, h = 20, T = UI();
       add(scene.add.text(x0 - 12, y, icon, { fontFamily: EMOJIFONT, fontSize: '18px' }).setOrigin(1, 0.5));
       const segs = [];
-      for (let i = 0; i < SEG; i++) { const sx = x0 + i * (segW + gap) + segW / 2; segs.push(add(scene.add.rectangle(sx, y, segW, h, 0x2b2014).setStrokeStyle(1, 0x5a4128))); }
-      const redraw = () => { const lit = Math.round(getVal() * SEG); segs.forEach((r, i) => r.setFillStyle(i < lit ? (i < 3 ? 0x6aaa4c : i < 5 ? 0xc0d04a : 0xffd24a) : 0x2b2014)); };
+      for (let i = 0; i < SEG; i++) { const sx = x0 + i * (segW + gap) + segW / 2; segs.push(add(scene.add.rectangle(sx, y, segW, h, T.surf2).setStrokeStyle(1, T.divider))); }
+      const redraw = () => { const lit = Math.round(getVal() * SEG); segs.forEach((r, i) => r.setFillStyle(i < lit ? (i < 3 ? 0x6aaa4c : i < 5 ? 0xc0d04a : 0xffd24a) : T.surf2)); };
       redraw();
       const hit = add(scene.add.rectangle(cx, y, w + 16, h + 18, 0x000000, 0.001).setInteractive());   // 透明大命中區(覆在格子上)
       const apply = (px) => { setVal(Math.max(0, Math.min(1, (px - x0) / w))); redraw(); };
@@ -939,29 +949,32 @@
         this.tutTeamArmed = false;   // 重置脈動狀態(避免上次殘留)
         if (this.sys && this.sys.settings) this.sys.settings.data = {};   // 清掉殘留 data:Phaser 的 scene.start(key) 不帶 data 時會沿用上次的→否則一般從大廳按編隊也會誤觸教學
         recomputeLayout();   // 確保 H 是當下裝置高度
-        this.add.rectangle(CX, H / 2, W, H, 0x160f18);   // 不透明底(卡捲到邊緣不穿幫)
+        const T = UI();   // 亮色 tokens(同卡片/商店/排行)
+        this.add.rectangle(CX, H / 2, W, H, T.page);   // 亮色不透明底(卡捲到邊緣不穿幫)
         // ===== 固定上方:標題 + 隊伍切換器 + 5 宮位 + 排序/篩選列 =====
         const headBot = this.headBot = 344;
-        this.add.rectangle(CX, headBot / 2, W, headBot, 0x191017).setStrokeStyle(1, 0x2a2018).setDepth(5);   // 上方固定區底(蓋住捲上來的卡)
-        this.add.text(CX, 22, '出戰編隊', { fontFamily: EMOJIFONT, fontSize: '21px', color: '#f3e9d8', fontStyle: 'bold' }).setOrigin(0.5).setDepth(6);
-        // ── 隊伍名稱 + ✎ 改名(置中;切換用陣兩側 ◀▶ 或左右滑動)──
-        const swY = 52;
-        this.swName = this.add.text(CX, swY, '', { fontFamily: EMOJIFONT, fontSize: '16px', color: '#ffe08a', fontStyle: 'bold' }).setOrigin(0.5).setDepth(7);
-        this._pen = this.add.text(0, swY, '✎', { fontFamily: EMOJIFONT, fontSize: '20px', color: '#9ad8ff' }).setOrigin(0.5).setDepth(7).setInteractive(); tapBind(this, this._pen, () => this.doRename());   // 位置在 updateSwitcher 擺到名字右側
-        // ── 5 宮位(包進 formG 容器 → 可整組左右滑動切隊)──
+        this.add.rectangle(CX, headBot / 2, W, headBot, T.surf).setStrokeStyle(1, T.divider).setDepth(5);   // 上方固定白區(蓋住捲上來的卡)
+        const fp = this.add.graphics().setDepth(5); fp.fillGradientStyle(0x2c3a4c, 0x2c3a4c, 0x141b24, 0x141b24, 1); fp.fillRect(6, 44, W - 12, 260);   // 陣列深色漸層舞台(y44..304)→亮卡疊上、和下方卡區明顯區隔
+        // ── 標題 + 隊伍名稱 並排一列(省一行高;位置由 updateSwitcher 水平置中)──
+        this.titleTxt = this.add.text(0, 26, '出戰編隊', { fontFamily: EMOJIFONT, fontSize: FS.sub, color: T.ink, fontStyle: 'bold' }).setOrigin(0, 0.5).setDepth(6);
+        this.swName = this.add.text(0, 26, '', { fontFamily: EMOJIFONT, fontSize: FS.cap, color: T.goldTx, fontStyle: 'bold' }).setOrigin(0, 0.5).setDepth(6);
+        this._pen = this.add.text(0, 26, '✎', { fontFamily: EMOJIFONT, fontSize: '19px', color: '#2e9be0' }).setOrigin(0.5).setDepth(6).setInteractive(); tapBind(this, this._pen, () => this.doRename());
+        // ── 5 宮位(包進 formG 容器 → 可整組左右滑動切隊;上下拉開間距不相疊)──
         this.formG = this.add.container(0, 0).setDepth(6);
-        const defs = [{ x: 128, y: 106 }, { x: 292, y: 106 }, { x: CX, y: 180 }, { x: 128, y: 254 }, { x: 292, y: 254 }];
+        const defs = [{ x: 128, y: 92 }, { x: 292, y: 92 }, { x: CX, y: 178 }, { x: 128, y: 264 }, { x: 292, y: 264 }];
         this.slots = defs.map(d => {
-          const rect = this.add.rectangle(d.x, d.y, 124, 74, 0x2b2014).setStrokeStyle(2, 0x4a3824);   // 不個別 setInteractive;取消宮位改場景層 slotAt 命中(避免容器逐物件事件誤觸)
-          const txt = this.add.text(d.x, d.y, '＋', { fontFamily: EMOJIFONT, fontSize: '22px', color: '#6a5a40' }).setOrigin(0.5);
-          this.formG.add(rect); this.formG.add(txt);
-          const slot = { el: null, cardId: null, uid: null, rect, txt, x: d.x, y: d.y };
+          const g = this.add.graphics();   // 圓角宮位(可重繪換色);不個別 setInteractive,取消宮位改場景層 slotAt 命中
+          const draw = (fill, stroke) => { g.clear(); g.fillStyle(fill, 1); g.fillRoundedRect(d.x - 62, d.y - 37, 124, 74, 16); g.lineStyle(2, stroke, 1); g.strokeRoundedRect(d.x - 62, d.y - 37, 124, 74, 16); };
+          draw(T.surf2, T.divider);   // 空宮=淺灰
+          const txt = this.add.text(d.x, d.y, '＋', { fontFamily: EMOJIFONT, fontSize: '22px', color: T.ink3 }).setOrigin(0.5);
+          this.formG.add(g); this.formG.add(txt);
+          const slot = { el: null, cardId: null, uid: null, g, draw, txt, x: d.x, y: d.y };
           return slot;
         });
         this.formG.add(this.add.text(defs[2].x - 54, defs[2].y - 28, '👑', { fontFamily: EMOJIFONT, fontSize: '15px' }).setOrigin(0.5));   // 中央=隊長
-        // ── 陣兩側的 ◀▶(固定、不隨陣滑動)──
-        const arrowY = 180, swArrow = (x, lab, cb) => { const r = this.add.rectangle(x, arrowY, 32, 58, 0x2b2014, 0.9).setStrokeStyle(2, 0x5a8a3c).setInteractive().setDepth(8); this.add.text(x, arrowY, lab, { fontFamily: EMOJIFONT, fontSize: '22px', color: '#cfe8b0', fontStyle: 'bold' }).setOrigin(0.5).setDepth(9); tapBind(this, r, cb); };
-        swArrow(20, '◀', () => this.switchTeamBy(-1)); swArrow(W - 20, '▶', () => this.switchTeamBy(1));
+        // ── 陣兩側的 ◀▶ 三角(固定、不隨陣滑動;鈕中央直接畫三角,不用 emoji)──
+        const arrowY = 178, swArrow = (x, dir, cb) => { roundRectG(this, x, arrowY, 34, 58, 15, T.surf, 1, 0x35a866, 2).setDepth(8); const tri = this.add.graphics().setDepth(9); tri.fillStyle(0x2f8a5b, 1); if (dir < 0) tri.fillTriangle(x - 6, arrowY, x + 5, arrowY - 9, x + 5, arrowY + 9); else tri.fillTriangle(x + 6, arrowY, x - 5, arrowY - 9, x - 5, arrowY + 9); const hit = this.add.rectangle(x, arrowY, 34, 58, 0x000000, 0.001).setInteractive().setDepth(9); tapBind(this, hit, cb); };
+        swArrow(24, -1, () => this.switchTeamBy(-1)); swArrow(W - 24, 1, () => this.switchTeamBy(1));
 
         // ===== 下方:可捲動卡區(5 張一排、正方形、點選加入;可排序/篩選) =====
         this.vpTop = headBot + 10; this.vpBot = H - 56; const vpH = this.vpBot - this.vpTop;
@@ -974,17 +987,22 @@
         this.cardUsed = {}; this.cards = [];
         my.forEach((inst) => {
           const cd = ROSTER.find(c => c.id === inst.id);
-          const rect = this.add.rectangle(0, 0, CS2, CS2, EL[cd.el].color).setStrokeStyle(2, 0x000000, 0.25);
-          const dk = cardArtKey(cd.id, 'thumb'), dimg = (dk && this.textures.exists(dk)) ? this.add.image(0, 0, dk).setDisplaySize(CS2, CS2).setOrigin(0.5) : null;
-          const nm = dimg ? null : this.add.text(0, -4, cd.name, { fontFamily: EMOJIFONT, fontSize: '13px', color: '#1a1208', fontStyle: 'bold' }).setOrigin(0.5);
-          const lv = this.add.text(0, CS2 / 2 - 11, 'Lv' + getCardLv(cd.id), { fontFamily: EMOJIFONT, fontSize: '12px', color: '#ffffff', fontStyle: 'bold', stroke: '#000000', strokeThickness: 3.5 }).setOrigin(0.5);
-          const kids = [rect]; if (dimg) kids.push(dimg); if (nm) kids.push(nm); kids.push(lv);
+          const tint = (T.elTint[cd.el] != null ? T.elTint[cd.el] : T.surf2);
+          const bg = roundRectG(this, 0, 0, CS2, CS2, 13, tint, 1, T.divider, 1.5);   // 圓角淡屬色底(同卡冊)
+          const dk = cardArtKey(cd.id, 'thumb'), dimg = (dk && this.textures.exists(dk)) ? this.add.image(0, 0, dk).setDisplaySize(CS2 - 6, CS2 - 6).setOrigin(0.5) : null;
+          const nm = dimg ? null : this.add.text(0, -4, cd.name, { fontFamily: EMOJIFONT, fontSize: '13px', color: T.ink, fontStyle: 'bold' }).setOrigin(0.5);
+          const kids = [bg]; if (dimg) kids.push(dimg); if (nm) kids.push(nm);
+          if (EL[cd.el]) { const bx = -CS2 / 2 + 13, by = -CS2 / 2 + 12;   // 左上圓角屬性徽章(屬色底白字)
+            kids.push(roundRectG(this, bx, by, 22, 18, 6, EL[cd.el].color, 1, 0xffffff, 1.5));
+            kids.push(this.add.text(bx, by, EL[cd.el].name, { fontFamily: EMOJIFONT, fontSize: '11px', color: '#ffffff', fontStyle: 'bold' }).setOrigin(0.5)); }
+          kids.push(roundRectG(this, 0, CS2 / 2 - 11, 34, 15, 7, 0x12161a, 0.72, null, 0));   // Lv 深色圓角底條
+          kids.push(this.add.text(0, CS2 / 2 - 11, 'Lv' + getCardLv(cd.id), { fontFamily: EMOJIFONT, fontSize: '11px', color: '#ffffff', fontStyle: 'bold' }).setOrigin(0.5));
           const cont = this.add.container(0, 0, kids);
           cont._inst = inst; cont._cd = cd; this.benchG.add(cont); this.cards.push(cont);   // 不個別 setInteractive;點擊改由場景層 cardAt(座標)命中判定 → 避免容器/遮罩造成的逐物件事件誤判
         });
         this.scroll = 0;
-        this.track = this.add.rectangle(411, this.vpTop + vpH / 2, 4, vpH, 0x000000, 0.3).setDepth(2);
-        this.thumb = this.add.rectangle(411, this.vpTop, 5, 40, 0xffd56a, 0.6).setOrigin(0.5, 0).setDepth(2);
+        this.track = this.add.rectangle(411, this.vpTop + vpH / 2, 4, vpH, T.divider, 1).setDepth(2);
+        this.thumb = this.add.rectangle(411, this.vpTop, 5, 40, T.gold, 0.9).setOrigin(0.5, 0).setDepth(2);
         // ── 排序/篩選列 ──
         this.sortKey = 'el'; this.filterEl = null; this.buildSortFilter(320);
         // ── 捲動 + 宮位區左右滑動切隊 ──
@@ -1033,34 +1051,40 @@
         this.layoutBench();   // 依排序/篩選排卡 + 定位 thumb
 
         // ===== 固定下方:導覽列(🎲隨機 / 📖卡冊 / ✅確定)=====
-        const navY = H - 28, mk = (x, label, col, sc, cb) => { const r = this.add.rectangle(x, navY, 130, 46, 0x2b2014).setStrokeStyle(2, sc).setInteractive().setDepth(6); this.add.text(x, navY, label, { fontFamily: EMOJIFONT, fontSize: '14px', color: col }).setOrigin(0.5).setDepth(6); tapBind(this, r, cb); return r; };
-        mk(76, '🎲 隨機', '#f3e9d8', 0x4a3824, () => this.randomFill());
-        mk(210, '📖 卡冊 ' + ownedCount() + '/' + ROSTER.length, '#cfe0ff', 0x5a6a8a, () => { this.scene.manager.start('collection'); this.scene.manager.stop('team'); });
-        this.confirmBtn = this.add.rectangle(344, navY, 130, 46, 0x2b2014).setStrokeStyle(2, 0x8a6a5a).setInteractive().setDepth(6);   // 大廳鈕改「確定」=存隊+回大廳
-        this.confirmTxt = this.add.text(344, navY, '確定', { fontFamily: EMOJIFONT, fontSize: '14px', color: '#ffd9b0', fontStyle: 'bold' }).setOrigin(0.5).setDepth(6);
-        tapBind(this, this.confirmBtn, () => this.confirm());
+        const navY = H - 28;
+        this.add.rectangle(CX, navY, W, 58, T.surf).setStrokeStyle(1, T.divider).setDepth(5);   // 底部白列(分隔)
+        const mk = (x, label, col, sc, cb) => { roundRectG(this, x, navY, 130, 46, 23, T.surf, 1, sc, 2).setDepth(6); this.add.text(x, navY, label, { fontFamily: EMOJIFONT, fontSize: FS.cap, color: col }).setOrigin(0.5).setDepth(7); const hit = this.add.rectangle(x, navY, 130, 46, 0x000000, 0.001).setInteractive().setDepth(7); tapBind(this, hit, cb); };   // 圓角藥丸鈕
+        mk(76, '🎲 隨機', T.ink, T.divider, () => this.randomFill());
+        mk(210, '📖 卡冊 ' + ownedCount() + '/' + ROSTER.length, '#2e6ba8', 0x5aa9e6, () => { this.scene.manager.start('collection'); this.scene.manager.stop('team'); });
+        this.confirmBtn = this.add.graphics().setPosition(344, navY).setDepth(6);   // 圓角確定鈕(graphics→可重繪換色+以中心為縮放樞紐做齊隊脈動)
+        this._confirmDraw = (fill, stroke) => { const g = this.confirmBtn; g.clear(); g.fillStyle(fill, 1); g.fillRoundedRect(-65, -23, 130, 46, 23); g.lineStyle(2, stroke, 1); g.strokeRoundedRect(-65, -23, 130, 46, 23); };
+        this._confirmDraw(T.surf2, T.divider);
+        this.confirmTxt = this.add.text(344, navY, '確定', { fontFamily: EMOJIFONT, fontSize: FS.cap, color: T.ink, fontStyle: 'bold' }).setOrigin(0.5).setDepth(7);
+        const confirmHit = this.add.rectangle(344, navY, 130, 46, 0x000000, 0.001).setInteractive().setDepth(7); tapBind(this, confirmHit, () => this.confirm());   // 確定鈕命中區(存隊+回大廳)
 
         if (!this.tutTeam) this.loadTeamSlots();   // 回填目前選中隊;教學編隊從空隊開始
         this.updateSwitcher(); this.refreshStart();
         bindSceneResize(this, () => { const o = H; recomputeLayout(); if (Math.abs(H - o) > 3) { this.scale.setGameSize(W, H); this.scene.restart(); } });
         if (this.tutTeam) this.time.delayedCall(220, () => this.tutTeamCoach());   // 編隊教學
       }
-      buildSortFilter(y) {   // 排序鍵(屬性/等級/星數循環)+ 元素篩選 chip(全火水雷土風)
-        const labels = { el: '屬性', lv: '等級', rank: '星數' };
-        tapBind(this, this.add.rectangle(70, y, 92, 26, 0x2b2014).setStrokeStyle(1, 0x5a6a8a).setInteractive().setDepth(6), () => {
-          this.sortKey = this.sortKey === 'el' ? 'lv' : this.sortKey === 'lv' ? 'rank' : 'el'; this.sortTxt.setText('排序:' + labels[this.sortKey]); this.layoutBench();
+      buildSortFilter(y) {   // 排序鍵循環 + 元素篩選 chip;整列包進 sfG 容器,選取即重建(圓角藥丸)
+        this._sfY = y;
+        if (this.sfG) this.sfG.destroy();
+        const T = UI(), g = this.sfG = this.add.container(0, 0).setDepth(6), labels = { el: '屬性', lv: '等級', rank: '星數' };
+        g.add(roundRectG(this, 68, y, 96, 28, 14, T.surf, 1, T.divider, 1.5));   // 排序藥丸
+        this.sortTxt = this.add.text(68, y, '排序:' + labels[this.sortKey], { fontFamily: EMOJIFONT, fontSize: FS.micro, color: T.ink2 }).setOrigin(0.5); g.add(this.sortTxt);
+        const sortHit = this.add.rectangle(68, y, 96, 28, 0x000000, 0.001).setInteractive(); g.add(sortHit);
+        tapBind(this, sortHit, () => { this.sortKey = this.sortKey === 'el' ? 'lv' : this.sortKey === 'lv' ? 'rank' : 'el'; this.layoutBench(); this.buildSortFilter(this._sfY); });
+        const els = [{ k: null, t: '全' }, { k: 'fire', t: '火' }, { k: 'water', t: '水' }, { k: 'thunder', t: '雷' }, { k: 'earth', t: '土' }, { k: 'wind', t: '風' }];
+        els.forEach((e, i) => {   // chip:選中=屬色填白字、未選=白底屬色字(全=深字)
+          const x = 148 + i * 45, on = this.filterEl === e.k, elc = e.k ? EL[e.k].color : 0x2b333a;
+          const fill = on ? elc : T.surf, stroke = on ? elc : T.divider;
+          const txtCol = on ? '#ffffff' : (e.k ? '#' + EL[e.k].color.toString(16).padStart(6, '0') : T.ink2);
+          g.add(roundRectG(this, x, y, 40, 28, 13, fill, 1, stroke, on ? 2 : 1.5));
+          g.add(this.add.text(x, y, e.t, { fontFamily: EMOJIFONT, fontSize: '13px', color: txtCol, fontStyle: 'bold' }).setOrigin(0.5));
+          const hit = this.add.rectangle(x, y, 40, 28, 0x000000, 0.001).setInteractive(); g.add(hit);
+          tapBind(this, hit, () => { this.filterEl = e.k; this.layoutBench(); this.buildSortFilter(this._sfY); });
         });
-        this.sortTxt = this.add.text(70, y, '排序:屬性', { fontFamily: EMOJIFONT, fontSize: '12px', color: '#cfe0ff' }).setOrigin(0.5).setDepth(7);
-        const els = [{ k: null, t: '全', c: 0x888888 }, { k: 'fire', t: '火' }, { k: 'water', t: '水' }, { k: 'thunder', t: '雷' }, { k: 'earth', t: '土' }, { k: 'wind', t: '風' }];
-        this.chips = [];
-        els.forEach((e, i) => {
-          const x = 144 + i * 46, col = e.k ? EL[e.k].color : e.c;
-          const r = this.add.rectangle(x, y, 40, 26, col, 0.9).setStrokeStyle(2, 0x000000, 0.3).setInteractive().setDepth(6);
-          this.add.text(x, y, e.t, { fontFamily: EMOJIFONT, fontSize: '13px', color: '#1a1208', fontStyle: 'bold' }).setOrigin(0.5).setDepth(7);
-          tapBind(this, r, () => { this.filterEl = e.k; this.chips.forEach(ch => ch.setStrokeStyle(2, 0x000000, 0.3)); r.setStrokeStyle(3, 0xffe066, 1); this.layoutBench(); });
-          this.chips.push(r);
-        });
-        this.chips[0].setStrokeStyle(3, 0xffe066, 1);   // 預設「全」亮起
       }
       layoutBench() {   // 依 sortKey/filterEl 排序篩選 → 重新定位可見卡、隱藏被篩掉的、重算捲動
         const CS2 = 72, x0 = 48, step = 81, ord = { fire: 0, water: 1, thunder: 2, earth: 3, wind: 4 };
@@ -1097,8 +1121,10 @@
       }
       updateSwitcher() {
         const i = getTeamIdx(), nm = teamCustomName(i); this.swName.setText('隊' + (i + 1) + (nm ? ' · ' + nm : ''));
-        if (this._pen) this._pen.x = this.swName.x + this.swName.width / 2 + 16;
-      }   // ✎ 緊跟名字右側
+        const gap = 12, penGap = 15, tw = this.titleTxt.width, nw = this.swName.width;   // 標題+隊名+✎ 一列水平置中
+        const sx = Math.round(CX - (tw + gap + nw + penGap) / 2);
+        this.titleTxt.x = sx; this.swName.x = sx + tw + gap; this._pen.x = this.swName.x + nw + penGap; this._pen.y = 26;
+      }
       doRename() { const i = getTeamIdx(), v = window.prompt('隊伍名稱(最多 6 字,留空=隊' + (i + 1) + ')', teamCustomName(i)); if (v != null) { renameTeam(i, v); this.updateSwitcher(); } }
       confirm() { saveTeamAt(getTeamIdx(), this.slots.map(s => s.cardId).filter(Boolean)); this.scene.manager.start('home'); this.scene.manager.stop('team'); }   // 存當前隊 + 回大廳(未滿也可離開,出戰時再擋)
       tutTeamCoach() {   // 編隊教學:綠框說明(統一教學風格)
@@ -1129,7 +1155,7 @@
       tapCard(inst, cd) { if (this.cardUsed[inst.u]) return; const slot = this.slots.find(s => !s.el); if (slot) this.assign(slot, inst, cd); }
       assign(slot, inst, cd) {
         slot.el = cd.el; slot.cardId = cd.id; slot.uid = inst.u;
-        slot.rect.setFillStyle(EL[cd.el].color); slot.txt.setText(cd.name).setColor('#1a1208').setFontSize('14px');
+        slot.draw(UI().elTint[cd.el] != null ? UI().elTint[cd.el] : UI().surf2, EL[cd.el] ? EL[cd.el].color : UI().divider); slot.txt.setText(cd.name).setColor(UI().ink).setFontSize('14px');
         const dk = cardArtKey(cd.id, 'full');   // 陣型用 _01 大圖(3:2 橫式,填寬格)
         if (dk && this.textures.exists(dk)) { if (!slot.img) { slot.img = this.add.image(slot.x, slot.y, dk); this.formG.add(slot.img); } else slot.img.setTexture(dk); slot.img.setDisplaySize(108, 72).setVisible(true); slot.txt.setVisible(false); }
         else { if (slot.img) slot.img.setVisible(false); slot.txt.setVisible(true); }
@@ -1140,7 +1166,7 @@
       clearSlot(slot) {
         if (!slot.el) return; this.cardUsed[slot.uid] = false;
         const card = this.cards.find(c => c._inst.u === slot.uid); if (card) card.setAlpha(1);
-        slot.el = null; slot.cardId = null; slot.uid = null; slot.rect.setFillStyle(0x2b2014); slot.txt.setText('＋').setColor('#6a5a40').setFontSize('20px');
+        slot.el = null; slot.cardId = null; slot.uid = null; slot.draw(UI().surf2, UI().divider); slot.txt.setText('＋').setColor(UI().ink3).setFontSize('20px');
         if (slot.img) slot.img.setVisible(false); slot.txt.setVisible(true);
         this.refreshStart();
       }
@@ -1158,8 +1184,8 @@
       refreshStart() {
         const n = this.slots.filter(s => s.el).length, ok = n === 5;   // 確定鈕外觀反映齊不齊(永遠可按=可離開,出戰時再擋)
         if (this.confirmBtn) {
-          this.confirmBtn.setFillStyle(ok ? 0x2e5a2c : 0x2b2014).setStrokeStyle(2, ok ? 0x5a8a3c : 0x8a6a5a);
-          this.confirmTxt.setText(ok ? '✅ 確定' : '確定 ' + n + '/5').setColor(ok ? '#cfe8b0' : '#ffd9b0');
+          this._confirmDraw(ok ? 0x35a866 : UI().surf2, ok ? 0x35a866 : UI().divider);
+          this.confirmTxt.setText(ok ? '✅ 確定' : '確定 ' + n + '/5').setColor(ok ? '#ffffff' : UI().ink3);
         }
         if (this.tutTeamArmed && this.confirmBtn) {
           this.tweens.killTweensOf(this.confirmBtn); this.tweens.killTweensOf(this.confirmTxt); this.confirmBtn.setScale(1); this.confirmTxt.setScale(1);
@@ -2419,8 +2445,8 @@
         (this.trayIcons || []).forEach((g, i) => {
           if (!g || g.active === false) return;
           const gx = g.x, gy = g.y;
-          g.setScale(0.1); this.tweens.add({ targets: g, scaleX: 1, scaleY: 1, duration: 320, delay: i * 90, ease: 'Back.out' });
-          for (let k = 0; k < 8; k++) { const ang = Math.random() * Math.PI * 2, r0 = 28 + Math.random() * 22, sx = gx + Math.cos(ang) * r0, sy = gy + Math.sin(ang) * r0, sz = 10 + Math.random() * 5, d = this.add.rectangle(sx, sy, sz, sz, 0xffe08a).setAlpha(0.95).setStrokeStyle(2, 0xffffff, 0.5).setBlendMode(ADD).setDepth(DEPTH.fx); this.tweens.add({ targets: d, x: gx, y: gy, alpha: 0, scale: 0.25, delay: i * 90, duration: 320 + Math.random() * 150, ease: 'Sine.inOut', onComplete: () => d.destroy() }); }
+          g.setScale(0.1); this.tweens.add({ targets: g, scaleX: 1, scaleY: 1, duration: 180, delay: i * 45, ease: 'Back.out' });
+          for (let k = 0; k < 8; k++) { const ang = Math.random() * Math.PI * 2, r0 = 28 + Math.random() * 22, sx = gx + Math.cos(ang) * r0, sy = gy + Math.sin(ang) * r0, sz = 10 + Math.random() * 5, d = this.add.rectangle(sx, sy, sz, sz, 0xffe08a).setAlpha(0.95).setStrokeStyle(2, 0xffffff, 0.5).setBlendMode(ADD).setDepth(DEPTH.fx); this.tweens.add({ targets: d, x: gx, y: gy, alpha: 0, scale: 0.25, delay: i * 45, duration: 180 + Math.random() * 90, ease: 'Sine.inOut', onComplete: () => d.destroy() }); }
         });
       }
       // 嬰兒級:把多HIT塊的建議落點畫成脈動金色格(放這裡就爆 HIT)
@@ -4668,55 +4694,63 @@
       body() { const f = { dungeon: this.bDungeon, monster: this.bMonster, shop: this.bShop, gacha: this.bGacha, friend: this.bRank, other: this.bOther }[this.tab]; if (f) f.call(this); }
       setRankTab(t) { this.rankTab = t; this.rebuild(); }
       bRank() {
-        const tabs = [['board', '🏆 排行'], ['rec', '📊 紀錄'], ['ach', '🏅 成就']], tab = this.rankTab || 'board', tw = W / 3, top = 82;
+        const T = UI(), cTop = 84, cBot = H - 60;
+        this.rect(CX, (cTop + cBot) / 2, W, cBot - cTop, T.page);   // 亮色 body 底(同卡片/商店)
+        const tabs = [['board', '🏆 排行'], ['rec', '📊 紀錄'], ['ach', '🏅 成就']], tab = this.rankTab || 'board';
+        const segW = (W - 32) / 3, segY = cTop + 30;   // 分頁控:白底藥丸,選中=金填+深字
         tabs.forEach((t, i) => {
-          const x = tw * (i + 0.5), on = tab === t[0];
-          const r = this.rect(x, top, tw - 6, 38, on ? 0x3a2c1d : 0x1f1810).setInteractive().setStrokeStyle(on ? 2 : 1, on ? 0xffd56a : 0x4a3824);
-          this.txt(x, top, t[1], '16px', on ? '#ffd56a' : '#9a8a6a', 0.5, on); tapBind(this, r, () => { if (tab !== t[0]) this.setRankTab(t[0]); });
+          const x = 16 + segW * i + segW / 2, on = tab === t[0];
+          this.L(roundRectG(this, x, segY, segW - 6, 40, 12, on ? T.gold : T.surf, 1, on ? T.gold : T.divider, on ? 2 : 1.5));
+          this.txt(x, segY, t[1], FS.cap, on ? T.ink : T.ink2, 0.5, on);
+          const hit = this.rect(x, segY, segW - 6, 40, 0x000000, 0.001).setInteractive(); tapBind(this, hit, () => { if (tab !== t[0]) this.setRankTab(t[0]); });
         });
         if (tab === 'rec') this.bRankRecords(); else if (tab === 'ach') this.bRankAch(); else this.bRankBoard();
       }
       bRankBoard() {
-        this.txt(CX, 116, '🏆 完成率排行', '17px', '#ffd56a', 0.5, true);
-        this.txt(CX, 136, '比「關卡完成率」· 純進度,不比戰力', '12px', '#9a8a6a', 0.5);
-        const me = completionRate();
-        const _tt = getTitle();
+        const T = UI(), cTop = 84;
+        this.txt(CX, cTop + 62, '比關卡完成率 · 純進度不比戰力', FS.micro, T.ink3, 0.5);
+        const me = completionRate(), _tt = getTitle();
         const rows = GHOSTS.map(g => ({ name: g[0], pct: g[1], me: false })).concat([{ name: '你' + (_tt ? ' · ' + titleName(_tt) : ''), pct: me.pct, me: true }]).sort((a, b) => b.pct - a.pct);
-        let y = 162;
+        let y = cTop + 84;
         rows.forEach((r, i) => {
           const rk = i + 1;
-          this.rect(CX, y, 392, 29, r.me ? 0x2e3a22 : (i % 2 ? 0x1a130b : 0x201810)).setStrokeStyle(r.me ? 2 : 1, r.me ? 0x6aaa4c : 0x3a2c1d);
-          this.txt(34, y, (rk <= 3 ? ['🥇', '🥈', '🥉'][rk - 1] : '#' + rk), '14px', rk <= 3 ? '#ffd56a' : '#bfb0a0', 0.5);
-          this.txt(72, y, r.name + (r.me ? ' (你)' : ''), '15px', r.me ? '#eafce0' : '#e8dcc8', 0, r.me);
-          this.rect(238, y, 108, 9, 0x000000, 0.5).setOrigin(0, 0.5);
-          this.rect(238, y, 108 * r.pct / 100, 9, r.me ? 0x6aca4c : 0x6ac0ff).setOrigin(0, 0.5);
-          this.txt(W - 18, y, r.pct + '%', '15px', '#ffe08a', 1, true); y += 32;
+          this.L(roundRectG(this, CX, y, W - 26, 30, 10, r.me ? T.elTint.wind : T.surf, 1, r.me ? 0x35a866 : T.divider, r.me ? 2 : 1.5));   // 白圓角列;你=淡綠底綠框
+          this.txt(30, y, (rk <= 3 ? ['🥇', '🥈', '🥉'][rk - 1] : '#' + rk), FS.cap, rk <= 3 ? T.goldTx : T.ink3, 0.5, rk <= 3);
+          this.txt(64, y, r.name + (r.me ? ' (你)' : ''), FS.cap, r.me ? '#2f8a5b' : T.ink, 0, r.me);
+          this.rect(238, y, 100, 8, T.divider).setOrigin(0, 0.5);
+          this.rect(238, y, r.pct, 8, r.me ? 0x35a866 : 0x6ab0e0).setOrigin(0, 0.5);
+          this.txt(W - 16, y, r.pct + '%', FS.cap, T.goldTx, 1, true); y += 33;
         });
-        this.txt(CX, y + 12, '🔒 線上真榜上線後開放(目前為本地幽靈榜)', '12px', '#7a6a50', 0.5);
+        this.txt(CX, y + 8, '🔒 線上真榜上線後開放(目前為本地幽靈榜)', FS.micro, T.ink3, 0.5);
       }
       bRankRecords() {
+        const T = UI(), cTop = 84;
         const hd = highestDiffCleared(), me = completionRate(), rec = loadSave().records || {}, pr = loadSave().progress || {}, tt = getTitle();
-        this.txt(CX, 114, '📊 我的紀錄', '17px', '#ffd56a', 0.5, true);
-        let y = 146; const row = (ic, lab, val) => { this.rect(CX, y, 392, 44, 0x201810).setStrokeStyle(1, 0x4a3824); this.txt(28, y, ic + ' ' + lab, '16px', '#cfe0d8', 0); this.txt(W - 22, y, String(val), '19px', '#ffffff', 1, true); y += 52; };
+        let y = cTop + 68; const row = (ic, lab, val) => {
+          this.L(roundRectG(this, CX, y, W - 26, 46, 12, T.surf, 1, T.divider, 1.5));   // 白圓角資料列
+          this.txt(28, y, ic + '  ' + lab, FS.body, T.ink2, 0);
+          this.txt(W - 24, y, String(val), FS.sub, T.ink, 1, true); y += 54;
+        };
         row('🗺️', '完成率', me.pct + '%  (' + me.done + '/' + me.total + ')');
         row('🏁', '通關場數', pr.clears || 0);
         row('💀', '最高難度通關', hd ? hd.emoji + ' ' + hd.name : '—');
         row('💥', '最大單手 HIT', rec.bestHit || 0);
         row('🔗', '最長 combo', rec.bestCombo || 0);
-        this.txt(CX, y + 8, '🏅 目前稱號:' + (tt ? titleName(tt) : '(未裝備)'), '15px', '#ffe08a', 0.5, true);
+        this.L(roundRectG(this, CX, y + 4, W - 26, 44, 12, T.elTint.thunder, 1, T.gold, 1.5));   // 稱號=金框淡黃卡
+        this.txt(CX, y + 4, '🏅 目前稱號:' + (tt ? titleName(tt) : '(未裝備)'), FS.body, T.goldTx, 0.5, true);
       }
       bRankAch() {
-        this.txt(CX, 102, '🏅 成就 / 稱號', '17px', '#ffd56a', 0.5, true);
-        this.txt(CX, 122, '點已解鎖的成就 → 裝備為稱號', '12px', '#9a8a6a', 0.5);
-        const cur = getTitle(); let y = 146;
+        const T = UI(), cTop = 84;
+        this.txt(CX, cTop + 60, '點已解鎖的成就 → 裝備為稱號', FS.micro, T.ink3, 0.5);
+        const cur = getTitle(); let y = cTop + 84;
         ACHIEVEMENTS.forEach(a => {
           const got = achDone(a.id), eq = cur === a.id;
-          const r = this.rect(CX, y, 392, 30, eq ? 0x2e3a22 : (got ? 0x241a10 : 0x140f0a)).setStrokeStyle(eq ? 2 : 1, eq ? 0x6aaa4c : (got ? 0x8a6a3a : 0x2a2018));
-          this.txt(26, y, got ? (eq ? '★' : '✓') : '🔒', '15px', got ? (eq ? '#ffd56a' : '#8fd16a') : '#5a4a38', 0.5);
-          this.txt(50, y, a.t, '15px', got ? '#ffe08a' : '#7a6a50', 0, got);
-          this.txt(W - 18, y, a.d, '12px', got ? '#bfb0a0' : '#5a4a38', 1);
-          if (got) r.setInteractive().on('pointerup', () => { setTitle(eq ? '' : a.id); this.toast(eq ? '已卸下稱號' : ('裝備稱號:' + a.t)); this.rebuild(); });
-          y += 33;
+          this.L(roundRectG(this, CX, y, W - 26, 32, 10, eq ? T.elTint.wind : (got ? T.surf : T.surf2), 1, eq ? 0x35a866 : T.divider, eq ? 2 : 1.5));   // 裝備中=淡綠綠框;未解鎖=淡灰
+          this.txt(28, y, got ? (eq ? '★' : '✓') : '🔒', FS.cap, got ? (eq ? T.goldTx : '#2f8a5b') : T.ink3, 0.5);
+          this.txt(50, y, a.t, FS.cap, got ? T.ink : T.ink3, 0, got);
+          this.txt(W - 16, y, a.d, FS.micro, got ? T.ink2 : T.ink3, 1);
+          if (got) { const hit = this.rect(CX, y, W - 26, 32, 0x000000, 0.001).setInteractive(); tapBind(this, hit, () => { setTitle(eq ? '' : a.id); this.toast(eq ? '已卸下稱號' : ('裝備稱號:' + a.t)); this.rebuild(); }); }
+          y += 35;
         });
       }
       mapNode(x, y, r, emoji, label, sub, cb, locked) {
@@ -4937,12 +4971,61 @@
         }
         return out;
       }
+      _summonCinematic(cx, cy, el, hi, cb) {   // 🌀 3~4s 結印召喚:方塊自四方聚攏印中→蓄光→吸氣→爆發噴方塊→(cb)卡登場。回傳 {kill} 供跳過清場
+        const ADD = Phaser.BlendModes.ADD, elc = EL[el].color, gold = 0xffe66a;
+        const all = [], seal = [], timers = [], reg = (o, s) => { all.push(o); if (s) seal.push(o); return o; };
+        const ring1 = reg(this.L(this.add.circle(cx, cy, 100, 0, 0).setStrokeStyle(3, elc, 0.9).setBlendMode(ADD)).setScale(0.15).setAlpha(0), 1);
+        const ring2 = reg(this.L(this.add.circle(cx, cy, 64, 0, 0).setStrokeStyle(2, elc, 0.7).setBlendMode(ADD)).setScale(0.15).setAlpha(0), 1);
+        this.tweens.add({ targets: ring1, scale: 1, alpha: 0.9, angle: 160, duration: 1300, ease: 'Cubic.out' });
+        this.tweens.add({ targets: ring2, scale: 1, alpha: 0.8, angle: -160, duration: 1300, ease: 'Cubic.out' });   // 雙印環慢展開對轉
+        for (let i = 0; i < 8; i++) { const a = i / 8 * Math.PI * 2; const m = reg(this.L(this.add.rectangle(cx + Math.cos(a) * 100, cy + Math.sin(a) * 100, 13, 13, elc, 0.9).setBlendMode(ADD)).setAlpha(0), 1); this.tweens.add({ targets: m, alpha: 1, duration: 300, delay: 500 + i * 45 }); }   // 8 印記亮起
+        const NB = 22;
+        for (let i = 0; i < NB; i++) { const a0 = i / NB * Math.PI * 2 + Math.random() * 0.5, r0 = 200 + Math.random() * 120, sz = 15 + Math.random() * 9;
+          const p = reg(this.L(this.add.rectangle(cx + Math.cos(a0) * r0, cy + Math.sin(a0) * r0, sz, sz, (hi && i % 4 === 0) ? gold : elc, 0.95).setBlendMode(ADD)).setAlpha(0));
+          this.tweens.add({ targets: p, alpha: 0.95, duration: 220, delay: 200 + i * 42 });
+          this.tweens.add({ targets: p, x: cx, y: cy, scale: 0.25, duration: 900 + Math.random() * 320, delay: 300 + i * 42, ease: 'Cubic.in', onComplete: () => p.destroy() }); }   // 方塊漸漸聚攏到印中(慢/錯開)
+        const core = reg(this.L(this.add.circle(cx, cy, 12, 0xffffff, 0.9).setBlendMode(ADD)).setScale(0), 1);
+        this.tweens.add({ targets: core, scale: 3.6, duration: 1150, delay: 850, ease: 'Quad.in' });   // 印中蓄光
+        const BURST_AT = hi ? 2250 : 1980;
+        timers.push(this.time.delayedCall(BURST_AT - 320, () => { if (core.active) this.tweens.add({ targets: core, scale: 2.2, duration: 280, ease: 'Quad.out' }); }));   // 爆發前吸一口氣(核心一縮=蓄力)
+        timers.push(this.time.delayedCall(BURST_AT, () => {   // 💥 爆發:光閃 + 衝擊波 + 噴方塊
+          const fl = this.L(this.add.circle(cx, cy, 50, hi ? gold : 0xffffff, 0.95).setBlendMode(ADD)).setScale(0.2);
+          this.tweens.add({ targets: fl, scale: hi ? 16 : 10, alpha: { from: 0.95, to: 0 }, duration: hi ? 760 : 560, ease: 'Quad.out', onComplete: () => fl.destroy() });
+          const sw = this.L(this.add.circle(cx, cy, 44, 0, 0).setStrokeStyle(4, hi ? gold : elc, 0.95).setBlendMode(ADD)).setScale(0.3);
+          this.tweens.add({ targets: sw, scale: hi ? 4.8 : 3, alpha: { from: 1, to: 0 }, duration: hi ? 820 : 600, ease: 'Quad.out', onComplete: () => sw.destroy() });
+          const nq = hi ? 28 : 16;
+          for (let i = 0; i < nq; i++) { const a = i / nq * Math.PI * 2 + Math.random() * 0.4, d = 100 + Math.random() * 100; const q = this.L(this.add.rectangle(cx, cy, 20, 20, (hi && i % 3 === 0) ? gold : elc, 0.95).setBlendMode(ADD));
+            this.tweens.add({ targets: q, x: cx + Math.cos(a) * d, y: cy + Math.sin(a) * d, scale: 0.25, alpha: { from: 1, to: 0 }, duration: 500 + Math.random() * 260, ease: 'Quad.out', onComplete: () => q.destroy() }); }   // 方塊向外噴射
+          if (hi) this.cameras.main.shake(360, 0.007);
+          seal.forEach(o => { if (o && o.active) this.tweens.add({ targets: o, alpha: 0, scaleX: '*=1.4', scaleY: '*=1.4', duration: 260, onComplete: () => o.destroy() }); });   // 收掉結印
+          if (cb) cb();
+        }));
+        return { kill: () => { timers.forEach(t => t && t.remove && t.remove()); all.forEach(o => { if (o && o.active) { this.tweens.killTweensOf(o); o.destroy(); } }); } };
+      }
+      _cardShine(cx, cy, w, h, r) {   // ✨ 卡面漸層流光:一道亮帶斜掃過卡面(遮罩在卡形內);之後每 2.6s 再淡掃一次維持氛圍
+        const ADD = Phaser.BlendModes.ADD;
+        const mg = this.add.graphics().setVisible(false); mg.fillStyle(0xffffff, 1); mg.fillRoundedRect(cx - w / 2, cy - h / 2, w, h, r);
+        const mask = mg.createGeometryMask();
+        const band = this.L(this.add.rectangle(cx - w / 2 - 60, cy, 44, h * 1.9, 0xffffff, 0.5).setBlendMode(ADD).setAngle(18).setMask(mask));
+        const sweep = (a) => { if (!band.active) return; band.x = cx - w / 2 - 60; band.setAlpha(a); this.tweens.add({ targets: band, x: cx + w / 2 + 60, duration: 640, ease: 'Quad.inOut' }); this.tweens.add({ targets: band, alpha: { from: a, to: 0 }, duration: 640, ease: 'Quad.in' }); };
+        sweep(0.55);
+        const loop = this.time.addEvent({ delay: 2600, loop: true, callback: () => sweep(0.32) });
+        band.once('destroy', () => { loop.remove(); if (mg && mg.scene) mg.destroy(); });
+        return band;
+      }
       drawGachaResult() {
         if (this.gachaDetail) return this.drawGachaDetail();   // 詳細 modal 蓋在結果上
         const T = UI(), res = this.gachaResult, n = res.length, ADD = Phaser.BlendModes.ADD;
-        this.rect(CX, H / 2, W, H, 0x0e0a16, 0.97).setInteractive();   // 全螢幕暗台(蓋掉選單;召喚時刻做戲劇感,亮卡在暗台上更跳)
-        this.txt(CX, Math.round(H * 0.12), n > 1 ? '🎉 十連結果 🎉' : '🎉 抽卡結果 🎉', '20px', '#ffd56a', 0.5, true);
+        const darkOv = this.rect(CX, H / 2, W, H, 0x0e0a16, 0.97).setInteractive();   // 全螢幕暗台(蓋掉選單;召喚時刻做戲劇感,亮卡在暗台上更跳)
+        const titleT = this.txt(CX, Math.round(H * 0.12), n > 1 ? '🎉 十連結果 🎉' : '🎉 抽卡結果 🎉', '20px', '#ffd56a', 0.5, true);
         const reveal = !this.gachaRevealed; this.gachaRevealed = true;   // 登場動畫只首次播
+        const makeConfirm = (fadeIn) => {   // 確定/下一步鈕:單抽電影化時延到卡登場才建,演出期間不搶視線
+          const r = this.L(this.add.rectangle(CX, H - 66, 220, 48, 0x35a866).setStrokeStyle(2, 0x35a866).setInteractive());
+          const tx = this.txt(CX, H - 66, this._afterPull ? '✔ 下一步:組隊' : '✔ 確定', FS.sub, '#ffffff', 0.5, true);
+          tapBind(this, r, () => { if (this._afterPull) { this._afterPull = null; this.gachaResult = null; this.gachaRevealed = false; this.scene.manager.start('team', { tutorial: true }); this.scene.manager.stop('home'); return; } this.gachaResult = null; this.gachaRevealed = false; this.rebuild(); });
+          if (fadeIn) { r.setAlpha(0); tx.setAlpha(0); this.tweens.add({ targets: [r, tx], alpha: 1, duration: 400 }); }   // 背景+文字一起淡入
+          return r;
+        };
         const tint = cd => (T.elTint[cd.el] != null ? T.elTint[cd.el] : T.surf2);
         if (n === 1) {   // ── 單抽:大立繪置中(亮色圓角卡) ──
           const it = res[0], cd = it.cd, hi = !!cd.hero, cy = Math.round(H * 0.42);   // hi=稀有特效(金光芒/大爆發):全卡★3後改用 hero 旗標(台灣特有種)判定
@@ -4965,15 +5048,25 @@
           const stT = this.txt(CX, cy + 176, EL[cd.el].name + '屬 · ' + starStr(cd.id), '15px', '#ffd56a', 0.5);
           const hintT = this.txt(CX, cy + 204, '👆 點卡片看詳細', '13px', '#b8b0c4', 0.5);
           const newT = it.isNew ? this.txt(CX, cy - 142, '✦ NEW ✦', '15px', '#ffe04a', 0.5, true) : null;
-          if (reveal) {   // 🌀 結印召喚陣 → 爆發後卡片/文字/光芒/方塊才現身
+          if (reveal) {   // 🌀 電影化召喚:漸暗→方塊聚攏印中→蓄光→爆發→卡自印中升起變大→卡面流光(可點任意處跳過)
+            darkOv.setAlpha(0); this.tweens.add({ targets: darkOv, alpha: 0.97, duration: 480, ease: 'Quad.out' });   // 畫面漸暗
+            titleT.setAlpha(0);   // 標題先藏,登場時才淡入
             rays.setAlpha(0); blocks.forEach(o => o.b.setAlpha(0)); cont.setScale(0).setAlpha(0);[nmT, stT, hintT, newT].forEach(t => t && t.setAlpha(0));
-            this._summonFX(CX, cy, cd.el, hi, () => {
-              if (!cont.active) return;
-              this.tweens.add({ targets: cont, scale: { from: 0.2, to: 1 }, alpha: { from: 0, to: 1 }, angle: { from: -8, to: 0 }, duration: 460, ease: 'Back.out' });
-              if (rays.active) this.tweens.add({ targets: rays, alpha: { from: 0, to: rayA }, duration: 560 });   // 光芒淡入
-              blocks.forEach(o => { if (o.b.active) this.tweens.add({ targets: o.b, alpha: o.baseA, duration: 620 }); });   // 飄移方塊淡入
-              [nmT, stT, hintT, newT].forEach((t, i) => { if (t && t.active) this.tweens.add({ targets: t, alpha: 1, duration: 300, delay: 160 + i * 60 }); });
-            });
+            let shown = false, cin = null;
+            const showCard = (instant) => {   // 卡登場(instant=跳過時瞬間到位)
+              if (shown) return; shown = true;
+              if (skipHit && skipHit.active) skipHit.destroy();
+              if (cont.active) this.tweens.add({ targets: cont, scale: { from: instant ? 1 : 0.2, to: 1 }, alpha: { from: instant ? 1 : 0, to: 1 }, y: { from: cy + (instant ? 0 : 26), to: cy }, angle: { from: instant ? 0 : -8, to: 0 }, duration: instant ? 1 : 480, ease: 'Back.out' });   // 卡從印中升起變大
+              if (rays.active) this.tweens.add({ targets: rays, alpha: { from: 0, to: rayA }, duration: instant ? 1 : 560 });   // 光芒淡入
+              blocks.forEach(o => { if (o.b.active) this.tweens.add({ targets: o.b, alpha: o.baseA, duration: instant ? 1 : 620 }); });   // 飄移方塊淡入
+              if (titleT.active) this.tweens.add({ targets: titleT, alpha: 1, duration: instant ? 1 : 400 });
+              [nmT, stT, hintT, newT].forEach((t, i) => { if (t && t.active) this.tweens.add({ targets: t, alpha: 1, duration: instant ? 1 : 300, delay: instant ? 0 : 160 + i * 60 }); });
+              this.time.delayedCall(instant ? 40 : 320, () => { if (cont.active) this._cardShine(CX, cy, 324, 220, 20); });   // ✨ 卡面漸層流光斜掃
+              makeConfirm(!instant);   // ✔ 卡登場才出現確定鈕(演出期間不搶視線;跳過則直接顯示)
+            };
+            const skipHit = this.rect(CX, H / 2, W, H, 0x000000, 0.001).setInteractive().setDepth(9000);   // 點任意處=快轉跳過演出
+            tapBind(this, skipHit, () => { if (cin && cin.kill) cin.kill(); showCard(true); });
+            cin = this._summonCinematic(CX, cy, cd.el, hi, () => showCard(false));
           } else { rays.setAlpha(rayA); blocks.forEach(o => o.b.setAlpha(o.baseA)); }   // 非首播(如從詳細頁返回):光芒/方塊直接顯示
         } else {   // ── 十連:5×2 大格子(亮色圓角卡) ──
           const cols = 5, gx = 74, gy = 92, x0 = CX - 2 * gx, y0 = Math.round(H * 0.28);
@@ -4996,39 +5089,37 @@
           });
           this.txt(CX, y0 + 2 * gy + 44, '👆 點卡片看詳細', '13px', '#b8b0c4', 0.5);
         }
-        this.btn(CX, H - 66, 220, 48, this._afterPull ? '✔ 下一步:組隊' : '✔ 確定', () => { if (this._afterPull) { this._afterPull = null; this.gachaResult = null; this.gachaRevealed = false; this.scene.manager.start('team', { tutorial: true }); this.scene.manager.stop('home'); return; } this.gachaResult = null; this.gachaRevealed = false; this.rebuild(); }, { col: 0x35a866, stroke: 0x35a866, color: '#ffffff', bold: true, fs: FS.sub });
+        if (!(n === 1 && reveal)) makeConfirm(false);   // 十連/非首播:確定鈕直接顯示;單抽電影化則延到卡登場才出現(見 showCard)
       }   // 教學免費十連→確定→導向編隊教學
       drawGachaDetail() {   // 抽卡卡片詳情=共用全螢幕詳情(與卡冊一致);點外面/關閉回結果
         const cd = ROSTER.find(c => c.id === this.gachaDetail); if (!cd) { this.gachaDetail = null; return this.drawGachaResult(); }
         cardDetailPanel(this, o => this.L(o), cd, { manage: false, onClose: () => { this.gachaDetail = null; this.rebuild(); } });
       }
       bOther() {
-        const pr = getProgress();
-        this.txt(CX, 92, '⚙️ 其他', '22px', '#f3e9d8', 0.5, true);
-        this.txt(CX, 150, '🏆 序章通關 ×' + pr.clears + '    📖 收集 ' + ownedCount() + '/' + ROSTER.length, '15px', '#ffd56a', 0.5);
-        this.btn(CX, 184, 360, 40, '✏️ 改名(目前:' + (getMeta().name || '忍者') + ')', () => { const cur = getMeta().name || '忍者'; const n = prompt('輸入用戶名稱(最多 8 字)', cur); if (n != null) { const nm = (n.trim().slice(0, 8)) || '忍者'; mutSave(s => { s.meta.name = nm; }); this.toast('已改名:' + nm); this.rebuild(); } }, { col: 0x2e2a3a, stroke: 0x5a6a8a, color: '#cfe0ff', fs: '15px' });
-        this.btn(CX - 92, 224, 172, 50, '📖 卡片圖鑑', () => this.go('dex'), { col: 0x2e2a3a, stroke: 0x5a6a8a, color: '#cfe0ff', fs: '17px' });
-        this.btn(CX + 92, 224, 172, 50, '🎓 新手教學', () => { const team = ['c03', 'c06', 'c19', 'c10', 'c12'].map(id => ROSTER.find(c => c.id === id)).filter(Boolean); if (team.length < 5) { this.toast('教學需要狗狗隊(先到其他→給狗狗隊)'); return; } this.scene.manager.start('game', { team: team, dungeonId: 'prologue', tutorial: true }); this.scene.manager.stop('home'); }, { col: 0x2e3a4a, stroke: 0x5aaa8a, color: '#cfe8e0', fs: '17px' });
+        const T = UI(), cTop = 84, cBot = H - 60, pr = getProgress();
+        this.rect(CX, (cTop + cBot) / 2, W, cBot - cTop, T.page);   // 亮色 body 底(同卡片/商店/排行)
+        this.txt(CX, cTop + 30, '⚙️ 其他', FS.title, T.ink, 0.5, true);
+        this.txt(CX, cTop + 56, '🏆 序章通關 ×' + pr.clears + '    📖 收集 ' + ownedCount() + '/' + ROSTER.length, FS.cap, T.ink2, 0.5);
+        this.btn(CX, cTop + 88, 360, 44, '✏️ 改名(目前:' + (getMeta().name || '忍者') + ')', () => { const cur = getMeta().name || '忍者'; const n = prompt('輸入用戶名稱(最多 8 字)', cur); if (n != null) { const nm = (n.trim().slice(0, 8)) || '忍者'; mutSave(s => { s.meta.name = nm; }); this.toast('已改名:' + nm); this.rebuild(); } }, { col: T.surf, stroke: 0x5aa9e6, color: T.ink, fs: FS.body });
+        this.btn(CX - 92, cTop + 138, 172, 48, '📖 卡片圖鑑', () => this.go('dex'), { col: T.surf, stroke: 0x5aa9e6, color: T.ink, fs: FS.body, bold: true });
+        this.btn(CX + 92, cTop + 138, 172, 48, '🎓 新手教學', () => { const team = ['c03', 'c06', 'c19', 'c10', 'c12'].map(id => ROSTER.find(c => c.id === id)).filter(Boolean); if (team.length < 5) { this.toast('教學需要狗狗隊(先到其他→給狗狗隊)'); return; } this.scene.manager.start('game', { team: team, dungeonId: 'prologue', tutorial: true }); this.scene.manager.stop('home'); }, { col: T.surf, stroke: 0x35a866, color: T.ink, fs: FS.body, bold: true });
         const addL = o => this.L(o);
-        this.txt(CX - 150, 274, '🔊 音效', '14', '#cfe0ff', 0); volBar(this, addL, CX + 38, 274, 232, '', () => SFX.sfxVol(), (v) => { SFX.setSfxVol(v); SFX.button(); });   // 音效音量(可點可拖,最左=靜音)
-        this.txt(CX - 150, 308, '🎵 背景', '14', '#cfe0ff', 0); volBar(this, addL, CX + 38, 308, 232, '', () => SFX.bgmVol(), (v) => { SFX.setBgmVol(v); if (this.bgmMp3) this.bgmMp3.setVolume((this._bgmBase || 0.45) * v); });   // 背景音量(即時調大廳音樂)
-        this.btn(CX, 346, 360, 38, '🔄 重置存檔', () => { localStorage.removeItem('ninja_save'); localStorage.removeItem('ninja_owned'); this.toast('已重置'); this.switchTab('dungeon'); }, { col: 0x3a201a, stroke: 0x8a4a3a, color: '#ffb0a0', fs: '15px' });
-        this.txt(CX, 382, '🧪 測試工具(上架前移除)', '13px', '#9a8a6a', 0.5);
+        this.txt(CX - 150, cTop + 182, '🔊 音效', FS.cap, T.ink2, 0); volBar(this, addL, CX + 38, cTop + 182, 232, '', () => SFX.sfxVol(), (v) => { SFX.setSfxVol(v); SFX.button(); });   // 音效音量(可點可拖,最左=靜音)
+        this.txt(CX - 150, cTop + 214, '🎵 背景', FS.cap, T.ink2, 0); volBar(this, addL, CX + 38, cTop + 214, 232, '', () => SFX.bgmVol(), (v) => { SFX.setBgmVol(v); if (this.bgmMp3) this.bgmMp3.setVolume((this._bgmBase || 0.45) * v); });   // 背景音量(即時調大廳音樂)
+        this.btn(CX, cTop + 246, 360, 40, '🔄 重置存檔', () => { localStorage.removeItem('ninja_save'); localStorage.removeItem('ninja_owned'); this.toast('已重置'); this.switchTab('dungeon'); }, { col: T.surf, stroke: 0xe0603a, color: '#c0492c', fs: FS.cap });
+        // ── 🧪 測試工具(上架前移除)──
+        this.txt(CX, cTop + 278, '🧪 測試工具(上架前移除)', FS.micro, T.ink3, 0.5);
+        const devMini = { col: T.surf2, stroke: T.divider, color: T.ink2, fs: FS.micro };
         const dev = (lv) => { devSetAllLv(lv); this.toast('全卡 → LV' + lv); this.rebuild(); };
-        this.btn(CX - 120, 414, 112, 40, '全卡 LV1', () => dev(1), { col: 0x24303a, stroke: 0x4a6a8a, color: '#cfe0ff', fs: '13px' });
-        this.btn(CX, 414, 112, 40, '全卡 LV10', () => dev(10), { col: 0x24303a, stroke: 0x4a6a8a, color: '#cfe0ff', fs: '13px' });
-        this.btn(CX + 120, 414, 112, 40, '全卡 LV20', () => dev(20), { col: 0x24303a, stroke: 0x4a6a8a, color: '#cfe0ff', fs: '13px' });
-        this.btn(CX - 120, 460, 114, 42, '⚡ 體力補滿', () => { refillStamina(); this.toast('體力補滿!'); this.rebuild(); }, { col: 0x2e3a22, stroke: 0x6aaa4c, color: '#eafce0', bold: true, fs: '13px' });
-        this.btn(CX, 460, 114, 42, '💎 +100 鑽石', () => { mutSave(s => { s.meta.stones = (s.meta.stones || 0) + 100; }); this.toast('💎 +100 鑽石!'); this.rebuild(); }, { col: 0x2a2440, stroke: 0x8c6aff, color: '#e0d0ff', bold: true, fs: '13px' });
-        this.btn(CX + 120, 460, 114, 42, '🔓 解鎖全關', () => { devUnlockAll(); this.toast('已解鎖全關(含塔魔王)'); this.rebuild(); }, { col: 0x2a2440, stroke: 0x8c6aff, color: '#e0d0ff', bold: true, fs: '13px' });
+        this.btn(CX - 120, cTop + 300, 112, 36, '全卡 LV1', () => dev(1), devMini);
+        this.btn(CX, cTop + 300, 112, 36, '全卡 LV10', () => dev(10), devMini);
+        this.btn(CX + 120, cTop + 300, 112, 36, '全卡 LV20', () => dev(20), devMini);
+        this.btn(CX - 120, cTop + 340, 112, 38, '⚡ 體力補滿', () => { refillStamina(); this.toast('體力補滿!'); this.rebuild(); }, { col: T.surf, stroke: 0x35a866, color: T.ink, bold: true, fs: FS.micro });
+        this.btn(CX, cTop + 340, 112, 38, '💎 +100 鑽石', () => { mutSave(s => { s.meta.stones = (s.meta.stones || 0) + 100; }); this.toast('💎 +100 鑽石!'); this.rebuild(); }, { col: T.surf, stroke: 0x8c6aff, color: T.ink, bold: true, fs: FS.micro });
+        this.btn(CX + 120, cTop + 340, 112, 38, '🔓 解鎖全關', () => { devUnlockAll(); this.toast('已解鎖全關(含塔魔王)'); this.rebuild(); }, { col: T.surf, stroke: 0x8c6aff, color: T.ink, bold: true, fs: FS.micro });
         const giveTeam = (name, ids) => { ids.forEach(id => addCard(id)); this.toast(name + ' ×5 已放進包包!'); this.rebuild(); };   // 測試:一鍵入手該隊 5 張(火水雷土風)
-        this.btn(CX - 92, 505, 172, 42, '🐕 狗狗隊', () => giveTeam('狗狗隊', ['c03', 'c06', 'c19', 'c10', 'c12']), { col: 0x3a2e1a, stroke: 0xc8803a, color: '#ffd9a0', bold: true, fs: '14px' });
-        this.btn(CX + 92, 505, 172, 42, '🐱 貓隊', () => giveTeam('貓隊', ['c02', 'c05', 'c08', 'c09', 'c11']), { col: 0x2e3a22, stroke: 0x8fd16a, color: '#e2ffd2', bold: true, fs: '14px' });
-        this.btn(CX - 92, 549, 172, 42, '🐹 鼠隊', () => giveTeam('鼠隊', ['c13', 'c16', 'c20', 'c23', 'c27']), { col: 0x33291a, stroke: 0xd8b890, color: '#f2e4c8', bold: true, fs: '14px' });
-        this.btn(CX + 92, 549, 172, 42, '🇹🇼 台灣隊', () => giveTeam('台灣隊', ['c15', 'c18', 'c22', 'c26', 'c30']), { col: 0x1a2a1f, stroke: 0x8fe0a8, color: '#d2ffe2', bold: true, fs: '14px' });
-        this.btn(CX - 92, 593, 172, 42, '🐟 魚隊', () => giveTeam('魚隊', ['c14', 'c17', 'c21', 'c24', 'c28']), { col: 0x16314d, stroke: 0x7fc8e8, color: '#d2f0ff', bold: true, fs: '14px' });
-        this.btn(CX + 92, 593, 172, 42, '🐰 兔隊', () => giveTeam('兔隊', ['c31', 'c32', 'c33', 'c34', 'c35']), { col: 0x3a1f2a, stroke: 0xe89ab0, color: '#ffd2e4', bold: true, fs: '14px' });
-        this.btn(CX, 637, 172, 42, '🐦 鳥隊', () => giveTeam('鳥隊', ['c01', 'c04', 'c07', 'c25', 'c29']), { col: 0x231a26, stroke: 0xc79bff, color: '#ecd2ff', bold: true, fs: '14px' });
+        const teams = [['🐕 狗狗隊', ['c03', 'c06', 'c19', 'c10', 'c12'], 0xc8803a], ['🐱 貓隊', ['c02', 'c05', 'c08', 'c09', 'c11'], 0x35a866], ['🐹 鼠隊', ['c13', 'c16', 'c20', 'c23', 'c27'], 0xb08040], ['🇹🇼 台灣隊', ['c15', 'c18', 'c22', 'c26', 'c30'], 0x2f8a5b], ['🐟 魚隊', ['c14', 'c17', 'c21', 'c24', 'c28'], 0x2e9be0], ['🐰 兔隊', ['c31', 'c32', 'c33', 'c34', 'c35'], 0xe07ba0], ['🐦 鳥隊', ['c01', 'c04', 'c07', 'c25', 'c29'], 0x8c6aff]];
+        teams.forEach((t, i) => { const col = (i % 2 === 0) ? CX - 92 : CX + 92, row = Math.floor(i / 2); this.btn(col, cTop + 380 + row * 38, 172, 34, t[0], () => giveTeam(t[0], t[1]), { col: T.surf, stroke: t[2], color: T.ink, bold: true, fs: FS.micro }); });
       }
     }
 
