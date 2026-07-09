@@ -1,0 +1,142 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=400">
+<title>強化合成</title>
+<link rel="stylesheet" href="../style.css">
+<style>
+  body { background: transparent; }
+
+  /* 強化對象大卡 */
+  .target {
+    display: flex; align-items: center; gap: 14px;
+    margin: 14px; padding: 14px 16px; border-radius: 18px;
+    border: 2.5px solid var(--gold);
+    box-shadow: var(--shadow-card);
+  }
+  .target .portrait {
+    width: 92px; height: 92px; border-radius: 14px; flex: none;
+    overflow: hidden; background: var(--surf); border: 1.5px solid var(--gold);
+  }
+  .target .portrait img { width: 100%; height: 100%; object-fit: cover; }
+  .target .info { flex: 1; min-width: 0; }
+  .target .nm { display: flex; align-items: center; gap: 6px; }
+  .target .nm .cn { font-size: var(--fs-sub); font-weight: 700; }
+  .target .atk { font-size: var(--fs-title); font-weight: 700; color: var(--ink); margin-top: 2px; }
+  .target .atk small { font-size: var(--fs-micro); color: var(--ink2); font-weight: 700; margin-right: 4px; }
+
+  /* 經驗條 + Lv 標示 */
+  .expline { display: flex; align-items: center; gap: 10px; margin-top: 10px; }
+  .expline .bar { flex: 1; }
+  .expline .lvto { font-size: var(--fs-cap); font-weight: 700; color: var(--okTx); white-space: nowrap; }
+
+  /* 素材序號徽章 */
+  .mini .seq {
+    position: absolute; right: 4px; top: 4px; z-index: 2;
+    width: 20px; height: 20px; border-radius: 50%;
+    background: var(--ok); border: 2px solid #fff; color: #fff;
+    font-size: 12px; font-weight: 700; display: grid; place-items: center;
+    box-shadow: 0 1px 3px rgba(0,0,0,.3);
+  }
+
+  .footer { padding: 8px 14px 16px; }
+</style>
+</head>
+<body>
+<div class="phone">
+
+  <!-- 標題列 -->
+  <div class="topbar">
+    <h1>⬆️ 強化合成</h1>
+    <div class="sub">選素材餵給主角</div>
+  </div>
+
+  <div class="screen-body">
+
+    <!-- 強化對象大卡 -->
+    <div class="target tint-fire">
+      <div class="portrait">
+        <img src="../assets/cards/c03_full.webp" alt="炎助">
+      </div>
+      <div class="info">
+        <div class="nm">
+          <span class="elbadge el-fire">火</span>
+          <span class="cn">炎助</span>
+        </div>
+        <div class="atk"><small>攻</small>259</div>
+        <div class="expline">
+          <span class="bar"><i style="width:60%;background:var(--ok)"></i></span>
+          <span class="lvto">Lv.18 → 19</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- 素材 -->
+    <div class="section-label" style="padding:2px 16px 0">素材（已選 3）</div>
+    <div class="grid-cards">
+      <div class="mini owned kage">
+        <span class="seq">1</span>
+        <img src="../assets/cards/c01_thumb.webp" alt="朱">
+        <span class="elbadge el-fire">火</span>
+        <span class="lvpill">Lv.5</span>
+      </div>
+      <div class="mini owned kage">
+        <span class="seq">2</span>
+        <img src="../assets/cards/c07_thumb.webp" alt="鳴">
+        <span class="elbadge el-thunder">雷</span>
+        <span class="lvpill">Lv.3</span>
+      </div>
+      <div class="mini owned kage">
+        <span class="seq">3</span>
+        <img src="../assets/cards/c10_thumb.webp" alt="土丸">
+        <span class="elbadge el-earth">土</span>
+        <span class="lvpill">Lv.4</span>
+      </div>
+      <div class="mini owned">
+        <img src="../assets/cards/c04_thumb.webp" alt="凪">
+        <span class="elbadge el-water">水</span>
+        <span class="lvpill">Lv.6</span>
+      </div>
+      <div class="mini owned">
+        <img src="../assets/cards/c06_thumb.webp" alt="水無">
+        <span class="elbadge el-water">水</span>
+        <span class="lvpill">Lv.2</span>
+      </div>
+      <div class="mini owned">
+        <img src="../assets/cards/c09_thumb.webp" alt="椿">
+        <span class="elbadge el-earth">土</span>
+        <span class="lvpill">Lv.7</span>
+      </div>
+      <div class="mini owned">
+        <img src="../assets/cards/c11_thumb.webp" alt="空">
+        <span class="elbadge el-wind">風</span>
+        <span class="lvpill">Lv.1</span>
+      </div>
+      <div class="mini owned">
+        <img src="../assets/cards/c12_thumb.webp" alt="疾風">
+        <span class="elbadge el-wind">風</span>
+        <span class="lvpill">Lv.3</span>
+      </div>
+      <div class="mini owned">
+        <img src="../assets/cards/c15_thumb.webp" alt="臺灣雲豹">
+        <span class="elbadge el-fire">火</span>
+        <span class="lvpill">Lv.9</span>
+      </div>
+      <div class="mini owned">
+        <img src="../assets/cards/c01_thumb.webp" alt="朱">
+        <span class="elbadge el-fire">火</span>
+        <span class="lvpill">Lv.2</span>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- 底部合成 -->
+  <div class="footer">
+    <button class="pill ok block lg">⚡ 合成</button>
+  </div>
+
+</div>
+</body>
+</html>

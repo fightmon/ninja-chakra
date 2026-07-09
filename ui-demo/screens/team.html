@@ -1,0 +1,205 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=400">
+<title>編成</title>
+<link rel="stylesheet" href="../style.css">
+<style>
+  body { background: transparent; }
+
+  /* 深色編隊卡→淺色暖底+金框(佈陣裝在裡面) */
+  .teamcard {
+    position: relative; overflow: hidden;
+    margin: 12px; border-radius: 18px; padding: 10px 12px 12px;
+    background: linear-gradient(160deg, #fcf9f4 0%, #f1ebe0 100%);
+    border: 2px solid var(--gold); box-shadow: 0 4px 16px rgba(43,51,58,.10);
+    color: var(--ink); flex: none;
+  }
+  .teamcard > * { position: relative; z-index: 1; }
+  /* 飄浮方塊粒子:固定在欄位左右緣,一致向上升起成能量流 */
+  .tc-particles { position: absolute; inset: 0; z-index: 0; pointer-events: none; overflow: hidden; }
+  .tc-blk { position: absolute; border-radius: 24%; box-shadow: 0 1px 3px rgba(0,0,0,.10);
+    opacity: 0; animation: floatBlk 8s linear infinite; will-change: transform, opacity; }
+  @keyframes floatBlk {
+    0%   { transform: translate3d(0, 10px, 0);        opacity: 0; }
+    18%  { opacity: var(--op, .45); }
+    82%  { opacity: var(--op, .45); }
+    100% { transform: translate3d(var(--dx, 0), -26px, 0); opacity: 0; }
+  }
+  @media (prefers-reduced-motion: reduce) { .tc-blk { animation: none; } }
+
+  /* 隊名 + 左右換隊 */
+  .tc-head { display: flex; align-items: center; justify-content: center; gap: 12px; padding: 2px 0 8px; }
+  .tc-head .arw { width: 28px; height: 28px; border-radius: 50%; background: var(--surf2);
+    border: 1px solid var(--divider); display: grid; place-items: center; font-size: 16px; cursor: pointer; color: var(--ink2); }
+  .tc-head .tn { font-size: var(--fs-body); font-weight: 700; }
+
+  /* 佈陣(橫式卡,十字排列) */
+  .formation { padding: 2px 4px 6px; }
+  .frow { display: flex; justify-content: center; gap: 12px; margin: 6px 0; }
+  .fcard { position: relative; width: 126px; height: 68px; border-radius: 12px; overflow: hidden;
+    border: 2.5px solid rgba(255,255,255,.85); box-shadow: 0 3px 9px rgba(0,0,0,.3); background: #222; }
+  .fcard img { width: 100%; height: 100%; object-fit: cover; }
+  .fcard .elbadge { position: absolute; top: 3px; right: 3px; }
+  .fcard .lvpill { position: absolute; left: 4px; bottom: 3px; }
+  .fcard.leader { width: 144px; height: 78px; border-color: var(--gold);
+    box-shadow: 0 0 0 2px rgba(244,183,60,.35), 0 5px 14px rgba(0,0,0,.4); }
+  .fcard.leader .crown { position: absolute; top: 2px; left: 4px; font-size: 14px; filter: drop-shadow(0 1px 2px rgba(0,0,0,.6)); }
+  .fcard.b-fire { border-color: #ffb59c; background: linear-gradient(135deg, #e8663e, #9c3620); }
+  .fcard.b-water { border-color: #a9d6f6; background: linear-gradient(135deg, #45a0e2, #235f8c); }
+  .fcard.b-thunder { border-color: #f4de8c; background: linear-gradient(135deg, #e6c33d, #a5821c); }
+  .fcard.b-earth { border-color: #e0b98c; background: linear-gradient(135deg, #cc9350, #875629); }
+  .fcard.b-wind { border-color: #9fe0b8; background: linear-gradient(135deg, #5bbd76, #2e7846); }
+
+  /* 統計:PWR/HP/RCV 英文簡寫,數字放大 */
+  .tc-stats { display: flex; justify-content: center; gap: 20px; padding: 8px 0 4px; border-top: 1px solid var(--divider); margin-top: 6px; }
+  .tc-stats span { display: inline-flex; align-items: baseline; gap: 5px; }
+  .tc-stats .k { font-size: 12px; letter-spacing: .5px; color: var(--ink3); font-weight: 700; }
+  .tc-stats .v { font-size: 21px; font-weight: 700; }   /* 數字放大 */
+  .tc-stats .pwr .v { color: var(--goldTx); }
+  .tc-stats .hp .v { color: var(--badTx); }
+  .tc-stats .rcv .v { color: var(--okTx); }
+  /* 隊長技:放大,只留效果(去掉技名) */
+  .tc-lead { text-align: center; font-size: var(--fs-cap); color: var(--ink2); padding: 5px 6px 2px; }
+  .tc-lead b { color: var(--goldTx); }
+
+  /* 排序列(固定):排序下拉 + 屬性篩選 */
+  .sortbar { flex: none; display: flex; align-items: center; gap: 6px; padding: 10px 12px 8px; background: var(--surf);
+    overflow-x: auto; white-space: nowrap; }
+  .sortbar::-webkit-scrollbar { height: 0; }
+  .sortlabel { font-size: var(--fs-cap); font-weight: 700; color: var(--ink2); white-space: nowrap; flex: none; }
+  .sortsel { flex: none; height: 34px; border-radius: 17px; border: 1.5px solid var(--divider); background: var(--surf2);
+    color: var(--ink); font-family: inherit; font-size: var(--fs-cap); font-weight: 700; padding: 0 8px; cursor: pointer; }
+  .sortbar .pill { flex: none; }
+
+  /* 選角捲動格(唯一捲動區,可見捲軸) */
+  .pickgrid { flex: 1; overflow-y: auto; padding: 6px 10px 14px; background: var(--surf); }
+  .pickgrid::-webkit-scrollbar { width: 9px; }
+  .pickgrid::-webkit-scrollbar-track { background: #efe9df; border-radius: 5px; }
+  .pickgrid::-webkit-scrollbar-thumb { background: var(--gold); border-radius: 5px; border: 2px solid #efe9df; background-clip: padding-box; }
+
+  .footer { flex: none; padding: 12px 18px 16px; border-top: 1px solid var(--divider); background: var(--surf); }
+  .mini.pick { border-color: var(--ok); border-width: 2.5px; }
+  .mini.pick::after { content: '✓'; position: absolute; top: 3px; right: 4px; width: 16px; height: 16px; border-radius: 50%;
+    background: var(--ok); color: #fff; font-size: 11px; display: grid; place-items: center; z-index: 2; }
+</style>
+</head>
+<body>
+<div class="phone">
+
+  <div class="topbar">
+    <h1>🛡️ 編成</h1>
+    <span class="sub">點角色卡編入隊伍</span>
+  </div>
+
+  <!-- 深色編隊卡:佈陣 + 統計 -->
+  <div class="teamcard">
+    <div class="tc-particles"></div>
+    <div class="tc-head">
+      <span class="arw">‹</span>
+      <span class="tn">隊1 · 戰鬥毛大隊</span>
+      <span class="arw">›</span>
+    </div>
+
+    <div class="formation">
+      <div class="frow">
+        <div class="fcard b-thunder"><img src="../assets/cards/c07_full.webp"><span class="elbadge el-thunder">雷</span><span class="lvpill">Lv.28</span></div>
+        <div class="fcard b-water"><img src="../assets/cards/c04_full.webp"><span class="elbadge el-water">水</span><span class="lvpill">Lv.25</span></div>
+      </div>
+      <div class="frow">
+        <div class="fcard leader b-fire"><span class="crown">👑</span><img src="../assets/cards/c15_full.webp"><span class="elbadge el-fire">火</span><span class="lvpill">Lv.35</span></div>
+      </div>
+      <div class="frow">
+        <div class="fcard b-wind"><img src="../assets/cards/c11_full.webp"><span class="elbadge el-wind">風</span><span class="lvpill">Lv.22</span></div>
+        <div class="fcard b-earth"><img src="../assets/cards/c09_full.webp"><span class="elbadge el-earth">土</span><span class="lvpill">Lv.24</span></div>
+      </div>
+    </div>
+
+    <div class="tc-stats">
+      <span class="pwr"><i class="k">PWR</i><i class="v">18,420</i></span>
+      <span class="hp"><i class="k">HP</i><i class="v">14,200</i></span>
+      <span class="rcv"><i class="k">RCV</i><i class="v">980</i></span>
+    </div>
+    <div class="tc-lead">👑 隊長技 · <b>火屬攻擊 ×1.5</b></div>
+  </div>
+
+  <!-- 排序 + 篩選(固定) -->
+  <div class="sortbar">
+    <select class="sortsel">
+      <option>屬性</option>
+      <option>種族</option>
+      <option>LV</option>
+      <option>PWR</option>
+      <option>HP</option>
+      <option>RCV</option>
+    </select>
+    <span class="pill sm ok">全部</span>
+    <span class="pill sm"><i class="ei ei-fire"></i></span>
+    <span class="pill sm"><i class="ei ei-water"></i></span>
+    <span class="pill sm"><i class="ei ei-thunder"></i></span>
+    <span class="pill sm"><i class="ei ei-earth"></i></span>
+    <span class="pill sm"><i class="ei ei-wind"></i></span>
+  </div>
+
+  <!-- 選角:唯一捲動區(有可見捲軸) -->
+  <div class="pickgrid">
+    <div class="grid-cards" style="padding:0">
+      <div class="mini pick"><img src="../assets/cards/c15_thumb.webp"><span class="elbadge el-fire">火</span><span class="lvpill">35</span></div>
+      <div class="mini"><img src="../assets/cards/c03_thumb.webp"><span class="elbadge el-fire">火</span><span class="lvpill">20</span></div>
+      <div class="mini pick"><img src="../assets/cards/c04_thumb.webp"><span class="elbadge el-water">水</span><span class="lvpill">25</span></div>
+      <div class="mini"><img src="../assets/cards/c06_thumb.webp"><span class="elbadge el-water">水</span><span class="lvpill">16</span></div>
+      <div class="mini pick"><img src="../assets/cards/c07_thumb.webp"><span class="elbadge el-thunder">雷</span><span class="lvpill">28</span></div>
+      <div class="mini"><img src="../assets/cards/c08_thumb.webp"><span class="elbadge el-thunder">雷</span><span class="lvpill">14</span></div>
+      <div class="mini pick"><img src="../assets/cards/c09_thumb.webp"><span class="elbadge el-earth">土</span><span class="lvpill">24</span></div>
+      <div class="mini"><img src="../assets/cards/c10_thumb.webp"><span class="elbadge el-earth">土</span><span class="lvpill">12</span></div>
+      <div class="mini pick"><img src="../assets/cards/c11_thumb.webp"><span class="elbadge el-wind">風</span><span class="lvpill">22</span></div>
+      <div class="mini"><img src="../assets/cards/c12_thumb.webp"><span class="elbadge el-wind">風</span><span class="lvpill">9</span></div>
+      <div class="mini"><img src="../assets/cards/c13_thumb.webp"><span class="elbadge el-fire">火</span><span class="lvpill">7</span></div>
+      <div class="mini"><img src="../assets/cards/c14_thumb.webp"><span class="elbadge el-fire">火</span><span class="lvpill">5</span></div>
+      <div class="mini"><img src="../assets/cards/c16_thumb.webp"><span class="elbadge el-water">水</span><span class="lvpill">11</span></div>
+      <div class="mini"><img src="../assets/cards/c17_thumb.webp"><span class="elbadge el-water">水</span><span class="lvpill">8</span></div>
+      <div class="mini"><img src="../assets/cards/c18_thumb.webp"><span class="elbadge el-thunder">雷</span><span class="lvpill">6</span></div>
+      <div class="mini"><img src="../assets/cards/c19_thumb.webp"><span class="elbadge el-thunder">雷</span><span class="lvpill">30</span></div>
+      <div class="mini"><img src="../assets/cards/c20_thumb.webp"><span class="elbadge el-earth">土</span><span class="lvpill">17</span></div>
+      <div class="mini"><img src="../assets/cards/c21_thumb.webp"><span class="elbadge el-earth">土</span><span class="lvpill">4</span></div>
+      <div class="mini"><img src="../assets/cards/c22_thumb.webp"><span class="elbadge el-wind">風</span><span class="lvpill">13</span></div>
+      <div class="mini"><img src="../assets/cards/c23_thumb.webp"><span class="elbadge el-wind">風</span><span class="lvpill">3</span></div>
+      <div class="mini"><img src="../assets/cards/c24_thumb.webp"><span class="elbadge el-fire">火</span><span class="lvpill">19</span></div>
+      <div class="mini"><img src="../assets/cards/c25_thumb.webp"><span class="elbadge el-water">水</span><span class="lvpill">10</span></div>
+      <div class="mini"><img src="../assets/cards/c26_thumb.webp"><span class="elbadge el-thunder">雷</span><span class="lvpill">7</span></div>
+      <div class="mini"><img src="../assets/cards/c27_thumb.webp"><span class="elbadge el-earth">土</span><span class="lvpill">15</span></div>
+      <div class="mini"><img src="../assets/cards/c28_thumb.webp"><span class="elbadge el-wind">風</span><span class="lvpill">2</span></div>
+    </div>
+  </div>
+
+  <div class="footer">
+    <button class="pill ok block lg">✔ 確定</button>
+  </div>
+
+</div>
+<script>
+  // 飄浮方塊粒子:固定在欄位左右緣,一致向上升起成能量流
+  (function(){
+    const wrap = document.querySelector('.tc-particles'); if(!wrap) return;
+    const cols = ['--fire','--water','--thunder','--earth','--wind'];
+    const spots = [
+      [3,16],[9,30],[5,46],[10,62],[4,78],[8,88],[11,22],[6,54],
+      [97,18],[91,32],[96,48],[92,64],[95,80],[89,26],[94,90],[90,56]
+    ];
+    spots.forEach((s, i) => {
+      const b = document.createElement('div'); b.className = 'tc-blk';
+      const sz = 6 + (i % 4) * 2;
+      b.style.width = b.style.height = sz + 'px';
+      b.style.left = s[0] + '%'; b.style.top = s[1] + '%';
+      b.style.background = 'var(' + cols[i % cols.length] + ')';
+      b.style.setProperty('--op', (0.55 - (i % 4) * 0.06).toFixed(2));
+      b.style.setProperty('--dx', (((i % 3) - 1) * 3) + 'px');
+      b.style.animationDuration = (7 + (i % 5) * 0.8).toFixed(1) + 's';
+      b.style.animationDelay = (-(i * 0.55)).toFixed(1) + 's';
+      wrap.appendChild(b);
+    });
+  })();
+</script>
+</body>
+</html>

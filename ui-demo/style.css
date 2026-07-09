@@ -1,0 +1,234 @@
+/* ============================================================
+   忍塊查克拉 · UI Demo 設計系統
+   對應遊戲 index.html 的 UI_THEMES(light) + FS 字級 + roundRectG 圓角
+   純靜態 demo,供 UI/UX 審查用。所有頁面共用此檔。
+   ============================================================ */
+
+@font-face {
+  font-family: 'GenSen';
+  font-weight: 400;
+  font-display: swap;
+  src: url('assets/fonts/gensen-r.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'GenSen';
+  font-weight: 700;
+  font-display: swap;
+  src: url('assets/fonts/gensen-b.woff2') format('woff2');
+}
+
+:root {
+  /* ---- 色票 token(light) ---- */
+  --page: radial-gradient(ellipse 100% 70% at 50% 40%, #5e5954 0%, #383030 52%, #261e1a 100%);   /* 深灰放射漸層(中間亮往外暗,像龍族拼圖) */
+  --surf: #ffffff;
+  --surf2: #f6f4f1;
+  --ink: #2b333a;
+  --ink2: #6c7780;
+  --ink3: #a6adb3;
+  --divider: #e4ded4;
+  --gold: #f4b73c;
+  --goldTx: #c8912a;
+  --ok: #35a866;
+  --okTx: #2f8a5b;
+  --bad: #d0574a;
+  --badTx: #c14a3d;
+  --onAccent: #ffffff;
+
+  /* ---- 屬性實色 ---- */
+  --fire: #e8513a;
+  --water: #3a9be8;
+  --thunder: #e6c12f;
+  --earth: #c8803a;
+  --wind: #4caf72;
+
+  /* ---- 屬性淡底 elTint ---- */
+  --t-fire: #ffe1d3;
+  --t-water: #d9edfb;
+  --t-thunder: #fdefb2;
+  --t-earth: #eed9bd;
+  --t-wind: #d8efdf;
+  /* ---- 屬性淡底2 elTint2(略深) ---- */
+  --t2-fire: #ffcdb7;
+  --t2-water: #bde0fb;
+  --t2-thunder: #ffe59c;
+  --t2-earth: #e6cca6;
+  --t2-wind: #bce9cd;
+
+  /* ---- 字級階梯 FS ---- */
+  --fs-display: 34px;
+  --fs-title: 27px;
+  --fs-sub: 18px;
+  --fs-body: 16px;
+  --fs-cap: 15px;
+  --fs-micro: 13px;
+
+  --shadow-card: 0 2px 8px rgba(43, 51, 58, .10);
+  --shadow-pop: 0 12px 40px rgba(43, 51, 58, .28);
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+body {
+  font-family: 'GenSen', 'Microsoft JhengHei', sans-serif;
+  color: var(--ink);
+}
+
+/* ============================================================
+   手機外框 —— 每個頁面放進 .phone(400×820)
+   ============================================================ */
+.phone {
+  position: relative;
+  width: 400px;
+  height: 820px;
+  background: var(--page);
+  border-radius: 30px;
+  overflow: hidden;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, .25), 0 0 0 1px rgba(0, 0, 0, .06);
+  display: flex;
+  flex-direction: column;
+  font-size: var(--fs-body);
+  line-height: 1.35;
+}
+/* 頁面內容捲動區(狀態列/導覽列固定) */
+.screen-body { flex: 1; overflow-y: auto; position: relative; }
+.screen-body::-webkit-scrollbar { width: 0; }
+
+/* ============================================================
+   狀態列(頂) —— 名稱/等級/體力/貨幣
+   ============================================================ */
+.statusbar {
+  display: flex; align-items: center; gap: 8px;
+  padding: 10px 14px; background: var(--surf);
+  border-bottom: 1px solid var(--divider);
+}
+.statusbar .avatar {
+  width: 34px; height: 34px; border-radius: 50%;
+  background: var(--t-earth); display: grid; place-items: center; font-size: 18px; flex: none;
+}
+.statusbar .who { flex: 1; min-width: 0; }
+.statusbar .who .name { font-weight: 700; font-size: var(--fs-body); display: flex; align-items: center; gap: 6px; }
+.statusbar .lvline { display: flex; align-items: center; gap: 6px; margin-top: 2px; }
+.statusbar .lvtag { font-size: var(--fs-micro); color: var(--ink2); font-weight: 700; }
+.statusbar .exp { flex: 1; height: 6px; border-radius: 3px; background: var(--divider); overflow: hidden; max-width: 120px; }
+.statusbar .exp > i { display: block; height: 100%; background: #5a7ff0; border-radius: 3px; }
+.coin { display: flex; align-items: center; gap: 3px; font-weight: 700; font-size: var(--fs-cap); }
+.coin.gold { color: var(--goldTx); }
+.coin.gem { color: var(--water); }
+
+/* 徽章(小圓角標籤) */
+.chip {
+  display: inline-flex; align-items: center; gap: 3px;
+  padding: 2px 9px; border-radius: 999px; font-size: var(--fs-micro); font-weight: 700;
+  background: var(--t-thunder); color: var(--goldTx);
+}
+
+/* ============================================================
+   底部導覽列 —— 6 分頁
+   ============================================================ */
+.navbar {
+  display: flex; background: var(--surf); border-top: 1px solid var(--divider);
+  padding: 6px 4px 8px;
+}
+.navbar .tab {
+  flex: 1; display: flex; flex-direction: column; align-items: center; gap: 2px;
+  font-size: var(--fs-micro); color: var(--ink3); padding: 4px 0; border-radius: 12px;
+}
+.navbar .tab .ic { font-size: 20px; }
+.navbar .tab.on { color: var(--fire); background: var(--t-fire); font-weight: 700; }
+
+/* ============================================================
+   通用元件
+   ============================================================ */
+/* 藥丸按鈕(3D 實體感:上緣高光 + 底部實色唇邊 + 落影 + 按下下沉→一眼看出可按) */
+.pill {
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  padding: 0 18px; height: 44px; border-radius: 22px;
+  background-color: var(--surf); background-image: linear-gradient(rgba(255,255,255,.16), rgba(0,0,0,.05));
+  border: 1.5px solid var(--divider); color: var(--ink);
+  font-family: inherit; font-size: var(--fs-body); font-weight: 700; cursor: pointer;
+  --lip: #d9d3c9;   /* 底部唇邊色(比按鈕底色深一階) */
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.45), 0 3px 0 var(--lip), 0 5px 9px rgba(43,51,58,.16);
+  transition: transform .06s ease, box-shadow .06s ease, filter .1s ease;
+}
+.pill:hover { filter: brightness(1.04); }
+.pill:active { transform: translateY(2px);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.35), 0 1px 0 var(--lip), 0 2px 5px rgba(43,51,58,.14); }
+.pill.sm { height: 34px; border-radius: 17px; font-size: var(--fs-cap); padding: 0 14px;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.4), 0 2px 0 var(--lip), 0 3px 6px rgba(43,51,58,.14); }
+.pill.sm:active { transform: translateY(1px); box-shadow: inset 0 1px 0 rgba(255,255,255,.3), 0 1px 0 var(--lip), 0 2px 4px rgba(43,51,58,.12); }
+.pill.lg { height: 52px; border-radius: 26px; font-size: var(--fs-sub); }
+.pill.block { display: flex; width: 100%; }
+.pill.primary { background-color: var(--gold); border-color: var(--gold); color: var(--onAccent); --lip: #cf9a1f; }
+.pill.ok { background-color: var(--ok); border-color: var(--ok); color: var(--onAccent); --lip: #26824e; }
+.pill.bad { background-color: var(--bad); border-color: var(--bad); color: var(--onAccent); --lip: #a53f34; }
+.pill.ghost { background-color: var(--surf2); border-color: var(--divider); color: var(--ink3); --lip: #ddd7cd; }
+/* footer 按鈕:寬度不超過螢幕 1/3≈130px、靠右排 → 預留空間給未來按鈕(涵蓋各頁不同命名的底部列) */
+.footer, .footbar, .gacha-footer, .actions { display: flex !important; align-items: center; gap: 8px; justify-content: flex-end !important; }
+.footer .pill, .footbar .pill, .gacha-footer .pill, .actions .pill { max-width: 130px !important; min-width: 0 !important; flex: 0 1 auto; }
+.footer .pill.block, .footbar .pill.block, .gacha-footer .pill.block, .actions .pill.block { width: 130px !important; flex: 0 0 130px; }
+
+/* 白色圓角面板/卡 */
+.panel { background: var(--surf); border: 1.5px solid var(--divider); border-radius: 16px; }
+.card { background: var(--surf); border: 1.5px solid var(--divider); border-radius: 14px; box-shadow: var(--shadow-card); }
+
+/* 屬性小徽章(卡角) */
+.elbadge {
+  display: inline-grid; place-items: center; width: 22px; height: 18px; border-radius: 6px;
+  border: 1.5px solid #fff; font-size: 11px; color: #fff;
+}
+.el-fire { background: var(--fire); --ei-w: url('assets/elem/fire-w.svg'); --ei-c: url('assets/elem/fire-c.svg'); }
+.el-water { background: var(--water); --ei-w: url('assets/elem/water-w.svg'); --ei-c: url('assets/elem/water-c.svg'); }
+.el-thunder { background: var(--thunder); --ei-w: url('assets/elem/thunder-w.svg'); --ei-c: url('assets/elem/thunder-c.svg'); }
+.el-earth { background: var(--earth); --ei-w: url('assets/elem/earth-w.svg'); --ei-c: url('assets/elem/earth-c.svg'); }
+.el-wind { background: var(--wind); --ei-w: url('assets/elem/wind-w.svg'); --ei-c: url('assets/elem/wind-c.svg'); }
+.ei-fire { --ei-c: url('assets/elem/fire-c.svg'); }
+.ei-water { --ei-c: url('assets/elem/water-c.svg'); }
+.ei-thunder { --ei-c: url('assets/elem/thunder-c.svg'); }
+.ei-earth { --ei-c: url('assets/elem/earth-c.svg'); }
+.ei-wind { --ei-c: url('assets/elem/wind-c.svg'); }
+/* 屬性 SVG icon(002_art/元素LOGO):用 background-image(比 mask 穩);白版給徽章、屬色版給篩選/標籤/盤面 */
+.elbadge { font-size: 0 !important; }
+.elbadge::before { content: ''; display: block; width: 14px; height: 14px; background: var(--ei-w) center/contain no-repeat; }
+/* 行內屬性 icon(篩選鈕/標籤/盤面用): <i class="ei ei-fire"></i> */
+.ei { display: inline-block; width: 1.15em; height: 1.15em; vertical-align: -0.22em; background: var(--ei-c) center/contain no-repeat; }
+.tint-fire { background: var(--t-fire); } .tint-water { background: var(--t-water); }
+.tint-thunder { background: var(--t-thunder); } .tint-earth { background: var(--t-earth); } .tint-wind { background: var(--t-wind); }
+
+/* Lv 深色圓角小條 */
+.lvpill {
+  display: inline-block; padding: 1px 8px; border-radius: 8px;
+  background: rgba(18, 22, 26, .72); color: #fff; font-size: 11px; font-weight: 700;
+}
+
+/* 屬/種 標籤(卡片詳情) */
+.tag { display: inline-flex; align-items: center; gap: 4px; padding: 4px 12px; border-radius: 999px; font-size: var(--fs-cap); font-weight: 700; }
+
+/* HP/經驗 圓角條 */
+.bar { height: 12px; border-radius: 6px; background: var(--surf2); overflow: hidden; border: 1px solid var(--divider); }
+.bar > i { display: block; height: 100%; border-radius: 6px; }
+
+/* 段落標題(小節) */
+.section-label { font-size: var(--fs-cap); font-weight: 700; color: var(--ink2); letter-spacing: .3px; }
+.muted { color: var(--ink2); } .weak { color: var(--ink3); }
+.gold-tx { color: var(--goldTx); } .ok-tx { color: var(--okTx); }
+
+/* 標題列(頁面頂: 標題 + 返回) */
+.topbar {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 12px 14px; background: var(--surf); border-bottom: 1px solid var(--divider);
+}
+.topbar h1 { font-size: var(--fs-title); font-weight: 700; }
+.topbar .sub { font-size: var(--fs-micro); color: var(--ink2); }
+
+/* 卡片格(卡冊/圖鑑/合成 共用) */
+.grid-cards { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; padding: 12px; }
+.mini {
+  position: relative; aspect-ratio: 1; border-radius: 12px; overflow: hidden;
+  border: 1.5px solid var(--divider); background: var(--surf2);
+}
+.mini img { width: 100%; height: 100%; object-fit: cover; }
+.mini .lvpill { position: absolute; left: 4px; bottom: 4px; }
+.mini .elbadge { position: absolute; left: 4px; top: 4px; }
+.mini.owned { border-color: var(--divider); }
+.mini.kage { border-color: var(--gold); border-width: 2.5px; }
+.mini.locked { background: var(--surf2); display: grid; place-items: center; color: var(--ink3); font-size: 26px; }

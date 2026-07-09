@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=400">
+<title>卡冊</title>
+<link rel="stylesheet" href="../style.css">
+<style>
+  body { background: transparent; }
+
+  /* 標題(BOX 格數併進標題) */
+  .cb-head { background: var(--surf); border-bottom: 1px solid var(--divider); padding: 12px 14px 10px; text-align: center; }
+  .cb-title { font-size: var(--fs-title); font-weight: 700; }
+  .cb-sub { font-size: var(--fs-micro); color: var(--ink2); margin-top: 3px; }
+
+  /* 排序 + 篩選(同一排,可橫捲);屬性數字放進篩選鈕 */
+  .cb-bar { display: flex; align-items: center; gap: 7px; padding: 10px 12px 6px; overflow-x: auto; white-space: nowrap; }
+  .cb-bar::-webkit-scrollbar { height: 0; }
+  .cb-sort { flex: none; height: 34px; border-radius: 17px; border: 1.5px solid var(--divider); background: var(--surf2);
+    color: var(--ink); font-family: inherit; font-size: var(--fs-cap); font-weight: 700; padding: 0 10px; cursor: pointer;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.5), 0 2px 0 #ddd7cd; }
+  .cb-bar .pill.sm { flex: none; }
+  .cb-bar .pill.sm .cnt { color: var(--ink2); margin-left: 2px; }
+
+  /* 卡片格 */
+  .cb-grid { flex: 1; overflow-y: auto; padding: 4px 12px 6px; }
+  .cb-grid::-webkit-scrollbar { width: 0; }
+
+  /* 分頁 */
+  .cb-pager { display: flex; align-items: center; justify-content: center; gap: 16px; padding: 6px 0 10px; }
+  .cb-pager .pg-btn { width: 40px; height: 30px; border-radius: 15px; border: 1.5px solid var(--divider); background: var(--surf);
+    color: var(--ink2); font-size: 13px; cursor: pointer; box-shadow: inset 0 1px 0 rgba(255,255,255,.5), 0 2px 0 #ddd7cd; }
+  .cb-pager .pg-num { font-size: var(--fs-cap); font-weight: 700; color: var(--ink2); }
+
+  .mini .battle { position: absolute; right: 4px; top: 4px; z-index: 2; padding: 1px 7px; border-radius: 8px;
+    background: var(--gold); color: var(--onAccent); font-size: 11px; font-weight: 700; box-shadow: 0 1px 4px rgba(0,0,0,.3); }
+
+  /* 底部操作列:space-between(整理 左、上一頁 右),寬按鈕 */
+  .footbar { padding: 10px 14px 14px; background: var(--surf); border-top: 1px solid var(--divider);
+    justify-content: space-between !important; }
+  .footbar .pill { max-width: none !important; width: 46% !important; flex: 0 0 46% !important; }
+</style>
+</head>
+<body>
+<div class="phone">
+
+  <!-- 標題(格數併入) -->
+  <div class="cb-head">
+    <div class="cb-title">🎒 卡冊（140 / 300）</div>
+    <div class="cb-sub">收集 35 / 35 種</div>
+  </div>
+
+  <!-- 排序 + 篩選(同排);屬性數字在鈕裡 -->
+  <div class="cb-bar">
+    <select class="cb-sort">
+      <option>編號</option>
+      <option>種族</option>
+      <option>LV</option>
+      <option>PWR</option>
+      <option>HP</option>
+      <option>RCV</option>
+    </select>
+    <button class="pill sm primary">全</button>
+    <button class="pill sm"><i class="ei ei-fire"></i><span class="cnt">79</span></button>
+    <button class="pill sm"><i class="ei ei-water"></i><span class="cnt">33</span></button>
+    <button class="pill sm"><i class="ei ei-earth"></i><span class="cnt">18</span></button>
+    <button class="pill sm"><i class="ei ei-thunder"></i><span class="cnt">45</span></button>
+    <button class="pill sm"><i class="ei ei-wind"></i><span class="cnt">56</span></button>
+  </div>
+
+  <!-- 卡片格(第 1 頁) -->
+  <div class="cb-grid">
+    <div class="grid-cards" style="padding:0">
+      <div class="mini owned kage"><img src="../assets/cards/c15_thumb.webp"><span class="elbadge el-fire">火</span><span class="battle">出戰</span><span class="lvpill">20</span></div>
+      <div class="mini owned"><img src="../assets/cards/c08_thumb.webp"><span class="elbadge el-thunder">雷</span><span class="lvpill">20</span></div>
+      <div class="mini owned"><img src="../assets/cards/c04_thumb.webp"><span class="elbadge el-water">水</span><span class="lvpill">20</span></div>
+      <div class="mini owned"><img src="../assets/cards/c10_thumb.webp"><span class="elbadge el-earth">土</span><span class="lvpill">20</span></div>
+      <div class="mini owned"><img src="../assets/cards/c09_thumb.webp"><span class="elbadge el-earth">土</span><span class="lvpill">20</span></div>
+      <div class="mini owned"><img src="../assets/cards/c01_thumb.webp"><span class="elbadge el-fire">火</span><span class="lvpill">20</span></div>
+      <div class="mini owned"><img src="../assets/cards/c11_thumb.webp"><span class="elbadge el-wind">風</span><span class="lvpill">20</span></div>
+      <div class="mini owned"><img src="../assets/cards/c12_thumb.webp"><span class="elbadge el-wind">風</span><span class="lvpill">20</span></div>
+      <div class="mini owned"><img src="../assets/cards/c05_thumb.webp"><span class="elbadge el-water">水</span><span class="lvpill">20</span></div>
+      <div class="mini owned"><img src="../assets/cards/c07_thumb.webp"><span class="elbadge el-thunder">雷</span><span class="lvpill">20</span></div>
+      <div class="mini owned"><img src="../assets/cards/c03_thumb.webp"><span class="elbadge el-fire">火</span><span class="lvpill">20</span></div>
+      <div class="mini owned"><img src="../assets/cards/c14_thumb.webp"><span class="elbadge el-fire">火</span><span class="lvpill">20</span></div>
+      <div class="mini owned"><img src="../assets/cards/c16_thumb.webp"><span class="elbadge el-water">水</span><span class="lvpill">20</span></div>
+      <div class="mini owned"><img src="../assets/cards/c17_thumb.webp"><span class="elbadge el-water">水</span><span class="lvpill">20</span></div>
+      <div class="mini owned"><img src="../assets/cards/c06_thumb.webp"><span class="elbadge el-water">水</span><span class="lvpill">20</span></div>
+      <div class="mini owned"><img src="../assets/cards/c13_thumb.webp"><span class="elbadge el-fire">火</span><span class="lvpill">20</span></div>
+      <div class="mini owned"><img src="../assets/cards/c18_thumb.webp"><span class="elbadge el-thunder">雷</span><span class="lvpill">20</span></div>
+      <div class="mini owned"><img src="../assets/cards/c19_thumb.webp"><span class="elbadge el-thunder">雷</span><span class="lvpill">20</span></div>
+      <div class="mini owned"><img src="../assets/cards/c20_thumb.webp"><span class="elbadge el-earth">土</span><span class="lvpill">20</span></div>
+      <div class="mini owned"><img src="../assets/cards/c21_thumb.webp"><span class="elbadge el-earth">土</span><span class="lvpill">20</span></div>
+      <div class="mini owned"><img src="../assets/cards/c22_thumb.webp"><span class="elbadge el-wind">風</span><span class="lvpill">20</span></div>
+      <div class="mini owned"><img src="../assets/cards/c23_thumb.webp"><span class="elbadge el-wind">風</span><span class="lvpill">20</span></div>
+      <div class="mini owned"><img src="../assets/cards/c24_thumb.webp"><span class="elbadge el-fire">火</span><span class="lvpill">20</span></div>
+      <div class="mini owned"><img src="../assets/cards/c02_thumb.webp"><span class="elbadge el-fire">火</span><span class="lvpill">20</span></div>
+      <div class="mini owned"><img src="../assets/cards/c25_thumb.webp"><span class="elbadge el-water">水</span><span class="lvpill">20</span></div>
+      <div class="mini owned"><img src="../assets/cards/c26_thumb.webp"><span class="elbadge el-thunder">雷</span><span class="lvpill">20</span></div>
+      <div class="mini owned"><img src="../assets/cards/c27_thumb.webp"><span class="elbadge el-earth">土</span><span class="lvpill">20</span></div>
+      <div class="mini owned"><img src="../assets/cards/c28_thumb.webp"><span class="elbadge el-wind">風</span><span class="lvpill">20</span></div>
+      <div class="mini owned"><img src="../assets/cards/c29_thumb.webp"><span class="elbadge el-fire">火</span><span class="lvpill">20</span></div>
+      <div class="mini owned"><img src="../assets/cards/c30_thumb.webp"><span class="elbadge el-water">水</span><span class="lvpill">20</span></div>
+    </div>
+  </div>
+
+  <!-- 分頁 -->
+  <div class="cb-pager">
+    <button class="pg-btn">◀</button>
+    <span class="pg-num">1 / 10</span>
+    <button class="pg-btn">▶</button>
+  </div>
+
+  <!-- 底部:整理(左) / 上一頁(右) -->
+  <div class="footbar">
+    <button class="pill bad">🗑 整理</button>
+    <button class="pill ghost">‹ 上一頁</button>
+  </div>
+
+</div>
+</body>
+</html>

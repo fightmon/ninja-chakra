@@ -1,0 +1,131 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=400">
+<title>難度選單</title>
+<link rel="stylesheet" href="../style.css">
+<style>
+  body { background: transparent; }
+  /* 半透明黑背幕 + 置中 */
+  .overlay {
+    position: absolute; inset: 0; z-index: 10;
+    background: rgba(18, 22, 26, .62);
+    display: grid; place-items: center;
+    padding: 20px;
+  }
+  /* 難度彈窗 */
+  .dlg { width: 360px; max-height: 100%; padding: 20px 18px 18px; overflow-y: auto;
+    box-shadow: var(--shadow-pop); }
+  .dlg::-webkit-scrollbar { width: 0; }
+  .dlg-title { font-size: var(--fs-title); font-weight: 700; text-align: center; }
+  .dlg-sub { font-size: var(--fs-micro); color: var(--ink2); text-align: center; margin-top: 3px; }
+
+  /* 難度列 */
+  .lvlist { display: flex; flex-direction: column; gap: 8px; margin: 16px 0; }
+  .lvrow { display: flex; align-items: center; gap: 11px; padding: 11px 12px; }
+  .lvrow .emo { font-size: 24px; flex: none; width: 30px; text-align: center; }
+  .lvrow .txt { flex: 1; min-width: 0; }
+  .lvrow .nm { font-size: var(--fs-body); font-weight: 700; }
+  .lvrow .hint { font-size: var(--fs-micro); color: var(--ink2); margin-top: 1px; }
+  .lvrow .rt { display: flex; flex-direction: column; align-items: flex-end; gap: 3px; flex: none; }
+  .lvrow .stam { font-size: var(--fs-cap); font-weight: 700; color: var(--goldTx); white-space: nowrap; }
+  .clr { display: inline-flex; align-items: center; gap: 2px; padding: 1px 7px; border-radius: 999px;
+    font-size: var(--fs-micro); font-weight: 700; background: var(--t-wind); color: var(--okTx); }
+
+  /* 選中(金框強調) */
+  .lvrow.sel { border-color: var(--gold); border-width: 2.5px; background: var(--t-thunder); }
+  .lvrow.sel .stam { color: var(--goldTx); }
+</style>
+</head>
+<body>
+<div class="phone">
+  <div class="overlay">
+    <div class="panel dlg">
+      <div class="dlg-title">⛰️ 土之山岳</div>
+      <div class="dlg-sub">選擇挑戰難度</div>
+
+      <div class="lvlist">
+
+        <!-- 入門 -->
+        <div class="card lvrow">
+          <div class="emo">👶</div>
+          <div class="txt">
+            <div class="nm">入門</div>
+            <div class="hint">帶對屬 1 張即可</div>
+          </div>
+          <div class="rt">
+            <span class="stam">⚡ 4</span>
+            <span class="clr">✓ CLEAR</span>
+          </div>
+        </div>
+
+        <!-- 初級 -->
+        <div class="card lvrow">
+          <div class="emo">🌱</div>
+          <div class="txt">
+            <div class="nm">初級</div>
+            <div class="hint">建議對屬 2 張</div>
+          </div>
+          <div class="rt">
+            <span class="stam">⚡ 6</span>
+            <span class="clr">✓ CLEAR</span>
+          </div>
+        </div>
+
+        <!-- 中級(選中) -->
+        <div class="card lvrow sel">
+          <div class="emo">⚔️</div>
+          <div class="txt">
+            <div class="nm">中級</div>
+            <div class="hint">建議對屬 2 張＋隊長</div>
+          </div>
+          <div class="rt">
+            <span class="stam">⚡ 8</span>
+          </div>
+        </div>
+
+        <!-- 上級 -->
+        <div class="card lvrow">
+          <div class="emo">🔥</div>
+          <div class="txt">
+            <div class="nm">上級</div>
+            <div class="hint">建議滿級對屬 3 張</div>
+          </div>
+          <div class="rt">
+            <span class="stam">⚡ 10</span>
+          </div>
+        </div>
+
+        <!-- 超級 -->
+        <div class="card lvrow">
+          <div class="emo">💀</div>
+          <div class="txt">
+            <div class="nm">超級</div>
+            <div class="hint">需相剋隊＋主動技</div>
+          </div>
+          <div class="rt">
+            <span class="stam">⚡ 12</span>
+          </div>
+        </div>
+
+        <!-- 地獄 -->
+        <div class="card lvrow">
+          <div class="emo">☠️</div>
+          <div class="txt">
+            <div class="nm">地獄</div>
+            <div class="hint">神裝魔王關 · 慎入</div>
+          </div>
+          <div class="rt">
+            <span class="stam">⚡ 15</span>
+          </div>
+        </div>
+
+      </div>
+
+      <button class="pill ghost block">取消</button>
+    </div>
+  </div>
+</div>
+</body>
+</html>

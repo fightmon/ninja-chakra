@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=400">
+<title>抽卡結果</title>
+<link rel="stylesheet" href="../style.css">
+<style>
+  body { background: transparent; }
+
+  /* 慶祝感深色喜氣底:深紅底 + 金色中央光暈 */
+  .gacha {
+    position: relative; height: 100%; overflow: hidden;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    background:
+      radial-gradient(circle at 50% 40%, rgba(244,183,60,.34) 0%, rgba(244,183,60,0) 42%),
+      linear-gradient(160deg, #3a0d0a 0%, #6e1a12 46%, #2a0906 100%);
+  }
+  /* 由中央放射的金色光線(靜態光暈感) */
+  .rays {
+    position: absolute; top: 40%; left: 50%; transform: translate(-50%,-50%);
+    width: 620px; height: 620px; z-index: 1; pointer-events: none;
+    background: repeating-conic-gradient(from 0deg at 50% 50%,
+      rgba(244,183,60,.10) 0deg 6deg, rgba(244,183,60,0) 6deg 14deg);
+    -webkit-mask-image: radial-gradient(circle, #000 0%, rgba(0,0,0,.5) 46%, transparent 66%);
+            mask-image: radial-gradient(circle, #000 0%, rgba(0,0,0,.5) 46%, transparent 66%);
+  }
+
+  /* 頂部召喚標語 */
+  .summon-title {
+    position: relative; z-index: 3; text-align: center; margin-bottom: 14px;
+  }
+  .summon-title .big {
+    font-size: var(--fs-title); font-weight: 700; color: var(--onAccent);
+    text-shadow: 0 2px 10px rgba(0,0,0,.5);
+  }
+  .summon-title .small {
+    font-size: var(--fs-micro); color: var(--gold); font-weight: 700;
+    letter-spacing: 3px; margin-top: 4px;
+  }
+
+  /* 中央大卡 —— 屬色淡底 + 金框(kage 感) */
+  .bigcard {
+    position: relative; z-index: 3; width: 258px;
+    border-radius: 20px; border: 3px solid var(--gold);
+    padding: 16px 16px 20px; text-align: center;
+    box-shadow: var(--shadow-pop), 0 0 32px rgba(244,183,60,.55);
+  }
+  .bigcard .newtag {
+    font-size: var(--fs-cap); font-weight: 700; color: var(--goldTx);
+    letter-spacing: 4px; margin-bottom: 8px;
+  }
+  .bigcard .art {
+    width: 100%; aspect-ratio: 1; object-fit: contain;
+    border-radius: 14px; background: rgba(255,255,255,.35);
+    filter: drop-shadow(0 8px 14px rgba(0,0,0,.28));
+  }
+  .bigcard .cname {
+    font-size: var(--fs-title); font-weight: 700; color: var(--ink);
+    margin-top: 12px; line-height: 1.1;
+  }
+  .bigcard .cmeta {
+    display: inline-flex; align-items: center; gap: 4px;
+    margin-top: 8px; padding: 4px 14px; border-radius: 999px;
+    font-size: var(--fs-cap); font-weight: 700; color: var(--onAccent);
+    background: var(--fire);
+  }
+  .bigcard .cmeta .stars { color: var(--gold); letter-spacing: 1px; }
+
+  .hint { position: relative; z-index: 3; margin-top: 16px; font-size: var(--fs-cap); }
+
+  .gacha-footer { position: relative; z-index: 3; margin-top: 22px; }
+  .gacha-footer .pill { min-width: 168px; box-shadow: 0 6px 18px rgba(0,0,0,.35); }
+</style>
+</head>
+<body>
+<div class="phone">
+  <div class="gacha">
+
+    <div class="rays"></div>
+
+    <!-- 召喚標語 -->
+    <div class="summon-title">
+      <div class="big">召喚成功!</div>
+      <div class="small">★ 影忍降臨 ★</div>
+    </div>
+
+    <!-- 中央大卡(火屬淡底 + 金框) -->
+    <div class="card bigcard tint-fire">
+      <div class="newtag">✦ NEW ✦</div>
+      <img class="art" src="../assets/cards/c15_full.webp" alt="臺灣雲豹">
+      <div class="cname">臺灣雲豹</div>
+      <div class="cmeta">
+        <i class="ei ei-fire" style="color:var(--fire)"></i> 火屬 · <span class="stars">★★★★</span>
+      </div>
+    </div>
+
+    <div class="hint weak">👆 點卡片看詳細</div>
+
+    <!-- 確定按鈕 -->
+    <div class="gacha-footer">
+      <button class="pill ok lg">確定</button>
+    </div>
+
+  </div>
+</div>
+</body>
+</html>

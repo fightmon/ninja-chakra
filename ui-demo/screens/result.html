@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=400">
+<title>戰鬥結算</title>
+<link rel="stylesheet" href="../style.css">
+<style>
+  body { background: transparent; }
+  /* 半透明黑背幕(仍在 .phone 內,模擬彈窗浮於某畫面上) */
+  .backdrop {
+    position: absolute; inset: 0; z-index: 10;
+    background: rgba(18, 22, 26, .62);
+    display: grid; place-items: center; padding: 20px;
+  }
+  /* 背景暗示(模糊的關卡畫面) */
+  .bg-hint {
+    position: absolute; inset: 0;
+    background: linear-gradient(160deg, var(--t-earth) 0%, var(--earth) 100%);
+    opacity: .9;
+  }
+  /* 置中彈窗 */
+  .result-pop {
+    position: relative; z-index: 11; width: 360px;
+    padding: 26px 22px 22px; text-align: center;
+    box-shadow: var(--shadow-pop);
+  }
+  .result-pop h1 {
+    font-size: var(--fs-title); font-weight: 700;
+    color: var(--goldTx); line-height: 1.15;
+  }
+  .result-pop .subtitle { margin-top: 6px; font-size: var(--fs-cap); }
+
+  /* 戰利品區 */
+  .loot { margin: 20px 0 6px; }
+  .loot .section-label { display: block; margin-bottom: 10px; }
+  .loot-row {
+    display: flex; gap: 12px; justify-content: center;
+  }
+  .loot-row .mini { width: 84px; aspect-ratio: 1; }
+  /* NEW 金標 */
+  .new-tag {
+    position: absolute; top: 4px; right: 4px; z-index: 2;
+    padding: 1px 7px; border-radius: 8px;
+    background: var(--gold); color: var(--onAccent);
+    font-size: 11px; font-weight: 700; letter-spacing: .5px;
+    box-shadow: 0 1px 4px rgba(0,0,0,.25);
+  }
+
+  /* 獎勵一行 */
+  .rewards {
+    display: flex; align-items: center; justify-content: center; gap: 18px;
+    margin: 18px 0 4px; font-weight: 700; font-size: var(--fs-sub);
+    color: var(--goldTx);
+  }
+  .rewards .rw { display: inline-flex; align-items: center; gap: 5px; }
+
+  /* 底部按鈕組 */
+  .actions {
+    display: flex; flex-direction: column; gap: 10px; margin-top: 20px;
+  }
+  .actions .split { display: flex; gap: 10px; }
+  .actions .split .pill { flex: 1; }
+</style>
+</head>
+<body>
+<div class="phone">
+
+  <!-- 背幕(浮於關卡畫面上) -->
+  <div class="backdrop">
+    <div class="bg-hint"></div>
+
+    <!-- 結算彈窗 -->
+    <div class="panel result-pop">
+      <h1>🎉 勝利！</h1>
+      <div class="subtitle muted">土之山岳 S1 · 清除</div>
+
+      <!-- 戰利品 -->
+      <div class="loot">
+        <span class="section-label">戰利品</span>
+        <div class="loot-row">
+          <div class="mini owned">
+            <span class="elbadge el-earth">土</span>
+            <img src="../assets/cards/c09_thumb.webp" alt="椿">
+            <span class="lvpill">Lv.1</span>
+          </div>
+          <div class="mini kage">
+            <span class="new-tag">NEW</span>
+            <span class="elbadge el-fire">火</span>
+            <img src="../assets/cards/c15_thumb.webp" alt="臺灣雲豹">
+            <span class="lvpill">影</span>
+          </div>
+          <div class="mini owned">
+            <span class="elbadge el-earth">土</span>
+            <img src="../assets/cards/c10_thumb.webp" alt="土丸">
+            <span class="lvpill">Lv.1</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- 經驗 / 金幣 -->
+      <div class="rewards">
+        <span class="rw">經驗 +120</span>
+        <span class="rw">🪙 +2,400</span>
+      </div>
+
+      <!-- 操作 -->
+      <div class="actions">
+        <button class="pill ok block">⚔ 下一關</button>
+        <div class="split">
+          <button class="pill">📖 看卡冊</button>
+          <button class="pill">🏠 回大廳</button>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+</div>
+</body>
+</html>

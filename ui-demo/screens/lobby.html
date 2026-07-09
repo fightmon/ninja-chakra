@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=400">
+<title>大廳</title>
+<link rel="stylesheet" href="../style.css">
+<style>
+  body { background: transparent; }
+  .map { position: relative; height: 100%; min-height: 620px;
+    background: url('../assets/map/map_bg.webp') center/cover no-repeat; overflow: hidden; }
+  .isle { position: absolute; width: 96px; filter: drop-shadow(0 6px 8px rgba(0,0,0,.28)); cursor: pointer; }
+  .isle span { position: absolute; left: 50%; bottom: 4px; transform: translateX(-50%);
+    font-size: var(--fs-micro); font-weight: 700; color: #fff; text-shadow: 0 1px 3px rgba(0,0,0,.8); white-space: nowrap; }
+  .isle.wind   { top: 120px; left: 24px; }
+  .isle.fire   { top: 108px; right: 20px; width: 104px; }
+  .isle.tower  { top: 190px; left: 148px; width: 108px; }
+  .isle.thunder{ top: 300px; left: 30px; }
+  .isle.earth  { top: 340px; left: 150px; width: 100px; }
+  .isle.water  { top: 300px; right: 26px; }
+  .isle.home   { bottom: 26px; left: 50%; transform: translateX(-50%); width: 78px; }
+</style>
+</head>
+<body>
+<div class="phone">
+
+  <!-- 狀態列 -->
+  <div class="statusbar">
+    <div class="avatar">🐾</div>
+    <div class="who">
+      <div class="name">戰鬥大毛 <span class="chip">🔥 地獄歸來</span></div>
+      <div class="lvline">
+        <span class="lvtag">Lv.32</span>
+        <span class="exp"><i style="width:64%"></i></span>
+        <span class="coin" style="color:var(--okTx)">⚡112/112</span>
+      </div>
+    </div>
+    <div style="display:flex;flex-direction:column;align-items:flex-end;gap:3px">
+      <span class="coin gem">💎 16</span>
+      <span class="coin gold">🪙 225,970</span>
+    </div>
+    <div style="font-size:20px;margin-left:2px">⚙️</div>
+  </div>
+
+  <!-- 世界地圖 -->
+  <div class="screen-body" style="padding:0">
+    <div class="map">
+      <div class="isle wind"><img src="../assets/map/island_wind.webp" style="width:100%"><span>風之峽谷</span></div>
+      <div class="isle fire"><img src="../assets/map/island_fire.webp" style="width:100%"><span>火之火山</span></div>
+      <div class="isle tower"><img src="../assets/map/island_tower.webp" style="width:100%"><span>結印之塔</span></div>
+      <div class="isle thunder"><img src="../assets/map/island_thunder.webp" style="width:100%"><span>雷之高原</span></div>
+      <div class="isle earth"><img src="../assets/map/island_earth.webp" style="width:100%"><span>土之山岳</span></div>
+      <div class="isle water"><img src="../assets/map/island_water.webp" style="width:100%"><span>水之深淵</span></div>
+      <div class="isle home"><img src="../assets/map/island_home.webp" style="width:100%"></div>
+    </div>
+  </div>
+
+  <!-- 底部導覽 -->
+  <div class="navbar">
+    <div class="tab on"><span class="ic">⛩️</span>關卡</div>
+    <div class="tab"><span class="ic">🐾</span>卡片</div>
+    <div class="tab"><span class="ic">🛒</span>商店</div>
+    <div class="tab"><span class="ic">🥚</span>抽卡</div>
+    <div class="tab"><span class="ic">🏆</span>排行</div>
+    <div class="tab"><span class="ic">⚙️</span>其他</div>
+  </div>
+
+</div>
+</body>
+</html>

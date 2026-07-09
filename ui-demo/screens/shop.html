@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=400">
+<title>商店</title>
+<link rel="stylesheet" href="../style.css">
+<style>
+  body { background: transparent; }
+  /* 頂部貨幣列 */
+  .shop-top {
+    display: flex; align-items: center; gap: 14px;
+    padding: 14px 20px; background: var(--surf); border-bottom: 1px solid var(--divider);
+  }
+  .shop-top .coin { font-size: var(--fs-body); }
+  /* 商品清單:垂直堆疊,左右留白 20、每顆間距 14 */
+  .shop-list { padding: 18px 20px 24px; display: flex; flex-direction: column; gap: 14px; }
+  /* 全寬藥丸加高一點好點,demo 用 */
+  .shop-list .pill.block { height: 56px; font-size: var(--fs-sub); }
+  .shop-list .pill.ghost { justify-content: space-between; padding: 0 20px; }
+  .shop-list .pill.ghost .todo { font-size: var(--fs-micro); font-weight: 700; color: var(--ink3); }
+  .shop-hint { font-size: var(--fs-micro); color: var(--ink3); text-align: center; margin-top: 4px; }
+</style>
+</head>
+<body>
+<div class="phone">
+
+  <!-- 頂部標題列 -->
+  <div class="topbar">
+    <h1>🛒 商店</h1>
+    <span class="sub">補給與擴充</span>
+  </div>
+
+  <!-- 頂部體力/貨幣資訊 -->
+  <div class="shop-top">
+    <span class="coin" style="color:var(--okTx)">⚡ 96/112</span>
+    <span class="coin gem">💎 16</span>
+    <span class="coin gold" style="margin-left:auto">🪙 225,970</span>
+  </div>
+
+  <!-- 商品清單 -->
+  <div class="screen-body">
+    <div class="shop-list">
+
+      <button class="pill ok block">⚡ 體力全回復　💎1</button>
+
+      <button class="pill ghost block">💎 魔法石商店 <span class="todo">待做</span></button>
+      <button class="pill ghost block">📦 BOX 擴張 <span class="todo">待做</span></button>
+      <button class="pill ghost block">👥 好友上限 <span class="todo">待做</span></button>
+
+      <div class="shop-hint">灰色項目為預留入口,尚未開放</div>
+    </div>
+  </div>
+
+  <!-- 底部導覽 -->
+  <div class="navbar">
+    <div class="tab"><span class="ic">⛩️</span>關卡</div>
+    <div class="tab"><span class="ic">🐾</span>卡片</div>
+    <div class="tab on"><span class="ic">🛒</span>商店</div>
+    <div class="tab"><span class="ic">🥚</span>抽卡</div>
+    <div class="tab"><span class="ic">🏆</span>排行</div>
+    <div class="tab"><span class="ic">⚙️</span>其他</div>
+  </div>
+
+</div>
+</body>
+</html>

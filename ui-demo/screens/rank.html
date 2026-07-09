@@ -1,0 +1,172 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=400">
+<title>排行</title>
+<link rel="stylesheet" href="../style.css">
+<style>
+  body { background: transparent; }
+
+  /* 分頁列 */
+  .tabs { display: flex; gap: 8px; padding: 12px 14px 4px; }
+
+  /* 天梯榜容器 */
+  .board { padding: 10px 14px 20px; display: flex; flex-direction: column; gap: 8px; }
+
+  /* 單列排名 */
+  .rankrow {
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px 12px;
+  }
+  /* 名次徽記 */
+  .rankrow .rk {
+    flex: none; width: 40px; text-align: center;
+    font-weight: 700; font-size: var(--fs-sub); color: var(--ink2);
+  }
+  .rankrow .rk .medal { font-size: 22px; line-height: 1; display: block; }
+  /* 玩家頭像 */
+  .rankrow .ava {
+    flex: none; width: 38px; height: 38px; border-radius: 50%;
+    background: var(--t-earth); display: grid; place-items: center; font-size: 19px;
+  }
+  /* 中段:名字 + 進度條 */
+  .rankrow .mid { flex: 1; min-width: 0; }
+  .rankrow .pname {
+    font-weight: 700; font-size: var(--fs-body);
+    display: flex; align-items: center; gap: 6px;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .rankrow .thinbar { height: 5px; border-radius: 3px; margin-top: 6px; }
+  /* 右側分數 */
+  .rankrow .score { flex: none; text-align: right; }
+  .rankrow .score .pt { font-weight: 700; font-size: var(--fs-sub); color: var(--goldTx); line-height: 1; }
+  .rankrow .score .u { font-size: var(--fs-micro); color: var(--ink3); }
+
+  /* 「你」高亮列 */
+  .rankrow.me {
+    background: var(--t-wind);
+    border-color: var(--wind);
+    border-width: 2px;
+  }
+  .rankrow.me .rk { color: var(--wind); }
+  .rankrow.me .score .pt { color: var(--wind); }
+
+  /* 賽季小資訊列 */
+  .seasonbar {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 10px 16px; margin: 0 14px 4px;
+  }
+  .seasonbar .st { font-size: var(--fs-cap); font-weight: 700; }
+  .seasonbar .rt { font-size: var(--fs-micro); color: var(--ink2); }
+</style>
+</head>
+<body>
+<div class="phone">
+
+  <!-- 標題列 -->
+  <div class="topbar">
+    <h1>🏆 排行</h1>
+    <span class="sub">第 7 賽季 · 剩 3 天</span>
+  </div>
+
+  <!-- 分頁 -->
+  <div class="tabs">
+    <button class="pill sm primary">天梯</button>
+    <button class="pill sm">紀錄</button>
+    <button class="pill sm">成就</button>
+  </div>
+
+  <div class="screen-body">
+
+    <!-- 賽季資訊 -->
+    <div class="panel seasonbar">
+      <span class="st"><i class="ei ei-fire" style="color:var(--fire)"></i> 火之段位 · <span class="gold-tx">上忍 III</span></span>
+      <span class="rt">全服前 8%</span>
+    </div>
+
+    <!-- 天梯榜 -->
+    <div class="board">
+
+      <!-- #1 -->
+      <div class="card rankrow">
+        <div class="rk"><span class="medal">🥇</span></div>
+        <div class="ava" style="background:var(--t-fire)">🐉</div>
+        <div class="mid">
+          <div class="pname">影狼King <span class="chip">👑 影忍</span></div>
+          <div class="bar thinbar"><i style="width:100%;background:var(--gold)"></i></div>
+        </div>
+        <div class="score"><div class="pt">28,940</div><div class="u">分</div></div>
+      </div>
+
+      <!-- #2 -->
+      <div class="card rankrow">
+        <div class="rk"><span class="medal">🥈</span></div>
+        <div class="ava" style="background:var(--t-water)">🐺</div>
+        <div class="mid">
+          <div class="pname">水鏡流</div>
+          <div class="bar thinbar"><i style="width:92%;background:var(--water)"></i></div>
+        </div>
+        <div class="score"><div class="pt">26,510</div><div class="u">分</div></div>
+      </div>
+
+      <!-- #3 -->
+      <div class="card rankrow">
+        <div class="rk"><span class="medal">🥉</span></div>
+        <div class="ava" style="background:var(--t-thunder)">⚡</div>
+        <div class="mid">
+          <div class="pname">雷神鳴</div>
+          <div class="bar thinbar"><i style="width:85%;background:var(--thunder)"></i></div>
+        </div>
+        <div class="score"><div class="pt">24,880</div><div class="u">分</div></div>
+      </div>
+
+      <!-- #4 -->
+      <div class="card rankrow">
+        <div class="rk">#4</div>
+        <div class="ava" style="background:var(--t-earth)">🐗</div>
+        <div class="mid">
+          <div class="pname">土遁·岩爺</div>
+          <div class="bar thinbar"><i style="width:78%;background:var(--earth)"></i></div>
+        </div>
+        <div class="score"><div class="pt">22,015</div><div class="u">分</div></div>
+      </div>
+
+      <!-- #5 你 -->
+      <div class="card rankrow me">
+        <div class="rk">#5</div>
+        <div class="ava" style="background:var(--t-wind)">🐾</div>
+        <div class="mid">
+          <div class="pname">戰鬥大毛 <span class="chip" style="background:var(--t-wind);color:var(--wind)">你</span></div>
+          <div class="bar thinbar"><i style="width:71%;background:var(--wind)"></i></div>
+        </div>
+        <div class="score"><div class="pt">20,760</div><div class="u">分</div></div>
+      </div>
+
+      <!-- #6 -->
+      <div class="card rankrow">
+        <div class="rk">#6</div>
+        <div class="ava" style="background:var(--t-fire)">🦊</div>
+        <div class="mid">
+          <div class="pname">狐火疾</div>
+          <div class="bar thinbar"><i style="width:66%;background:var(--fire)"></i></div>
+        </div>
+        <div class="score"><div class="pt">19,430</div><div class="u">分</div></div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- 底部導覽 -->
+  <div class="navbar">
+    <div class="tab"><span class="ic">⛩️</span>關卡</div>
+    <div class="tab"><span class="ic">🐾</span>卡片</div>
+    <div class="tab"><span class="ic">🛒</span>商店</div>
+    <div class="tab"><span class="ic">🥚</span>抽卡</div>
+    <div class="tab on"><span class="ic">🏆</span>排行</div>
+    <div class="tab"><span class="ic">⚙️</span>其他</div>
+  </div>
+
+</div>
+</body>
+</html>

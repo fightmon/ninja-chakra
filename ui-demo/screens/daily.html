@@ -1,0 +1,142 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=400">
+<title>每日登入</title>
+<link rel="stylesheet" href="../style.css">
+<style>
+  body { background: transparent; }
+  /* 半透明黑背幕 */
+  .backdrop {
+    position: absolute; inset: 0; z-index: 20;
+    background: rgba(0,0,0,.5);
+    display: grid; place-items: center;
+    padding: 20px;
+  }
+  /* 置中白色彈窗 */
+  .dlg {
+    position: relative; width: 340px;
+    padding: 22px 20px 20px;
+    box-shadow: var(--shadow-pop);
+  }
+  .dlg h1 {
+    font-size: var(--fs-title); font-weight: 700;
+    text-align: center; margin-bottom: 4px;
+  }
+  .dlg .subtitle {
+    text-align: center; font-size: var(--fs-micro);
+    color: var(--ink2); margin-bottom: 16px;
+  }
+  /* 右上角關閉鈕 */
+  .closebtn {
+    position: absolute; top: -14px; right: -6px;
+    width: 34px; height: 34px; border-radius: 50%;
+    background: var(--surf); border: 1.5px solid var(--divider);
+    display: grid; place-items: center; cursor: pointer;
+    font-size: var(--fs-sub); color: var(--ink2);
+    box-shadow: var(--shadow-card); z-index: 2;
+  }
+  /* 7 日格 = 3×3 grid */
+  .days {
+    display: grid; grid-template-columns: repeat(3, 1fr);
+    gap: 8px; margin-bottom: 18px;
+  }
+  .day {
+    position: relative; padding: 8px 4px 10px;
+    display: flex; flex-direction: column; align-items: center; gap: 4px;
+    text-align: center;
+  }
+  .day .dlabel {
+    font-size: var(--fs-micro); font-weight: 700; color: var(--ink2);
+  }
+  .day .rw { font-size: 26px; line-height: 1; }
+  .day .amt { font-size: var(--fs-cap); font-weight: 700; color: var(--ink); }
+  /* 已領:淡化 + 打勾 */
+  .day.done .rw, .day.done .amt, .day.done .dlabel { opacity: .55; }
+  .day.done .check {
+    position: absolute; top: 4px; right: 6px;
+    font-size: var(--fs-cap); color: var(--okTx); font-weight: 700;
+  }
+  /* 今日:金框金淡底 + 標記 */
+  .day.today {
+    border-color: var(--gold); border-width: 2.5px;
+    box-shadow: 0 0 0 2px rgba(244,183,60,.18);
+  }
+  .day.today .dlabel { color: var(--goldTx); }
+  .day.today .todaymark {
+    position: absolute; top: -9px; left: 50%; transform: translateX(-50%);
+    background: var(--gold); color: var(--onAccent);
+    font-size: 10px; font-weight: 700; padding: 1px 8px; border-radius: 999px;
+    white-space: nowrap; box-shadow: var(--shadow-card);
+  }
+  /* 第 7 天跨兩格置中 */
+  .day.big { grid-column: 2 / 4; }
+  .day.big .rw { font-size: 30px; }
+</style>
+</head>
+<body>
+<div class="phone">
+  <div class="backdrop">
+    <div class="dlg panel">
+
+      <div class="closebtn">✕</div>
+
+      <h1>🎁 每日登入獎勵</h1>
+      <div class="subtitle">連續登入第 3 天 · 別斷了好運</div>
+
+      <div class="days">
+        <!-- D1 已領 -->
+        <div class="day card done">
+          <span class="check">✓</span>
+          <div class="dlabel">D1</div>
+          <div class="rw">🪙</div>
+          <div class="amt">500</div>
+        </div>
+        <!-- D2 已領 -->
+        <div class="day card done">
+          <span class="check">✓</span>
+          <div class="dlabel">D2</div>
+          <div class="rw">⚡</div>
+          <div class="amt">×5</div>
+        </div>
+        <!-- D3 今日 -->
+        <div class="day card today tint-thunder">
+          <span class="todaymark">今日</span>
+          <div class="dlabel">D3</div>
+          <div class="rw">💎</div>
+          <div class="amt">×3</div>
+        </div>
+        <!-- D4 -->
+        <div class="day card">
+          <div class="dlabel">D4</div>
+          <div class="rw">🪙</div>
+          <div class="amt">1,000</div>
+        </div>
+        <!-- D5 -->
+        <div class="day card">
+          <div class="dlabel">D5</div>
+          <div class="rw">🥚</div>
+          <div class="amt">×1</div>
+        </div>
+        <!-- D6 -->
+        <div class="day card">
+          <div class="dlabel">D6</div>
+          <div class="rw">⚡</div>
+          <div class="amt">×10</div>
+        </div>
+        <!-- D7 大獎(跨兩格置中) -->
+        <div class="day card big">
+          <div class="dlabel">D7 · 週滿獎</div>
+          <div class="rw">💎</div>
+          <div class="amt">×15　＋　🎴 卡包 ×1</div>
+        </div>
+      </div>
+
+      <button class="pill ok block">🎁 領取 D3 獎勵</button>
+
+    </div>
+  </div>
+</div>
+</body>
+</html>

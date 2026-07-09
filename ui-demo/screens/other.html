@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=400">
+<title>其他</title>
+<link rel="stylesheet" href="../style.css">
+<style>
+  body { background: transparent; }
+
+  /* 設定清單:垂直堆疊、項目間 12px */
+  .settings { padding: 16px 14px; display: flex; flex-direction: column; gap: 12px; }
+
+  /* 全寬設定藥丸:靠左對齊、當作可點的一列 */
+  .set-pill { justify-content: flex-start; height: 52px; border-radius: 16px; font-size: var(--fs-sub); }
+  .set-pill .arrow { margin-left: auto; color: var(--ink3); font-size: var(--fs-sub); }
+
+  /* toggle 一列:白面板 + 標籤 + 自訂開關 */
+  .toggle-row {
+    display: flex; align-items: center; gap: 10px;
+    padding: 0 16px; height: 52px; border-radius: 16px;
+    font-size: var(--fs-sub); font-weight: 700;
+  }
+  .toggle-row .lbl { flex: 1; display: flex; align-items: center; gap: 8px; }
+
+  /* 自訂圓角開關 */
+  .switch { position: relative; width: 52px; height: 30px; border-radius: 15px;
+    background: var(--divider); flex: none; transition: background .15s; }
+  .switch > i { position: absolute; top: 3px; left: 3px; width: 24px; height: 24px; border-radius: 50%;
+    background: var(--surf); box-shadow: 0 1px 3px rgba(43,51,58,.3); transition: left .15s; }
+  .switch.on { background: var(--ok); }
+  .switch.on > i { left: 25px; }
+
+  .set-gap { height: 4px; }
+</style>
+</head>
+<body>
+<div class="phone">
+
+  <!-- 標題列 -->
+  <div class="topbar">
+    <h1>⚙️ 其他</h1>
+    <span class="sub">設定與帳號</span>
+  </div>
+
+  <!-- 設定清單 -->
+  <div class="screen-body">
+    <div class="settings">
+
+      <div class="section-label">帳號</div>
+      <button class="pill block set-pill">✏️ 改名（目前：戰鬥大毛）<span class="arrow">›</span></button>
+
+      <div class="set-gap"></div>
+      <div class="section-label">遊戲</div>
+      <button class="pill block set-pill">📖 卡片圖鑑<span class="arrow">›</span></button>
+      <button class="pill block set-pill">🎓 新手教學<span class="arrow">›</span></button>
+
+      <div class="set-gap"></div>
+      <div class="section-label">聲音與顯示</div>
+      <div class="panel toggle-row">
+        <span class="lbl">🔊 音效</span>
+        <span class="switch on"><i></i></span>
+      </div>
+      <div class="panel toggle-row">
+        <span class="lbl">🎵 背景音樂 BGM</span>
+        <span class="switch"><i></i></span>
+      </div>
+      <div class="panel toggle-row">
+        <span class="lbl">🌙 夜間模式</span>
+        <span class="switch"><i></i></span>
+      </div>
+
+      <div class="set-gap"></div>
+      <div class="section-label">危險操作</div>
+      <button class="pill bad block set-pill">🔄 重置存檔</button>
+      <div class="muted" style="font-size:var(--fs-micro); padding:0 4px;">重置後所有卡片與進度將永久刪除，無法復原。</div>
+
+    </div>
+  </div>
+
+  <!-- 底部導覽 -->
+  <div class="navbar">
+    <div class="tab"><span class="ic">⛩️</span>關卡</div>
+    <div class="tab"><span class="ic">🐾</span>卡片</div>
+    <div class="tab"><span class="ic">🛒</span>商店</div>
+    <div class="tab"><span class="ic">🥚</span>抽卡</div>
+    <div class="tab"><span class="ic">🏆</span>排行</div>
+    <div class="tab on"><span class="ic">⚙️</span>其他</div>
+  </div>
+
+</div>
+</body>
+</html>

@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>忍塊查克拉 · UI Demo</title>
+<link rel="stylesheet" href="style.css">
+<style>
+  body { background: linear-gradient(160deg, #303139 0%, #1c1d23 45%, #131318 100%); color: #e7e9ec; padding: 32px 24px 80px; }
+  .head { max-width: 1200px; margin: 0 auto 28px; }
+  .head h1 { font-size: 32px; font-weight: 700; }
+  .head p { color: #9aa2ac; margin-top: 6px; font-size: var(--fs-body); max-width: 720px; }
+  .toc { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 16px; }
+  .toc a { text-decoration: none; }
+  .toc .pill.sm { height: 32px; }
+
+  .gallery {
+    max-width: 1360px; margin: 0 auto;
+    display: grid; grid-template-columns: repeat(auto-fill, 400px); gap: 40px 32px; justify-content: center;
+  }
+  .frame { display: flex; flex-direction: column; align-items: center; scroll-margin-top: 20px; }
+  .frame .cap {
+    margin-bottom: 12px; font-weight: 700; font-size: var(--fs-sub);
+    display: flex; align-items: center; gap: 8px;
+  }
+  .frame .cap .n { width: 24px; height: 24px; border-radius: 50%; background: var(--gold); color: #1c1a12;
+    display: grid; place-items: center; font-size: var(--fs-micro); font-weight: 700; }
+  .frame iframe {
+    width: 400px; height: 820px; border: none; border-radius: 30px;
+    background: var(--page); box-shadow: 0 10px 40px rgba(0,0,0,.22);
+  }
+</style>
+</head>
+<body>
+  <div class="head">
+    <h1>🧩 忍塊查克拉 · UI Demo</h1>
+    <p>目前所有頁面的純靜態預覽,用於一頁頁審 UI／UX。改動只需編輯 <code>style.css</code>(全站設計系統)或各頁 <code>screens/*.html</code>。以下每個手機外框都是可獨立點開的頁面。</p>
+    <div class="toc" id="toc"></div>
+  </div>
+
+  <div class="gallery" id="gallery"></div>
+
+<script>
+  const SCREENS = [
+    ['lobby', '大廳'],
+    ['cards', '卡片管理'],
+    ['collection', '卡冊'],
+    ['card-detail', '卡片詳情'],
+    ['team', '編成'],
+    ['dex', '圖鑑'],
+    ['fuse', '合成'],
+    ['shop', '商店'],
+    ['summon', '轉蛋'],
+    ['gacha', '抽卡結果'],
+    ['rank', '排行'],
+    ['other', '其他'],
+    ['daily', '每日登入'],
+    ['difficulty', '難度選單'],
+    ['battle', '戰鬥'],
+    ['result', '戰鬥結算'],
+  ];
+  const toc = document.getElementById('toc');
+  const gallery = document.getElementById('gallery');
+  SCREENS.forEach(([file, name], i) => {
+    const a = document.createElement('a');
+    a.href = '#s-' + file;
+    a.innerHTML = '<span class="pill sm">' + (i + 1) + '. ' + name + '</span>';
+    toc.appendChild(a);
+
+    const f = document.createElement('div');
+    f.className = 'frame';
+    f.id = 's-' + file;
+    f.innerHTML =
+      '<div class="cap"><span class="n">' + (i + 1) + '</span>' + name +
+      ' <a href="screens/' + file + '.html" target="_blank" style="font-size:var(--fs-micro);color:var(--ink3);text-decoration:none">↗ 開新分頁</a></div>' +
+      '<iframe src="screens/' + file + '.html" loading="lazy" scrolling="no"></iframe>';
+    gallery.appendChild(f);
+  });
+</script>
+</body>
+</html>

@@ -1,0 +1,328 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=400">
+<title>戰鬥</title>
+<link rel="stylesheet" href="../style.css">
+<style>
+  body { background: transparent; }
+
+  /* 深色遊戲場景(此頁不走亮色系統) */
+  .battle {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    background:
+      radial-gradient(120% 80% at 50% 0%, #2a2035 0%, #1a1420 60%, #120e18 100%);
+    color: #f0eaf4;
+  }
+
+  /* ---- 敵人列 ---- */
+  .enemies {
+    display: flex; justify-content: space-around; align-items: flex-end;
+    gap: 6px; padding: 16px 12px 12px;
+  }
+  .enemy { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 5px; max-width: 108px; }
+  .enemy .figure { position: relative; }
+  .enemy img { width: 100%; height: auto; filter: drop-shadow(0 5px 10px rgba(0,0,0,.5)); }
+  .enemy.boss img { width: 108px; }
+  .enemy.grunt img { width: 78px; }
+  /* 出手倒數(左上圓圈) */
+  .enemy .turns {
+    position: absolute; top: -4px; left: -4px;
+    width: 26px; height: 26px; border-radius: 50%;
+    background: rgba(18,14,24,.85); border: 2px solid var(--gold);
+    display: grid; place-items: center;
+    font-size: var(--fs-cap); font-weight: 700; color: var(--gold);
+    box-shadow: 0 2px 6px rgba(0,0,0,.5);
+  }
+  /* 敵人紅色 HP 細條 */
+  .enemy .ehp {
+    width: 100%; height: 6px; border-radius: 3px;
+    background: rgba(0,0,0,.45); overflow: hidden;
+    border: 1px solid rgba(255,255,255,.12);
+  }
+  .enemy .ehp > i { display: block; height: 100%; border-radius: 3px;
+    background: linear-gradient(180deg, #ff6a5a, #c1332a); }
+  .enemy .ename { font-size: var(--fs-micro); font-weight: 700; color: #d9cfe4; text-shadow: 0 1px 3px rgba(0,0,0,.7); }
+
+  /* ---- 玩家 HP 條(綠) ---- */
+  .playerhp {
+    display: flex; align-items: center; gap: 8px;
+    padding: 4px 16px 10px;
+  }
+  .playerhp .php {
+    flex: 1; height: 18px; border-radius: 9px;
+    background: rgba(0,0,0,.4); overflow: hidden;
+    border: 1px solid rgba(255,255,255,.14);
+  }
+  .playerhp .php > i { display: block; height: 100%; border-radius: 9px;
+    background: linear-gradient(180deg, #58e08a, #2f9a5c); }
+  .playerhp .phpnum { font-size: var(--fs-cap); font-weight: 700; color: #d7f5e2;
+    text-shadow: 0 1px 3px rgba(0,0,0,.7); white-space: nowrap; }
+
+  /* ---- 9×9 盤面 ---- */
+  .board-wrap { padding: 4px 12px 10px; }
+  .board {
+    display: grid;
+    grid-template-columns: repeat(9, 1fr);
+    grid-template-rows: repeat(9, 1fr);
+    gap: 3px;
+    aspect-ratio: 1;
+    padding: 6px;
+    border-radius: 16px;
+    background: rgba(10,7,15,.55);
+    border: 1px solid rgba(255,255,255,.08);
+    box-shadow: inset 0 2px 10px rgba(0,0,0,.5);
+  }
+  .cell {
+    border-radius: 5px;
+    background: rgba(255,255,255,.045);
+    display: grid; place-items: center;
+    font-size: 11px; font-weight: 700;
+    color: rgba(255,255,255,.16);
+  }
+  /* 部分宮格帶淡屬色字樣 */
+  .cell.z-fire   { background: rgba(232,81,58,.14);  color: rgba(232,81,58,.55); }
+  .cell.z-water  { background: rgba(58,155,232,.14); color: rgba(58,155,232,.6); }
+  .cell.z-thunder{ background: rgba(230,193,47,.14); color: rgba(230,193,47,.6); }
+  .cell.z-earth  { background: rgba(200,128,58,.14); color: rgba(200,128,58,.6); }
+  .cell.z-wind   { background: rgba(76,175,114,.14); color: rgba(76,175,114,.6); }
+
+  /* 糖果方塊(屬色漸層,上亮下暗,圓角 20%) */
+  .blk {
+    width: 84%; height: 84%;
+    border-radius: 20%;
+    box-shadow: inset 0 2px 3px rgba(255,255,255,.4), 0 2px 4px rgba(0,0,0,.4);
+    place-self: center;
+  }
+  .blk-fire    { background: linear-gradient(180deg, #ff8a6e, var(--fire)); }
+  .blk-water   { background: linear-gradient(180deg, #74c0f5, var(--water)); }
+  .blk-thunder { background: linear-gradient(180deg, #f6e07a, var(--thunder)); }
+  .blk-earth   { background: linear-gradient(180deg, #e0a86e, var(--earth)); }
+  .blk-wind    { background: linear-gradient(180deg, #86d6a3, var(--wind)); }
+
+  /* ---- 底部拼片托盤 ---- */
+  .tray {
+    display: flex; justify-content: space-around; align-items: center;
+    gap: 8px; padding: 10px 14px 6px;
+  }
+  .piece {
+    display: grid; gap: 3px;
+    padding: 8px; border-radius: 14px;
+    background: rgba(255,255,255,.05);
+    border: 1px solid rgba(255,255,255,.08);
+  }
+  .piece .prow { display: flex; gap: 3px; }
+  .piece .pcell { width: 18px; height: 18px; }
+  .piece .pcell.empty { visibility: hidden; }
+  .pblk {
+    width: 18px; height: 18px; border-radius: 20%;
+    box-shadow: inset 0 1px 2px rgba(255,255,255,.4), 0 1px 2px rgba(0,0,0,.4);
+  }
+
+  /* ---- 出戰卡小圖列 ---- */
+  .team {
+    display: flex; justify-content: center; gap: 8px;
+    padding: 8px 12px 14px;
+  }
+  .cardmini {
+    width: 56px; aspect-ratio: 3/4; border-radius: 12px; overflow: hidden;
+    border: 2.5px solid var(--divider); background: rgba(255,255,255,.06);
+    box-shadow: 0 2px 6px rgba(0,0,0,.4); position: relative;
+  }
+  .cardmini img { width: 100%; height: 100%; object-fit: cover; }
+  .cardmini.f-fire    { border-color: var(--fire); }
+  .cardmini.f-water   { border-color: var(--water); }
+  .cardmini.f-thunder { border-color: var(--thunder); }
+  .cardmini.f-earth   { border-color: var(--earth); }
+  .cardmini.f-wind    { border-color: var(--wind); }
+  .cardmini.leader::after {
+    content: "👑"; position: absolute; top: 1px; right: 2px; font-size: 12px;
+    text-shadow: 0 1px 2px rgba(0,0,0,.7);
+  }
+</style>
+</head>
+<body>
+<div class="phone">
+  <div class="battle">
+
+    <!-- 敵人列(3 隻,土屬關) -->
+    <div class="enemies">
+      <div class="enemy grunt">
+        <div class="figure">
+          <div class="turns">2</div>
+          <img src="../assets/monsters/grunt_earth.png" alt="土之下忍">
+        </div>
+        <div class="ehp"><i style="width:72%"></i></div>
+        <div class="ename">土之下忍</div>
+      </div>
+      <div class="enemy boss">
+        <div class="figure">
+          <div class="turns">3</div>
+          <img src="../assets/monsters/boss_nrm_earth.png" alt="岩窟魔王">
+        </div>
+        <div class="ehp"><i style="width:88%"></i></div>
+        <div class="ename">岩窟魔王</div>
+      </div>
+      <div class="enemy grunt">
+        <div class="figure">
+          <div class="turns">1</div>
+          <img src="../assets/monsters/grunt_earth.png" alt="土之下忍">
+        </div>
+        <div class="ehp"><i style="width:45%"></i></div>
+        <div class="ename">土之下忍</div>
+      </div>
+    </div>
+
+    <!-- 玩家 HP -->
+    <div class="playerhp">
+      <span style="font-size:16px">❤️</span>
+      <span class="php"><i style="width:100%"></i></span>
+      <span class="phpnum">378 / 378</span>
+    </div>
+
+    <!-- 9×9 盤面 -->
+    <div class="board-wrap">
+      <div class="board">
+        <!-- row 1 -->
+        <div class="cell"></div>
+        <div class="cell"><div class="blk blk-fire"></div></div>
+        <div class="cell z-fire"><i class="ei ei-fire"></i></div>
+        <div class="cell"></div>
+        <div class="cell"><div class="blk blk-water"></div></div>
+        <div class="cell"></div>
+        <div class="cell"></div>
+        <div class="cell z-wind"><i class="ei ei-wind"></i></div>
+        <div class="cell"></div>
+        <!-- row 2 -->
+        <div class="cell"></div>
+        <div class="cell"></div>
+        <div class="cell"><div class="blk blk-earth"></div></div>
+        <div class="cell"></div>
+        <div class="cell"></div>
+        <div class="cell"><div class="blk blk-thunder"></div></div>
+        <div class="cell"></div>
+        <div class="cell"></div>
+        <div class="cell"></div>
+        <!-- row 3 -->
+        <div class="cell"><div class="blk blk-wind"></div></div>
+        <div class="cell"></div>
+        <div class="cell"></div>
+        <div class="cell z-water"><i class="ei ei-water"></i></div>
+        <div class="cell"><div class="blk blk-water"></div></div>
+        <div class="cell"></div>
+        <div class="cell"><div class="blk blk-fire"></div></div>
+        <div class="cell"></div>
+        <div class="cell"></div>
+        <!-- row 4 -->
+        <div class="cell"></div>
+        <div class="cell"><div class="blk blk-thunder"></div></div>
+        <div class="cell"></div>
+        <div class="cell"></div>
+        <div class="cell"></div>
+        <div class="cell"></div>
+        <div class="cell"></div>
+        <div class="cell z-earth"><i class="ei ei-earth"></i></div>
+        <div class="cell"></div>
+        <!-- row 5 -->
+        <div class="cell"></div>
+        <div class="cell"></div>
+        <div class="cell"><div class="blk blk-fire"></div></div>
+        <div class="cell"></div>
+        <div class="cell"><div class="blk blk-earth"></div></div>
+        <div class="cell"></div>
+        <div class="cell"></div>
+        <div class="cell"></div>
+        <div class="cell"></div>
+        <!-- row 6 -->
+        <div class="cell z-thunder"><i class="ei ei-thunder"></i></div>
+        <div class="cell"></div>
+        <div class="cell"></div>
+        <div class="cell"><div class="blk blk-wind"></div></div>
+        <div class="cell"></div>
+        <div class="cell"></div>
+        <div class="cell"><div class="blk blk-water"></div></div>
+        <div class="cell"></div>
+        <div class="cell"></div>
+        <!-- row 7 -->
+        <div class="cell"></div>
+        <div class="cell"></div>
+        <div class="cell"></div>
+        <div class="cell"></div>
+        <div class="cell"></div>
+        <div class="cell"><div class="blk blk-thunder"></div></div>
+        <div class="cell"></div>
+        <div class="cell"></div>
+        <div class="cell"></div>
+        <!-- row 8 -->
+        <div class="cell"></div>
+        <div class="cell z-fire"><i class="ei ei-fire"></i></div>
+        <div class="cell"></div>
+        <div class="cell"></div>
+        <div class="cell"></div>
+        <div class="cell"></div>
+        <div class="cell"></div>
+        <div class="cell"></div>
+        <div class="cell"></div>
+        <!-- row 9 -->
+        <div class="cell"></div>
+        <div class="cell"></div>
+        <div class="cell"></div>
+        <div class="cell"></div>
+        <div class="cell"></div>
+        <div class="cell"></div>
+        <div class="cell"></div>
+        <div class="cell"></div>
+        <div class="cell"></div>
+      </div>
+    </div>
+
+    <!-- 底部拼片托盤(3 片) -->
+    <div class="tray">
+      <!-- L 形 火 -->
+      <div class="piece">
+        <div class="prow">
+          <div class="pcell"><div class="pblk blk-fire"></div></div>
+          <div class="pcell empty"></div>
+        </div>
+        <div class="prow">
+          <div class="pcell"><div class="pblk blk-fire"></div></div>
+          <div class="pcell"><div class="pblk blk-fire"></div></div>
+        </div>
+      </div>
+      <!-- 橫 3 水 -->
+      <div class="piece">
+        <div class="prow">
+          <div class="pcell"><div class="pblk blk-water"></div></div>
+          <div class="pcell"><div class="pblk blk-water"></div></div>
+          <div class="pcell"><div class="pblk blk-water"></div></div>
+        </div>
+      </div>
+      <!-- 田 4 土/雷混 -->
+      <div class="piece">
+        <div class="prow">
+          <div class="pcell"><div class="pblk blk-earth"></div></div>
+          <div class="pcell"><div class="pblk blk-earth"></div></div>
+        </div>
+        <div class="prow">
+          <div class="pcell"><div class="pblk blk-thunder"></div></div>
+          <div class="pcell"><div class="pblk blk-earth"></div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 出戰隊伍(5 張) -->
+    <div class="team">
+      <div class="cardmini f-fire"><img src="../assets/cards/c01_thumb.webp" alt="朱"></div>
+      <div class="cardmini f-water"><img src="../assets/cards/c04_thumb.webp" alt="凪"></div>
+      <div class="cardmini f-fire leader"><img src="../assets/cards/c15_thumb.webp" alt="臺灣雲豹"></div>
+      <div class="cardmini f-thunder"><img src="../assets/cards/c07_thumb.webp" alt="鳴"></div>
+      <div class="cardmini f-wind"><img src="../assets/cards/c11_thumb.webp" alt="空"></div>
+    </div>
+
+  </div>
+</div>
+</body>
+</html>

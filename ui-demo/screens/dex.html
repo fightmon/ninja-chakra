@@ -1,0 +1,141 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=400">
+<title>圖鑑</title>
+<link rel="stylesheet" href="../style.css">
+<style>
+  body { background: transparent; }
+  /* 分組小節間距 */
+  .dex-group { margin-top: 6px; }
+  .dex-group .section-label { padding: 14px 14px 2px; display: flex; align-items: center; gap: 6px; }
+  .dex-group .section-label .cnt { margin-left: auto; color: var(--ink3); font-weight: 700; }
+  .dex-group .grid-cards { padding-top: 6px; padding-bottom: 6px; }
+  /* 底部返回列 */
+  .footbar { display: flex; justify-content: center;
+    padding: 12px 14px; background: var(--surf); border-top: 1px solid var(--divider); }
+</style>
+</head>
+<body>
+<div class="phone">
+
+  <!-- 頂部固定標題列 -->
+  <div class="topbar">
+    <div>
+      <h1>卡片圖鑑</h1>
+      <div class="sub">收集 28/35 · 拖曳捲動</div>
+    </div>
+  </div>
+
+  <!-- 捲動內容 -->
+  <div class="screen-body">
+
+    <!-- 🐶 犬系 5/5 -->
+    <div class="dex-group">
+      <div class="section-label">🐶 犬系 <span class="cnt">5/5</span></div>
+      <div class="grid-cards">
+        <div class="mini owned">
+          <span class="elbadge el-fire">火</span>
+          <img src="../assets/cards/c01_thumb.webp" alt="朱">
+          <span class="lvpill">Lv20</span>
+        </div>
+        <div class="mini owned">
+          <span class="elbadge el-fire">火</span>
+          <img src="../assets/cards/c03_thumb.webp" alt="炎助">
+          <span class="lvpill">Lv18</span>
+        </div>
+        <div class="mini owned">
+          <span class="elbadge el-earth">土</span>
+          <img src="../assets/cards/c09_thumb.webp" alt="椿">
+          <span class="lvpill">Lv12</span>
+        </div>
+        <div class="mini owned">
+          <span class="elbadge el-thunder">雷</span>
+          <img src="../assets/cards/c07_thumb.webp" alt="鳴">
+          <span class="lvpill">Lv15</span>
+        </div>
+        <div class="mini owned">
+          <span class="elbadge el-wind">風</span>
+          <img src="../assets/cards/c11_thumb.webp" alt="空">
+          <span class="lvpill">Lv09</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- 🐱 貓系 3/5 -->
+    <div class="dex-group">
+      <div class="section-label">🐱 貓系 <span class="cnt">3/5</span></div>
+      <div class="grid-cards">
+        <div class="mini owned">
+          <span class="elbadge el-water">水</span>
+          <img src="../assets/cards/c04_thumb.webp" alt="凪">
+          <span class="lvpill">Lv16</span>
+        </div>
+        <div class="mini owned">
+          <span class="elbadge el-water">水</span>
+          <img src="../assets/cards/c06_thumb.webp" alt="水無">
+          <span class="lvpill">Lv14</span>
+        </div>
+        <div class="mini owned">
+          <span class="elbadge el-earth">土</span>
+          <img src="../assets/cards/c10_thumb.webp" alt="土丸">
+          <span class="lvpill">Lv11</span>
+        </div>
+        <div class="mini locked">?</div>
+        <div class="mini locked">?</div>
+      </div>
+    </div>
+
+    <!-- 🐦 禽系 4/5 -->
+    <div class="dex-group">
+      <div class="section-label">🐦 禽系 <span class="cnt">4/5</span></div>
+      <div class="grid-cards">
+        <div class="mini owned">
+          <span class="elbadge el-wind">風</span>
+          <img src="../assets/cards/c12_thumb.webp" alt="疾風">
+          <span class="lvpill">Lv13</span>
+        </div>
+        <div class="mini owned">
+          <span class="elbadge el-thunder">雷</span>
+          <img src="../assets/cards/c07_thumb.webp" alt="鳴">
+          <span class="lvpill">Lv08</span>
+        </div>
+        <div class="mini owned">
+          <span class="elbadge el-fire">火</span>
+          <img src="../assets/cards/c01_thumb.webp" alt="朱">
+          <span class="lvpill">Lv06</span>
+        </div>
+        <div class="mini owned">
+          <span class="elbadge el-water">水</span>
+          <img src="../assets/cards/c04_thumb.webp" alt="凪">
+          <span class="lvpill">Lv05</span>
+        </div>
+        <div class="mini locked">?</div>
+      </div>
+    </div>
+
+    <!-- ⭐ 影忍 kage 1/3 -->
+    <div class="dex-group">
+      <div class="section-label">⭐ 影忍 <span class="cnt">1/3</span></div>
+      <div class="grid-cards">
+        <div class="mini kage">
+          <span class="elbadge el-fire">火</span>
+          <img src="../assets/cards/c15_thumb.webp" alt="臺灣雲豹">
+          <span class="lvpill">Lv30</span>
+        </div>
+        <div class="mini locked">?</div>
+        <div class="mini locked">?</div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- 底部固定返回列 -->
+  <div class="footbar">
+    <button class="pill">🏠 返回大廳</button>
+  </div>
+
+</div>
+</body>
+</html>
