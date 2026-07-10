@@ -1,0 +1,115 @@
+---
+// 全站共用版面：head/SEO/OG + 日夜模式 + 單一來源 nav/footer + 共用 CSS
+export interface Props {
+  title: string;
+  description?: string;
+  image?: string;          // OG 圖(絕對或相對 /)；預設 og-image
+  path?: string;           // 目前路徑(canonical)，如 '/dex/c15/'
+  navActive?: 'dex' | 'devlog' | '';
+}
+const {
+  title,
+  description = '塊頭勇者 Blockyusha 是一款把 Woodoku 方塊消除縫進轉珠 RPG 的卡片收集手機遊戲：拖方塊消除觸發五屬攻擊，收集可愛的方塊頭動物勇者一路闖塔。免下載，開網頁就能玩。',
+  image = '/og-image.webp',
+  path = '/',
+  navActive = '',
+} = Astro.props;
+const canonical = new URL(path, Astro.site ?? 'https://blockyusha.com').href;
+const ogImage = new URL(image, Astro.site ?? 'https://blockyusha.com').href;
+---
+<!doctype html>
+<html lang="zh-TW">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<script is:inline>(function(){try{var t=localStorage.getItem('bytheme')||((window.matchMedia&&matchMedia('(prefers-color-scheme:dark)').matches)?'dark':'light');document.documentElement.setAttribute('data-theme',t);}catch(e){}})();</script>
+<title>{title}</title>
+<meta name="description" content={description} />
+<link rel="canonical" href={canonical} />
+<meta name="theme-color" content="#ffd43b" />
+<meta property="og:type" content="website" />
+<meta property="og:site_name" content="塊頭勇者 Blockyusha" />
+<meta property="og:title" content={title} />
+<meta property="og:description" content={description} />
+<meta property="og:url" content={canonical} />
+<meta property="og:image" content={ogImage} />
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:title" content={title} />
+<meta name="twitter:description" content={description} />
+<meta name="twitter:image" content={ogImage} />
+<link rel="icon" href="/play/art/cards/c15_thumb.webp" />
+<link rel="apple-touch-icon" href="/play/art/cards/c15_thumb.webp" />
+</head>
+<body>
+
+<header>
+  <div class="nav wrap">
+    <a class="brand" href="/">塊頭勇者</a>
+    <nav class="links">
+      <a href="/dex/" class={navActive === 'dex' ? 'on' : ''}>角色圖鑑</a>
+      <a href="/devlog/how-to-play.html">玩法</a>
+      <a href="/devlog/" class={navActive === 'devlog' ? 'on' : ''}>日誌</a>
+    </nav>
+    <div class="navr">
+      <button class="themebtn" type="button" onclick="toggleTheme()" aria-label="切換日夜模式">🌙</button>
+      <a class="miniplay" href="/play/">開始遊戲</a>
+    </div>
+  </div>
+</header>
+
+<slot />
+
+<footer>
+  <a href="/">首頁</a><a href="/dex/">角色圖鑑</a><a href="/play/">開始遊戲</a><a href="/devlog/">開發日誌</a>
+  <div class="cp">塊頭勇者 Blockyusha · 開發中 · © 2026 fightmon</div>
+</footer>
+
+<script is:inline>
+function toggleTheme(){var d=document.documentElement,t=d.getAttribute('data-theme')==='dark'?'light':'dark';
+  d.setAttribute('data-theme',t);try{localStorage.setItem('bytheme',t);}catch(e){}
+  document.querySelectorAll('.themebtn').forEach(function(b){b.textContent=t==='dark'?'☀️':'🌙';});}
+(function(){var t=document.documentElement.getAttribute('data-theme');
+  document.querySelectorAll('.themebtn').forEach(function(b){b.textContent=t==='dark'?'☀️':'🌙';});})();
+</script>
+
+<style is:global>
+/* ===== base ===== */
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{--cream:#fff8ec;--sun:#ffd23b;--sun2:#ffb020;--ink:#2c2114;--ink2:#6b5a41;
+  --fire:#ff6a3d;--water:#37b6ff;--thunder:#f0b410;--earth:#c8873f;--wind:#3fbf54;
+  --cta1:#ffdf6b;--cta2:#ff8a2a;--shadow:0 12px 30px rgba(140,90,20,.18)}
+html{scroll-behavior:smooth}
+body{background:var(--cream);color:var(--ink);
+  font-family:"Noto Sans TC","PingFang TC","Microsoft JhengHei",system-ui,-apple-system,sans-serif;
+  -webkit-font-smoothing:antialiased;line-height:1.6;overflow-x:hidden}
+img{max-width:100%;display:block}
+a{color:inherit;text-decoration:none}
+.wrap{max-width:900px;margin:0 auto;padding:0 16px}
+/* ===== header / nav (single source) ===== */
+header{position:sticky;top:0;z-index:50;background:rgba(255,248,236,.92);backdrop-filter:blur(8px);border-bottom:2px solid rgba(255,178,32,.2)}
+.nav{display:flex;align-items:center;justify-content:space-between;height:58px}
+.brand{font-size:20px;font-weight:900;letter-spacing:-.5px;
+  background:linear-gradient(120deg,#ff8a2a,#ff5a3d);-webkit-background-clip:text;background-clip:text;color:transparent}
+.links{display:none;gap:22px;font-size:15px;font-weight:700;color:var(--ink2)}
+.links a:hover,.links a.on{color:var(--fire)}
+.navr{display:flex;align-items:center;gap:10px}
+.themebtn{width:40px;height:40px;border:none;border-radius:50%;cursor:pointer;font-size:19px;line-height:1;
+  background:rgba(255,255,255,.55);box-shadow:0 3px 10px rgba(140,90,20,.16);transition:transform .12s}
+.themebtn:active{transform:scale(.9)}
+.miniplay{background:linear-gradient(120deg,var(--cta1),var(--cta2));color:#3a1f00;font-weight:900;
+  padding:9px 20px;border-radius:999px;font-size:15px;box-shadow:0 6px 16px rgba(255,140,40,.35)}
+/* ===== footer ===== */
+footer{background:#2c2114;color:#cbb99a;text-align:center;padding:34px 20px;font-size:14px}
+footer a{color:#ffcf6b;margin:0 10px}
+footer a:hover{color:#fff}
+footer .cp{margin-top:12px;font-size:12px;color:#8a795c}
+/* ===== dark mode (shared) ===== */
+:root[data-theme="dark"]{--cream:#16120b;--ink:#f0e7d6;--ink2:#b9a988}
+[data-theme="dark"] body{background:#15120b}
+[data-theme="dark"] header{background:rgba(20,16,10,.9);border-bottom-color:rgba(255,178,32,.16)}
+[data-theme="dark"] .themebtn{background:rgba(255,255,255,.1)}
+[data-theme="dark"] footer{background:#0d0b07}
+@media(min-width:720px){.links{display:flex}}
+</style>
+</body>
+</html>

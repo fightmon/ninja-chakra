@@ -1,0 +1,116 @@
+---
+import Base from '../../layouts/Base.astro';
+import { cards, byId, order, meta } from '../../data/cards';
+import type { Card } from '../../data/cards';
+
+export function getStaticPaths() {
+  return cards.map((c) => ({ params: { id: c.id }, props: { card: c } }));
+}
+
+const { card } = Astro.props as { card: Card };
+const el = meta.elName[card.el];
+const fam = meta.famName[card.fam];
+const race = meta.raceName[card.race];
+const pos = order.indexOf(card.id);
+const prev = pos > 0 ? byId[order[pos - 1]] : null;
+const next = pos < order.length - 1 ? byId[order[pos + 1]] : null;
+
+const title = `${card.name} — 塊頭勇者 圖鑑`;
+const desc = `${card.name}（${el}屬性・${fam}）是塊頭勇者 Blockyusha 的角色。滿級 HP ${card.max.hp}／攻擊 ${card.max.atk}／回復 ${card.max.rcv}；隊長技「${card.lead.name}」：${card.lead.desc}；主動技「${card.act.name}」（CD ${card.act.cd}）。`;
+---
+<Base title={title} description={desc} path={`/dex/${card.id}/`} image={`/play/art/cards/${card.id}_full.webp`} navActive="dex">
+
+<div class="wrap">
+  <a class="back" href="/dex/">← 回角色圖鑑</a>
+
+  <div class="top" style={`--el:${meta.elColor[card.el]}`}>
+    <div class="art">
+      <span class="num">No.{card.n}</span>
+      {card.hero && <span class="hero">⭐ 台灣特有種</span>}
+      <img src={`/play/art/cards/${card.id}_full.webp`} alt={card.name} />
+    </div>
+    <div class="info">
+      <h1>{card.name}</h1>
+      <div class="badges">
+        <span class="badge">{el}</span>
+        <span class="badge g">{fam}</span>
+        <span class="badge g">{race}</span>
+      </div>
+      <div class="stars">★★★<small>基礎 ★3 · 可進化 +2</small></div>
+    </div>
+  </div>
+
+  <div class="sec" style={`--el:${meta.elColor[card.el]}`}>
+    <h2>能力值</h2>
+    <table>
+      <thead><tr><th>三圍</th><th>LV 1</th><th>滿級 (LV20)</th></tr></thead>
+      <tbody>
+        <tr><th>❤️ HP</th><td>{card.lv1.hp}</td><td><b>{card.max.hp}</b></td></tr>
+        <tr><th>⚔️ 攻擊</th><td>{card.lv1.atk}</td><td><b>{card.max.atk}</b></td></tr>
+        <tr><th>➕ 回復</th><td>{card.lv1.rcv}</td><td><b>{card.max.rcv}</b></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="sec" style={`--el:${meta.elColor[card.el]}`}>
+    <h2>隊長技</h2>
+    <div class="skill"><div class="sk-h"><span class="sk-n">{card.lead.name}</span></div><p>{card.lead.desc}</p></div>
+  </div>
+
+  <div class="sec" style={`--el:${meta.elColor[card.el]}`}>
+    <h2>主動技</h2>
+    <div class="skill"><div class="sk-h"><span class="sk-n">{card.act.name}</span><span class="cd" style={`background:${meta.elColor[card.el]}`}>CD {card.act.cd}</span></div><p>{card.act.desc}</p></div>
+  </div>
+
+  <div class="note">屬性相剋：火 → 風 → 雷 → 土 → 水 → 火（打中弱點傷害翻倍）。{meta.note}</div>
+
+  <div class="pn">
+    {prev ? <a href={`/dex/${prev.id}/`}>← {prev.name}</a> : <a class="dis">←</a>}
+    <a class="toall" href="/dex/">☰ 圖鑑</a>
+    {next ? <a href={`/dex/${next.id}/`}>{next.name} →</a> : <a class="dis">→</a>}
+  </div>
+</div>
+
+<style is:global>
+.back{display:inline-block;margin:16px 0 6px;color:var(--ink2);font-weight:700;font-size:14px}
+.top{background:linear-gradient(160deg,#fff,#fff8ea);border:2px solid #fff;border-radius:22px;box-shadow:0 12px 30px rgba(140,90,20,.16);overflow:hidden;margin-top:6px}
+.art{position:relative;background:var(--el)}
+.art img{width:100%;max-height:360px;object-fit:contain;background:var(--el)}
+.art .num{position:absolute;left:12px;top:10px;font-size:14px;font-weight:800;color:#fff;background:rgba(0,0,0,.45);border-radius:8px;padding:2px 12px}
+.art .hero{position:absolute;right:12px;top:10px;font-size:13px;font-weight:900;color:#7a4e00;background:#ffe36b;border-radius:999px;padding:3px 12px}
+.info{padding:20px}
+.info h1{font-size:28px;font-weight:900;line-height:1.2}
+.badges{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0 4px}
+.badge{font-size:13px;font-weight:800;border-radius:999px;padding:4px 13px;color:#fff;background:var(--el)}
+.badge.g{background:#fff;color:var(--ink2);border:2px solid rgba(200,140,40,.22)}
+.stars{color:#ffb400;font-size:18px;letter-spacing:2px}
+.stars small{color:var(--ink2);font-size:12px;margin-left:6px;font-weight:700}
+.sec{margin-top:22px}
+.sec h2{font-size:15px;font-weight:900;color:var(--ink2);letter-spacing:1px;margin-bottom:10px;padding-left:10px;border-left:5px solid var(--el)}
+table{width:100%;border-collapse:collapse;background:#fff;border-radius:14px;overflow:hidden;box-shadow:0 6px 16px rgba(140,90,20,.1)}
+th,td{padding:13px 12px;text-align:center;border-bottom:1px solid rgba(200,140,40,.22);font-size:15px}
+thead th{background:var(--el);color:#fff;font-weight:800}
+tbody th{text-align:left;font-weight:800;color:var(--ink2);background:#fffaf0}
+tbody tr:last-child td,tbody tr:last-child th{border-bottom:none}
+td b{font-size:17px}
+.skill{background:#fff;border-radius:14px;padding:16px 18px;box-shadow:0 6px 16px rgba(140,90,20,.1)}
+.skill .sk-h{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.skill .sk-n{font-size:17px;font-weight:900}
+.skill .cd{font-size:12px;font-weight:800;color:#fff;border-radius:999px;padding:2px 12px;white-space:nowrap}
+.skill p{color:var(--ink2);font-size:15px;margin-top:6px}
+.note{color:var(--ink2);font-size:13px;background:#fff6e0;border-radius:12px;padding:14px 16px;margin-top:18px}
+.pn{display:flex;justify-content:space-between;gap:10px;margin:22px 0 60px}
+.pn a{flex:1;background:#fff;border-radius:14px;padding:14px;text-align:center;font-weight:800;box-shadow:0 5px 14px rgba(140,90,20,.12);color:var(--ink)}
+.pn a.dis{opacity:.35;pointer-events:none}
+.pn .toall{flex:0 0 auto;background:linear-gradient(120deg,#ffdf6b,#ff8a2a);color:#3a1f00}
+[data-theme="dark"] .top{background:linear-gradient(160deg,#231d14,#1c170f);border-color:#231d14}
+[data-theme="dark"] table{background:#231d14}
+[data-theme="dark"] th,[data-theme="dark"] td{border-bottom-color:rgba(255,200,90,.15)}
+[data-theme="dark"] tbody th{background:#2a2318}
+[data-theme="dark"] .skill{background:#231d14}
+[data-theme="dark"] .pn a:not(.toall){background:#231d14;color:var(--ink)}
+[data-theme="dark"] .badge.g{background:#2a2318;color:var(--ink2);border-color:transparent}
+[data-theme="dark"] .note{background:#2a2318;color:var(--ink2)}
+@media(min-width:600px){.top{display:flex}.art{flex:0 0 300px}.art img{height:100%;max-height:none}.info{flex:1}}
+</style>
+</Base>

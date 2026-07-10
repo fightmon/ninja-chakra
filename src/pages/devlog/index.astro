@@ -1,0 +1,56 @@
+---
+import Base from '../../layouts/Base.astro';
+const posts = [
+  {
+    href: '/devlog/2026-06-12-element-balance.html',
+    date: '2026-06-12',
+    t: '我想讓五個屬性都有人愛用，結果數據打了我一巴掌（「陰」到現在還沒爬起來）',
+    s: '把五個屬性丟進模擬器跑一萬場，發現三個根本沒人想用。風好修、土卡在 2048 式傾斜、陰轉一圈還在原地——一篇還沒解完的平衡踩坑，文末想跟大家討個點子。',
+    tags: ['#玩法設計', '#數值平衡', '#踩坑'],
+  },
+  {
+    href: '/devlog/2026-06-11-origin.html',
+    date: '2026-06-11',
+    t: '我只是想做個消消樂，結果縫出一個沒人做過的東西',
+    s: '把 Woodoku 跟轉珠 RPG 縫在一起會發生什麼事？方塊有了屬性、消除會放招、招式還會反過來改變盤面——附兩個純 CSS 動畫 demo。',
+    tags: ['#玩法設計', '#方塊消除', '#轉珠RPG'],
+  },
+];
+---
+<Base title="開發日誌 — 塊頭勇者 Blockyusha" path="/devlog/" navActive="devlog"
+  description="塊頭勇者 Blockyusha 開發日誌：機制設計、數值平衡、踩坑心得，用 CSS 動畫演給你看的碎念。">
+
+<div class="dlog">
+  <header class="dhero">
+    <h1>開發日誌</h1>
+    <p>把 Woodoku 方塊消除縫進轉珠 RPG 的一路碎念 · 機制設計與踩坑</p>
+  </header>
+
+  <p class="sec">最新文章</p>
+  {posts.map((p) => (
+    <a class="post" href={p.href}>
+      <div class="date">{p.date}</div>
+      <h2 class="t">{p.t}</h2>
+      <p class="s">{p.s}</p>
+      <div class="tags">{p.tags.map((tag) => <i>{tag}</i>)}</div>
+    </a>
+  ))}
+</div>
+
+<style is:global>
+.dlog{max-width:720px;margin:0 auto;padding:clamp(30px,6vw,56px) 18px 70px}
+.dhero{text-align:center;margin-bottom:40px}
+.dhero h1{font-size:clamp(30px,7vw,44px);font-weight:900;background:linear-gradient(120deg,#ff8a2a,#ff5a3d);-webkit-background-clip:text;background-clip:text;color:transparent}
+.dhero p{color:var(--ink2);font-size:15px;margin-top:8px}
+.sec{font-size:13px;color:var(--sun2);letter-spacing:2px;margin:0 0 16px;text-transform:uppercase;font-weight:800}
+.post{display:block;background:#fff;border-radius:16px;padding:22px 24px;margin-bottom:16px;box-shadow:var(--shadow);transition:transform .15s,box-shadow .15s}
+.post:hover{transform:translateY(-2px);box-shadow:0 14px 34px rgba(140,90,20,.2)}
+.post .date{font-size:12px;color:var(--ink2);margin-bottom:6px}
+.post .t{font-size:19px;font-weight:900;line-height:1.4;margin-bottom:8px}
+.post .s{font-size:14px;color:var(--ink2);line-height:1.7}
+.post .tags{margin-top:12px;display:flex;flex-wrap:wrap;gap:6px}
+.post .tags i{font-style:normal;font-size:11px;color:#7a4e08;background:rgba(255,178,32,.14);border-radius:999px;padding:3px 10px}
+[data-theme="dark"] .post{background:#231d14}
+[data-theme="dark"] .post .tags i{background:rgba(255,255,255,.08);color:#e8d4a8}
+</style>
+</Base>

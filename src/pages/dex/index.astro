@@ -1,0 +1,107 @@
+---
+import Base from '../../layouts/Base.astro';
+import { meta, byId } from '../../data/cards';
+const filters: [string, string, string][] = [
+  ['all', '全部', '#ff8a2a'],
+  ['fire', meta.elName.fire, meta.elColor.fire],
+  ['water', meta.elName.water, meta.elColor.water],
+  ['thunder', meta.elName.thunder, meta.elColor.thunder],
+  ['earth', meta.elName.earth, meta.elColor.earth],
+  ['wind', meta.elName.wind, meta.elColor.wind],
+];
+---
+<Base title="角色圖鑑 — 塊頭勇者 Blockyusha" path="/dex/" navActive="dex"
+  description="塊頭勇者 Blockyusha 全角色圖鑑：7 大物種隊、35 隻方塊頭動物勇者的屬性、HP、攻擊、回復、隊長技與主動技一覽。">
+
+<div class="title">
+  <h1>角色圖鑑</h1>
+  <p>7 大物種隊 · 35 隻方塊頭勇者 · 點擊看詳細數值</p>
+</div>
+
+<div class="tools">
+  <input class="search" id="search" type="search" placeholder="🔍 搜尋名字或編號…" autocomplete="off" />
+  <div class="filters" id="filters">
+    {filters.map(([e, label, c]) => (
+      <button class={`filt${e === 'all' ? ' on' : ''}`} data-el={e} style={`--c:${c}`}>{label}</button>
+    ))}
+  </div>
+</div>
+
+<div class="teams">
+  {meta.teams.map((t) => (
+    <section class="team">
+      <div class="team-h" style={`--tc:${t.color}`}>
+        <span class="em">{t.emoji}</span>{t.name}<small class="cnt">{t.ids.length} 隻</small>
+      </div>
+      <div class="team-grid">
+        {t.ids.map((id) => byId[id]).filter(Boolean).map((c) => (
+          <a class="cell" href={`/dex/${c.id}/`} style={`--el:${meta.elColor[c.el]}`} data-el={c.el} data-name={c.name} data-n={c.n}>
+            <div class="pic">
+              <span class="num">{c.n}</span>
+              {c.hero && <span class="hero">⭐</span>}
+              <img loading="lazy" src={`/play/art/cards/${c.id}_thumb.webp`} alt={c.name} />
+            </div>
+            <div class="nm">{c.name}</div>
+          </a>
+        ))}
+      </div>
+    </section>
+  ))}
+  <div class="empty" id="empty" style="display:none">找不到符合的角色 🥲</div>
+</div>
+
+<script is:inline>
+(function(){
+  var teams=document.querySelectorAll('.team'), fbox=document.getElementById('filters'), search=document.getElementById('search');
+  var curEl='all', q='';
+  function apply(){
+    teams.forEach(function(sec){
+      var shown=0;
+      sec.querySelectorAll('.cell').forEach(function(c){
+        var okEl=curEl==='all'||c.dataset.el===curEl;
+        var okQ=!q||c.dataset.name.toLowerCase().indexOf(q)>=0||c.dataset.n.indexOf(q)>=0;
+        var vis=okEl&&okQ; c.style.display=vis?'':'none'; if(vis)shown++;
+      });
+      sec.style.display=shown?'':'none';
+      var cnt=sec.querySelector('.cnt'); if(cnt)cnt.textContent=shown+' 隻';
+    });
+    document.getElementById('empty').style.display=[].some.call(teams,function(s){return s.style.display!=='none';})?'none':'';
+  }
+  fbox.querySelectorAll('.filt').forEach(function(b){b.onclick=function(){curEl=b.dataset.el;fbox.querySelectorAll('.filt').forEach(function(x){x.classList.remove('on');});b.classList.add('on');apply();};});
+  search.addEventListener('input',function(){q=search.value.trim().toLowerCase();apply();});
+})();
+</script>
+
+<style is:global>
+.title{text-align:center;padding:28px 0 4px}
+.title h1{font-size:clamp(28px,7vw,40px);font-weight:900;background:linear-gradient(120deg,#ff8a2a,#ff5a3d);-webkit-background-clip:text;background-clip:text;color:transparent}
+.title p{color:var(--ink2);font-size:14px;margin-top:4px}
+.tools{max-width:900px;margin:16px auto 8px;padding:0 16px;display:flex;flex-direction:column;gap:12px;align-items:center}
+.search{width:100%;max-width:380px;border:2px solid rgba(200,140,40,.3);border-radius:999px;padding:11px 18px;font-size:16px;background:#fff;outline:none;color:var(--ink)}
+.search:focus{border-color:var(--fire)}
+.filters{display:flex;flex-wrap:wrap;gap:8px;justify-content:center}
+.filt{border:none;cursor:pointer;font-family:inherit;font-weight:800;font-size:14px;padding:8px 16px;border-radius:999px;background:#fff;color:var(--ink2);box-shadow:0 3px 10px rgba(140,90,20,.12)}
+.filt.on{color:#fff;background:var(--c,#ff8a2a)}
+.teams{max-width:900px;margin:0 auto;padding:14px 16px 60px}
+.team{margin-bottom:26px}
+.team-h{display:flex;align-items:center;gap:10px;font-size:18px;font-weight:900;padding:8px 14px;border-radius:14px;color:#3a2a10;background:linear-gradient(100deg,var(--tc),#fff8ec 90%);border-left:6px solid var(--tc);margin-bottom:12px}
+.team-h .em{font-size:22px}
+.team-h small{margin-left:auto;font-size:13px;font-weight:800;color:var(--ink2);background:rgba(255,255,255,.6);border-radius:999px;padding:2px 10px}
+.team-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:8px}
+.cell{background:#fff;border-radius:14px;padding:6px 4px 9px;text-align:center;box-shadow:0 4px 12px rgba(140,90,20,.13);border-bottom:4px solid var(--el);transition:transform .12s}
+.cell:hover{transform:translateY(-3px)}
+.cell .pic{position:relative;border-radius:10px;overflow:hidden;background:var(--el)}
+.cell .pic img{width:100%;aspect-ratio:1;object-fit:cover}
+.cell .num{position:absolute;left:4px;top:3px;font-size:10px;font-weight:800;color:#fff;background:rgba(0,0,0,.45);border-radius:5px;padding:0 5px}
+.cell .hero{position:absolute;right:3px;top:2px;font-size:12px}
+.cell .nm{font-size:13px;font-weight:800;margin-top:5px;line-height:1.25}
+.empty{text-align:center;color:var(--ink2);padding:40px}
+[data-theme="dark"] .search{background:#231d14;border-color:rgba(255,178,32,.25)}
+[data-theme="dark"] .filt{background:#231d14;color:var(--ink2)}
+[data-theme="dark"] .cell{background:#231d14}
+[data-theme="dark"] .team-h{background:linear-gradient(100deg,var(--tc),#16120b 90%)}
+[data-theme="dark"] .team-h small{background:rgba(0,0,0,.28)}
+@media(max-width:440px){.cell .nm{font-size:11px}.team-grid{gap:6px}}
+@media(min-width:640px){.team-grid{gap:12px}.cell .nm{font-size:15px}}
+</style>
+</Base>
