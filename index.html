@@ -1,14 +1,14 @@
 <!doctype html>
-<html lang="zh-TW" data-theme="dark">
+<html lang="zh-TW">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<script>(function(){try{var t=localStorage.getItem('bytheme')||((window.matchMedia&&matchMedia('(prefers-color-scheme:dark)').matches)?'dark':'light');document.documentElement.setAttribute('data-theme',t);}catch(e){}})();</script>
 <title>塊頭勇者 Blockyusha — 方塊消除 × 轉珠 RPG</title>
-<meta name="description" content="塊頭勇者 Blockyusha 是一款把 Woodoku 方塊消除縫進轉珠 RPG 的卡片收集遊戲：拖方塊、湊整列消除觸發五屬攻擊，收集可愛的方塊頭動物勇者一路闖塔。免下載，開網頁就能玩。">
-<meta name="keywords" content="塊頭勇者,Blockyusha,方塊消除,Woodoku,轉珠RPG,卡片收集,block puzzle rpg,woodoku like,puzzle rpg">
+<meta name="description" content="塊頭勇者 Blockyusha 是一款把 Woodoku 方塊消除縫進轉珠 RPG 的卡片收集手機遊戲：拖方塊、湊整列消除觸發五屬攻擊，收集可愛的方塊頭動物勇者一路闖塔。免下載，開網頁就能玩。">
+<meta name="keywords" content="塊頭勇者,Blockyusha,方塊消除,Woodoku,轉珠RPG,卡片收集,手機遊戲,block puzzle rpg,woodoku like">
 <link rel="canonical" href="https://blockyusha.com/">
-<meta name="theme-color" content="#0d1333">
-<!-- Open Graph / 社群分享 -->
+<meta name="theme-color" content="#ffd43b">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="塊頭勇者 Blockyusha">
 <meta property="og:title" content="塊頭勇者 Blockyusha — 方塊消除 × 轉珠 RPG">
@@ -17,97 +17,289 @@
 <meta property="og:image" content="https://blockyusha.com/og-image.webp">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="塊頭勇者 Blockyusha — 方塊消除 × 轉珠 RPG">
-<meta name="twitter:description" content="拖方塊、湊消除、放大招——收集方塊頭動物勇者的消除 RPG。">
 <meta name="twitter:image" content="https://blockyusha.com/og-image.webp">
 <link rel="icon" href="./play/art/cards/c15_thumb.webp">
 <link rel="apple-touch-icon" href="./play/art/cards/c15_thumb.webp">
 <style>
-*,*::before,*::after{box-sizing:border-box}
-html,body{margin:0;padding:0}
-body{
-  background:linear-gradient(180deg,#080c1a 0%,#0d1333 42%,#111a40 100%);
-  background-attachment:fixed;min-height:100vh;color:#e8ecf4;
-  font-family:"Noto Sans TC","PingFang TC","Microsoft JhengHei",system-ui,-apple-system,sans-serif;
-  -webkit-font-smoothing:antialiased;text-align:center;
+/* ===== base (mobile-first) ===== */
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --cream:#fff8ec; --sun:#ffd23b; --sun2:#ffb020; --peach:#ffe0a3;
+  --ink:#2c2114; --ink2:#6b5a41;
+  --fire:#ff6a3d; --water:#37b6ff; --thunder:#ffc21f; --earth:#c8873f; --wind:#4fc95d;
+  --cta1:#ffdf6b; --cta2:#ff8a2a;
+  --shadow:0 12px 30px rgba(140,90,20,.18);
 }
-.wrap{max-width:760px;margin:0 auto;padding:clamp(36px,7vw,72px) 18px 72px}
-/* ===== Hero ===== */
-.logo{font-size:clamp(42px,10vw,76px);font-weight:900;letter-spacing:-1px;margin:0;line-height:1.05;
-  background:linear-gradient(120deg,#ffd56a,#ff7a4a 55%,#5B86FF);-webkit-background-clip:text;background-clip:text;color:transparent}
-.en{font-size:clamp(15px,3.2vw,20px);letter-spacing:6px;color:#8a93ad;margin:10px 0 0;font-weight:700;text-transform:uppercase}
-.tagline{font-size:clamp(16px,3vw,20px);color:#cdd4e6;margin:22px auto 0;line-height:1.7;max-width:30em}
-.heroart{width:min(340px,72vw);height:auto;margin:26px auto 4px;display:block;
-  filter:drop-shadow(0 16px 40px rgba(0,0,0,.55))}
-/* ===== CTA ===== */
-.cta{display:inline-block;margin-top:22px;text-decoration:none;
-  font-size:clamp(20px,4.6vw,26px);font-weight:900;color:#2a1600;
-  background:linear-gradient(120deg,#ffe08a,#ff9a4a);
-  padding:18px 46px;border-radius:999px;
-  box-shadow:0 12px 30px rgba(255,140,60,.35),inset 0 1px 0 rgba(255,255,255,.5);
-  transition:transform .15s,box-shadow .15s}
-.cta:hover{transform:translateY(-3px) scale(1.02);box-shadow:0 18px 44px rgba(255,140,60,.5)}
-.cta:active{transform:translateY(0)}
-.free{font-size:13px;color:#8a93ad;margin-top:12px}
-.kw{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin-top:26px}
-.kw span{font-size:13px;color:#aeb6cc;background:rgba(100,120,180,.1);border:1px solid rgba(100,120,180,.2);border-radius:999px;padding:5px 14px}
-/* ===== Features ===== */
-.sec{font-size:13px;color:#6f7894;letter-spacing:3px;margin:64px 0 22px;text-transform:uppercase}
-.feats{display:grid;grid-template-columns:repeat(2,1fr);gap:14px}
-@media(max-width:520px){.feats{grid-template-columns:1fr}}
-.feat{background:rgba(15,20,45,.7);border:1px solid rgba(100,120,180,.18);border-radius:16px;padding:22px 20px;text-align:left}
-.feat .ic{font-size:28px;margin-bottom:8px}
-.feat h3{font-size:17px;font-weight:800;margin:0 0 6px;color:#f0e8d4}
-.feat p{font-size:14px;color:#9aa3bd;line-height:1.7;margin:0}
-/* ===== Character strip ===== */
-.chars{display:flex;gap:12px;overflow-x:auto;padding:6px 2px 14px;scroll-snap-type:x mandatory;-webkit-overflow-scrolling:touch}
-.chars img{width:120px;height:auto;border-radius:14px;scroll-snap-align:center;flex:0 0 auto;
-  border:1px solid rgba(120,140,255,.18);background:rgba(15,20,45,.6)}
-/* ===== Footer ===== */
-.foot{margin-top:60px;padding-top:26px;border-top:1px solid rgba(100,120,180,.12);font-size:14px;color:#8a93ad}
-.foot a{color:#aeb6cc;text-decoration:none;margin:0 10px;border-bottom:1px solid rgba(120,140,255,.35);padding-bottom:1px}
-.foot a:hover{color:#fff}
-.copy{margin-top:18px;font-size:12px;color:#5b6580}
+html{scroll-behavior:smooth}
+body{
+  background:var(--cream);color:var(--ink);
+  font-family:"Noto Sans TC","PingFang TC","Microsoft JhengHei",system-ui,-apple-system,sans-serif;
+  -webkit-font-smoothing:antialiased;line-height:1.6;overflow-x:hidden;
+}
+img{max-width:100%;display:block}
+a{color:inherit}
+.wrap{max-width:760px;margin:0 auto;padding:0 20px}
+section{position:relative}
+.eyebrow{font-size:13px;letter-spacing:4px;color:var(--sun2);font-weight:800;text-transform:uppercase;text-align:center;margin-bottom:6px}
+.h2{font-size:clamp(26px,7vw,38px);font-weight:900;text-align:center;letter-spacing:-.5px;margin-bottom:26px;
+  background:linear-gradient(120deg,#ff8a2a,#ff5a3d);-webkit-background-clip:text;background-clip:text;color:transparent}
+
+/* ===== header ===== */
+header{position:sticky;top:0;z-index:50;background:rgba(255,248,236,.9);backdrop-filter:blur(8px);
+  border-bottom:2px solid rgba(255,178,32,.2)}
+.nav{display:flex;align-items:center;justify-content:space-between;height:58px}
+.brand{font-size:20px;font-weight:900;letter-spacing:-.5px;
+  background:linear-gradient(120deg,#ff8a2a,#ff5a3d);-webkit-background-clip:text;background-clip:text;color:transparent}
+.nav .links{display:none;gap:20px;font-size:15px;font-weight:700;color:var(--ink2)}
+.nav .links a{text-decoration:none}
+.nav .links a:hover{color:var(--fire)}
+.miniplay{background:linear-gradient(120deg,var(--cta1),var(--cta2));color:#3a1f00;font-weight:900;
+  text-decoration:none;padding:8px 18px;border-radius:999px;font-size:15px;box-shadow:0 6px 16px rgba(255,140,40,.35)}
+
+/* ===== hero ===== */
+.hero{background:radial-gradient(120% 90% at 50% 0%,#fff3cf 0%,var(--sun) 55%,var(--sun2) 130%);
+  padding:38px 0 0;text-align:center;overflow:hidden}
+.hero .logo{font-size:clamp(46px,15vw,92px);font-weight:900;letter-spacing:-1px;line-height:1;
+  color:#fff;text-shadow:0 4px 0 #e67e00,0 8px 22px rgba(150,70,0,.35)}
+.hero .en{font-size:clamp(14px,4vw,20px);letter-spacing:8px;color:#8a5200;font-weight:800;margin-top:10px}
+.hero .slogan{font-size:clamp(16px,4.2vw,20px);color:#5a3a08;font-weight:600;margin:18px auto 0;max-width:22em}
+.heroart{width:min(300px,74vw);margin:6px auto -6px;filter:drop-shadow(0 20px 28px rgba(150,70,0,.3))}
+.cta{display:inline-block;margin-top:6px;text-decoration:none;font-weight:900;color:#3a1f00;
+  font-size:clamp(21px,6vw,26px);background:linear-gradient(120deg,#fff0b0,#ff8a2a);
+  padding:18px 52px;border-radius:999px;
+  box-shadow:0 12px 0 #d96a00,0 20px 30px rgba(180,90,0,.35);transition:transform .12s,box-shadow .12s}
+.cta:active{transform:translateY(6px);box-shadow:0 6px 0 #d96a00,0 12px 20px rgba(180,90,0,.35)}
+.free{color:#7a4e08;font-size:14px;font-weight:600;margin-top:14px}
+.kw{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin:20px auto 0;padding-bottom:44px}
+.kw span{font-size:13px;font-weight:700;color:#7a4e08;background:rgba(255,255,255,.55);border-radius:999px;padding:6px 14px}
+/* wave divider */
+.wave{display:block;width:100%;height:40px;margin-top:-1px}
+
+/* floating decor */
+.decor{position:absolute;pointer-events:none;user-select:none;font-size:26px;opacity:.9;z-index:1}
+
+/* ===== character ===== */
+.character{background:var(--cream);padding:56px 0}
+.cards{display:grid;grid-template-columns:1fr;gap:22px}
+.char{background:#fff;border-radius:22px;padding:24px 20px;text-align:center;box-shadow:var(--shadow);
+  border:2px solid #fff}
+.char .ring{width:120px;height:120px;margin:0 auto 14px;border-radius:50%;padding:5px;background:var(--el);
+  box-shadow:0 8px 20px rgba(0,0,0,.12)}
+.char .ring img{width:100%;height:100%;object-fit:cover;border-radius:50%;background:#fff}
+.char h3{font-size:22px;font-weight:900}
+.char .el{font-size:13px;font-weight:800;color:#fff;background:var(--el);border-radius:999px;padding:3px 12px;display:inline-block;margin:6px 0 10px}
+.char p{font-size:15px;color:var(--ink2);line-height:1.75}
+
+/* ===== gallery ===== */
+.gallery{background:var(--sun);padding:56px 0 60px}
+.gallery .h2{background:linear-gradient(120deg,#c85a00,#ff5a3d);-webkit-background-clip:text;background-clip:text;color:transparent}
+.strip{display:flex;gap:14px;overflow-x:auto;padding:6px 20px 16px;scroll-snap-type:x mandatory;-webkit-overflow-scrolling:touch}
+.strip::-webkit-scrollbar{height:8px}
+.strip::-webkit-scrollbar-thumb{background:rgba(150,90,0,.35);border-radius:99px}
+.strip img{width:180px;height:180px;object-fit:cover;border-radius:18px;flex:0 0 auto;scroll-snap-align:center;
+  background:#fff;border:4px solid #fff;box-shadow:0 10px 22px rgba(150,90,0,.22)}
+
+/* ===== features ===== */
+.features{background:var(--cream);padding:56px 0}
+.feats{display:grid;grid-template-columns:1fr;gap:16px}
+.feat{background:#fff;border-radius:20px;padding:24px;box-shadow:var(--shadow);display:flex;gap:16px;align-items:flex-start}
+.feat .ic{font-size:36px;flex:0 0 auto;line-height:1}
+.feat h3{font-size:19px;font-weight:900;margin-bottom:4px}
+.feat p{font-size:15px;color:var(--ink2)}
+
+/* ===== event band ===== */
+.event{background:linear-gradient(120deg,#ff9a3d,#ff5a3d);color:#fff;text-align:center;padding:54px 0;overflow:hidden}
+.event .stars{font-size:22px;letter-spacing:3px;color:#ffe680}
+.event h2{font-size:clamp(24px,6.5vw,34px);font-weight:900;margin:8px 0 10px}
+.event p{font-size:16px;opacity:.95;max-width:24em;margin:0 auto 22px}
+.event .cta2{display:inline-block;text-decoration:none;font-weight:900;color:#c8340f;background:#fff;
+  font-size:20px;padding:16px 46px;border-radius:999px;box-shadow:0 10px 0 #d9d0c0,0 18px 26px rgba(120,30,0,.3)}
+.event .cta2:active{transform:translateY(6px);box-shadow:0 4px 0 #d9d0c0}
+.event .ev-art{width:110px;margin:0 auto 6px}
+
+/* ===== social ===== */
+.social{background:var(--cream);padding:56px 0 40px;text-align:center}
+.social .avatars{display:flex;justify-content:center;gap:-10px;margin:8px 0 18px}
+.social .avatars img{width:56px;height:56px;border-radius:50%;object-fit:cover;border:3px solid #fff;
+  box-shadow:0 4px 12px rgba(0,0,0,.12);margin-left:-12px;background:#fff}
+.social .avatars img:first-child{margin-left:0}
+.handle{font-size:22px;font-weight:900;color:var(--fire)}
+.social p{color:var(--ink2);font-size:15px;margin:6px auto 20px;max-width:24em}
+.socbtns{display:flex;flex-wrap:wrap;gap:12px;justify-content:center}
+.socbtns a{text-decoration:none;font-weight:800;font-size:15px;color:var(--ink);background:#fff;
+  border-radius:999px;padding:12px 22px;box-shadow:var(--shadow)}
+.socbtns a:hover{color:var(--fire)}
+
+/* ===== footer ===== */
+footer{background:#2c2114;color:#cbb99a;text-align:center;padding:34px 20px;font-size:14px}
+footer a{color:#ffcf6b;text-decoration:none;margin:0 10px}
+footer .cp{margin-top:12px;font-size:12px;color:#8a795c}
+
+/* ===== theme toggle ===== */
+.navr{display:flex;align-items:center;gap:10px}
+.themebtn{width:40px;height:40px;border:none;border-radius:50%;cursor:pointer;font-size:19px;line-height:1;
+  background:rgba(255,255,255,.55);box-shadow:0 3px 10px rgba(140,90,20,.16);transition:transform .12s}
+.themebtn:active{transform:scale(.9)}
+/* ===== dark mode ===== */
+:root[data-theme="dark"]{--cream:#16120b;--ink:#f0e7d6;--ink2:#b9a988}
+[data-theme="dark"] body{background:linear-gradient(180deg,#100d08,#16120b 42%,#1c170f)}
+[data-theme="dark"] header{background:rgba(20,16,10,.9);border-bottom-color:rgba(255,178,32,.16)}
+[data-theme="dark"] .themebtn{background:rgba(255,255,255,.1)}
+[data-theme="dark"] .char,[data-theme="dark"] .feat{background:#231d14;border-color:#231d14}
+[data-theme="dark"] .hero{background:radial-gradient(120% 90% at 50% 0%,#3c2d0d,#2b200a 55%,#1b1305 130%)}
+[data-theme="dark"] .hero .logo{color:#ffd977;text-shadow:0 4px 0 #7a4400,0 8px 22px rgba(0,0,0,.55)}
+[data-theme="dark"] .hero .en{color:#caa040}
+[data-theme="dark"] .hero .slogan{color:#ecd9ac}
+[data-theme="dark"] .free{color:#caa040}
+[data-theme="dark"] .kw span{background:rgba(255,255,255,.09);color:#ecd9ac}
+[data-theme="dark"] .gallery{background:#2a200b}
+[data-theme="dark"] .strip img{background:#231d14;border-color:#2c2418}
+[data-theme="dark"] .social .avatars img,[data-theme="dark"] .socbtns a{background:#231d14;border-color:#2c2418}
+[data-theme="dark"] footer{background:#0d0b07}
+/* ===== desktop enhance ===== */
+@media(min-width:720px){
+  .nav .links{display:flex}
+  .cards{grid-template-columns:repeat(3,1fr)}
+  .feats{grid-template-columns:repeat(2,1fr)}
+  .hero{padding-top:52px}
+}
 </style>
 </head>
 <body>
-<div class="wrap">
 
-  <header>
+<header>
+  <div class="wrap nav">
+    <span class="brand">塊頭勇者</span>
+    <nav class="links">
+      <a href="#character">角色</a>
+      <a href="#gallery">畫廊</a>
+      <a href="#features">特色</a>
+      <a href="./devlog/">日誌</a>
+    </nav>
+    <div class="navr">
+      <button class="themebtn" type="button" onclick="toggleTheme()" aria-label="切換日夜模式">🌙</button>
+      <a class="miniplay" href="./play/">開始遊戲</a>
+    </div>
+  </div>
+</header>
+
+<!-- HERO -->
+<section class="hero">
+  <span class="decor" style="left:6%;top:12%">🔥</span>
+  <span class="decor" style="right:8%;top:16%">💧</span>
+  <span class="decor" style="left:12%;top:46%">⚡</span>
+  <span class="decor" style="right:10%;top:52%">🍃</span>
+  <div class="wrap">
     <h1 class="logo">塊頭勇者</h1>
-    <p class="en">Blockyusha</p>
-    <img class="heroart" src="./play/art/cards/c15_full.webp" alt="塊頭勇者 角色 · 臺灣雲豹" loading="eager" width="340">
-    <p class="tagline">拖方塊、湊整列消除、放大招——<br>收集<b style="color:#ffd56a">方塊頭動物勇者</b>的消除 RPG。</p>
+    <p class="en">BLOCKYUSHA</p>
+    <p class="slogan">拖方塊、湊整列消除、放大招——<br>收集可愛的<b>方塊頭動物勇者</b>！</p>
+    <img class="heroart" src="./play/art/cards/c15_full.webp" alt="塊頭勇者主角 臺灣雲豹" width="300">
     <a class="cta" href="./play/">▶ 開始遊戲</a>
-    <p class="free">免下載 · 開網頁就能玩</p>
-    <div class="kw"><span>#方塊消除</span><span>#轉珠RPG</span><span>#卡片收集</span><span>#五屬相剋</span></div>
-  </header>
-
-  <p class="sec">遊戲特色</p>
-  <div class="feats">
-    <div class="feat"><div class="ic">🧩</div><h3>Woodoku 縫進 RPG</h3><p>把方塊拖進 9×9 盤，湊滿整列／整行／九宮就消除——每一消都是一次攻擊。</p></div>
-    <div class="feat"><div class="ic">🔥</div><h3>五屬相剋</h3><p>火→風→雷→土→水→火，環形相剋。用對屬性打敵人弱點，傷害翻倍。</p></div>
-    <div class="feat"><div class="ic">🐾</div><h3>收集動物勇者</h3><p>貓犬鳥鼠兔魚＋台灣特有種，一隻隻可愛的方塊頭勇者等你組隊。</p></div>
-    <div class="feat"><div class="ic">🗼</div><h3>闖塔冒險</h3><p>盤面、鬥志、屬塊帶進下一關，一路往上爬——愈上面愈刺激。</p></div>
+    <p class="free">免下載 · 開網頁就能玩 📱</p>
+    <div class="kw"><span># 方塊消除</span><span># 轉珠RPG</span><span># 卡片收集</span><span># 五屬相剋</span></div>
   </div>
+</section>
 
-  <p class="sec">角色群像</p>
-  <div class="chars">
-    <img src="./play/art/cards/c15_thumb.webp" alt="臺灣雲豹" loading="lazy" width="120">
-    <img src="./play/art/cards/c01_thumb.webp" alt="朱" loading="lazy" width="120">
-    <img src="./play/art/cards/c03_thumb.webp" alt="炎助" loading="lazy" width="120">
-    <img src="./play/art/cards/c04_thumb.webp" alt="凪" loading="lazy" width="120">
-    <img src="./play/art/cards/c07_thumb.webp" alt="鳴" loading="lazy" width="120">
-    <img src="./play/art/cards/c11_thumb.webp" alt="空" loading="lazy" width="120">
-    <img src="./play/art/cards/c09_thumb.webp" alt="椿" loading="lazy" width="120">
-    <img src="./play/art/cards/c12_thumb.webp" alt="疾風" loading="lazy" width="120">
+<!-- CHARACTER -->
+<section class="character" id="character">
+  <div class="wrap">
+    <p class="eyebrow">Character</p>
+    <h2 class="h2">登場勇者</h2>
+    <div class="cards">
+      <div class="char" style="--el:var(--fire)">
+        <div class="ring"><img src="./play/art/cards/c15_thumb.webp" alt="臺灣雲豹"></div>
+        <h3>臺灣雲豹</h3><span class="el">火 · 隊長</span>
+        <p>台灣特有種化身的火焰隊長，一爪點燃整條戰線。</p>
+      </div>
+      <div class="char" style="--el:var(--water)">
+        <div class="ring"><img src="./play/art/cards/c04_thumb.webp" alt="凪"></div>
+        <h3>凪</h3><span class="el">水 · 治癒</span>
+        <p>沉穩的水系勇者，消除補血、穩住整支隊伍的節奏。</p>
+      </div>
+      <div class="char" style="--el:var(--thunder)">
+        <div class="ring"><img src="./play/art/cards/c07_thumb.webp" alt="鳴"></div>
+        <h3>鳴</h3><span class="el">雷 · 爆發</span>
+        <p>速度最快的雷系忍者，連鎖消除瞬間打出高倍傷害。</p>
+      </div>
+    </div>
+    <div style="text-align:center;margin-top:30px"><a href="./dex/" style="display:inline-block;font-weight:900;font-size:17px;color:#fff;background:linear-gradient(120deg,#ff9a3d,#ff5a3d);padding:14px 34px;border-radius:999px;box-shadow:0 8px 20px rgba(255,90,60,.3)">看全部 35 隻角色 →</a></div>
   </div>
+</section>
 
-  <footer class="foot">
-    <a href="./devlog/">開發日誌</a>
-    <a href="./devlog/how-to-play.html">玩法說明</a>
-    <p class="copy">塊頭勇者 Blockyusha · 開發中 · © 2026 fightmon</p>
-  </footer>
+<!-- GALLERY -->
+<section class="gallery" id="gallery">
+  <p class="eyebrow">Gallery</p>
+  <h2 class="h2">角色群像</h2>
+  <div class="strip">
+    <img src="./play/art/cards/c01_full.webp" alt="朱" loading="lazy">
+    <img src="./play/art/cards/c03_full.webp" alt="炎助" loading="lazy">
+    <img src="./play/art/cards/c07_full.webp" alt="鳴" loading="lazy">
+    <img src="./play/art/cards/c04_full.webp" alt="凪" loading="lazy">
+    <img src="./play/art/cards/c11_full.webp" alt="空" loading="lazy">
+    <img src="./play/art/cards/c10_full.webp" alt="土丸" loading="lazy">
+    <img src="./play/art/cards/c12_full.webp" alt="疾風" loading="lazy">
+    <img src="./play/art/cards/c15_full.webp" alt="臺灣雲豹" loading="lazy">
+  </div>
+</section>
 
-</div>
+<!-- FEATURES -->
+<section class="features" id="features">
+  <div class="wrap">
+    <p class="eyebrow">Gameplay</p>
+    <h2 class="h2">遊戲特色</h2>
+    <div class="feats">
+      <div class="feat"><div class="ic">🧩</div><div><h3>Woodoku 縫進 RPG</h3><p>方塊拖進 9×9 盤，湊滿整列／整行／九宮就消除——每一消都是一次攻擊。</p></div></div>
+      <div class="feat"><div class="ic">🔥</div><div><h3>五屬相剋</h3><p>火→風→雷→土→水→火，環形相剋。打中弱點傷害翻倍。</p></div></div>
+      <div class="feat"><div class="ic">🐾</div><div><h3>收集動物勇者</h3><p>貓犬鳥鼠兔魚＋台灣特有種，一隻隻方塊頭勇者等你組隊。</p></div></div>
+      <div class="feat"><div class="ic">🗼</div><div><h3>闖塔冒險</h3><p>盤面、鬥志、屬塊帶進下一關，一路往上爬愈來愈刺激。</p></div></div>
+    </div>
+  </div>
+</section>
+
+<!-- EVENT / CTA -->
+<section class="event">
+  <span class="decor" style="left:8%;top:20%">✨</span>
+  <span class="decor" style="right:9%;top:60%">✨</span>
+  <div class="wrap">
+    <img class="ev-art" src="./play/art/cards/c03_full.webp" alt="炎助">
+    <div class="stars">★★★★★</div>
+    <h2>現在就開玩，免費！</h2>
+    <p>不用下載、不用註冊——點一下，方塊頭勇者的冒險立刻開始。</p>
+    <a class="cta2" href="./play/">▶ 立即遊玩</a>
+  </div>
+</section>
+
+<!-- SOCIAL -->
+<section class="social">
+  <p class="eyebrow">Community</p>
+  <h2 class="h2">一起玩起來</h2>
+  <div class="avatars">
+    <img src="./play/art/cards/c01_thumb.webp" alt="">
+    <img src="./play/art/cards/c07_thumb.webp" alt="">
+    <img src="./play/art/cards/c11_thumb.webp" alt="">
+    <img src="./play/art/cards/c04_thumb.webp" alt="">
+    <img src="./play/art/cards/c15_thumb.webp" alt="">
+  </div>
+  <div class="handle">@blockyusha</div>
+  <p>把遊戲分享給朋友，一起收集方塊頭勇者、爬上天梯！追蹤開發、看幕後碎念都在開發日誌。</p>
+  <div class="socbtns">
+    <a href="./play/">🎮 開始遊戲</a>
+    <a href="./devlog/">📖 開發日誌</a>
+    <a href="./devlog/how-to-play.html">❓ 玩法說明</a>
+  </div>
+</section>
+
+<footer>
+  <a href="./play/">遊戲</a><a href="./devlog/">開發日誌</a><a href="./devlog/how-to-play.html">玩法說明</a>
+  <div class="cp">塊頭勇者 Blockyusha · 開發中 · © 2026 fightmon</div>
+</footer>
+
+<script>
+function toggleTheme(){var d=document.documentElement,t=d.getAttribute('data-theme')==='dark'?'light':'dark';
+  d.setAttribute('data-theme',t);try{localStorage.setItem('bytheme',t);}catch(e){}
+  document.querySelectorAll('.themebtn').forEach(function(b){b.textContent=t==='dark'?'☀️':'🌙';});}
+(function(){var t=document.documentElement.getAttribute('data-theme');
+  document.querySelectorAll('.themebtn').forEach(function(b){b.textContent=t==='dark'?'☀️':'🌙';});})();
+</script>
 </body>
 </html>

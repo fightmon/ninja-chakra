@@ -1,0 +1,151 @@
+<!doctype html>
+<html lang="zh-TW">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<script>(function(){try{var t=localStorage.getItem('bytheme')||((window.matchMedia&&matchMedia('(prefers-color-scheme:dark)').matches)?'dark':'light');document.documentElement.setAttribute('data-theme',t);}catch(e){}})();</script>
+<title>角色資料 — 塊頭勇者 Blockyusha</title>
+<link rel="icon" href="../play/art/cards/c15_thumb.webp">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{--cream:#fff8ec;--ink:#2c2114;--ink2:#6b5a41;--line:rgba(200,140,40,.22);
+  --fire:#ff6a3d;--water:#37b6ff;--thunder:#f0b410;--earth:#c8873f;--wind:#3fbf54}
+body{background:var(--cream);color:var(--ink);font-family:"Noto Sans TC","PingFang TC","Microsoft JhengHei",system-ui,sans-serif;-webkit-font-smoothing:antialiased;line-height:1.65}
+img{max-width:100%;display:block}
+a{color:inherit;text-decoration:none}
+.wrap{max-width:680px;margin:0 auto;padding:0 16px}
+header{position:sticky;top:0;z-index:50;background:rgba(255,248,236,.92);backdrop-filter:blur(8px);border-bottom:2px solid rgba(255,178,32,.2)}
+.nav{display:flex;align-items:center;justify-content:space-between;height:56px}
+.brand{font-size:19px;font-weight:900;background:linear-gradient(120deg,#ff8a2a,#ff5a3d);-webkit-background-clip:text;background-clip:text;color:transparent}
+.miniplay{background:linear-gradient(120deg,#ffdf6b,#ff8a2a);color:#3a1f00;font-weight:900;padding:8px 18px;border-radius:999px;font-size:14px;box-shadow:0 6px 16px rgba(255,140,40,.35)}
+.back{display:inline-block;margin:16px 0 6px;color:var(--ink2);font-weight:700;font-size:14px}
+/* hero */
+.top{background:linear-gradient(160deg,#fff,#fff8ea);border:2px solid #fff;border-radius:22px;box-shadow:0 12px 30px rgba(140,90,20,.16);overflow:hidden;margin-top:6px}
+.art{position:relative;background:var(--el)}
+.art img{width:100%;max-height:360px;object-fit:contain;background:var(--el)}
+.art .num{position:absolute;left:12px;top:10px;font-size:14px;font-weight:800;color:#fff;background:rgba(0,0,0,.45);border-radius:8px;padding:2px 12px}
+.art .hero{position:absolute;right:12px;top:10px;font-size:13px;font-weight:900;color:#7a4e00;background:#ffe36b;border-radius:999px;padding:3px 12px}
+.info{padding:20px}
+.info h1{font-size:28px;font-weight:900;line-height:1.2}
+.badges{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0 4px}
+.badge{font-size:13px;font-weight:800;border-radius:999px;padding:4px 13px;color:#fff;background:var(--el)}
+.badge.g{background:#fff;color:var(--ink2);border:2px solid var(--line)}
+.stars{color:#ffb400;font-size:18px;letter-spacing:2px}
+.stars small{color:var(--ink2);font-size:12px;margin-left:6px;font-weight:700}
+/* stat table */
+.sec{margin-top:22px}
+.sec h2{font-size:15px;font-weight:900;color:var(--ink2);letter-spacing:1px;margin-bottom:10px;padding-left:10px;border-left:5px solid var(--el)}
+table{width:100%;border-collapse:collapse;background:#fff;border-radius:14px;overflow:hidden;box-shadow:0 6px 16px rgba(140,90,20,.1)}
+th,td{padding:13px 12px;text-align:center;border-bottom:1px solid var(--line);font-size:15px}
+thead th{background:var(--el);color:#fff;font-weight:800}
+tbody th{text-align:left;font-weight:800;color:var(--ink2);background:#fffaf0}
+tbody tr:last-child td,tbody tr:last-child th{border-bottom:none}
+td b{font-size:17px}
+/* skill cards */
+.skill{background:#fff;border-radius:14px;padding:16px 18px;box-shadow:0 6px 16px rgba(140,90,20,.1);margin-bottom:12px}
+.skill .sk-h{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.skill .sk-n{font-size:17px;font-weight:900}
+.skill .cd{font-size:12px;font-weight:800;color:#fff;background:var(--el);border-radius:999px;padding:2px 12px;white-space:nowrap}
+.skill p{color:var(--ink2);font-size:15px;margin-top:6px}
+.note{color:var(--ink2);font-size:13px;background:#fff6e0;border-radius:12px;padding:14px 16px;margin-top:18px}
+/* prev/next */
+.pn{display:flex;justify-content:space-between;gap:10px;margin:22px 0 60px}
+.pn a{flex:1;background:#fff;border-radius:14px;padding:14px;text-align:center;font-weight:800;box-shadow:0 5px 14px rgba(140,90,20,.12);color:var(--ink)}
+.pn a.dis{opacity:.35;pointer-events:none}
+.pn .toall{flex:0 0 auto;background:linear-gradient(120deg,#ffdf6b,#ff8a2a);color:#3a1f00}
+footer{background:#2c2114;color:#cbb99a;text-align:center;padding:26px 16px;font-size:13px}
+footer a{color:#ffcf6b;margin:0 8px}
+.missing{text-align:center;padding:80px 20px;color:var(--ink2)}
+@media(min-width:600px){.top{display:flex}.art{flex:0 0 300px}.art img{height:100%;max-height:none}.info{flex:1}}
+/* theme toggle + dark */
+.navr{display:flex;align-items:center;gap:10px}
+.themebtn{width:38px;height:38px;border:none;border-radius:50%;cursor:pointer;font-size:18px;line-height:1;background:rgba(255,255,255,.55);box-shadow:0 3px 10px rgba(140,90,20,.16)}
+.themebtn:active{transform:scale(.9)}
+:root[data-theme="dark"]{--cream:#16120b;--ink:#f0e7d6;--ink2:#b9a988;--line:rgba(255,200,90,.15)}
+[data-theme="dark"] body{background:#14110b}
+[data-theme="dark"] header{background:rgba(20,16,10,.9);border-bottom-color:rgba(255,178,32,.16)}
+[data-theme="dark"] .themebtn{background:rgba(255,255,255,.1)}
+[data-theme="dark"] .top{background:linear-gradient(160deg,#231d14,#1c170f);border-color:#231d14}
+[data-theme="dark"] table{background:#231d14}
+[data-theme="dark"] tbody th{background:#2a2318;color:var(--ink2)}
+[data-theme="dark"] .skill{background:#231d14}
+[data-theme="dark"] .pn a:not(.toall){background:#231d14;color:var(--ink)}
+[data-theme="dark"] .badge.g{background:#2a2318;color:var(--ink2)}
+[data-theme="dark"] .note{background:#2a2318;color:var(--ink2)}
+[data-theme="dark"] footer{background:#0d0b07}
+</style>
+</head>
+<body>
+<header><div class="wrap nav">
+  <a class="brand" href="../">塊頭勇者</a>
+  <div class="navr">
+    <button class="themebtn" type="button" onclick="toggleTheme()" aria-label="切換日夜模式">🌙</button>
+    <a class="miniplay" href="../play/">開始遊戲</a>
+  </div>
+</div></header>
+
+<div class="wrap">
+  <a class="back" href="./">← 回角色圖鑑</a>
+  <div id="app"></div>
+</div>
+
+<footer>
+  <a href="../">首頁</a><a href="./">角色圖鑑</a><a href="../play/">開始遊戲</a>
+  <div style="margin-top:10px;font-size:12px;color:#8a795c">塊頭勇者 Blockyusha · © 2026 fightmon</div>
+</footer>
+
+<script src="./data.js"></script>
+<script>
+(function(){
+  var D=window.DEX,cards=D.cards,M=D.meta;
+  var id=(new URLSearchParams(location.search)).get('id')||'';
+  // 允許用編號(001)或 id(c01)；前後切換依遊戲圖鑑分組順序(SPECIES_TEAMS)
+  var byId={},order=[]; cards.forEach(function(x){byId[x.id]=x;});
+  M.teams.forEach(function(t){t.ids.forEach(function(iid){order.push(iid);});});
+  var c=cards.find(function(x){return x.id===id||x.n===id});
+  var app=document.getElementById('app');
+  if(!c){app.innerHTML='<div class="missing">找不到這隻角色 🥲<br><br><a class="miniplay" href="./">回圖鑑</a></div>';return;}
+  var EC=M.elColor;document.documentElement.style.setProperty('--el',EC[c.el]);
+  document.title=c.name+' — 塊頭勇者 圖鑑';
+  var race=M.raceName[c.race]||c.race, fam=M.famName[c.fam]||c.fam;
+  var stars='★★★';
+  function row(label,a,b){return '<tr><th>'+label+'</th><td>'+a+'</td><td><b>'+b+'</b></td></tr>';}
+  var html=''+
+  '<div class="top">'+
+    '<div class="art"><span class="num">No.'+c.n+'</span>'+(c.hero?'<span class="hero">⭐ 台灣特有種</span>':'')+
+      '<img src="../play/art/cards/'+c.id+'_full.webp" alt="'+c.name+'"></div>'+
+    '<div class="info">'+
+      '<h1>'+c.name+'</h1>'+
+      '<div class="badges"><span class="badge">'+M.elName[c.el]+'</span>'+
+        '<span class="badge g">'+fam+'</span><span class="badge g">'+race+'</span></div>'+
+      '<div class="stars">'+stars+'<small>基礎 ★3 · 可進化 +2</small></div>'+
+    '</div>'+
+  '</div>'+
+  '<div class="sec"><h2>能力值</h2>'+
+    '<table><thead><tr><th>三圍</th><th>LV 1</th><th>滿級 (LV20)</th></tr></thead><tbody>'+
+      row('❤️ HP',c.lv1.hp,c.max.hp)+
+      row('⚔️ 攻擊',c.lv1.atk,c.max.atk)+
+      row('➕ 回復',c.lv1.rcv,c.max.rcv)+
+    '</tbody></table></div>'+
+  '<div class="sec"><h2>隊長技</h2><div class="skill"><div class="sk-h"><span class="sk-n">'+c.lead.name+'</span></div><p>'+c.lead.desc+'</p></div></div>'+
+  '<div class="sec"><h2>主動技</h2><div class="skill"><div class="sk-h"><span class="sk-n">'+c.act.name+'</span><span class="cd">CD '+c.act.cd+'</span></div><p>'+c.act.desc+'</p></div></div>'+
+  '<div class="note">屬性相剋：火 → 風 → 雷 → 土 → 水 → 火（打中弱點傷害翻倍）。'+M.note+'</div>';
+  // prev/next 依圖鑑分組順序
+  var pos=order.indexOf(c.id),prev=byId[order[pos-1]],next=byId[order[pos+1]];
+  html+='<div class="pn">'+
+    (prev?'<a href="./card.html?id='+prev.id+'">← '+prev.name+'</a>':'<a class="dis">←</a>')+
+    '<a class="toall" href="./">☰ 圖鑑</a>'+
+    (next?'<a href="./card.html?id='+next.id+'">'+next.name+' →</a>':'<a class="dis">→</a>')+
+  '</div>';
+  app.innerHTML=html;
+})();
+</script>
+<script>
+function toggleTheme(){var d=document.documentElement,t=d.getAttribute('data-theme')==='dark'?'light':'dark';
+  d.setAttribute('data-theme',t);try{localStorage.setItem('bytheme',t);}catch(e){}
+  document.querySelectorAll('.themebtn').forEach(function(b){b.textContent=t==='dark'?'☀️':'🌙';});}
+(function(){var t=document.documentElement.getAttribute('data-theme');
+  document.querySelectorAll('.themebtn').forEach(function(b){b.textContent=t==='dark'?'☀️':'🌙';});})();
+</script>
+</body>
+</html>
