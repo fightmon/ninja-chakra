@@ -6,7 +6,7 @@
   <meta name="viewport"
     content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <meta name="robots" content="noindex"> <!-- 試玩版不被搜尋引擎收錄(純連結分享);正式上線時移除 -->
-  <title>忍塊查克拉 — 自適應 v0.6</title>
+  <title>塊頭勇者 — 自適應 v0.6</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Russo+One&display=swap"
@@ -142,7 +142,7 @@
     if (typeof window !== 'undefined') window.addEventListener('pointerdown', () => SFX.resume(), { once: true });   // 首次點擊解鎖音訊(瀏覽器禁自動播放)
     // ===== 新手教學:腳本化引導戰鬥(事件推進)。on=完成這步的事件;setup=進這步先佈置盤面 =====
     const TUT_STEPS = [
-      { on: 'tap', msg: '👊 歡迎來到《忍塊查克拉》!\n我帶你打贏第一場 —— 點任意處繼續。' },
+      { on: 'tap', msg: '👊 歡迎來到《塊頭勇者》!\n我帶你打贏第一場 —— 點任意處繼續。' },
       { on: 'place', msg: '① 放塊:把下面托盤的方塊拖到盤面發亮處,\n填滿一整「行 / 列 / 3×3 宮」就會消除!', setup: 'place1', hint: 'gap' },
       { on: 'clear', msg: '② 清掉「屬性宮」其實就是攻擊敵人 ⚔\n敵人是火、你清「水之宮」→ 水剋火 →\n打更痛,還把牠的出手往後推(沙漏 +1)!', setup: 'water', hint: 'gap' },
       { on: 'aoe', msg: '③ 一次清「15 格以上」→【全體攻擊】💥\n一次打到所有敵人!\n把發亮處填滿、清掉這一大片試試', setup: 'aoe', hint: 'gap' },
