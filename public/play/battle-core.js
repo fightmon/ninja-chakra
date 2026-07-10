@@ -31,7 +31,7 @@ const WSUM = SHAPES.reduce((a,s)=>a+s.w,0);
 const CONFIG = {
   ADV_MULT:1.6, WEAK_MULT:0.7, NORM_MULT:1.0,   // 相剋軟化(原2.0/0.5硬牆→1.6/0.7,讓手控能逆轉小劣勢)
   NEUTRAL_BOX_BASE:40, LINE_BASE:30, LINE_SAME_RATE:0.5,
-  HIT_BASE:16, ELEM_RATE:0.08,   // 逐格傷害:每個被清的格(含中性)都給 HIT_BASE;屬區格再額外 +卡攻擊×相剋×ELEM_RATE。※底傷×1.33 補回「拿掉鬥志(舊平均×1.465)」的缺口,combo 改當技術加成
+  HIT_BASE:16, ELEM_RATE:0.08,   // 逐格傷害:每個被清的格(含中性)都給 HIT_BASE;屬區格再額外 +卡攻擊×相剋×ELEM_RATE。※底傷×1.33 補回「拿掉舊制combo(舊平均×1.465)」的缺口,combo 改當技術加成
   PLAYER_HP_BASE:1000, RESHUFFLE_COST:120,
   ATTR:{ fire_burn_rate:0.4, wind_immune:1, earth_dr:0.3, yang_heal_rate:0.25, yin_amp:1.5 },   // 陽回血砍到已驗證平衡值(1.2→0.5→0.25);陰改傷害×2(見 fireAttr)
 };

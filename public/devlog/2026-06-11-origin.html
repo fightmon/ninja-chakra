@@ -60,7 +60,7 @@ body{
 .flashscreen{position:absolute;inset:0;border-radius:14px;background:#fff;opacity:0;pointer-events:none;transition:opacity .12s}
 .flashscreen.show{opacity:.35}
 
-/* 鬥志條(demo2) */
+/* combo條(demo2) */
 .morale{display:flex;gap:4px;justify-content:center;margin-top:6px}
 .mpip{width:26px;height:7px;border-radius:4px;background:rgba(120,140,190,.16);transition:background .2s,box-shadow .2s}
 .mpip.fill{background:var(--gold)}
@@ -87,27 +87,27 @@ body{
 
     <h2>一、起點：我只是覺得消消樂玩久了很空</h2>
     <p>一開始我只想做個方塊消除。把塊塞進 9×9，填滿一整列、一整行、或一個 3×3 宮就消掉——就 Woodoku、1010 那套成熟機制。好玩，但玩久了你會發現：<strong>它沒有「目的」</strong>。消掉了，然後呢？分數加一加，就這樣。</p>
-    <p>然後某天我冒出一個念頭：<strong>如果每個方塊有「屬性」，填滿一個宮的時候，會放出一招忍術呢？</strong></p>
+    <p>然後某天我冒出一個念頭：<strong>如果每個方塊有「屬性」，填滿一個宮的時候，會放出一招主動技呢？</strong></p>
 
     <div class="demo" data-demo="core">
       <div class="demo-stage"><div class="grid"></div><div class="burst"></div></div>
       <div class="demo-cap">填滿一個 3×3 宮 → 依屬性放出招式（火燒傷／水填塊／雷麻痺／土搬移／風風刃）</div>
     </div>
 
-    <p>就這一下，整個遊戲的味道變了。你不是在「清方塊」，你是在<strong>結印放招</strong>。火宮填滿＝燒傷，雷宮填滿＝麻痺敵人讓它慢半拍……方塊消除突然有了 RPG 的骨。</p>
+    <p>就這一下，整個遊戲的味道變了。你不是在「清方塊」，你是在<strong>召喚放招</strong>。火宮填滿＝燒傷，雷宮填滿＝麻痺敵人讓它慢半拍……方塊消除突然有了 RPG 的骨。</p>
 
     <h2>二、然後我發現一件更怪的事</h2>
     <p>轉珠遊戲的招式，多半就是「造成傷害／回血／減傷」——跟你怎麼轉珠是脫鉤的。但我這邊不一樣：<strong>有些招式會直接改變盤面本身</strong>。</p>
-    <p>水會「填」一塊查克拉進去補縫、風會「消」掉雜塊清出空間、土會「搬移」你已經放好的塊……這代表——<strong>放招不是按個按鈕就好，你得配合「接下來要怎麼擺塊」去思考。</strong>招式和空間決策是咬在一起的。</p>
+    <p>水會「填」一塊能量進去補縫、風會「消」掉雜塊清出空間、土會「搬移」你已經放好的塊……這代表——<strong>放招不是按個按鈕就好，你得配合「接下來要怎麼擺塊」去思考。</strong>招式和空間決策是咬在一起的。</p>
     <blockquote>這一層咬合，是我翻遍同類遊戲都沒看到的：把「招式」跟「方塊空間」綁死。轉珠遊戲抄不走，因為它們的盤面是珠子不是空間；消消樂也抄不走，因為它們沒有 RPG 那層。</blockquote>
 
-    <h2>三、最爽的瞬間：一手多消，鬥志直接衝「極」</h2>
-    <p>當你一手棋同時清掉<strong>好幾個結構</strong>（宮＋列＋行一起爆）——這叫暴擊。而暴擊會讓「鬥志」這條槽<strong>從任何狀態直接衝到最高階「極」</strong>：就算你前一秒被打到快死、夥伴倒下，這一爆就像九尾覺醒一樣全場逆轉。</p>
+    <h2>三、最爽的瞬間：一手多消，combo直接衝「極」</h2>
+    <p>當你一手棋同時清掉<strong>好幾個結構</strong>（宮＋列＋行一起爆）——這叫暴擊。而暴擊會讓「combo」這條槽<strong>從任何狀態直接衝到最高階「極」</strong>：就算你前一秒被打到快死、夥伴倒下，這一爆就像逆轉勝一樣全場逆轉。</p>
 
     <div class="demo" data-demo="burst">
       <div class="demo-stage"><div class="grid"></div><div class="flashscreen"></div><div class="burst"></div></div>
       <div class="morale"></div>
-      <div class="demo-cap">一手同時清 2 個結構 = 暴擊 → 鬥志衝「極」🦊 全體解放</div>
+      <div class="demo-cap">一手同時清 2 個結構 = 暴擊 → combo衝「極」🦊 全體解放</div>
     </div>
 
     <p>這個「逆轉爽感」是我最想要的東西。Woodoku 給你空間 combo 的滿足，轉珠給你養成收集的目標，而這個「暴擊衝極」把兩邊的高潮接在了一起。</p>
@@ -189,7 +189,7 @@ async function runBurst(root){
   while(true){
     cells.forEach(c=>{c.className='cell';c.style.width='40px';c.style.height='40px';c.style.background='';});
     burst.className='burst'; fs.className='flashscreen';
-    setMorale(2,false); // 起始鬥志「中」
+    setMorale(2,false); // 起始combo「中」
     await sleep(600);
     // 上排火、下排水,各留中間缺口 → 一塊同時補兩列
     const top=[0,1,3,4], bot=[5,6,8,9];
@@ -208,10 +208,10 @@ async function runBurst(root){
     await sleep(560);
     cells.forEach(c=>{c.classList.remove('flash');c.classList.add('clear');});
     burst.classList.remove('show'); await sleep(160);
-    // 鬥志衝極
+    // combo衝極
     setMorale(6,true);
     fs.classList.add('show'); await sleep(140); fs.classList.remove('show');
-    burst.textContent='🦊 鬥志「極」· 全體解放！'; burst.style.color='#ff7a4a'; burst.classList.add('show');
+    burst.textContent='🦊 combo「極」· 全體解放！'; burst.style.color='#ff7a4a'; burst.classList.add('show');
     await sleep(1100);
     burst.classList.remove('show');
     await sleep(550);

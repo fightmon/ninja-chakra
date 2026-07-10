@@ -76,7 +76,7 @@
     ];
     const DEX_EL5 = ['fire', 'water', 'thunder', 'earth', 'wind'];
     const DEX_ASSIGNED = new Set(['c03', 'c06', 'c19', 'c10', 'c12', 'c02', 'c05', 'c08', 'c09', 'c11', 'c13', 'c16', 'c20', 'c23', 'c27', 'c15', 'c18', 'c22', 'c26', 'c30', 'c14', 'c17', 'c21', 'c24', 'c28', 'c31', 'c32', 'c33', 'c34', 'c35', 'c01', 'c04', 'c07', 'c25', 'c29']);   // 已歸物種隊(犬/貓/鳥/鼠/魚/兔/台灣)的卡 → 不重複進「未歸隊」
-    // 物種「種族」顯示(覆蓋詳細頁的人忍/妖怪/靈獸;只改顯示,不動底層 race)→ 已歸隊的卡顯示其物種
+    // 物種「種族」顯示(覆蓋詳細頁的人類/妖怪/靈獸;只改顯示,不動底層 race)→ 已歸隊的卡顯示其物種
     const CARD_SPECIES = {};
     [['🐱', '貓', '#8fd16a', 0x1d3a1f, ['c02', 'c05', 'c08', 'c09', 'c11']],
     ['🐶', '犬', '#e0c890', 0x3a2e1a, ['c03', 'c06', 'c19', 'c10', 'c12']],
@@ -184,8 +184,8 @@
       const ac = activeSkill(cd.el, cd.id), ls = leadSkill(cd.id);
       const lv = getCardLv(cd.id), n = (loadOwned()[cd.id] || 0), atk = cardAtk(cd.id);
       const exp = getCardExp(cd.id), need = expToNext(lv), mx = lv >= MAXLV;
-      const RI2 = { human: { n: '人忍', e: '🥷' }, yokai: { n: '妖怪', e: '👹' }, beast: { n: '靈獸', e: '🐾' } };
-      const ri = CARD_SPECIES[cd.id] || RI2[cd.race] || RI2.human;   // 已歸物種隊→顯示貓/犬/鼠/台灣特有;其餘人忍/妖怪/靈獸
+      const RI2 = { human: { n: '人類', e: '🥷' }, yokai: { n: '妖怪', e: '👹' }, beast: { n: '靈獸', e: '🐾' } };
+      const ri = CARD_SPECIES[cd.id] || RI2[cd.race] || RI2.human;   // 已歸物種隊→顯示貓/犬/鼠/台灣特有;其餘人類/妖怪/靈獸
       const txt = (x, y, s, fs, col, ox, bold) => add(scene.add.text(x, y, s, { fontFamily: EMOJIFONT, fontSize: fs, color: col || TK.ink, fontStyle: bold ? 'bold' : 'normal' }).setOrigin(ox == null ? 0.5 : ox, 0.5));
       const rect = (x, y, w, h, col, a) => add(scene.add.rectangle(x, y, w, h, col, a == null ? 1 : a));
       const rr = (x, y, w, h, r, fill, fa, stroke, sw) => add(roundRectG(scene, x, y, w, h, r, fill, fa, stroke, sw));
@@ -273,8 +273,8 @@
       const elc = EL[cd.el].color, ac = activeSkill(cd.el, cd.id), ls = leadSkill(cd.id);
       const lv = getCardLv(cd.id), n = (loadOwned()[cd.id] || 0), atk = cardAtk(cd.id);
       const exp = getCardExp(cd.id), need = expToNext(lv), mx = lv >= MAXLV;
-      const RI = { human: { n: '人忍', e: '🥷', c: '#7fc1ff', bg: 0x16314d }, yokai: { n: '妖怪', e: '👹', c: '#e0905a', bg: 0x3a2418 }, beast: { n: '靈獸', e: '🐾', c: '#8fd16a', bg: 0x1d3a1f } };
-      const ri = CARD_SPECIES[cd.id] || RI[cd.race] || RI.human;   // 已歸物種隊→顯示貓/犬/鼠/台灣特有;其餘照舊人忍/妖怪/靈獸
+      const RI = { human: { n: '人類', e: '🥷', c: '#7fc1ff', bg: 0x16314d }, yokai: { n: '妖怪', e: '👹', c: '#e0905a', bg: 0x3a2418 }, beast: { n: '靈獸', e: '🐾', c: '#8fd16a', bg: 0x1d3a1f } };
+      const ri = CARD_SPECIES[cd.id] || RI[cd.race] || RI.human;   // 已歸物種隊→顯示貓/犬/鼠/台灣特有;其餘照舊人類/妖怪/靈獸
       const TK = UI();   // UI token(亮/暗主題;T 已被面板頂座標用掉,故取名 TK)
       const txt = (x, y, s, fs, col, ox, bold) => add(scene.add.text(x, y, s, { fontFamily: EMOJIFONT, fontSize: fs, color: col || TK.ink, fontStyle: bold ? 'bold' : 'normal' }).setOrigin(ox == null ? 0.5 : ox, 0.5));
       const rect = (x, y, w, h, col, a) => add(scene.add.rectangle(x, y, w, h, col, a == null ? 1 : a));
@@ -402,7 +402,7 @@
       { id: 'c10', name: '土丸', el: 'earth', race: 'human', rank: 'genin', atk: 40, hp: 360, rcv: 20, attrs: ['earth'] },
       { id: 'c11', name: '空', el: 'wind', race: 'human', rank: 'chunin', atk: 122, hp: 355, rcv: 40, attrs: ['wind'] },
       { id: 'c12', name: '疾風', el: 'wind', race: 'human', rank: 'genin', atk: 76, hp: 222, rcv: 25, attrs: ['wind'] },
-      /* ── 擴充:補滿五屬階梯 + 影忍(kage ★4)SSR 層,共 30 張;★4 靈獸=五屬神主角 ── */
+      /* ── 擴充:補滿五屬階梯 + 四星(kage ★4)SSR 層,共 30 張;★4 靈獸=五屬神主角 ── */
       { id: 'c13', name: '豆', el: 'fire', race: 'yokai', rank: 'genin', atk: 120, hp: 150, rcv: 15, attrs: ['fire'] },
       { id: 'c14', name: '緋貂', el: 'fire', race: 'beast', rank: 'chunin', atk: 192, hp: 240, rcv: 24, attrs: ['fire'] },
       { id: 'c15', name: '臺灣雲豹', el: 'fire', race: 'beast', rank: 'kage', atk: 360, hp: 445, rcv: 45, attrs: ['fire'], hero: true },
@@ -438,26 +438,26 @@
       wind: ['微風', '旋風刃', '颶風亂舞', '九霄罡風', '風神·天穹裂空', '真空斷界', '天遁神風'],
     };
     // DUNGEONS / STAGES / ELEM_DUNGEONS / DIFFS / DIFFS_BY / counterOf / ARCH → data-stages.js(關卡/難度/敵種內容資料,已分離;改關卡只動該檔)
-    // 純查克拉(水塊)形狀:大小=水等級。可重疊放置(只填空格、重疊處忽略)
+    // 純能量(水塊)形狀:大小=水等級。可重疊放置(只填空格、重疊處忽略)
     const WILD_SHAPES = {
       1: [[0, 0]], 2: [[0, 0], [0, 1]], 3: [[0, 0], [0, 1], [0, 2]], 4: [[0, 0], [0, 1], [1, 0], [1, 1]], 5: [[0, 1], [1, 0], [1, 1], [1, 2], [2, 1]],
       6: [[0, 0], [0, 1], [0, 2], [1, 0], [1, 1], [1, 2]],                                  // LV6:2×3
       7: [[0, 0], [0, 1], [0, 2], [1, 0], [1, 1], [1, 2], [2, 0], [2, 1], [2, 2]]
     };               // LV7:3×3(9格)
 
-    // 五屬「形狀系統」:清宮生成的萬用查克拉塊,形狀由屬性決定(水直/風橫/火可轉/土斜→2×2→U/雷鋸齒),LV1~5
+    // 五屬「形狀系統」:清宮生成的萬用能量塊,形狀由屬性決定(水直/風橫/火可轉/土斜→2×2→U/雷鋸齒),LV1~5
     // SHAPES_BY_EL / chakraShape / normCells / rot90 / randOrient / rnd / 種子亂數(mulberry32/BRNG/brnd/startBattleSeed) / pickShape / boxOf / canPlace → battle-core.js
     // computeClears → battle-core.js
 
     /* ===== 自適應版面常數(寬度固定 420、高度依裝置比例,FIT 不黑邊;上下錨定) ===== */
     const W = 420, CX = 210;
     const CS = 40, RECT = 37, BX0 = 30, DRAG_LIFT = 66;
-    // 戰鬥畫面 z-index 分層(由下往上):背景→敵方→我方卡→鬥志/HP→盤面→托盤→暫態特效→nav(最高);暫態特效字壓在盤面之上、僅次 nav
+    // 戰鬥畫面 z-index 分層(由下往上):背景→敵方→我方卡→combo/HP→盤面→托盤→暫態特效→nav(最高);暫態特效字壓在盤面之上、僅次 nav
     const DEPTH = { bg: 0, enemy: 10, card: 20, hp: 30, morale: 32, store: 34, abtn: 38, board: 40, tray: 50, drag: 56, proj: 60, flash: 62, fx: 66, nav: 90 };
     // 色彩工具:shadeColor(往白/往黑)、lerpColor(兩色內插)→ 給屬塊「明暗漸層流動」用
     function shadeColor(col, f) { let r = (col >> 16) & 255, g = (col >> 8) & 255, b = col & 255; if (f >= 0) { r += (255 - r) * f; g += (255 - g) * f; b += (255 - b) * f; } else { const k = 1 + f; r *= k; g *= k; b *= k; } return (Math.round(r) << 16) | (Math.round(g) << 8) | Math.round(b); }
     function lerpColor(a, b, t) { const A = [(a >> 16) & 255, (a >> 8) & 255, a & 255], B = [(b >> 16) & 255, (b >> 8) & 255, b & 255]; return (Math.round(A[0] + (B[0] - A[0]) * t) << 16) | (Math.round(A[1] + (B[1] - A[1]) * t) << 8) | Math.round(A[2] + (B[2] - A[2]) * t); }
-    // 註:卡身(card)壓在 HP/鬥志之下(照規格);但「卡上的屬塊(store)與主技鈕(abtn)」是可拖/可點的前景配件,提到 HP/鬥志之上才不會被擋住。兩者空間上不與盤面重疊,故仍排在 board 之下無妨。
+    // 註:卡身(card)壓在 HP/combo之下(照規格);但「卡上的屬塊(store)與主技鈕(abtn)」是可拖/可點的前景配件,提到 HP/combo之上才不會被擋住。兩者空間上不與盤面重疊,故仍排在 board 之下無妨。
     // 版面高度依「當下」裝置比例算(尺寸變化時即時重算),FIT 不黑邊;上下錨定
     let H, TRAY_Y, BY0, CARDS_Y, PHP_Y, INFO_Y, BG_H, BATTLE_CY, BOARD_CY;
     function recomputeLayout() {
@@ -468,7 +468,7 @@
       H = Math.max(640, Math.min(1400, Math.round(W * vh / vw)));   // 涵蓋約 1.52~3.33 的長寬比
       TRAY_Y = H - 46; BY0 = TRAY_Y - 52 - 9 * CS; CARDS_Y = BY0 - 50; PHP_Y = BY0 - 16; INFO_Y = BY0 - 2;   // 板面/托盤盡量往下、卡列貼緊板面 → 上方戰鬥區留多一點
       BG_H = BY0 + 22; BATTLE_CY = Math.round((CARDS_Y - 29) / 2);   // 背景延伸到盤面上緣+22;敵人置中於 nav(26) 與主動技鈕(CARDS_Y-55) 之間
-      BOARD_CY = BY0 + Math.round(9 * CS / 2);   // 盤面正中央(9×9 格的中心)→ 暴擊/連印/鬥志等操控盤面的特效字都以此置中
+      BOARD_CY = BY0 + Math.round(9 * CS / 2);   // 盤面正中央(9×9 格的中心)→ 暴擊/連擊/combo等操控盤面的特效字都以此置中
     }
     recomputeLayout();
     const EMOJIFONT = '"Segoe UI Emoji","GenSen","Microsoft JhengHei",sans-serif';
@@ -498,7 +498,7 @@
 
     /* ===== F5 收集系統(localStorage 持有卡 + 關卡掉落) ===== */
     const STARTER = ['c03', 'c06', 'c19', 'c10', 'c12'];   // 新手起始=狗狗隊(火c03/水c06/雷c19/土c10/風c12):有美術圖 + 新手互動教學可直接用
-    const RANKNAME = { genin: '下忍', chunin: '中忍', jonin: '上忍', kage: '影忍' };
+    const RANKNAME = { genin: '一星', chunin: '二星', jonin: '三星', kage: '四星' };
     const RANKSTAR = { genin: '★', chunin: '★★', jonin: '★★★', kage: '★★★★' };
     const EL_SKILL = { fire: '🔥 清火宮 → 生成「可自由轉」形狀塊存卡', water: '💧 清水宮 → 生成「直落」形狀塊存卡(可預測)', thunder: '⚡ 清雷宮 → 生成「鋸齒閃電」塊存卡', earth: '🪨 清土宮 → 生成「方塊系」塊存卡(疊2張更強)', wind: '🌀 清風宮 → 生成「橫吹」形狀塊存卡(可預測)' };
     const SUB_SKILL = { yin: '🟣 陰 · 傷害×2(該手放大)', yang: '🟢 陽 · 回血(回復我方生命)' };
@@ -527,7 +527,7 @@
       c10: { name: '砂礫', desc: '全體傷害 ×1.12', type: 'allAtk', v: 1.12 },
       c11: { name: '疾風之足', desc: '出擊體力 −20%', type: 'stamina', v: 0.8 },
       c12: { name: '微風', desc: '全體傷害 ×1.12', type: 'allAtk', v: 1.12 },
-      // 擴充卡(隊長技隨稀有度遞強;影忍=各流派核心)
+      // 擴充卡(隊長技隨稀有度遞強;六星=各流派核心)
       c13: { name: '小火種', desc: '全體傷害 ×1.08', type: 'allAtk', v: 1.08 },
       c14: { name: '赤焰', desc: '火屬清除那手 全傷害 ×1.2', type: 'elemAtk', el: 'fire', v: 1.2 },
       c15: { name: '掠食者之威', desc: '攻擊力 ×1.12', type: 'allAtk', v: 1.12 },   // 🐆雲豹(台灣隊·起手友善:無條件每次攻擊;全隊不暴走)
@@ -557,7 +557,7 @@
       fire: { name: '業火奔流', cd: 5, icon: '🔥', desc: '對鎖定的單一敵人造成 攻擊×3 傷害' },
       water: { name: '回春之泉', cd: 4, icon: '💧', desc: '回復 30% 生命' },
       thunder: { name: '封雷結界', cd: 4, icon: '⚡', desc: '全體敵出手延遲 +3 手' },
-      earth: { name: '大地整復', cd: 5, icon: '🪨', desc: '洗換手中的查克拉塊(換新一手)' },
+      earth: { name: '大地整復', cd: 5, icon: '🪨', desc: '洗換手中的能量塊(換新一手)' },
       wind: { name: '疾風亂舞', cd: 5, icon: '🌀', desc: '清掉最滿的一宮,化風刃單體攻擊(+1連擊)' },
     };
     // 物種卡專屬主動技(覆蓋屬性預設;activeSkill(el,id) 會優先吃這裡)→ 台灣隊等招牌卡用
@@ -602,7 +602,7 @@
     function activeSkill(el, id) { if (id && CARD_ACTIVE[id]) return CARD_ACTIVE[id]; const f = id && CARD_FAMILY[id]; if (f && FAMILY_ACTIVE[f]) return FAMILY_ACTIVE[f]; return ACTIVE_SKILLS[el] || null; }   // 台灣各卡 > 家族 > 屬性預設
     /* F6 統一存檔:持有卡 / 編隊 / 進度 / 設定 一個物件全自動存 localStorage */
     const SAVE_KEY = 'ninja_save';
-    function defaultMeta() { return { name: '忍者', rank: 1, exp: 0, coins: 0, stones: 30, stamina: 50, staminaMax: 50, staTs: null, pity: 0, boxBuy: 0, dayKey: null, dailyN: 0 }; }   // 首登送 30 鑽;name=用戶名稱(其他可改);pity=結印保底;boxBuy=魔法石擴背包次數;dayKey/dailyN=每日登入
+    function defaultMeta() { return { name: '塊頭勇者', rank: 1, exp: 0, coins: 0, stones: 30, stamina: 50, staminaMax: 50, staTs: null, pity: 0, boxBuy: 0, dayKey: null, dailyN: 0 }; }   // 首登送 30 鑽;name=用戶名稱(其他可改);pity=召喚保底;boxBuy=魔法石擴背包次數;dayKey/dailyN=每日登入
     function defaultSave() { const cards = STARTER.map((id, i) => ({ u: 'k' + (i + 1), id })); return { ver: 1, cards, uidSeq: STARTER.length, team: STARTER.slice(), cardLv: {}, cardEvo: {}, gems: { fire: 0, water: 0, thunder: 0, earth: 0, wind: 0 }, progress: { cleared: false, clears: 0, bestStage: 0 }, meta: defaultMeta(), settings: { welcome: true } }; }   // 個體制:每張卡=cards 陣列裡一個獨立個體(各佔一背包格)
     function writeSave(s) { try { s.updatedAt = Date.now(); localStorage.setItem(SAVE_KEY, JSON.stringify(s)); } catch (e) { } }   // 每次寫入蓋時間戳(雲端衝突解決:新覆舊)
     function loadSave() {
@@ -921,20 +921,20 @@
     const RANK_POOL = { genin: ROSTER.filter(c => c.rank === 'genin'), chunin: ROSTER.filter(c => c.rank === 'chunin'), jonin: ROSTER.filter(c => c.rank === 'jonin'), kage: ROSTER.filter(c => c.rank === 'kage') };
     function pickDrop(spec) {
       let pool = ROSTER; if (spec.el) pool = pool.filter(c => c.el === spec.el);
-      if (spec.rank) pool = pool.filter(c => c.rank === spec.rank); else pool = pool.filter(c => c.rank !== 'kage');   // 影忍只能抽卡取得,不從刷關掉落
+      if (spec.rank) pool = pool.filter(c => c.rank === spec.rank); else pool = pool.filter(c => c.rank !== 'kage');   // 六星只能抽卡取得,不從刷關掉落
       return pool.length ? pool[rnd(pool.length)] : null;
     }
     function rollDrops(table) { const out = []; (table || []).forEach(d => { if (Math.random() < d.rate) { const c = pickDrop(d); if (c) out.push(c); } }); return out; }
 
     /* ===== 轉蛋(簡單版:雙池 + 機率公示) ===== */
     const GACHA = {
-      premium: { name: '結印轉蛋', cur: 'stones', icon: '💎', cost1: 5, cost10: 50, rates: [['genin', 0.50], ['chunin', 0.35], ['jonin', 0.12], ['kage', 0.03]] },
+      premium: { name: '勇者召喚', cur: 'stones', icon: '💎', cost1: 5, cost10: 50, rates: [['genin', 0.50], ['chunin', 0.35], ['jonin', 0.12], ['kage', 0.03]] },
       normal: { name: '一般轉蛋', cur: 'coins', icon: '💰', cost1: 1000, cost10: 9000, rates: [['genin', 0.70], ['chunin', 0.28], ['jonin', 0.02]] },
     };
     function rollRarity(rates) { const r = Math.random(); let acc = 0; for (let k = 0; k < rates.length; k++) { acc += rates[k][1]; if (r < acc) return rates[k][0]; } return rates[rates.length - 1][0]; }
     function gachaPull(bankey) { let pool = RANK_POOL[rollRarity(GACHA[bankey].rates)]; if (!pool || !pool.length) pool = ROSTER; return pool[rnd(pool.length)]; }   // ⚠️ 暫時防呆:全卡★3(line 554)後 genin/chunin/kage 池為空→退回全卡均抽(避免崩;正式抽卡機制待定)
     function spendCoins(n) { let ok = false; mutSave(s => { if ((s.meta.coins || 0) >= n) { s.meta.coins -= n; ok = true; } }); return ok; }
-    const PITY_MAX = 50;   // 結印轉蛋保底:第 50 抽必得影忍(kage)
+    const PITY_MAX = 50;   // 勇者召喚保底:第 50 抽必得六星(kage)
     function getPity() { return loadSave().meta.pity || 0; }
     function setPity(n) { mutSave(s => { s.meta.pity = n; }); }
     function doGacha(bankey, count) {
@@ -945,15 +945,15 @@
         let c, pityHit = false;
         if (bankey === 'premium') {
           let p = getPity();
-          if (p >= PITY_MAX - 1) { c = RANK_POOL.kage[rnd(RANK_POOL.kage.length)]; setPity(0); pityHit = true; }   // 第50抽保底:必影忍
-          else { c = gachaPull(bankey); if (c.rank === 'kage') setPity(0); else setPity(p + 1); }                  // 抽到影忍歸零、否則+1
+          if (p >= PITY_MAX - 1) { c = RANK_POOL.kage[rnd(RANK_POOL.kage.length)]; setPity(0); pityHit = true; }   // 第50抽保底:必六星
+          else { c = gachaPull(bankey); if (c.rank === 'kage') setPity(0); else setPity(p + 1); }                  // 抽到六星歸零、否則+1
         } else { c = gachaPull(bankey); }
         out.push({ cd: c, isNew: !isOwned(c.id), pity: pityHit }); addCard(c.id);
       }
       track('gacha');
       return out;
     }
-    function freePull10() { const out = []; for (let i = 0; i < 10; i++) { const c = gachaPull('premium'); out.push({ cd: c, isNew: !isOwned(c.id), pity: false }); addCard(c.id); } track('gacha_free'); return out; }   // 新手教學完成免費十連(不扣費、用結印池)
+    function freePull10() { const out = []; for (let i = 0; i < 10; i++) { const c = gachaPull('premium'); out.push({ cd: c, isNew: !isOwned(c.id), pity: false }); addCard(c.id); } track('gacha_free'); return out; }   // 新手教學完成免費十連(不扣費、用勇者召喚池)
 
     /* ===== 出戰編隊 ===== */
     class TeamScene extends Phaser.Scene {
@@ -1212,7 +1212,7 @@
       }
     }
 
-    /* ===== 戰鬥(多敵 + 自由查克拉) ===== */
+    /* ===== 戰鬥(多敵 + 自由能量) ===== */
     class GameScene extends Phaser.Scene {
       constructor() { super('game'); }
       init(data) {
@@ -1437,16 +1437,16 @@
         this.pHpFrame = this.add.nineslice(BX0, PHP_Y, 'hpframe', undefined, W - 2 * BX0, 16, 8, 8, 0, 0).setOrigin(0, 0.5).setDepth(DEPTH.hp);   // 白框=抗鋸齒貼圖(取代 Graphics 描邊)
         this.drawPlayerHp();
         this.pHpTxt = this.add.text(CX, PHP_Y, '', { fontFamily: EMOJIFONT, fontSize: '12px', color: '#fff', fontStyle: 'bold', stroke: '#0a2008', strokeThickness: 3 }).setOrigin(0.5).setDepth(DEPTH.hp);
-        // combo 指示器:疊在 HP 條左端(原鬥志胸章位置);combo≥2 才亮、隨連擊變熱、斷了熄掉
+        // combo 指示器:疊在 HP 條左端(原舊版胸章位置);combo≥2 才亮、隨連擊變熱、斷了熄掉
         this.comboBg = this.add.circle(BX0 + 16, PHP_Y, 16, 0x1a140c, 0.92).setStrokeStyle(2.5, 0x6a5a3a).setDepth(DEPTH.morale).setVisible(false);
         this.comboTxt = this.add.text(BX0 + 16, PHP_Y, '', { fontFamily: EMOJIFONT, fontSize: '15px', color: '#fff', fontStyle: 'bold' }).setOrigin(0.5).setDepth(DEPTH.morale).setVisible(false);
-        // 隊長技狀態徽章(借原 combo/鬥志位置:HP 左端):黑熊🛡 / 鮭魚❄️,亮=就緒、灰+數字=冷卻中
+        // 隊長技狀態徽章(借原 combo 位置:HP 左端):黑熊🛡 / 鮭魚❄️,亮=就緒、灰+數字=冷卻中
         this.leadGlow = this.add.circle(BX0 + 16, PHP_Y, 21, 0xff6ab0, 0).setBlendMode(Phaser.BlendModes.ADD).setDepth(DEPTH.morale).setVisible(false);   // 隊長徽章「備妥」呼吸光暈(迴生=粉紅,墊在徽章底)
         this.leadBg = this.add.image(BX0 + 16, PHP_Y, 'badgecircle').setDepth(DEPTH.morale).setVisible(false);   // 圓徽=抗鋸齒貼圖(深底白邊;狀態色改用 setTint,取代 Arc 描邊的鋸齒)
         this.leadIc = this.add.text(BX0 + 16, PHP_Y, '', { fontFamily: EMOJIFONT, fontSize: '16px' }).setOrigin(0.5).setDepth(DEPTH.morale).setVisible(false);
         this.leadNum = this.add.text(BX0 + 27, PHP_Y + 9, '', { fontFamily: EMOJIFONT, fontSize: '11px', color: '#ffd24a', fontStyle: 'bold', stroke: '#000000', strokeThickness: 3 }).setOrigin(0.5).setDepth(DEPTH.morale + 1).setVisible(false);
 
-        // 結印區
+        // 召喚區
         for (let r = 0; r < N; r++)for (let c = 0; c < N; c++)
           this.cells.push(this.add.rectangle(BX0 + c * CS, BY0 + r * CS, RECT, RECT, NEUTRAL_DARK).setOrigin(0, 0).setDepth(DEPTH.board));
         for (let b = 0; b < 9; b++) {
@@ -2054,18 +2054,18 @@
         }
       }
       drawGloss() { const g = this.gloss; if (g) g.clear(); }   // 玻璃光澤/斜角都已拿掉,只留屬色亮邊(描邊);保留空函式避免呼叫端報錯
-      // 放塊:查克拉凝聚成形 —— 屬色凝聚體由略大半透明收實 + 粒子向中心收束 + 格子淡入(只演「放下後仍在盤上」的格)
+      // 放塊:能量凝聚成形 —— 屬色凝聚體由略大半透明收實 + 粒子向中心收束 + 格子淡入(只演「放下後仍在盤上」的格)
       coalesceCells(list) {
-        if (!list) return; const ADD = Phaser.BlendModes.ADD;   // list=[{r,c,el}](放下當下就記住屬性→就算馬上結印被清掉也照演凝聚)
+        if (!list) return; const ADD = Phaser.BlendModes.ADD;   // list=[{r,c,el}](放下當下就記住屬性→就算馬上召喚被清掉也照演凝聚)
         list.forEach((pc, idx) => {
-          const r = pc.r, c = pc.c; if (r < 0 || r >= N || c < 0 || c >= N || !this.board[r][c]) return;   // 已被結印清掉的格→不跑「聚攏成實心塊」(交給結印的溶解→集結演出)
+          const r = pc.r, c = pc.c; if (r < 0 || r >= N || c < 0 || c >= N || !this.board[r][c]) return;   // 已被召喚清掉的格→不跑「聚攏成實心塊」(交給召喚的溶解→集結演出)
           const cell = this.cellRect(r, c); if (!cell) return;
           const el = pc.el, col = EL[el] ? EL[el].color : NEUTRAL_FILL, cx = BX0 + c * CS + RECT / 2, cy = BY0 + r * CS + RECT / 2, dl = idx * 55;   // dl:多格逐格錯開→像一道波流過整塊(絲滑)
           this.tweens.killTweensOf(cell); cell.setAlpha(0.12); this.tweens.add({ targets: cell, alpha: 1, duration: 430, delay: dl, ease: 'Sine.out', onComplete: () => cell.setAlpha(1) });   // 格子柔和淡入
           const o = this.add.rectangle(cx, cy, RECT, RECT, col).setOrigin(0.5).setBlendMode(ADD).setDepth(DEPTH.board + 1).setAlpha(0.5).setScale(1.35);   // 凝聚體:起始倍數 1.35(略大半透→緩緩收實)
           this.tweens.add({ targets: o, scaleX: 1, scaleY: 1, alpha: 0, duration: 440, delay: dl, ease: 'Cubic.out', onComplete: () => o.destroy() });
           for (let k = 0; k < 6; k++) {
-            const a = Math.random() * Math.PI * 2, r0 = 18 + Math.random() * 14, sx = cx + Math.cos(a) * r0, sy = cy + Math.sin(a) * r0;   // 查克拉粒子滑順收束(Sine.inOut+錯開)
+            const a = Math.random() * Math.PI * 2, r0 = 18 + Math.random() * 14, sx = cx + Math.cos(a) * r0, sy = cy + Math.sin(a) * r0;   // 能量粒子滑順收束(Sine.inOut+錯開)
             const sz = 3.6 + Math.random() * 2.8, d = this.add.rectangle(sx, sy, sz, sz, col).setAlpha(0.85).setAngle(Math.random() * 90).setBlendMode(ADD).setDepth(DEPTH.board + 1);   // 方塊粒子(呼應魔物方塊主題;隨機轉角更活)
             this.tweens.add({ targets: d, x: cx, y: cy, alpha: 0, scale: 0.25, duration: 360 + Math.random() * 180, delay: dl + Math.random() * 70, ease: 'Sine.inOut', onComplete: () => d.destroy() });
           }
@@ -2098,7 +2098,7 @@
           if (!ready && card.pulse) { card.pulse.stop(); card.pulse = null; card.abtn.setScale(1); }
         });
       }
-      // 屬塊存放顯示:無框無底,元素色塊+「明暗漸層流動」(查克拉在屬性裡流的感覺);新生時彈出一下
+      // 屬塊存放顯示:無框無底,元素色塊+「明暗漸層流動」(能量在屬性裡流的感覺);新生時彈出一下
       renderStored() {
         if (!this.stored) return; this.teamCards.forEach((card, i) => {
           const so = card.storeObj; if (!so) return;
@@ -2119,7 +2119,7 @@
           if (card.storeKey !== key) { card.storeKey = key; inner.setScale(0.2); this.tweens.add({ targets: inner, scaleX: 1, scaleY: 1, duration: 320, ease: 'Back.out' }); } else inner.setScale(1);   // 新生/升級才彈出一次(醒目);平時靠漸層流動,不亂閃
         });
       }
-      // 每幀驅動:屬塊的明暗漸層流動(沿塊身相位差→像能量在流)+ 「極」鬥志徽章底色漸層流動(絕好調)
+      // 每幀驅動:屬塊的明暗漸層流動(沿塊身相位差→像能量在流)+ 「極」combo徽章底色漸層流動(絕好調)
       update(time) {
         if (!this.teamCards) return;
         try {   // ★ 單幀繪製例外絕不可外拋,否則會中斷整個遊戲主迴圈→畫面凍住
@@ -2215,7 +2215,7 @@
         });
       }
       trayRebirth() {
-        const ADD = Phaser.BlendModes.ADD;   // 土:每塊的查克拉各自收束到「該塊自己的中心」(快→慢)→ 元素閃 → 補新塊 → 各自展開(快→慢),像重生
+        const ADD = Phaser.BlendModes.ADD;   // 土:每塊的能量各自收束到「該塊自己的中心」(快→慢)→ 元素閃 → 補新塊 → 各自展開(快→慢),像重生
         (this.trayIcons || []).forEach(g => this.tweens.add({ targets: g, scaleX: 0.08, scaleY: 0.08, duration: 300, ease: 'Quart.out' }));   // 縮放=往各塊自身中心收束
         this.traySlots.forEach(sx => { const fl = this.add.circle(sx, TRAY_Y, 13, EL.earth.color, 0.6).setBlendMode(ADD).setDepth(DEPTH.tray + 1); this.tweens.add({ targets: fl, scale: 2.4, alpha: 0, duration: 420, delay: 260, onComplete: () => fl.destroy() }); });   // 各塊中心元素閃
         this.time.delayedCall(340, () => {
@@ -2273,7 +2273,7 @@
           case 'earth': {
             const col = EL.earth.color;   // 聚氣花火 → 托盤塊重生
             this.chargeAt(ox, oy, col, 380);
-            this.time.delayedCall(380, () => { this.labSnd('s_earth_skill', 0.7); this.tonFloat('重生查克拉塊', '#d49a4a'); this.trayRebirth(); });   // 土主動技塊變形音
+            this.time.delayedCall(380, () => { this.labSnd('s_earth_skill', 0.7); this.tonFloat('重生能量塊', '#d49a4a'); this.trayRebirth(); });   // 土主動技塊變形音
             break;
           }
           case 'wind': this.windSelect(i, atk); break;   // 風:進入「點選宮」模式 → 點一宮全清化風刃單體(算 combo)
@@ -3274,7 +3274,7 @@
         });
         const placed = d.cells.map(([dr, dc]) => { const rr = r + dr, cc = c + dc; return (rr >= 0 && rr < N && cc >= 0 && cc < N && this.board[rr][cc]) ? { r: rr, c: cc, el: this.board[rr][cc].el } : null; }).filter(Boolean);
         this.stored[d.store] = null; this.renderStored();
-        this.afterAction(false); this.coalesceCells(placed);   // 查克拉凝聚成形(結印時也演)
+        this.afterAction(false); this.coalesceCells(placed);   // 能量凝聚成形(召喚時也演)
       }   // 連擊引擎:屬塊消除「也生塊」(滾雪球爽度);仍不佔托盤格→不推進敵(由 tray.every(used) 決定)
       updateDrag(p) {
         if (!this.drag) return; this.clearGhost();
@@ -3325,7 +3325,7 @@
         });
       }
 
-      /* 放塊 = 一回合(敵人推進);放純查克拉 = bonus(不推進回合) */
+      /* 放塊 = 一回合(敵人推進);放純能量 = bonus(不推進回合) */
       doPlace(i, r, c) {
         if (this.resultOpen) return;
         const cells = this.tray[i].c, kind = this.tray[i].kind;
@@ -3337,7 +3337,7 @@
         const placed = (kind !== 'wind') ? cells.map(([dr, dc]) => { const rr = r + dr, cc = c + dc; return (rr >= 0 && rr < N && cc >= 0 && cc < N && this.board[rr][cc]) ? { r: rr, c: cc, el: this.board[rr][cc].el } : null; }).filter(Boolean) : null;   // 放下當下記住屬性(之後就算被清也照演)
         this.tray[i].used = true;
         this.afterAction(kind === 'water' || kind === 'wind');
-        if (placed) this.coalesceCells(placed);   // 查克拉凝聚成形(結印時也會演 → 凝聚→才清)
+        if (placed) this.coalesceCells(placed);   // 能量凝聚成形(召喚時也會演 → 凝聚→才清)
       }
       // 共用:放塊後處理(消除→燒傷→敵推進→補塊→卡死檢查)
       afterAction(fromBlock) {
@@ -3351,10 +3351,10 @@
         if (!this.anyPlaceable()) { this.time.delayedCall(420, () => this.handleStuck()); }
         this.updateAll();
       }
-      // 一手結束:鬥志/燒傷立即結算(屬我方展演),敵方出手+補新手延後到展演完才發動(以「手」為節奏)
+      // 一手結束:combo/燒傷立即結算(屬我方展演),敵方出手+補新手延後到展演完才發動(以「手」為節奏)
       endHand() {
         const showed = this.handCleared;   // 本手有清除展演→敵攻多等一下;空手→快一點
-        this.handCleared = false;   // combo 已改逐塊處理(放塊有清+1/沒清歸零),這裡不再動 combo/鬥志
+        this.handCleared = false;   // combo 已改逐塊處理(放塊有清+1/沒清歸零),這裡不再動 combo
         this._salmonHeal = false; this._salmonHealed = 0;   // 🐟溯流之癒只持續本手 → 收手清旗標
         if (this._fishHeal && this._fishHeal.turns > 0) this._fishHeal.turns--;   // 🐟活水:每手倒數,歸 0 失效
         if (this._huajing) { this._huajing.turns--; if (this._huajing.turns <= 0) { Object.assign(this.boxElement, this._huajing.saved); this._huajing = null; this.renderTeam && this.renderTeam(); this.refreshBoard && this.refreshBoard(); } }   // 🐰化境:回合到→還原各宮屬性
@@ -3364,7 +3364,7 @@
             this.floatText(e.sprite.x, e.sprite.y - 24, '🔥' + e.burn, '#ff7a63'); if (e.hp <= 0) this.killEnemy(e);
           }
         });
-        this.updateAll();   // 立即反映鬥志字/燒傷後血量(別等延遲回呼)
+        this.updateAll();   // 立即反映combo字/燒傷後血量(別等延遲回呼)
         this.locked = true;   // 鎖輸入:等我方這手展演完,敵方才出手(玩家才看得到上面的表現),再補新手解鎖
         this.time.delayedCall(showed ? 1200 : 200, () => {   // 等我方華麗展演(HIT 數到底)演完,敵方才出手
           if (this.resultOpen) { this.locked = false; return; }   // 期間已開結算/勝敗畫面→不再推進
@@ -3385,7 +3385,7 @@
           if (!this.anyPlaceable()) this.time.delayedCall(420, () => this.handleStuck());
         });
       }
-      // 卡死處理:空盤+只剩工具塊(土/風無從施力)→自動補一般查克拉塊;否則才花血重洗
+      // 卡死處理:空盤+只剩工具塊(土/風無從施力)→自動補一般能量塊;否則才花血重洗
       handleStuck() {
         if (this.resultOpen || this.anyPlaceable()) return;
         const empty = this.board.every(row => row.every(c => !c));
@@ -3393,7 +3393,7 @@
         const onlyTools = unused.length > 0 && unused.every(t => t.kind === 'earth' || t.kind === 'wind');
         if (empty && onlyTools) {
           const s = this.tray.findIndex(t => !t.used);
-          if (s >= 0) { this.tray[s] = { c: pickShape(), used: false }; this.renderTray(); this.tonFloat('盤面已空,自動補查克拉塊', '#cfe3ff'); return; }
+          if (s >= 0) { this.tray[s] = { c: pickShape(), used: false }; this.renderTray(); this.tonFloat('盤面已空,自動補能量塊', '#cfe3ff'); return; }
         }
         if (this.anyStoredPlaceable()) { this.flashStored(); this.tonFloat('托盤卡住 → 拖卡上的屬塊解圍!', '#ffe066'); return; }   // 有存塊能解=不扣血,提示用屬塊(真沒塊可解才花血)
         this.showReshuffleModal();
@@ -3429,7 +3429,7 @@
         if (this.stuckObj) { this.stuckObj.forEach(o => { if (o && o.destroy) o.destroy(); }); this.stuckObj = null; }
         if (this.stuckBlk) { this.stuckBlk.forEach(so => { if (so && so.active) so.setScale(1).setY(so._baseY != null ? so._baseY : so.y); }); this.stuckBlk = null; }
       }
-      /* 土屬塊:兩段式搬移查克拉 — ①拖塊蓋住要抓的查克拉 ②再拖把它們整組搬到空位 */
+      /* 土屬塊:兩段式搬移能量 — ①拖塊蓋住要抓的能量 ②再拖把它們整組搬到空位 */
       earthSelect(i, r, c) {
         const cells = this.tray[i].c, sel = [];
         cells.forEach(([dr, dc]) => {
@@ -3594,12 +3594,12 @@
         const f = this.add.rectangle(CX, H / 2, W, H, col, 0.32).setDepth(DEPTH.flash); this.tweens.add({ targets: f, alpha: 0, duration: 450, onComplete: () => f.destroy() });
         const fl = this.add.circle(sx, sy, 46, 0xffffff, 0.95).setBlendMode(ADD).setDepth(DEPTH.fx); this.tweens.add({ targets: fl, scale: 2.2, alpha: 0, duration: 400, ease: 'Quad.out', onComplete: () => fl.destroy() });   // 白光爆閃(蓋換圖瞬間→像變身)
         [0, 120].forEach(dl => { const ring = this.add.circle(sx, sy, 22, col, 0).setStrokeStyle(5, col, 0.95).setBlendMode(ADD).setDepth(DEPTH.fx); this.tweens.add({ targets: ring, scale: 3.4, alpha: 0, duration: 560, delay: dl, ease: 'Cubic.out', onComplete: () => ring.destroy() }); });   // 擴散屬色雙光環
-        for (let k = 0; k < 16; k++) { const a = Math.random() * Math.PI * 2, r0 = 52 + Math.random() * 44, d = this.add.circle(sx, sy, 3 + Math.random() * 2.2, col, 1).setBlendMode(ADD).setDepth(DEPTH.fx); this.tweens.add({ targets: d, x: sx + Math.cos(a) * r0, y: sy + Math.sin(a) * r0, alpha: 0, scale: 0.2, duration: 480 + Math.random() * 240, ease: 'Quad.out', onComplete: () => d.destroy() }); }   // 屬色查克拉迸發
+        for (let k = 0; k < 16; k++) { const a = Math.random() * Math.PI * 2, r0 = 52 + Math.random() * 44, d = this.add.circle(sx, sy, 3 + Math.random() * 2.2, col, 1).setBlendMode(ADD).setDepth(DEPTH.fx); this.tweens.add({ targets: d, x: sx + Math.cos(a) * r0, y: sy + Math.sin(a) * r0, alpha: 0, scale: 0.2, duration: 480 + Math.random() * 240, ease: 'Quad.out', onComplete: () => d.destroy() }); }   // 屬色能量迸發
         if (e.sprite) { const bs = e.baseScale || e.sprite.scaleX || 1; this.tweens.add({ targets: e.sprite, scaleX: bs * 1.35, scaleY: bs * 1.35, duration: 210, yoyo: true, ease: 'Back.out' }); }   // 換新型態彈一下(回基準)
         this.cameras.main.shake(240, 0.008);
       }
 
-      // 各屬區攻擊:該宮格子收束到「宮中心」→ 結印 → 射向敵人;彈著→該段扣血 + combo++(被彈著一次)
+      // 各屬區攻擊:該宮格子收束到「宮中心」→ 召喚 → 射向敵人;彈著→該段扣血 + combo++(被彈著一次)
       zoneStrike(cx, cy, cells, color, dmg, victims, shakeBig, el, bigHit) {
         const ADD = Phaser.BlendModes.ADD, hot = shadeColor(color, 0.18);   // hot=略提亮的屬色;el/bigHit 供實驗室彈著配音
         cells.slice(0, 9).forEach((rc, i) => {
@@ -3691,7 +3691,7 @@
         Object.keys(data.fx).forEach(e => { const f = data.fx[e]; f.attrs.forEach(a => this.fireAttr(a, f.atk, f.level, tgt)); });
         if (!this.fromBlock) Object.keys(data.fx).forEach(e => this.storeBlock(e, data.fx[e].level));   // 清宮→生成該屬形狀塊存到卡
         data.cells.forEach(([r, c], idx) => {
-          const cel = this.boxElement[boxOf(r, c)], gcol = cel ? EL[cel].color : 0xbfe6ff, cen = this.cellCenter(r, c), gd = Math.min(idx, 18) * 16;   // 充能:被清的格亮起屬色微光(由弱漸強)→ 溶解時散掉化成查克拉(取代 90ms 瞬閃)
+          const cel = this.boxElement[boxOf(r, c)], gcol = cel ? EL[cel].color : 0xbfe6ff, cen = this.cellCenter(r, c), gd = Math.min(idx, 18) * 16;   // 充能:被清的格亮起屬色微光(由弱漸強)→ 溶解時散掉化成能量(取代 90ms 瞬閃)
           const g = this.add.rectangle(cen.x, cen.y, RECT, RECT, gcol).setOrigin(0.5).setBlendMode(Phaser.BlendModes.ADD).setDepth(DEPTH.board + 1).setAlpha(0);
           this.tweens.add({ targets: g, alpha: 0.55, duration: 160, delay: gd, ease: 'Quad.in' });
           this.tweens.add({ targets: g, alpha: 0, scaleX: 0.6, scaleY: 0.6, duration: 260, delay: 360 + gd, ease: 'Sine.out', onComplete: () => g.destroy() });
@@ -4177,7 +4177,7 @@
           }
         });
       }
-      // 查克拉集結成印 → 射向敵人(全程 additive 疊光=真發光)
+      // 能量集結成印 → 射向敵人(全程 additive 疊光=真發光)
       chakraBez(a, c, b, t) { const it = 1 - t; return { x: it * it * a.x + 2 * it * t * c.x + t * t * b.x, y: it * it * a.y + 2 * it * t * c.y + t * t * b.y }; }   // 二次貝茲
       chakraBez3(a, c1, c2, b, t) { const it = 1 - t, it2 = it * it, t2 = t * t; return { x: it2 * it * a.x + 3 * it2 * t * c1.x + 3 * it * t2 * c2.x + t2 * t * b.x, y: it2 * it * a.y + 3 * it2 * t * c1.y + 3 * it * t2 * c2.y + t2 * t * b.y }; }   // 三次貝茲
       chakraArc(a, b, mag) { const mx = (a.x + b.x) / 2, my = (a.y + b.y) / 2, dx = b.x - a.x, dy = b.y - a.y, L = Math.hypot(dx, dy) || 1; return { x: mx - dy / L * mag, y: my + dx / L * mag }; }   // 控制點:中點往垂直偏 mag → 弧線
@@ -4242,7 +4242,7 @@
           } else fireBolts();
         });
       }
-      // 查克拉彈:沿弧線飛 + 逐段描出的弧線軌跡線(亮白核 + 屬色光暈,像子機/追蹤彈)
+      // 能量彈:沿弧線飛 + 逐段描出的弧線軌跡線(亮白核 + 屬色光暈,像子機/追蹤彈)
       chakraBolt(ox, oy, tx, ty, color, tgt, dmg, pw, hot) {
         pw = pw || 1; hot = hot || 0xffffff; const ADD = Phaser.BlendModes.ADD, a = { x: ox, y: oy }, b = { x: tx, y: ty }, bs = 1 + (pw - 1) * 0.4;   // bs:彈體/軌跡隨 HIT 變粗大;hot=高光色(預設白)
         const ctrl = this.chakraArc(a, b, (Math.random() < 0.5 ? 1 : -1) * (55 + Math.random() * 45));
@@ -4261,7 +4261,7 @@
         });   // 傳入到達角度(貝茲末端切線)+ HIT 規模 + 高光色
         this.tweens.add({ targets: glow, scale: 1.5, duration: 320, ease: 'Quad.in' });
       }
-      // ang=查克拉彈到達角度→火花/粒子依「擊中角度」散開(大半往來向反向潑回 back-splash、少數穿透)
+      // ang=能量彈到達角度→火花/粒子依「擊中角度」散開(大半往來向反向潑回 back-splash、少數穿透)
       chakraImpact(x, y, color, tgt, dmg, ang, pw, hot) {
         const ADD = Phaser.BlendModes.ADD; pw = pw || 1; hot = hot || 0xffffff; const ps = 1 + (pw - 1) * 0.4;   // ps:命中規模隨 HIT(9→×1、18→×1.4、27→×1.8);hot=高光色
         SFX.hit(pw);   // 打擊音(大 HIT 更重更亮)
@@ -4346,7 +4346,7 @@
         this.tweens.add({ targets: t, alpha: 0, delay: 1250, duration: 420, onComplete: () => t.destroy() });
         this.time.delayedCall(520, () => this.tonFloat('✦ 屬塊已存到卡上 — 可拖下來用!', '#ffe08a'));
       }
-      // (鬥志 moraleFX/syncMoraleState 已移除:改用 combo 系統)
+      // (舊版 moraleFX/syncMoraleState 已移除:改用 combo 系統)
       showJutsu(el, lv, dy) {
         dy = dy || 0; const name = KATA[lv - 1] + '・' + JUTSU[el][lv - 1]; const col = '#' + EL[el].color.toString(16).padStart(6, '0');
         const t = this.add.text(CX, BOARD_CY + dy, name, { fontFamily: JUTSUFONT, fontSize: (17 + lv * 4) + 'px', color: col, fontStyle: 'bold', stroke: '#000', strokeThickness: 4 }).setOrigin(0.5).setAlpha(0).setScale(0.5).setDepth(DEPTH.fx);   // 毛筆字、置中(和 HIT 同位置,接 HIT 之後出現;dy 供多招上下並列)
@@ -4472,8 +4472,8 @@
       }
       showReshuffleModal() {
         this.resultOpen = true; const g = this.overlay(); const cy = H / 2;
-        g.add(this.add.text(CX, cy - 90, '查克拉無法順利提煉', { fontFamily: EMOJIFONT, fontSize: '20px', color: '#ffd56a', fontStyle: 'bold' }).setOrigin(0.5));
-        g.add(this.add.text(CX, cy - 52, '燃燒生命重新排列查克拉?(−' + CONFIG.RESHUFFLE_COST + ' HP)', { fontFamily: EMOJIFONT, fontSize: '13px', color: '#f3e9d8' }).setOrigin(0.5));
+        g.add(this.add.text(CX, cy - 90, '能量無法順利提煉', { fontFamily: EMOJIFONT, fontSize: '20px', color: '#ffd56a', fontStyle: 'bold' }).setOrigin(0.5));
+        g.add(this.add.text(CX, cy - 52, '燃燒生命重新排列能量?(−' + CONFIG.RESHUFFLE_COST + ' HP)', { fontFamily: EMOJIFONT, fontSize: '13px', color: '#f3e9d8' }).setOrigin(0.5));
         this.mkBtn(g, cy + 10, '燃燒生命重排', () => { g.destroy(); this.resultOpen = false; this.reshuffle(); }, 0x3a5a2c);
         this.mkBtn(g, cy + 68, '放棄(認輸)', () => { g.destroy(); this.resultOpen = false; this.gameOver('放棄提煉'); });
       }
@@ -4495,7 +4495,7 @@
         this.resultOpen = true;
         const steps = [
           { ic: '🧩', t: '拼塊 × 打怪', b: '把方塊拖進 9×9 盤面,\n填滿一整「列 / 行 / 宮(3×3)」\n就會消除 → 攻擊敵人!' },
-          { ic: '⭐', t: '屬塊保存(招牌玩法)', b: '消除一個「宮」會生成屬塊,\n存到對應的忍卡上。\n把它拖到盤面湊更多消除,\n還能囤到 boss 一次狂放!' },
+          { ic: '⭐', t: '屬塊保存(招牌玩法)', b: '消除一個「宮」會生成屬塊,\n存到對應的勇者卡上。\n把它拖到盤面湊更多消除,\n還能囤到 boss 一次狂放!' },
           { ic: '💧', t: '打傷害 vs 回血', b: '盤面分「五屬區」和中間的「無屬區」。\n清屬性區 = 打傷害,\n清「無屬區」= 回血(隊伍回復力)!\n血少時記得去清中間那圈。' },
           { ic: '⚡', t: '相剋 & 大招', b: '帶相剋屬性更強:\n火→風→雷→土→水→火。\n卡片「上方的小鈕」蓄滿會發亮,\n點一下放大招!' },
           { ic: '🛡', t: '看懂敵人腳下徽章', b: '高難度敵人有招牌行為:\n🛡=要清夠大/連夠久才打得到,\n🔥灼燒=每手扣血、⚡麻痺=鎖你一塊,\n💚=會回血。魔王還會隨血量變身!' },
@@ -4757,7 +4757,7 @@
         };
         // 列1:頭像 + 名稱 + 稱號金 chip(左);💎/💰 chip(右,堆疊)
         this.L(this.add.circle(24, 24, 15, _l ? EL[_l.el].color : 0xc9c2b8).setStrokeStyle(2, 0xffffff)); this.txt(24, 24, _l ? EL[_l.el].face : '🥷', '16px', '#ffffff', 0.5);
-        this.txt(48, 18, (m.name || '忍者'), FS.body, T.ink, 0, true);
+        this.txt(48, 18, (m.name || '塊頭勇者'), FS.body, T.ink, 0, true);
         if (getTitle()) { const lb = '🏅 ' + titleName(getTitle()); const tt = this.add.text(0, 0, lb, { fontFamily: EMOJIFONT, fontSize: '11px', color: '#6a4a00', fontStyle: 'bold' }); const w = Math.ceil(tt.width) + 16; tt.setPosition(48 + w / 2, 42).setOrigin(0.5); this.L(roundRectG(this, 48 + w / 2, 42, w, 19, 9.5, T.gold, 1, null, 0)); this.L(tt); }
         chipR(W - 10, 20, '💎 ' + m.stones);
         chipR(W - 10, 48, '💰 ' + m.coins.toLocaleString());
@@ -5002,9 +5002,9 @@
         const T = UI(), cTop = 84;
         this.rect(CX, (cTop + H - 60) / 2, W, (H - 60) - cTop, T.page);   // 亮色 body 底
         this.txt(CX, cTop + 34, '🥚 轉蛋', FS.title, T.ink, 0.5, true);
-        this.gachaBanner(cTop + 132, 'premium', '✨ 影忍 SSR 限定 · 機率 3%', 0x7c5cd0);   // 卡頂=cTop+57,與卡片管理/商店的第一個內容頂緣一致
-        this.gachaBanner(cTop + 296, 'normal', '金錢轉蛋（無影忍）', 0x35a866);
-        this.txt(CX, H - 74, '※ 機率已公示;影忍僅「結印轉蛋」可得', FS.micro, T.ink3, 0.5);
+        this.gachaBanner(cTop + 132, 'premium', '✨ 六星 限定 · 機率 3%', 0x7c5cd0);   // 卡頂=cTop+57,與卡片管理/商店的第一個內容頂緣一致
+        this.gachaBanner(cTop + 296, 'normal', '金錢轉蛋（無六星）', 0x35a866);
+        this.txt(CX, H - 74, '※ 機率已公示;六星僅「勇者召喚」可得', FS.micro, T.ink3, 0.5);
         if (this.gachaResult) this.drawGachaResult();
       }
       gachaBanner(y, bankey, tagline, accent) {
@@ -5028,7 +5028,7 @@
         _loadCardArt(this, out.map(o => o.cd.id));   // 大廳只載出戰隊→抽到別的卡會沒圖:抽完先補載卡圖,載好再顯示
         if (this.load.list.size) { this.load.once('complete', () => this.rebuild()); this.load.start(); } else this.rebuild();
       }
-      _summonFX(cx, cy, el, rare, cb) {   // 🌀 結印召喚:雙元素環展開 + 查克拉方塊向心聚攏 → 爆發射出方塊 →(cb)卡片現身。呼應忍術/五行/方塊主題
+      _summonFX(cx, cy, el, rare, cb) {   // 🌀 勇者召喚:雙元素環展開 + 能量方塊向心聚攏 → 爆發射出方塊 →(cb)卡片現身。呼應主動技/五行/方塊主題
         const ADD = Phaser.BlendModes.ADD, elc = EL[el].color, gold = 0xffe66a;
         const ring1 = this.L(this.add.circle(cx, cy, 92, 0, 0).setStrokeStyle(3, elc, 0.9).setBlendMode(ADD)).setScale(0.2).setAlpha(0);
         const ring2 = this.L(this.add.circle(cx, cy, 60, 0, 0).setStrokeStyle(2, elc, 0.7).setBlendMode(ADD)).setScale(0.2).setAlpha(0);
@@ -5038,7 +5038,7 @@
         for (let i = 0; i < 8; i++) { const a = i / 8 * Math.PI * 2; const m = this.L(this.add.rectangle(cx + Math.cos(a) * 92, cy + Math.sin(a) * 92, 14, 14, elc, 0.9).setBlendMode(ADD)).setAlpha(0); marks.push(m); this.tweens.add({ targets: m, alpha: 1, duration: 200, delay: 260 }); }
         for (let i = 0; i < 14; i++) { const a0 = i / 14 * Math.PI * 2, r0 = 150 + Math.random() * 40; const p = this.L(this.add.rectangle(cx + Math.cos(a0) * r0, cy + Math.sin(a0) * r0, 20, 20, elc, 0.95).setBlendMode(ADD)).setAlpha(0);
           this.tweens.add({ targets: p, alpha: 1, duration: 140, delay: 120 });
-          this.tweens.add({ targets: p, x: cx, y: cy, scale: 0.3, duration: 480, delay: 180 + i * 14, ease: 'Cubic.in', onComplete: () => p.destroy() }); }   // 查克拉方塊向心(正方向,不轉)
+          this.tweens.add({ targets: p, x: cx, y: cy, scale: 0.3, duration: 480, delay: 180 + i * 14, ease: 'Cubic.in', onComplete: () => p.destroy() }); }   // 能量方塊向心(正方向,不轉)
         const core = this.L(this.add.circle(cx, cy, 10, 0xffffff, 0.9).setBlendMode(ADD)).setScale(0);
         this.tweens.add({ targets: core, scale: 4.5, duration: 420, delay: 520, ease: 'Quad.in' });
         this.time.delayedCall(rare ? 900 : 760, () => {   // 爆發
@@ -5068,7 +5068,7 @@
         }
         return out;
       }
-      _summonCinematic(cx, cy, el, hi, cb) {   // 🌀 3~4s 結印召喚:方塊自四方聚攏印中→蓄光→吸氣→爆發噴方塊→(cb)卡登場。回傳 {kill} 供跳過清場
+      _summonCinematic(cx, cy, el, hi, cb) {   // 🌀 3~4s 勇者召喚:方塊自四方聚攏中心→蓄光→吸氣→爆發噴方塊→(cb)卡登場。回傳 {kill} 供跳過清場
         const ADD = Phaser.BlendModes.ADD, elc = EL[el].color, gold = 0xffe66a;
         const all = [], seal = [], timers = [], reg = (o, s) => { all.push(o); if (s) seal.push(o); return o; };
         const ring1 = reg(this.L(this.add.circle(cx, cy, 100, 0, 0).setStrokeStyle(3, elc, 0.9).setBlendMode(ADD)).setScale(0.15).setAlpha(0), 1);
@@ -5099,7 +5099,7 @@
           emitter.explode(hi ? 46 : 26);
           this.time.delayedCall(1300, () => { if (emitter && emitter.active) emitter.destroy(); });
           if (hi) this.cameras.main.shake(360, 0.007);
-          seal.forEach(o => { if (o && o.active) this.tweens.add({ targets: o, alpha: 0, scaleX: '*=1.4', scaleY: '*=1.4', duration: 260, onComplete: () => o.destroy() }); });   // 收掉結印
+          seal.forEach(o => { if (o && o.active) this.tweens.add({ targets: o, alpha: 0, scaleX: '*=1.4', scaleY: '*=1.4', duration: 260, onComplete: () => o.destroy() }); });   // 收掉召喚特效
           if (cb) cb();
         }));
         return { kill: () => { timers.forEach(t => t && t.remove && t.remove()); all.forEach(o => { if (o && o.active) { this.tweens.killTweensOf(o); o.destroy(); } }); } };
@@ -5192,7 +5192,7 @@
         this.rect(CX, (cTop + cBot) / 2, W, cBot - cTop, T.page);   // 亮色 body 底(同卡片/商店/排行)
         this.txt(CX, cTop + 30, '⚙️ 其他', FS.title, T.ink, 0.5, true);
         this.txt(CX, cTop + 56, '🏆 序章通關 ×' + pr.clears + '    📖 收集 ' + ownedCount() + '/' + ROSTER.length, FS.cap, T.ink2, 0.5);
-        this.btn(CX, cTop + 88, 360, 44, '✏️ 改名(目前:' + (getMeta().name || '忍者') + ')', () => { const cur = getMeta().name || '忍者'; const n = prompt('輸入用戶名稱(最多 8 字)', cur); if (n != null) { const nm = (n.trim().slice(0, 8)) || '忍者'; mutSave(s => { s.meta.name = nm; }); this.toast('已改名:' + nm); this.rebuild(); } }, { col: T.surf, stroke: 0x5aa9e6, color: T.ink, fs: FS.body });
+        this.btn(CX, cTop + 88, 360, 44, '✏️ 改名(目前:' + (getMeta().name || '塊頭勇者') + ')', () => { const cur = getMeta().name || '塊頭勇者'; const n = prompt('輸入用戶名稱(最多 8 字)', cur); if (n != null) { const nm = (n.trim().slice(0, 8)) || '塊頭勇者'; mutSave(s => { s.meta.name = nm; }); this.toast('已改名:' + nm); this.rebuild(); } }, { col: T.surf, stroke: 0x5aa9e6, color: T.ink, fs: FS.body });
         this.btn(CX - 92, cTop + 138, 172, 48, '📖 卡片圖鑑', () => this.go('dex'), { col: T.surf, stroke: 0x5aa9e6, color: T.ink, fs: FS.body, bold: true });
         this.btn(CX + 92, cTop + 138, 172, 48, '🎓 新手教學', () => { const team = ['c03', 'c06', 'c19', 'c10', 'c12'].map(id => ROSTER.find(c => c.id === id)).filter(Boolean); if (team.length < 5) { this.toast('教學需要狗狗隊(先到其他→給狗狗隊)'); return; } this.scene.manager.start('game', { team: team, dungeonId: 'prologue', tutorial: true }); this.scene.manager.stop('home'); }, { col: T.surf, stroke: 0x35a866, color: T.ink, fs: FS.body, bold: true });
         const addL = o => this.L(o);

@@ -6,7 +6,7 @@ const _ELref = (typeof EL !== 'undefined') ? EL : require('./battle-core.js').EL
 
 // 地下城:序章(教學)+ 五元素關 + 最終塔;turns 以「手」為單位;線性解鎖
 const DUNGEONS = {
-  prologue:{id:'prologue',name:'序章·結印之章',emoji:'🏯',cost:10,stages:[
+  prologue:{id:'prologue',name:'序章·召喚之章',emoji:'🏯',cost:10,stages:[
       {es:[{el:'wind',hp:450,atk:90,turns:2}]},
       {es:[{el:'earth',hp:380,atk:80,turns:2},{el:'earth',hp:380,atk:80,turns:2}]},
       {es:[{el:'thunder',hp:340,atk:70,turns:2},{el:'fire',hp:1500,atk:190,turns:3,boss:true},{el:'thunder',hp:340,atk:70,turns:2}]},
@@ -36,7 +36,7 @@ const DUNGEONS = {
       {es:[{el:'wind',hp:580,atk:90,turns:2},{el:'wind',hp:580,atk:90,turns:2}]},
       {es:[{el:'wind',hp:500,atk:90,turns:2},{el:'wind',hp:1900,atk:200,turns:3,boss:true},{el:'wind',hp:500,atk:90,turns:2}]},
     ],drops:[[{el:'wind',rate:0.8}],[{el:'wind',rate:1.0}],[{el:'wind',rate:1.0},{rank:'jonin',rate:0.2}]]},
-  tower:{id:'tower',name:'結印之塔',emoji:'🗼',cost:20,stages:[
+  tower:{id:'tower',name:'召喚之塔',emoji:'🗼',cost:20,stages:[
       {es:[{el:'fire',hp:800,atk:120,turns:2},{el:'water',hp:800,atk:120,turns:2}]},
       {es:[{el:'thunder',hp:750,atk:110,turns:2,arch:'archmage'},{el:'earth',hp:750,atk:110,turns:2},{el:'wind',hp:750,atk:110,turns:2}]},
       {es:[{el:'fire',hp:3200,atk:210,turns:3,boss:true,phases:[{el:'fire',beh:'burn'},{el:'water',beh:'regen'},{el:'thunder',beh:'paralyze'},{el:'earth',beh:'hit'},{el:'wind',beh:'combo'}]}]},   // 魔王:五屬階段變身(每 20% 血換屬+換招牌行為,逼平衡隊);血砍3200讓強隊在超級/地獄打得死(模擬5000時連★3LV20都0%)
