@@ -3,62 +3,111 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>忍塊查克拉 · 開發日誌</title>
-<meta name="description" content="忍塊查克拉是一款把 Woodoku 方塊消除縫進轉珠 RPG 的卡片收集遊戲。這裡是它的開發日誌：機制設計、踩坑心得、用 CSS 動畫演給你看的碎念。">
+<title>塊頭勇者 Blockyusha — 方塊消除 × 轉珠 RPG</title>
+<meta name="description" content="塊頭勇者 Blockyusha 是一款把 Woodoku 方塊消除縫進轉珠 RPG 的卡片收集遊戲：拖方塊、湊整列消除觸發五屬攻擊，收集可愛的方塊頭動物勇者一路闖塔。免下載，開網頁就能玩。">
+<meta name="keywords" content="塊頭勇者,Blockyusha,方塊消除,Woodoku,轉珠RPG,卡片收集,block puzzle rpg,woodoku like,puzzle rpg">
+<link rel="canonical" href="https://blockyusha.com/">
+<meta name="theme-color" content="#0d1333">
+<!-- Open Graph / 社群分享 -->
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="塊頭勇者 Blockyusha">
+<meta property="og:title" content="塊頭勇者 Blockyusha — 方塊消除 × 轉珠 RPG">
+<meta property="og:description" content="拖方塊、湊消除、放大招——收集方塊頭動物勇者的消除 RPG。免下載，開網頁就能玩。">
+<meta property="og:url" content="https://blockyusha.com/">
+<meta property="og:image" content="https://blockyusha.com/og-image.webp">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="塊頭勇者 Blockyusha — 方塊消除 × 轉珠 RPG">
+<meta name="twitter:description" content="拖方塊、湊消除、放大招——收集方塊頭動物勇者的消除 RPG。">
+<meta name="twitter:image" content="https://blockyusha.com/og-image.webp">
+<link rel="icon" href="./play/art/cards/c15_thumb.webp">
+<link rel="apple-touch-icon" href="./play/art/cards/c15_thumb.webp">
 <style>
 *,*::before,*::after{box-sizing:border-box}
 html,body{margin:0;padding:0}
 body{
-  background:linear-gradient(180deg,#080c1a 0%,#0d1333 40%,#111a40 100%);
+  background:linear-gradient(180deg,#080c1a 0%,#0d1333 42%,#111a40 100%);
   background-attachment:fixed;min-height:100vh;color:#e8ecf4;
   font-family:"Noto Sans TC","PingFang TC","Microsoft JhengHei",system-ui,-apple-system,sans-serif;
-  -webkit-font-smoothing:antialiased;
+  -webkit-font-smoothing:antialiased;text-align:center;
 }
-.wrap{max-width:720px;margin:0 auto;padding:clamp(40px,7vw,80px) 18px 80px}
-.hero{text-align:center;margin-bottom:48px}
-.logo{font-size:clamp(30px,6vw,46px);font-weight:800;letter-spacing:-1px;margin:0 0 12px;
-  background:linear-gradient(120deg,#ffd56a,#ff7a4a 60%,#5B86FF);-webkit-background-clip:text;background-clip:text;color:transparent}
-.tagline{font-size:clamp(14px,2.6vw,17px);color:#8a93ad;margin:0;line-height:1.6}
-.kw{display:inline-flex;flex-wrap:wrap;gap:6px;justify-content:center;margin-top:18px}
-.kw span{font-size:12px;color:#aeb6cc;background:rgba(100,120,180,.1);border:1px solid rgba(100,120,180,.18);border-radius:999px;padding:3px 11px}
-.sec{font-size:13px;color:#6f7894;letter-spacing:2px;margin:0 0 16px;text-transform:uppercase}
-.post{display:block;text-decoration:none;color:inherit;background:rgba(15,20,45,.7);
-  border:1px solid rgba(100,120,180,.18);border-radius:16px;padding:20px 22px;margin-bottom:16px;
-  transition:transform .15s,border-color .15s,box-shadow .15s}
-.post:hover{transform:translateY(-2px);border-color:rgba(120,140,255,.45);box-shadow:0 10px 36px rgba(0,0,0,.4)}
-.post .date{font-size:12px;color:#6f7894;margin-bottom:6px}
-.post .t{font-size:18px;font-weight:800;line-height:1.4;margin:0 0 8px;color:#f0e8d4}
-.post .s{font-size:14px;color:#9aa3bd;line-height:1.7;margin:0}
-.post .tags{margin-top:10px;display:flex;flex-wrap:wrap;gap:6px}
-.post .tags i{font-style:normal;font-size:11px;color:#aeb6cc;background:rgba(100,120,180,.1);border-radius:999px;padding:2px 9px}
-.foot{margin-top:54px;padding-top:24px;border-top:1px solid rgba(100,120,180,.12);text-align:center;font-size:13px;color:#6f7894}
+.wrap{max-width:760px;margin:0 auto;padding:clamp(36px,7vw,72px) 18px 72px}
+/* ===== Hero ===== */
+.logo{font-size:clamp(42px,10vw,76px);font-weight:900;letter-spacing:-1px;margin:0;line-height:1.05;
+  background:linear-gradient(120deg,#ffd56a,#ff7a4a 55%,#5B86FF);-webkit-background-clip:text;background-clip:text;color:transparent}
+.en{font-size:clamp(15px,3.2vw,20px);letter-spacing:6px;color:#8a93ad;margin:10px 0 0;font-weight:700;text-transform:uppercase}
+.tagline{font-size:clamp(16px,3vw,20px);color:#cdd4e6;margin:22px auto 0;line-height:1.7;max-width:30em}
+.heroart{width:min(340px,72vw);height:auto;margin:26px auto 4px;display:block;
+  filter:drop-shadow(0 16px 40px rgba(0,0,0,.55))}
+/* ===== CTA ===== */
+.cta{display:inline-block;margin-top:22px;text-decoration:none;
+  font-size:clamp(20px,4.6vw,26px);font-weight:900;color:#2a1600;
+  background:linear-gradient(120deg,#ffe08a,#ff9a4a);
+  padding:18px 46px;border-radius:999px;
+  box-shadow:0 12px 30px rgba(255,140,60,.35),inset 0 1px 0 rgba(255,255,255,.5);
+  transition:transform .15s,box-shadow .15s}
+.cta:hover{transform:translateY(-3px) scale(1.02);box-shadow:0 18px 44px rgba(255,140,60,.5)}
+.cta:active{transform:translateY(0)}
+.free{font-size:13px;color:#8a93ad;margin-top:12px}
+.kw{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin-top:26px}
+.kw span{font-size:13px;color:#aeb6cc;background:rgba(100,120,180,.1);border:1px solid rgba(100,120,180,.2);border-radius:999px;padding:5px 14px}
+/* ===== Features ===== */
+.sec{font-size:13px;color:#6f7894;letter-spacing:3px;margin:64px 0 22px;text-transform:uppercase}
+.feats{display:grid;grid-template-columns:repeat(2,1fr);gap:14px}
+@media(max-width:520px){.feats{grid-template-columns:1fr}}
+.feat{background:rgba(15,20,45,.7);border:1px solid rgba(100,120,180,.18);border-radius:16px;padding:22px 20px;text-align:left}
+.feat .ic{font-size:28px;margin-bottom:8px}
+.feat h3{font-size:17px;font-weight:800;margin:0 0 6px;color:#f0e8d4}
+.feat p{font-size:14px;color:#9aa3bd;line-height:1.7;margin:0}
+/* ===== Character strip ===== */
+.chars{display:flex;gap:12px;overflow-x:auto;padding:6px 2px 14px;scroll-snap-type:x mandatory;-webkit-overflow-scrolling:touch}
+.chars img{width:120px;height:auto;border-radius:14px;scroll-snap-align:center;flex:0 0 auto;
+  border:1px solid rgba(120,140,255,.18);background:rgba(15,20,45,.6)}
+/* ===== Footer ===== */
+.foot{margin-top:60px;padding-top:26px;border-top:1px solid rgba(100,120,180,.12);font-size:14px;color:#8a93ad}
+.foot a{color:#aeb6cc;text-decoration:none;margin:0 10px;border-bottom:1px solid rgba(120,140,255,.35);padding-bottom:1px}
+.foot a:hover{color:#fff}
+.copy{margin-top:18px;font-size:12px;color:#5b6580}
 </style>
 </head>
 <body>
 <div class="wrap">
-  <header class="hero">
-    <h1 class="logo">忍塊查克拉</h1>
-    <p class="tagline">把 Woodoku 方塊消除縫進轉珠 RPG 的卡片收集遊戲<br>開發日誌 · 機制設計與踩坑碎念</p>
-    <div class="kw"><span>#方塊消除</span><span>#轉珠RPG</span><span>#卡片收集</span><span>#獨立開發</span></div>
+
+  <header>
+    <h1 class="logo">塊頭勇者</h1>
+    <p class="en">Blockyusha</p>
+    <img class="heroart" src="./play/art/cards/c15_full.webp" alt="塊頭勇者 角色 · 臺灣雲豹" loading="eager" width="340">
+    <p class="tagline">拖方塊、湊整列消除、放大招——<br>收集<b style="color:#ffd56a">方塊頭動物勇者</b>的消除 RPG。</p>
+    <a class="cta" href="./play/">▶ 開始遊戲</a>
+    <p class="free">免下載 · 開網頁就能玩</p>
+    <div class="kw"><span>#方塊消除</span><span>#轉珠RPG</span><span>#卡片收集</span><span>#五屬相剋</span></div>
   </header>
 
-  <p class="sec">開發日誌</p>
+  <p class="sec">遊戲特色</p>
+  <div class="feats">
+    <div class="feat"><div class="ic">🧩</div><h3>Woodoku 縫進 RPG</h3><p>把方塊拖進 9×9 盤，湊滿整列／整行／九宮就消除——每一消都是一次攻擊。</p></div>
+    <div class="feat"><div class="ic">🔥</div><h3>五屬相剋</h3><p>火→風→雷→土→水→火，環形相剋。用對屬性打敵人弱點，傷害翻倍。</p></div>
+    <div class="feat"><div class="ic">🐾</div><h3>收集動物勇者</h3><p>貓犬鳥鼠兔魚＋台灣特有種，一隻隻可愛的方塊頭勇者等你組隊。</p></div>
+    <div class="feat"><div class="ic">🗼</div><h3>闖塔冒險</h3><p>盤面、鬥志、屬塊帶進下一關，一路往上爬——愈上面愈刺激。</p></div>
+  </div>
 
-  <a class="post" href="2026-06-12-element-balance.html">
-    <div class="date">2026-06-12</div>
-    <h2 class="t">我想讓五個屬性都有人愛用，結果數據打了我一巴掌（「陰」到現在還沒爬起來）</h2>
-    <p class="s">把五個屬性丟進模擬器跑一萬場，發現三個根本沒人想用。風好修、土卡在 2048 式傾斜、陰轉一圈還在原地——一篇還沒解完的平衡踩坑，文末想跟大家討個點子。</p>
-    <div class="tags"><i>#玩法設計</i><i>#數值平衡</i><i>#踩坑</i></div>
-  </a>
+  <p class="sec">角色群像</p>
+  <div class="chars">
+    <img src="./play/art/cards/c15_thumb.webp" alt="臺灣雲豹" loading="lazy" width="120">
+    <img src="./play/art/cards/c01_thumb.webp" alt="朱" loading="lazy" width="120">
+    <img src="./play/art/cards/c03_thumb.webp" alt="炎助" loading="lazy" width="120">
+    <img src="./play/art/cards/c04_thumb.webp" alt="凪" loading="lazy" width="120">
+    <img src="./play/art/cards/c07_thumb.webp" alt="鳴" loading="lazy" width="120">
+    <img src="./play/art/cards/c11_thumb.webp" alt="空" loading="lazy" width="120">
+    <img src="./play/art/cards/c09_thumb.webp" alt="椿" loading="lazy" width="120">
+    <img src="./play/art/cards/c12_thumb.webp" alt="疾風" loading="lazy" width="120">
+  </div>
 
-  <a class="post" href="2026-06-11-origin.html">
-    <div class="date">2026-06-11</div>
-    <h2 class="t">我只是想做個消消樂，結果縫出一個沒人做過的東西</h2>
-    <p class="s">把 Woodoku 跟轉珠 RPG 縫在一起會發生什麼事？方塊有了屬性、消除會放招、招式還會反過來改變盤面——附兩個純 CSS 動畫 demo。</p>
-    <div class="tags"><i>#玩法設計</i><i>#方塊消除</i><i>#轉珠RPG</i></div>
-  </a>
+  <footer class="foot">
+    <a href="./devlog/">開發日誌</a>
+    <a href="./devlog/how-to-play.html">玩法說明</a>
+    <p class="copy">塊頭勇者 Blockyusha · 開發中 · © 2026 fightmon</p>
+  </footer>
 
-  <footer class="foot">忍塊查克拉還在開發中 · © 2026 fightmon</footer>
 </div>
 </body>
 </html>
