@@ -1,0 +1,172 @@
+---
+import Base from '../../layouts/Base.astro';
+---
+<Base title="我想讓五個屬性都有人愛用，結果數據打了我一巴掌（「陰」到現在還沒爬起來） — 塊頭勇者 開發日誌" path="/devlog/2026-06-12-element-balance/" navActive="devlog"
+  description="把五個屬性丟進模擬器跑一萬場，發現三個根本沒人想用。風好修、土卡在 2048 式傾斜、陰轉一圈還在原地——一篇還沒解完的平衡踩坑日誌，附互動 demo。">
+
+<article class="dp">
+  <div class="dp-wrap">
+    <a class="back" href="/devlog/">← 開發日誌</a>
+    <h1 class="title">我想讓五個屬性都有人愛用，結果數據打了我一巴掌（「陰」到現在還沒爬起來）</h1>
+    <div class="meta">
+      <span>2026-06-12</span>
+      <span class="tag">#塊頭勇者</span><span class="tag">#玩法設計</span>
+      <span class="tag">#數值平衡</span><span class="tag">#踩坑</span>
+    </div>
+
+    <div class="body">
+      <p class="lead">塊頭勇者的五個屬性(火水雷土風)各配一招主動技,我本來很滿意——「每個都有特色、都有人愛用」。然後我寫了個模擬器跑了一萬場,結果發現:<strong>有三個屬性,根本沒人想帶。</strong>這篇是還沒解完的踩坑現場。</p>
+
+      <h2>一、模擬器打臉:三個屬性是「廢的」</h2>
+      <p>關鍵前提:在我的戰鬥裡,<strong>每清一個結構的基礎傷害,所有屬性都一樣</strong>;屬性只差在那一招「主技」。所以我把每個主技的「淨價值」量出來——拿掉相剋運氣,對照「完全沒主技」的基準,看它讓你變強多少。</p>
+      <p>結果很殘忍:</p>
+
+      <div class="demo">
+        <div class="bars" id="bars"></div>
+        <div class="demo-cap">各主技「淨價值」(對照無主技基準;綠=強、紅=幾乎沒用)</div>
+      </div>
+
+      <p>火、雷、陽 一拉就破八九成,但 <strong>風居然是負的</strong>——它的招式是「消掉方塊」,結果消掉的是我自己的能量,<strong>等於把那一宮的傷害丟掉</strong>,換來常常用不到的空間。土跟陰也只比「沒招」好一咪咪。會玩的人一看,就會把這三個冷凍起來。</p>
+
+      <h2>二、風:這個好修</h2>
+      <p>風從「消方塊」改成 <strong>「風刃 · 消除時順便砍敵人」</strong>。一句話的概念,直接從最廢變第二強。消除開空間 + 造成傷害,攻防一體,爽。</p>
+
+      <h2>三、土:我最執著、也最難搞的一個</h2>
+      <p>土本來是「搬移方塊」,兩段操作又瑣碎又弱。我試了「全盤往下坍塌」,再升級成 <strong>「傾斜」</strong>——就像 2048:你選一個方向,整盤滑過去、把缺口補滿、完成結構。</p>
+
+      <div class="demo">
+        <div class="tilt-stage">
+          <div class="tilt-arrow" id="tarrow">&nbsp;</div>
+          <div class="tilt-grid" id="tgrid"></div>
+        </div>
+        <div class="demo-cap">土「傾斜」:整盤往一個方向滑 → 底排補滿 → 消除(像 2048)</div>
+      </div>
+
+      <p>直覺多了、也變強了……但 <strong>還是追不上水</strong>。為什麼?因為水是「精準補上缺的那一格」,百發百中;土是「滑一滑、賭它剛好對齊」。<strong>重排,天生比補格不可靠。</strong></p>
+      <blockquote>於是我想通一件事:也許土本來就該是「整地工具」,不是「輸出明星」。不是每個屬性都得當主角——有一個穩定的板面 utility,其實也很好。這我可以接受。</blockquote>
+
+      <h2>四、陰:轉了一大圈,還站在原地</h2>
+      <p>陰最頭痛。它原本是「增傷」,弱。我一個一個試:</p>
+      <p>① 改 <strong>「連鎖引爆」</strong>(消除向外炸一圈)——很強,但它<strong>清太多塊,反而把你接下來能 combo 的料也一起清光</strong>了。<br>
+      ② 那改 <strong>「時間操控 · 時停=多放一手」</strong>?結果發現——那跟雷的「麻痺(拖慢敵人)」<strong>根本是同一件事</strong>(都是讓你相對多動)。撞車。<br>
+      ③ 那 <strong>「詛咒 · 讓敵人多受傷」</strong>?可以,但它就不「對盤面」了,離我想要的味道有點遠。</p>
+      <p>每個點子,不是撞到別的屬性、就是有破口。<strong>陰,我到現在還沒定案。</strong></p>
+
+      <h2>今天的心得</h2>
+      <p>做這種「屬性都要不一樣、又都要平衡、又都要好玩」的設計,比想像難太多。<strong>傷害很好懂(立刻看到數字往下掉),但『幫盤面』的價值很隱性</strong>,玩家不一定領情。而要硬塞五六個都不重複的效果,可用的空間其實很窄。</p>
+      <p>火、風、水、雷、土我大致有底了——<strong>就差一個「陰」</strong>還卡著。</p>
+
+      <div class="ask">
+        <h2>🙏 想問問正在看的你</h2>
+        <p style="margin-bottom:0">如果是你,會怎麼讓 <strong>「陰 / 暗影」</strong> 這個屬性,<strong>既強、又不跟別人重複、又對得起『幻術』的味道</strong>?<br>
+        或更廣一點:<strong>「操作盤面」的技能,要怎麼設計,才會跟『純傷害』一樣爽?</strong><br>
+        有更有趣的想法,真的拜託告訴我——我卡在這了。</p>
+      </div>
+
+      <hr>
+      <p>塊頭勇者還在開發中。更多踩坑與碎念都記在 <a href="/devlog/">開發日誌</a>。下次見。</p>
+    </div>
+
+    <div class="foot">— 開發日誌 · 塊頭勇者</div>
+  </div>
+</article>
+
+<style is:global>
+.dp-wrap{max-width:720px;margin:0 auto;padding:clamp(28px,5vw,56px) 18px clamp(56px,8vw,90px)}
+.dp .back{display:inline-block;color:var(--ink2);text-decoration:none;font-size:14px;margin-bottom:20px}
+.dp .back:hover{color:var(--fire)}
+.dp .title{font-size:clamp(24px,4.6vw,35px);font-weight:900;line-height:1.34;margin:0 0 14px;letter-spacing:-.5px;color:var(--ink)}
+.dp .meta{display:flex;flex-wrap:wrap;align-items:center;gap:8px;font-size:13px;color:var(--ink2);margin-bottom:30px}
+.dp .tag{background:rgba(255,178,32,.12);border:1px solid rgba(200,140,40,.25);border-radius:999px;padding:2px 10px;color:var(--ink2)}
+.dp .body{font-size:16px;line-height:1.85;color:var(--ink)}
+.dp .body h2{font-size:clamp(19px,3.2vw,24px);font-weight:900;margin:40px 0 14px;letter-spacing:-.3px;color:var(--ink)}
+.dp .body p{margin:0 0 16px}
+.dp .body strong{color:var(--sun2)}
+.dp .body blockquote{margin:20px 0;padding:12px 18px;border-left:3px solid var(--sun2);background:rgba(255,178,32,.08);border-radius:0 10px 10px 0;color:var(--ink)}
+.dp .body hr{border:none;border-top:1px solid rgba(200,140,40,.2);margin:34px 0}
+.dp .body a{color:var(--fire);text-decoration:underline;text-underline-offset:2px}
+.dp .lead{font-size:17px;color:var(--ink2)}
+.dp .ask{background:rgba(255,178,32,.08);border:1px solid rgba(255,178,32,.35);border-radius:16px;padding:20px 22px;margin:26px 0 0}
+.dp .ask h2{margin-top:0}
+
+/* demo 框 */
+.dp .demo{margin:26px auto;background:#fff;border:1px solid rgba(200,140,40,.2);border-radius:18px;padding:22px 16px 14px;box-shadow:var(--shadow)}
+.dp .demo-cap{text-align:center;font-size:12px;color:var(--ink2);margin-top:14px;letter-spacing:.3px}
+
+/* 土傾斜 demo */
+.dp .tilt-stage{display:flex;flex-direction:column;align-items:center;gap:10px}
+.dp .tilt-arrow{font-size:15px;color:var(--sun2);font-weight:900;height:20px;letter-spacing:1px}
+.dp .tilt-grid{position:relative;width:170px;height:170px;background:rgba(200,140,40,.06);border-radius:10px}
+.dp .tcell{position:absolute;width:30px;height:30px;border-radius:6px;
+  transition:left .5s cubic-bezier(.4,0,.2,1),top .5s cubic-bezier(.4,0,.2,1),transform .25s,opacity .25s,box-shadow .2s;
+  transform:scale(1);opacity:1}
+.dp .tcell.flash{box-shadow:0 0 0 2px var(--sun2),0 0 16px var(--sun2);z-index:2}
+.dp .tcell.gone{transform:scale(0);opacity:0}
+
+/* 公平性長條 */
+.dp .bars{margin:6px 4px}
+.dp .bar-row{display:flex;align-items:center;gap:10px;margin:7px 0;font-size:13px}
+.dp .bar-lab{width:118px;flex:none;color:var(--ink)}
+.dp .bar-track{flex:1;height:18px;background:rgba(200,140,40,.1);border-radius:5px;overflow:hidden}
+.dp .bar-fill{height:100%;width:0;border-radius:5px;transition:width 1s cubic-bezier(.2,.7,.2,1)}
+.dp .bar-val{width:40px;flex:none;text-align:right;font-weight:900;font-variant-numeric:tabular-nums;color:var(--ink)}
+
+.dp .foot{margin-top:46px;padding-top:22px;border-top:1px solid rgba(200,140,40,.2);font-size:14px;color:var(--ink2)}
+@media(prefers-reduced-motion:reduce){.dp .tcell,.dp .bar-fill{transition:none}}
+
+/* dark */
+[data-theme="dark"] .dp .tag{background:rgba(255,255,255,.08);border-color:rgba(255,178,32,.2);color:#e8d4a8}
+[data-theme="dark"] .dp .body blockquote{background:rgba(255,178,32,.1)}
+[data-theme="dark"] .dp .body hr{border-top-color:rgba(255,178,32,.16)}
+[data-theme="dark"] .dp .ask{background:rgba(255,255,255,.05);border-color:rgba(255,178,32,.28)}
+[data-theme="dark"] .dp .demo{background:#231d14;border-color:rgba(255,178,32,.16)}
+[data-theme="dark"] .dp .tilt-grid{background:rgba(255,255,255,.05)}
+[data-theme="dark"] .dp .bar-track{background:rgba(255,255,255,.08)}
+[data-theme="dark"] .dp .foot{border-top-color:rgba(255,178,32,.16)}
+</style>
+
+<script is:inline>
+const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+
+/* ---- 公平性長條 ---- */
+const NET=[['陽 回血',76,'#3dd68c'],['雷 麻痺',75,'#3dd68c'],['火 燒傷',59,'#37b6ff'],['水 填塊',35,'#37b6ff'],['土 搬移',8,'#ff8f4a'],['陰 增傷',4,'#ff8f4a'],['風 消塊',-2,'#ff5c5c']];
+(function(){const w=document.getElementById('bars');
+  NET.forEach(([lab,v,col])=>{const row=document.createElement('div');row.className='bar-row';
+    row.innerHTML='<div class="bar-lab">'+lab+'</div><div class="bar-track"><div class="bar-fill"></div></div><div class="bar-val">'+(v>0?'+':'')+v+'</div>';
+    w.appendChild(row);const f=row.querySelector('.bar-fill');f.style.background=col;
+    setTimeout(()=>{f.style.width=Math.max(3,v/80*100)+'%';},200);});
+})();
+
+/* ---- 土傾斜 demo ---- */
+const SZ=5,CELL=34,ELC=['#ff6a3d','#37b6ff','#f0b410','#c8873f','#3fbf54'];
+const grid=document.getElementById('tgrid'),arrow=document.getElementById('tarrow');
+let blocks=[];
+function clearBlocks(){blocks.forEach(b=>b.dom.remove());blocks=[];}
+function scatter(){clearBlocks();
+  // 保證每欄至少 1 塊(傾斜往下→底排必滿) + 隨機加幾塊
+  const cells=[];
+  for(let c=0;c<SZ;c++){const r=Math.floor(Math.random()*SZ);cells.push([r,c]);}
+  let extra=5;while(extra>0){const r=Math.floor(Math.random()*SZ),c=Math.floor(Math.random()*SZ);
+    if(!cells.some(([a,o])=>a===r&&o===c)){cells.push([r,c]);extra--;}}
+  cells.forEach(([r,c])=>{const d=document.createElement('div');d.className='tcell';
+    d.style.left=c*CELL+'px';d.style.top=r*CELL+'px';d.style.background=ELC[Math.floor(Math.random()*ELC.length)];
+    d.style.transform='scale(0)';grid.appendChild(d);blocks.push({r,c,dom:d});
+    setTimeout(()=>d.style.transform='scale(1)',20);});}
+function tiltDown(){
+  for(let c=0;c<SZ;c++){const col=blocks.filter(b=>b.c===c).sort((a,b)=>a.r-b.r);
+    col.forEach((b,i)=>{b.r=SZ-col.length+i;b.dom.style.top=b.r*CELL+'px';});}}
+function fullRows(){const rs=[];for(let r=0;r<SZ;r++)if(blocks.filter(b=>b.r===r).length===SZ)rs.push(r);return rs;}
+async function loop(){
+  while(true){
+    arrow.innerHTML='&nbsp;';scatter();await sleep(900);
+    arrow.textContent='▼ 往下傾斜';tiltDown();await sleep(650);
+    const rs=fullRows();const hit=blocks.filter(b=>rs.includes(b.r));
+    if(hit.length){hit.forEach(b=>b.dom.classList.add('flash'));await sleep(380);
+      hit.forEach(b=>b.dom.classList.add('gone'));await sleep(300);
+      blocks=blocks.filter(b=>!hit.includes(b));hit.forEach(b=>b.dom.remove());}
+    await sleep(700);
+  }
+}
+loop();
+</script>
+</Base>

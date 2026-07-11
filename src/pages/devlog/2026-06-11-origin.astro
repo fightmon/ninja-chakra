@@ -1,0 +1,220 @@
+---
+import Base from '../../layouts/Base.astro';
+---
+<Base title="我只是想做個消消樂，結果縫出一個沒人做過的東西 — 塊頭勇者 開發日誌" path="/devlog/2026-06-11-origin/" navActive="devlog"
+  description="塊頭勇者是一款把 Woodoku 方塊消除縫進轉珠 RPG 的卡片收集遊戲。這篇開發日誌講它怎麼從一個消消樂，長成一個招式會作用在盤面上的怪東西。">
+
+<article class="dp">
+  <div class="dp-wrap">
+    <a class="back" href="/devlog/">← 開發日誌</a>
+    <h1 class="title">我只是想做個消消樂，結果縫出一個沒人做過的東西</h1>
+    <div class="meta">
+      <span>2026-06-11</span>
+      <span class="tag">#塊頭勇者</span>
+      <span class="tag">#玩法設計</span>
+      <span class="tag">#方塊消除</span>
+      <span class="tag">#轉珠RPG</span>
+    </div>
+
+    <div class="body">
+      <p class="lead">先講背景：<strong>塊頭勇者</strong>是一款還在開發中的手機遊戲——把 <strong>Woodoku 那種 9×9 方塊消除</strong>，縫進<strong>龍族拼圖／神魔之塔那種轉珠 RPG</strong>，再加上卡片收集。聽起來很縫合怪對吧？我自己做著做著也嚇一跳。這篇不是教學，是個開發碎念。</p>
+
+      <h2>一、起點：我只是覺得消消樂玩久了很空</h2>
+      <p>一開始我只想做個方塊消除。把塊塞進 9×9，填滿一整列、一整行、或一個 3×3 宮就消掉——就 Woodoku、1010 那套成熟機制。好玩，但玩久了你會發現：<strong>它沒有「目的」</strong>。消掉了，然後呢？分數加一加，就這樣。</p>
+      <p>然後某天我冒出一個念頭：<strong>如果每個方塊有「屬性」，填滿一個宮的時候，會放出一招主動技呢？</strong></p>
+
+      <div class="demo" data-demo="core">
+        <div class="demo-stage"><div class="grid"></div><div class="burst"></div></div>
+        <div class="demo-cap">填滿一個 3×3 宮 → 依屬性放出招式（火燒傷／水填塊／雷麻痺／土搬移／風風刃）</div>
+      </div>
+
+      <p>就這一下，整個遊戲的味道變了。你不是在「清方塊」，你是在<strong>召喚放招</strong>。火宮填滿＝燒傷，雷宮填滿＝麻痺敵人讓它慢半拍……方塊消除突然有了 RPG 的骨。</p>
+
+      <h2>二、然後我發現一件更怪的事</h2>
+      <p>轉珠遊戲的招式，多半就是「造成傷害／回血／減傷」——跟你怎麼轉珠是脫鉤的。但我這邊不一樣：<strong>有些招式會直接改變盤面本身</strong>。</p>
+      <p>水會「填」一塊能量進去補縫、風會「消」掉雜塊清出空間、土會「搬移」你已經放好的塊……這代表——<strong>放招不是按個按鈕就好，你得配合「接下來要怎麼擺塊」去思考。</strong>招式和空間決策是咬在一起的。</p>
+      <blockquote>這一層咬合，是我翻遍同類遊戲都沒看到的：把「招式」跟「方塊空間」綁死。轉珠遊戲抄不走，因為它們的盤面是珠子不是空間；消消樂也抄不走，因為它們沒有 RPG 那層。</blockquote>
+
+      <h2>三、最爽的瞬間：一手多消，combo直接衝「極」</h2>
+      <p>當你一手棋同時清掉<strong>好幾個結構</strong>（宮＋列＋行一起爆）——這叫暴擊。而暴擊會讓「combo」這條槽<strong>從任何狀態直接衝到最高階「極」</strong>：就算你前一秒被打到快死、夥伴倒下，這一爆就像逆轉勝一樣全場逆轉。</p>
+
+      <div class="demo" data-demo="burst">
+        <div class="demo-stage"><div class="grid"></div><div class="flashscreen"></div><div class="burst"></div></div>
+        <div class="morale"></div>
+        <div class="demo-cap">一手同時清 2 個結構 = 暴擊 → combo衝「極」🦊 全體解放</div>
+      </div>
+
+      <p>這個「逆轉爽感」是我最想要的東西。Woodoku 給你空間 combo 的滿足，轉珠給你養成收集的目標，而這個「暴擊衝極」把兩邊的高潮接在了一起。</p>
+
+      <h2>四、做著做著，我有點慌</h2>
+      <p>因為我去查了一輪——<strong>好像真的沒人把這兩個東西這樣縫過。</strong>（當然也可能只是我孤陋寡聞，有看過類似的拜託告訴我。）一邊覺得「欸我是不是挖到什麼了」，一邊又怕「是不是其實這樣縫根本不好玩，所以才沒人做」。</p>
+      <p>結論是：<strong>機制的骨架已經立起來、而且自己玩起來是有那個味的。</strong>剩下就是把肉長上去——更多卡、數值平衡、然後……美術。對，現在你看到的全是色塊和 emoji 佔位，真的立繪還沒影。但我學到一件事：</p>
+
+      <h2>今天的心得</h2>
+      <p><strong>先把機制做到「自己會想再玩一局」，美術再回來服務它。</strong>色塊很醜，但色塊能驗證「好不好玩」；好不好玩驗證過了，醜才有資格被換掉。</p>
+      <p>（這些 CSS 小動畫就是我現在的「美術」——不用畫一張圖，照樣把機制演給你看。挺好。）</p>
+
+      <hr>
+      <p>塊頭勇者還在開發中。更多踩坑與碎念之後都記在這裡。下次見。</p>
+    </div>
+
+    <div class="foot">— 開發日誌 · 塊頭勇者</div>
+  </div>
+</article>
+
+<style is:global>
+.dp-wrap{max-width:720px;margin:0 auto;padding:clamp(28px,5vw,56px) 18px clamp(56px,8vw,90px)}
+.dp .back{display:inline-block;color:var(--ink2);text-decoration:none;font-size:14px;margin-bottom:20px}
+.dp .back:hover{color:var(--fire)}
+.dp .title{font-size:clamp(25px,5vw,38px);font-weight:900;line-height:1.32;margin:0 0 14px;letter-spacing:-.5px;color:var(--ink)}
+.dp .meta{display:flex;flex-wrap:wrap;align-items:center;gap:8px;font-size:13px;color:var(--ink2);margin-bottom:30px}
+.dp .tag{background:rgba(255,178,32,.12);border:1px solid rgba(200,140,40,.25);border-radius:999px;padding:2px 10px;color:var(--ink2)}
+.dp .body{font-size:16px;line-height:1.85;color:var(--ink)}
+.dp .body h2{font-size:clamp(19px,3.2vw,24px);font-weight:900;margin:40px 0 14px;letter-spacing:-.3px;color:var(--ink)}
+.dp .body p{margin:0 0 16px}
+.dp .body strong{color:var(--sun2)}
+.dp .body blockquote{margin:20px 0;padding:12px 18px;border-left:3px solid var(--sun2);background:rgba(255,178,32,.08);border-radius:0 10px 10px 0;color:var(--ink)}
+.dp .body hr{border:none;border-top:1px solid rgba(200,140,40,.2);margin:34px 0}
+.dp .body a{color:var(--fire);text-decoration:underline;text-underline-offset:2px}
+.dp .lead{font-size:17px;color:var(--ink2)}
+
+/* ===== 內嵌 CSS demo 通用框 ===== */
+.dp .demo{margin:26px auto;background:#fff;border:1px solid rgba(200,140,40,.2);border-radius:18px;padding:22px 16px 14px;box-shadow:var(--shadow)}
+.dp .demo-cap{text-align:center;font-size:12px;color:var(--ink2);margin-top:12px;letter-spacing:.3px}
+.dp .demo-stage{display:flex;justify-content:center;align-items:center;min-height:172px;position:relative}
+
+/* 3x3 宮 */
+.dp .grid{display:grid;grid-template-columns:repeat(3,48px);grid-template-rows:repeat(3,48px);gap:6px}
+.dp .cell{width:48px;height:48px;border-radius:10px;background:rgba(200,140,40,.08);
+  border:1px solid rgba(200,140,40,.15);transform:scale(.6);opacity:0;
+  transition:transform .18s cubic-bezier(.34,1.56,.64,1),opacity .18s,background .15s,box-shadow .2s;
+  display:flex;align-items:center;justify-content:center;font-size:20px}
+.dp .cell.on{transform:scale(1);opacity:1}
+.dp .cell.flash{box-shadow:0 0 0 3px var(--sun2),0 0 22px var(--sun2);background:#fff4d0 !important;transform:scale(1.08)}
+.dp .cell.clear{transform:scale(0);opacity:0}
+
+/* 招式爆發標 */
+.dp .burst{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%) scale(.6);
+  opacity:0;pointer-events:none;font-weight:900;font-size:22px;white-space:nowrap;
+  text-shadow:0 2px 8px rgba(0,0,0,.2);transition:transform .3s cubic-bezier(.34,1.56,.64,1),opacity .3s}
+.dp .burst.show{opacity:1;transform:translate(-50%,-50%) scale(1)}
+.dp .flashscreen{position:absolute;inset:0;border-radius:14px;background:#fff;opacity:0;pointer-events:none;transition:opacity .12s}
+.dp .flashscreen.show{opacity:.35}
+
+/* combo條(demo2) */
+.dp .morale{display:flex;gap:4px;justify-content:center;margin-top:6px}
+.dp .mpip{width:26px;height:7px;border-radius:4px;background:rgba(200,140,40,.15);transition:background .2s,box-shadow .2s}
+.dp .mpip.fill{background:var(--sun2)}
+.dp .mpip.kiwami{background:var(--fire);box-shadow:0 0 10px var(--fire)}
+
+.dp .foot{margin-top:46px;padding-top:22px;border-top:1px solid rgba(200,140,40,.2);font-size:14px;color:var(--ink2)}
+@media (prefers-reduced-motion:reduce){.dp .cell,.dp .burst,.dp .flashscreen{transition:none}}
+
+/* dark */
+[data-theme="dark"] .dp .tag{background:rgba(255,255,255,.08);border-color:rgba(255,178,32,.2);color:#e8d4a8}
+[data-theme="dark"] .dp .body blockquote{background:rgba(255,178,32,.1)}
+[data-theme="dark"] .dp .body hr{border-top-color:rgba(255,178,32,.16)}
+[data-theme="dark"] .dp .demo{background:#231d14;border-color:rgba(255,178,32,.16)}
+[data-theme="dark"] .dp .cell{background:rgba(255,255,255,.06);border-color:rgba(255,255,255,.1)}
+[data-theme="dark"] .dp .burst{text-shadow:0 2px 10px rgba(0,0,0,.6)}
+[data-theme="dark"] .dp .mpip{background:rgba(255,255,255,.1)}
+[data-theme="dark"] .dp .foot{border-top-color:rgba(255,178,32,.16)}
+</style>
+
+<script is:inline>
+const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+const ELS=[
+  {k:'fire',   c:'#ff6a3d', face:'🔥', label:'火 · 燒傷'},
+  {k:'water',  c:'#37b6ff', face:'💧', label:'水 · 填塊'},
+  {k:'thunder',c:'#f0b410', face:'⚡', label:'雷 · 麻痺'},
+  {k:'earth',  c:'#c8873f', face:'🪨', label:'土 · 搬移'},
+  {k:'wind',   c:'#3fbf54', face:'🌀', label:'風 · 風刃'},
+];
+
+/* ---------- Demo 1：核心循環 ---------- */
+async function runCore(root){
+  const grid=root.querySelector('.grid'), burst=root.querySelector('.burst');
+  const cells=[];
+  for(let i=0;i<9;i++){const d=document.createElement('div');d.className='cell';grid.appendChild(d);cells.push(d);}
+  let ei=0;
+  while(true){
+    const el=ELS[ei%ELS.length]; ei++;
+    cells.forEach(c=>{c.className='cell';c.style.background='';c.textContent='';});
+    burst.className='burst';
+    await sleep(500);
+    // 先填 8 格(留 1 格缺口),交錯滑入
+    const gap=4; // 中間留缺口最戲劇
+    const order=[0,1,2,3,5,6,7,8];
+    for(const idx of order){
+      const c=cells[idx];
+      c.style.background=el.c; c.classList.add('on');
+      await sleep(95);
+    }
+    await sleep(360);
+    // 最後一塊「啪」補進缺口
+    const g=cells[gap]; g.style.background=el.c; g.classList.add('on');
+    await sleep(230);
+    // 整宮閃光
+    cells.forEach(c=>c.classList.add('flash'));
+    await sleep(280);
+    // 消除
+    cells.forEach(c=>{c.classList.remove('flash');c.classList.add('clear');});
+    // 招式爆發
+    burst.textContent=el.face+' '+el.label;
+    burst.style.color=el.c;
+    burst.classList.add('show');
+    await sleep(900);
+    burst.classList.remove('show');
+    await sleep(450);
+  }
+}
+
+/* ---------- Demo 2：暴擊衝極 ---------- */
+async function runBurst(root){
+  const grid=root.querySelector('.grid'), burst=root.querySelector('.burst'),
+        fs=root.querySelector('.flashscreen'), mwrap=root.querySelector('.morale');
+  grid.style.gridTemplateColumns='repeat(5,40px)'; grid.style.gridTemplateRows='repeat(2,40px)';
+  grid.style.gridAutoFlow='row';
+  const cells=[];
+  for(let i=0;i<10;i++){const d=document.createElement('div');d.className='cell';d.style.width='40px';d.style.height='40px';grid.appendChild(d);cells.push(d);}
+  const pips=[];
+  for(let i=0;i<6;i++){const p=document.createElement('div');p.className='mpip';mwrap.appendChild(p);pips.push(p);}
+  const setMorale=(n,kiwami)=>{pips.forEach((p,i)=>{p.className='mpip'+(i<n?(kiwami&&i===n-1?' kiwami':' fill'):'');});};
+  while(true){
+    cells.forEach(c=>{c.className='cell';c.style.width='40px';c.style.height='40px';c.style.background='';});
+    burst.className='burst'; fs.className='flashscreen';
+    setMorale(2,false); // 起始combo「中」
+    await sleep(600);
+    // 上排火、下排水,各留中間缺口 → 一塊同時補兩列
+    const top=[0,1,3,4], bot=[5,6,8,9];
+    for(const i of top){cells[i].style.background='#ff6a3d';cells[i].classList.add('on');await sleep(70);}
+    for(const i of bot){cells[i].style.background='#37b6ff';cells[i].classList.add('on');await sleep(70);}
+    await sleep(380);
+    // 關鍵一手:中間直塊同時補滿上下兩列
+    cells[2].style.background='#ff6a3d';cells[2].classList.add('on');
+    cells[7].style.background='#37b6ff';cells[7].classList.add('on');
+    await sleep(240);
+    cells.forEach(c=>c.classList.add('flash'));
+    fs.classList.add('show'); await sleep(120); fs.classList.remove('show');
+    await sleep(220);
+    // 暴擊!
+    burst.textContent='暴擊 ×2 !'; burst.style.color='#ff8a2a'; burst.classList.add('show');
+    await sleep(560);
+    cells.forEach(c=>{c.classList.remove('flash');c.classList.add('clear');});
+    burst.classList.remove('show'); await sleep(160);
+    // combo衝極
+    setMorale(6,true);
+    fs.classList.add('show'); await sleep(140); fs.classList.remove('show');
+    burst.textContent='🦊 combo「極」· 全體解放！'; burst.style.color='#ff5a3d'; burst.classList.add('show');
+    await sleep(1100);
+    burst.classList.remove('show');
+    await sleep(550);
+  }
+}
+
+document.querySelectorAll('.demo').forEach(d=>{
+  if(d.dataset.demo==='core')runCore(d);
+  else if(d.dataset.demo==='burst')runBurst(d);
+});
+</script>
+</Base>
