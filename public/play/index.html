@@ -9,13 +9,25 @@
   <title>塊頭勇者 — 自適應 v0.6</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Russo+One&display=swap"
-    rel="stylesheet"> <!-- HIT/COMBO=Russo One(設計感粗體);招式名毛筆已移除 -->
+  <link href="https://fonts.googleapis.com/css2?family=Russo+One&display=swap" rel="stylesheet">
+  <!-- HIT/COMBO=Russo One(設計感粗體);招式名毛筆已移除 -->
   <link rel="preload" as="font" type="font/woff2" href="gensen-r.woff2" crossorigin>
   <!-- 粗體 B700(1.3MB)不 preload:首屏只搶 R400,B700 開場後非阻塞補載(見 bootGame 尾) -->
-  <style>/* 主字:源泉圓體 TW(外部子集,R400/B700,Big5常用字全覆蓋) */
-@font-face{font-family:'GenSen';font-weight:400;font-display:swap;src:url('gensen-r.woff2') format('woff2');}
-@font-face{font-family:'GenSen';font-weight:700;font-display:swap;src:url('gensen-b.woff2') format('woff2');}
+  <style>
+    /* 主字:源泉圓體 TW(外部子集,R400/B700,Big5常用字全覆蓋) */
+    @font-face {
+      font-family: 'GenSen';
+      font-weight: 400;
+      font-display: swap;
+      src: url('gensen-r.woff2') format('woff2');
+    }
+
+    @font-face {
+      font-family: 'GenSen';
+      font-weight: 700;
+      font-display: swap;
+      src: url('gensen-b.woff2') format('woff2');
+    }
   </style>
   <style>
     html,
@@ -35,6 +47,7 @@
     /* dvh=動態視口高(實際可見區),100vh 留作舊瀏覽器 fallback */
   </style>
   <script src="phaser.min.js"></script><!-- Phaser 打包進本地(原 CDN;弱網/CDN被擋時 CDN 版會整個起不來) -->
+  <script src="https://accounts.google.com/gsi/client" async defer></script><!-- Google 登入(GIS);無法本地打包→async defer,用前判 window.google?.accounts?.id,失敗退回勇者卡 12 碼找回 -->
 </head>
 
 <body>
@@ -45,14 +58,14 @@
     /* ===== 純邏輯(N/EL/SHAPES/CONFIG/computeClears/種子亂數 等戰鬥核心已抽到 battle-core.js,瀏覽器當共用全域)===== */
     const KEYS = ['fire', 'wind', 'thunder', 'earth', 'water'];
     const MONSTER_IMG = { water: 'art/monsters/slime_water.png', fire: 'art/monsters/slime_fire.png', thunder: 'art/monsters/slime_thunder.png', earth: 'art/monsters/slime_earth.png', wind: 'art/monsters/slime_wind.png' };   // 舊五屬史萊姆(fallback);無對應則用 emoji 臉。圖檔放 001_website/art/monsters/
-    const CARD_ART = { c03: 1, c06: 1, c19: 1, c10: 1, c12: 1, c02: 1, c05: 1, c08: 1, c09: 1, c11: 1, c13: 1, c16: 1, c20: 1, c23: 1, c27: 1, c15: 1, c18: 1, c22: 1, c26: 1, c30: 1, c31: 1, c32: 1, c33: 1, c34: 1, c35: 1, c14: 1, c17: 1, c21: 1, c24: 1, c28: 1, c01: 1, c04: 1, c07: 1, c25: 1, c29: 1, c36: 1, c37: 1, c38: 1, c39: 1, c40: 1 };   // 有角色圖的卡:犬/貓/鼠/台灣/兔/魚(c14,17,21,24,28)/鳥(c01,04,07,25,29)/妖·蜘蛛(c36-c40,1→2星換_e圖),各火水雷土風 → art/cards/<id>_thumb.webp+_full.webp
-    function cardArtKey(id, size) { if (id && SPIDER_EVO[id] && getCardEvo(id) >= 1) return 'card_' + id + '_e_' + size; return (id && CARD_ART[id]) ? ('card_' + id + '_' + size) : null; }   // 回傳 texture key(thumb/full),無圖回 null→退回 emoji;蜘蛛進化(evo≥1)→改回 <id>_e_<size>
-    function _loadCardArt(scene, ids) { (ids || []).forEach(id => { if (!id || !CARD_ART[id]) return;['thumb', 'full'].forEach(s => { const k = 'card_' + id + '_' + s; if (!scene.textures.exists(k)) scene.load.image(k, 'art/cards/' + id + '_' + s + '.webp'); }); if (SPIDER_EVO[id]) { ['thumb', 'full'].forEach(s => { const k = 'card_' + id + '_e_' + s; if (!scene.textures.exists(k)) scene.load.image(k, 'art/cards/' + id + '_e_' + s + '.webp'); }); } }); }   // 按需載卡圖(戰鬥/大廳只載出戰隊);繪製端皆有 textures.exists 保護→沒載到退回 emoji;蜘蛛系額外多載 _e 進化圖(兩形都要有)
+    const CARD_ART = { c03: 1, c06: 1, c19: 1, c10: 1, c12: 1, c02: 1, c05: 1, c08: 1, c09: 1, c11: 1, c13: 1, c16: 1, c20: 1, c23: 1, c27: 1, c15: 1, c18: 1, c22: 1, c26: 1, c30: 1, c31: 1, c32: 1, c33: 1, c34: 1, c35: 1, c14: 1, c17: 1, c21: 1, c24: 1, c28: 1, c01: 1, c04: 1, c07: 1, c25: 1, c29: 1, c36: 1, c37: 1, c38: 1, c39: 1, c40: 1, c41: 1, c42: 1, c43: 1, c44: 1, c45: 1, c46: 1, c47: 1, c48: 1, c49: 1, c50: 1 };   // 有角色圖的卡:犬/貓/鼠/台灣/兔/魚(c14,17,21,24,28)/鳥(c01,04,07,25,29)/妖·蜘蛛(c36-c40,1→2星換_e圖)/妖·鬼(c41-c45,1→2星換_e圖),各火水雷土風 → art/cards/<id>_thumb.webp+_full.webp
+    function cardArtKey(id, size) { if (id && EVO_CARDS[id] && getCardEvo(id) >= 1) return 'card_' + id + '_e_' + size; return (id && CARD_ART[id]) ? ('card_' + id + '_' + size) : null; }   // 回傳 texture key(thumb/full),無圖回 null→退回 emoji;進化雜牌卡(evo≥1)→改回 <id>_e_<size>
+    function _loadCardArt(scene, ids) { (ids || []).forEach(id => { if (!id || !CARD_ART[id]) return;['thumb', 'full'].forEach(s => { const k = 'card_' + id + '_' + s; if (!scene.textures.exists(k)) scene.load.image(k, 'art/cards/' + id + '_' + s + '.webp'); }); if (EVO_CARDS[id]) { ['thumb', 'full'].forEach(s => { const k = 'card_' + id + '_e_' + s; if (!scene.textures.exists(k)) scene.load.image(k, 'art/cards/' + id + '_e_' + s + '.webp'); }); } }); }   // 按需載卡圖(戰鬥/大廳只載出戰隊);繪製端皆有 textures.exists 保護→沒載到退回 emoji;進化雜牌卡額外多載 _e 進化圖(兩形都要有)
     function _loadAllCardArt(scene) { _loadCardArt(scene, Object.keys(CARD_ART)); }   // 卡冊/編隊/合成/圖鑑=看全部卡→進場才載全部
-    function _loadCardThumbs(scene, ids) { (ids || []).forEach(id => { if (!id || !CARD_ART[id]) return; const k = 'card_' + id + '_thumb'; if (!scene.textures.exists(k)) scene.load.image(k, 'art/cards/' + id + '_thumb.webp'); if (SPIDER_EVO[id]) { const ek = 'card_' + id + '_e_thumb'; if (!scene.textures.exists(ek)) scene.load.image(ek, 'art/cards/' + id + '_e_thumb.webp'); } }); }   // 只載縮圖(格子用;大圖等開詳情才補);蜘蛛系額外多載 _e_thumb(卡冊/合成/圖鑑格子才有進化縮圖)
+    function _loadCardThumbs(scene, ids) { (ids || []).forEach(id => { if (!id || !CARD_ART[id]) return; const k = 'card_' + id + '_thumb'; if (!scene.textures.exists(k)) scene.load.image(k, 'art/cards/' + id + '_thumb.webp'); if (EVO_CARDS[id]) { const ek = 'card_' + id + '_e_thumb'; if (!scene.textures.exists(ek)) scene.load.image(ek, 'art/cards/' + id + '_e_thumb.webp'); } }); }   // 只載縮圖(格子用;大圖等開詳情才補);進化雜牌卡額外多載 _e_thumb(卡冊/合成/圖鑑格子才有進化縮圖)
     function _loadAllCardThumbs(scene) { _loadCardThumbs(scene, Object.keys(CARD_ART)); }
-    function _ensureFullArt(scene, id, onReady) {   // 開卡片詳情才補「大圖」:沒載到就載,載好回呼(通常重繪);已有則不動;蜘蛛進化後改補 _e_full(與 cardArtKey 回傳的 key 對齊)
-      const evoFull = id && SPIDER_EVO[id] && getCardEvo(id) >= 1;
+    function _ensureFullArt(scene, id, onReady) {   // 開卡片詳情才補「大圖」:沒載到就載,載好回呼(通常重繪);已有則不動;進化後改補 _e_full(與 cardArtKey 回傳的 key 對齊)
+      const evoFull = id && EVO_CARDS[id] && getCardEvo(id) >= 1;
       const k = (id && CARD_ART[id]) ? ('card_' + id + (evoFull ? '_e_full' : '_full')) : null;
       if (!k || scene.textures.exists(k)) return;
       scene.load.image(k, 'art/cards/' + id + (evoFull ? '_e_full' : '_full') + '.webp'); scene.load.once('complete', onReady);
@@ -75,9 +88,11 @@
       { emoji: '🐟', name: '魚系', color: '#7fc8e8', cards: { fire: 'c14', water: 'c17', thunder: 'c21', earth: 'c24', wind: 'c28' } },   // 獸魂隊(圖/名待補)
       { emoji: '🇹🇼', name: '台灣特有種', color: '#8fe0a8', cards: { fire: 'c15', water: 'c18', thunder: 'c22', earth: 'c26', wind: 'c30' } },
       { emoji: '🕷️', name: '妖·蜘蛛', color: '#b79bff', cards: { fire: 'c36', water: 'c37', thunder: 'c38', earth: 'c39', wind: 'c40' } },   // 雜牌卡(未標家族,保留 genin 1星,進化2星換岩甲圖)
+      { emoji: '👹', name: '妖·鬼', color: '#ff6a4a', cards: { fire: 'c41', water: 'c42', thunder: 'c43', earth: 'c44', wind: 'c45' } },   // 雜牌卡(未標家族,保留 genin 1星,進化2星換鬼哥圖)
+      { emoji: '🧱', name: '妖·牆', color: '#c9a86a', cards: { fire: 'c46', water: 'c47', thunder: 'c48', earth: 'c49', wind: 'c50' } },   // 雜牌卡(未標家族,保留 genin 1星,進化2星換城牆怪圖);土城盾兵/盾王借此圖
     ];
     const DEX_EL5 = ['fire', 'water', 'thunder', 'earth', 'wind'];
-    const DEX_ASSIGNED = new Set(['c03', 'c06', 'c19', 'c10', 'c12', 'c02', 'c05', 'c08', 'c09', 'c11', 'c13', 'c16', 'c20', 'c23', 'c27', 'c15', 'c18', 'c22', 'c26', 'c30', 'c14', 'c17', 'c21', 'c24', 'c28', 'c31', 'c32', 'c33', 'c34', 'c35', 'c01', 'c04', 'c07', 'c25', 'c29', 'c36', 'c37', 'c38', 'c39', 'c40']);   // 已歸物種隊(犬/貓/鳥/鼠/魚/兔/台灣/妖蜘蛛)的卡 → 不重複進「未歸隊」
+    const DEX_ASSIGNED = new Set(['c03', 'c06', 'c19', 'c10', 'c12', 'c02', 'c05', 'c08', 'c09', 'c11', 'c13', 'c16', 'c20', 'c23', 'c27', 'c15', 'c18', 'c22', 'c26', 'c30', 'c14', 'c17', 'c21', 'c24', 'c28', 'c31', 'c32', 'c33', 'c34', 'c35', 'c01', 'c04', 'c07', 'c25', 'c29', 'c36', 'c37', 'c38', 'c39', 'c40', 'c41', 'c42', 'c43', 'c44', 'c45', 'c46', 'c47', 'c48', 'c49', 'c50']);   // 已歸物種隊(犬/貓/鳥/鼠/魚/兔/台灣/妖蜘蛛/妖鬼/妖牆)的卡 → 不重複進「未歸隊」
     // 物種「種族」顯示(覆蓋詳細頁的人類/妖怪/靈獸;只改顯示,不動底層 race)→ 已歸隊的卡顯示其物種
     const CARD_SPECIES = {};
     [['🐱', '貓', '#8fd16a', 0x1d3a1f, ['c02', 'c05', 'c08', 'c09', 'c11']],
@@ -87,7 +102,9 @@
     ['🐟', '魚', '#7fc8e8', 0x16314d, ['c14', 'c17', 'c21', 'c24', 'c28']],
     ['🐰', '兔', '#e89ab0', 0x3a1f2a, ['c31', 'c32', 'c33', 'c34', 'c35']],
     ['🐦', '鳥', '#c79bff', 0x231a26, ['c01', 'c04', 'c07', 'c25', 'c29']],
-    ['🕷️', '妖', '#b79bff', 0x241a2e, ['c36', 'c37', 'c38', 'c39', 'c40']]
+    ['🕷️', '妖', '#b79bff', 0x241a2e, ['c36', 'c37', 'c38', 'c39', 'c40']],
+    ['👹', '妖', '#ff6a4a', 0x2e1a1a, ['c41', 'c42', 'c43', 'c44', 'c45']],
+    ['🧱', '妖', '#c9a86a', 0x2a2418, ['c46', 'c47', 'c48', 'c49', 'c50']]
     ].forEach(([e, n, c, bg, ids]) => ids.forEach(id => CARD_SPECIES[id] = { e, n, c, bg }));
     // ===== 程序化音效(WebAudio 即時合成,零檔案/零版權/離線)=====
     const SFX = (() => {
@@ -246,8 +263,10 @@
       const aCY = Math.round((40 + yC) / 2);   // 角色垂直置中於「頂鈕(~40)~白卡頂(yC)」的上半漸層區(取代原本底緣貼卡頂的探頭式)
       { const g = add(scene.add.graphics()); g.lineStyle(3, 0xffffff, 0.5); g.beginPath(); g.arc(CX, aCY + 10, Math.round(artW * 0.36), Phaser.Math.DegToRad(-205), Phaser.Math.DegToRad(25)); g.strokePath(); }   // 弧線
       const fk = cardArtKey(cd.id, 'full');
-      if (fk && scene.textures.exists(fk)) { const art = add(scene.add.image(CX, aCY, fk).setDisplaySize(artW, artH).setOrigin(0.5));
-        const twf = scene.tweens.add({ targets: art, y: aCY - 8, duration: 1900, yoyo: true, repeat: -1, ease: 'Sine.inOut', onUpdate: () => { if (!art.active) twf.stop(); } }); }   // 浮動;面板銷毀自動停
+      if (fk && scene.textures.exists(fk)) {
+        const art = add(scene.add.image(CX, aCY, fk).setDisplaySize(artW, artH).setOrigin(0.5));
+        const twf = scene.tweens.add({ targets: art, y: aCY - 8, duration: 1900, yoyo: true, repeat: -1, ease: 'Sine.inOut', onUpdate: () => { if (!art.active) twf.stop(); } });
+      }   // 浮動;面板銷毀自動停
       else txt(CX, aCY, EL[cd.el].name, '60px', TK.ink3, 0.5, true);
       elementBgFX(scene, add, cd.el, CX, aCY, artW, artH);
       // ── 最上層:角落鈕(返回/星/分解)+ 主技形狀預覽(壓在角色之上,不被蓋)──
@@ -437,10 +456,26 @@
       { id: 'c38', name: '雷蜘蛛', el: 'thunder', race: 'yokai', rank: 'genin', atk: 115, hp: 95, rcv: 14, attrs: ['thunder'] },
       { id: 'c39', name: '土蜘蛛', el: 'earth', race: 'yokai', rank: 'genin', atk: 80, hp: 140, rcv: 14, attrs: ['earth'] },
       { id: 'c40', name: '風蜘蛛', el: 'wind', race: 'yokai', rank: 'genin', atk: 100, hp: 100, rcv: 16, attrs: ['wind'] },
+      /* ── 👹 鬼系(雜牌卡,完全鏡像蜘蛛系:故意不進 CARD_FAMILY/TW_IDS→保留 genin ★1、低三圍;1★→2★進化=換名換圖「◯鬼哥」,見 GHOST_EVO)── */
+      { id: 'c41', name: '火小鬼', el: 'fire', race: 'yokai', rank: 'genin', atk: 140, hp: 85, rcv: 8, attrs: ['fire'] },
+      { id: 'c42', name: '水小鬼', el: 'water', race: 'yokai', rank: 'genin', atk: 70, hp: 120, rcv: 22, attrs: ['water'] },
+      { id: 'c43', name: '雷小鬼', el: 'thunder', race: 'yokai', rank: 'genin', atk: 120, hp: 90, rcv: 13, attrs: ['thunder'] },
+      { id: 'c44', name: '土小鬼', el: 'earth', race: 'yokai', rank: 'genin', atk: 85, hp: 145, rcv: 13, attrs: ['earth'] },
+      { id: 'c45', name: '風小鬼', el: 'wind', race: 'yokai', rank: 'genin', atk: 105, hp: 100, rcv: 15, attrs: ['wind'] },
+      /* ── 🧱 牆怪系(雜牌卡,鏡像蜘蛛/鬼系:不進 CARD_FAMILY/TW_IDS→保留 genin ★1;防禦系高血低攻;1★→2★進化換名換圖「◯城牆怪」,見 WALL_EVO;土城盾兵/盾王借圖)── */
+      { id: 'c46', name: '火牆怪', el: 'fire', race: 'yokai', rank: 'genin', atk: 105, hp: 135, rcv: 8, attrs: ['fire'] },
+      { id: 'c47', name: '水牆怪', el: 'water', race: 'yokai', rank: 'genin', atk: 55, hp: 165, rcv: 20, attrs: ['water'] },
+      { id: 'c48', name: '雷牆怪', el: 'thunder', race: 'yokai', rank: 'genin', atk: 95, hp: 140, rcv: 12, attrs: ['thunder'] },
+      { id: 'c49', name: '土牆怪', el: 'earth', race: 'yokai', rank: 'genin', atk: 70, hp: 185, rcv: 12, attrs: ['earth'] },
+      { id: 'c50', name: '風牆怪', el: 'wind', race: 'yokai', rank: 'genin', atk: 85, hp: 150, rcv: 14, attrs: ['wind'] },
     ];
     // 蜘蛛系 1★→2★進化換名換圖表:進化階(getCardEvo)≥1 → 顯示「岩甲◯蜘蛛」+ <id>_e_ 圖(canEvolve 已擋≥1 不可再進到 evo2,只有兩形)
     const SPIDER_EVO = { c36: '岩甲火蜘蛛', c37: '岩甲水蜘蛛', c38: '岩甲雷蜘蛛', c39: '岩甲土蜘蛛', c40: '岩甲風蜘蛛' };
-    function cardName(id) { const c = ROSTER.find(x => x.id === id) || {}; return (SPIDER_EVO[id] && getCardEvo(id) >= 1) ? SPIDER_EVO[id] : c.name; }   // 卡片顯示名字統一入口(蜘蛛進化後換名,其餘卡直接回 ROSTER.name)
+    // 鬼系 1★→2★進化換名換圖表(完全鏡像 SPIDER_EVO):進化階(getCardEvo)≥1 → 顯示「◯鬼哥」+ <id>_e_ 圖
+    const GHOST_EVO = { c41: '火鬼哥', c42: '水鬼哥', c43: '雷鬼哥', c44: '土鬼哥', c45: '風鬼哥' };
+    const WALL_EVO = { c46: '火城牆怪', c47: '水城牆怪', c48: '雷城牆怪', c49: '土城牆怪', c50: '風城牆怪' };   // 牆怪 1★→2★進化換名換圖(鏡像蜘蛛/鬼系):進化階≥1 → 顯示「◯城牆怪」+ <id>_e_ 圖;土城盾王借城牆怪 e_full
+    const EVO_CARDS = Object.assign({}, SPIDER_EVO, GHOST_EVO, WALL_EVO);   // 合併進化雜牌卡名表:凡是「進化換名換圖」共用邏輯(cardArtKey/_loadCardArt/_loadCardThumbs/_ensureFullArt/canEvolve/GACHA_ROSTER/cardName/進化預覽)一律讀這裡,不分蜘蛛/鬼/牆
+    function cardName(id) { const c = ROSTER.find(x => x.id === id) || {}; return (EVO_CARDS[id] && getCardEvo(id) >= 1) ? EVO_CARDS[id] : c.name; }   // 卡片顯示名字統一入口(進化雜牌卡進化後換名,其餘卡直接回 ROSTER.name)
     // CONFIG → battle-core.js
     const KATA = ['一之型', '二之型', '三之型', '四之型', '五之型', '禁術', '奧義'];   // LV1~7(簡單數字,日文漢字通用)
     const JUTSU = {
@@ -490,17 +525,21 @@
 
     /* ===== UI 設計 token(亮色為主 + 夜間模式;見 003_plan/ui-system-v1.md)。色=0x十六進位、文字色=#字串 ===== */
     const UI_THEMES = {
-      light: { page: 0xf3efe8, surf: 0xffffff, surf2: 0xf6f4f1, ink: '#2b333a', ink2: '#6c7780', ink3: '#a6adb3', divider: 0xe4ded4, gold: 0xf4b73c, goldTx: '#c8912a', ok: 0x35a866, okTx: '#2f8a5b', bad: 0xd0574a, badTx: '#c14a3d', onAccent: '#ffffff',
-               elTint: { fire: 0xffe1d3, water: 0xd9edfb, thunder: 0xfdefb2, earth: 0xeed9bd, wind: 0xd8efdf, junk: 0xe6e2dc },
-               elTint2: { fire: 0xffcdb7, water: 0xbde0fb, thunder: 0xffe59c, earth: 0xe6cca6, wind: 0xbce9cd, junk: 0xd8d4ce } },
-      dark:  { page: 0x0b0f14, surf: 0x1b222b, surf2: 0x131a22, ink: '#eef2f6', ink2: '#9aa7b2', ink3: '#606c77', divider: 0x2b333d, gold: 0xffcb4d, goldTx: '#ffcb4d', ok: 0x4ec27a, okTx: '#4ec27a', bad: 0xe86a5a, badTx: '#e86a5a', onAccent: '#ffffff',
-               elTint: { fire: 0x3a2019, water: 0x122a3d, thunder: 0x39300f, earth: 0x33271a, wind: 0x153021, junk: 0x22262c },
-               elTint2: { fire: 0x512a20, water: 0x1b3a55, thunder: 0x4c3f16, earth: 0x463420, wind: 0x1e402c, junk: 0x2f343b } },
+      light: {
+        page: 0xf3efe8, surf: 0xffffff, surf2: 0xf6f4f1, ink: '#2b333a', ink2: '#6c7780', ink3: '#a6adb3', divider: 0xe4ded4, gold: 0xf4b73c, goldTx: '#c8912a', ok: 0x35a866, okTx: '#2f8a5b', bad: 0xd0574a, badTx: '#c14a3d', onAccent: '#ffffff',
+        elTint: { fire: 0xffe1d3, water: 0xd9edfb, thunder: 0xfdefb2, earth: 0xeed9bd, wind: 0xd8efdf, junk: 0xe6e2dc },
+        elTint2: { fire: 0xffcdb7, water: 0xbde0fb, thunder: 0xffe59c, earth: 0xe6cca6, wind: 0xbce9cd, junk: 0xd8d4ce }
+      },
+      dark: {
+        page: 0x0b0f14, surf: 0x1b222b, surf2: 0x131a22, ink: '#eef2f6', ink2: '#9aa7b2', ink3: '#606c77', divider: 0x2b333d, gold: 0xffcb4d, goldTx: '#ffcb4d', ok: 0x4ec27a, okTx: '#4ec27a', bad: 0xe86a5a, badTx: '#e86a5a', onAccent: '#ffffff',
+        elTint: { fire: 0x3a2019, water: 0x122a3d, thunder: 0x39300f, earth: 0x33271a, wind: 0x153021, junk: 0x22262c },
+        elTint2: { fire: 0x512a20, water: 0x1b3a55, thunder: 0x4c3f16, earth: 0x463420, wind: 0x1e402c, junk: 0x2f343b }
+      },
     };
     const FS = { display: '34px', title: '27px', sub: '18px', body: '16px', cap: '15px', micro: '13px' };   // 字級階梯(見設計系統;往大開;txt() 另有 15px 下限)
     let UI_MODE = (() => { try { return localStorage.getItem('nb_theme') === 'dark' ? 'dark' : 'light'; } catch (e) { return 'light'; } })();   // 初始亮色;夜間模式存 localStorage
     function UI() { return UI_THEMES[UI_MODE]; }
-    function setUITheme(m) { UI_MODE = (m === 'dark') ? 'dark' : 'light'; try { localStorage.setItem('nb_theme', UI_MODE); } catch (e) {} }
+    function setUITheme(m) { UI_MODE = (m === 'dark') ? 'dark' : 'light'; try { localStorage.setItem('nb_theme', UI_MODE); } catch (e) { } }
     // 圓角矩形(Phaser add.rectangle 是直角→改用 graphics 畫圓角卡片/徽章/藥丸)。回傳 graphics,交給 scene.L() 進 layer。
     function roundRectG(scene, cx, cy, w, h, r, fill, fa, stroke, sw) {
       const g = scene.add.graphics();
@@ -575,6 +614,8 @@
     };
     // 物種卡專屬主動技(覆蓋屬性預設;activeSkill(el,id) 會優先吃這裡)→ 台灣隊等招牌卡用
     const SPIDER_ACTIVE = { name: '蛛絲纏縛', cd: 4, icon: '🕸️', desc: '鎖定 1 敵,其出手倒數 +1 手' };   // 🕷️蜘蛛系(c36~c40)共用同一份主動技物件
+    const GHOST_ACTIVE = { name: '怨擊', cd: 5, icon: '👊', desc: '對指定 1 敵造成 攻擊力×2 傷害(吃相剋)' };
+    const WALL_ACTIVE = { name: '築牆阻擋', cd: 6, icon: '🧱', desc: '全體敵人出手倒數 +1 手' };   // 👹鬼系(c41~c45)共用同一份主動技物件
     const CARD_ACTIVE = {
       c15: { name: '裂空撲殺', cd: 3, icon: '🐆', desc: '總傷≈攻×2:敵單隻→集中、多隻→均分全體,各吃相剋' },
       c22: { name: '群鵲圍攻', cd: 4, icon: '🐦', desc: '全體敵出手延遲 +2 手' },
@@ -582,6 +623,8 @@
       c26: { name: '巨塊', cd: 5, icon: '🐻', desc: '清空托盤→生成 1 個 3×3 疊塊,放上去補滿一宮→大清(教高 HIT)' },
       c30: { name: '靈猴造塊', cd: 4, icon: '🐒', desc: '托盤 3 塊變成可覆蓋的 2×2 塊,易解宮' },
       c36: SPIDER_ACTIVE, c37: SPIDER_ACTIVE, c38: SPIDER_ACTIVE, c39: SPIDER_ACTIVE, c40: SPIDER_ACTIVE,
+      c41: GHOST_ACTIVE, c42: GHOST_ACTIVE, c43: GHOST_ACTIVE, c44: GHOST_ACTIVE, c45: GHOST_ACTIVE,
+      c46: WALL_ACTIVE, c47: WALL_ACTIVE, c48: WALL_ACTIVE, c49: WALL_ACTIVE, c50: WALL_ACTIVE,
     };
     // 動物家族(2026-06-29:技能綁家族,同家族 5 屬共用一套、各套自己屬性;台灣=各卡專屬例外)
     const CARD_FAMILY = {};
@@ -688,6 +731,7 @@
        任何網路失敗只留待重送(dirty),絕不阻塞開場(硬上限 2.5 秒)或遊玩。
        身分存 nb_cloud={uid,guestCode,token,rev,syncedAt,dirty},與 ninja_save 分離。 */
     const CLOUD_URL = 'https://ninja-backend.pages.dev';   // ☁️ 後端 base(之後換 api.blockyusha.com)
+    const GOOGLE_CLIENT_ID = '599505135998-1hpf425oncmc3oki353mr8ots12k94f7.apps.googleusercontent.com';   // 🔑 Google 登入(公開值);授權來源=blockyusha.com/localhost:8137
     const CLOUD_KEY = 'nb_cloud';
     let hydrating = false;   // 開場調和中:writeSave 不觸發推雲(避免把剛拉下的雲檔又推回去)
     let _cloudT = null, _cloudT0 = 0, _cloudDead = false, _guestP = null;   // debounce 計時器 / max-wait 起點 / 413 停推 / 建帳號進行中鎖
@@ -831,6 +875,121 @@
         const close = () => { try { g.destroy(); } catch (e) { } };
         hit.on('pointerup', close); bg.on('pointerup', close);
       } catch (e) { }
+    }
+    /* ── 🔑 Google 帳號綁定(GIS ID-token 流程)──
+       綁定/登入走後端 /api/auth/google;拿到回應用 cloudSet 落地新身分。
+       switched(Google 已綁別帳號)=Google 存檔勝:備份本地→採用該帳號→拉雲覆蓋→reload。
+       GIS 載入失敗(離線/被擋)一律 graceful:退回勇者卡 12 碼找回。 */
+    let _gsiInited = false, _gsiPendingCb = null;
+    function gsiReady() { return !!(window.google && window.google.accounts && window.google.accounts.id); }
+    function ensureGoogleInit() {   // 初始化 GIS(一次);未就緒回 false
+      if (!gsiReady()) return false;
+      if (!_gsiInited) {
+        try {
+          window.google.accounts.id.initialize({
+            client_id: GOOGLE_CLIENT_ID,
+            callback: (resp) => { const cb = _gsiPendingCb; _gsiPendingCb = null; if (cb) cb(resp && resp.credential); },
+            auto_select: false, cancel_on_tap_outside: true,
+          });
+          _gsiInited = true;
+        } catch (e) { return false; }
+      }
+      return true;
+    }
+    async function googleAuthSubmit(credential) {   // POST /api/auth/google → {uid,token,guestCode,email,name,switched,bound,isNew};非2xx丟帶 status/code 的錯
+      const c = cloudState();
+      const headers = { 'Content-Type': 'application/json' };
+      if (c.token) headers['Authorization'] = 'Bearer ' + c.token;   // 手動帶,不走 authedFetch(避免 401 自動用舊 guestCode 重登蓋掉切帳)
+      const r = await cloudFetch('/api/auth/google', { method: 'POST', headers: headers, body: JSON.stringify({ credential: credential }) });
+      if (!r.ok) { let b = {}; try { b = await r.json(); } catch (e) { } const err = new Error('google ' + r.status); err.status = r.status; err.code = b.error; err.reason = b.reason; throw err; }
+      return r.json();
+    }
+    async function applyGoogleAuth(d) {   // 落地後端回應:同帳號→只記綁定;切帳(Google 存檔勝)→備份本地→採用該帳號→拉雲覆蓋→reload
+      const prevGuestCode = cloudState().guestCode;
+      if (d.switched) {   // 切帳:採用 Google 帳號自己的 guestCode(不沿用舊帳號的碼,免日後 401 靜默登回舊帳號)
+        backupLocalSave('google-switch');
+        cloudSet({ uid: d.uid, token: d.token, guestCode: d.guestCode || null, googleEmail: d.email || '', dirty: false });
+        try {
+          const res = await cloudPull();
+          if (res && res.data != null) { try { localStorage.setItem(SAVE_KEY, JSON.stringify(res.data)); } catch (e) { } cloudSet({ rev: res.rev, syncedAt: Date.now(), dirty: false }); }
+          else { cloudSet({ rev: (res && res.rev) || 0 }); }
+        } catch (e) { try { localStorage.removeItem(SAVE_KEY); } catch (e2) { } }   // pull 失敗:清本地舊帳資料(已 backupLocalSave),reload 後重拉 Google 雲端;絕不把舊帳資料反向推回 Google 帳號(維持「Google 存檔勝」)
+        setTimeout(() => location.reload(), 400);
+        return { switched: true };
+      }
+      cloudSet({ uid: d.uid, token: d.token, guestCode: d.guestCode || prevGuestCode, googleEmail: d.email || '' });   // 綁到現有帳號:同一 uid,沿用本帳號 guestCode
+      return { switched: false };
+    }
+    function showGoogleBindOverlay(opt) {   // 🔑 Google 綁定 DOM 彈窗(獨立於 Phaser,蓋在畫布上);opt:{title,sub,cancelLabel,bound,onDone,onSkip}
+      opt = opt || {};
+      const old = document.getElementById('gbind-ov'); if (old) { try { old.remove(); } catch (e) { } }
+      const ov = document.createElement('div'); ov.id = 'gbind-ov';
+      ov.style.cssText = 'position:fixed;inset:0;z-index:99999;display:flex;align-items:center;justify-content:center;background:rgba(8,6,16,.84);font-family:system-ui,-apple-system,"Noto Sans TC",sans-serif;padding:16px;box-sizing:border-box;';
+      const card = document.createElement('div');
+      card.style.cssText = 'width:100%;max-width:340px;background:#161020;border:2px solid #3a2f52;border-radius:18px;padding:26px 20px;text-align:center;box-shadow:0 12px 48px rgba(0,0,0,.6);';
+      const h = document.createElement('div'); h.textContent = opt.title || '綁定 Google 帳號';
+      h.style.cssText = 'font-size:21px;font-weight:800;color:#ffe04a;line-height:1.4;margin-bottom:12px;';
+      const p = document.createElement('div'); p.textContent = opt.sub || '';
+      p.style.cssText = 'font-size:15px;color:#e8e2f0;line-height:1.7;white-space:pre-line;margin-bottom:22px;';
+      const gbtn = document.createElement('div'); gbtn.id = 'gbind-btn'; gbtn.style.cssText = 'min-height:44px;display:flex;justify-content:center;margin-bottom:14px;';
+      const cancel = document.createElement('button'); cancel.textContent = opt.cancelLabel || '放棄';
+      cancel.style.cssText = 'background:none;border:none;color:#9b93ad;font-size:15px;padding:8px 16px;cursor:pointer;';
+      const close = (skipped) => { try { ov.remove(); } catch (e) { } if (skipped && opt.onSkip) { try { opt.onSkip(); } catch (e) { } } };
+      cancel.onclick = () => close(true);
+      card.appendChild(h); card.appendChild(p); card.appendChild(gbtn); card.appendChild(cancel); ov.appendChild(card);
+      document.body.appendChild(ov);
+
+      const showSuccess = (em) => {   // 綁定成功(同帳號):卡片改成成功狀態,完成鈕關閉(不觸發 onSkip)
+        h.textContent = '✅ 綁定成功!'; h.style.color = '#7ee0a0';
+        p.textContent = (em ? em + '\n' : '') + '之後用同個 Google 就能接著玩。'; p.style.color = '#e8e2f0';
+        gbtn.style.display = 'none'; cancel.textContent = '完成'; cancel.style.color = '#7ee0a0'; cancel.onclick = () => close(false);
+        if (opt.onDone) { try { opt.onDone(); } catch (e) { } }
+      };
+      const setErr = (msg) => { p.textContent = msg; p.style.color = '#ff9a8a'; };
+
+      if (opt.bound) { gbtn.style.display = 'none'; cancel.textContent = opt.cancelLabel || '關閉'; return; }   // 已綁定:只顯示資訊+關閉
+
+      let busy = false;
+      const onCred = async (credential) => {
+        if (!credential || busy) return; busy = true; gbtn.style.opacity = '.5'; gbtn.style.pointerEvents = 'none';
+        try {
+          const d = await googleAuthSubmit(credential);
+          const res = await applyGoogleAuth(d);
+          if (res.switched) { p.textContent = '正在載入你的雲端進度…'; p.style.color = '#e8e2f0'; return; }   // reload 中,不動卡片
+          showSuccess(d.email);
+        } catch (e) {
+          busy = false; gbtn.style.opacity = '1'; gbtn.style.pointerEvents = 'auto';
+          if (e && e.status === 403) setErr('此帳號已被停權');
+          else if (e && e.status === 401) setErr('Google 驗證失敗,請重試');
+          else setErr('綁定失敗,請檢查網路後重試');
+        }
+      };
+
+      if (!ensureGoogleInit()) {   // GIS 未就緒(離線/被擋):退回勇者卡
+        setErr('Google 登入暫時無法載入(可能離線或被封鎖)。\n別擔心,你的「勇者卡」12 碼一樣能跨手機找回進度。');
+        gbtn.style.display = 'none'; cancel.textContent = '知道了';
+        return;
+      }
+      _gsiPendingCb = onCred;
+      try {
+        window.google.accounts.id.renderButton(gbtn, { theme: 'filled_blue', size: 'large', text: 'continue_with', shape: 'pill', width: 260, locale: 'zh_TW' });
+      } catch (e) {
+        gbtn.style.display = 'none';
+        try { window.google.accounts.id.prompt(); } catch (x) { setErr('無法開啟 Google 登入,請稍後再試'); }
+      }
+    }
+    function promptAccountBindAfterTutorial(scene) {   // 教學後一次性:邀綁 Google(換機不丟進度);拒絕→退回勇者卡 12 碼提示
+      if ((loadSave().settings || {}).bindPrompted) return;
+      mutSave(s => { s.settings = s.settings || {}; s.settings.bindPrompted = true; });
+      const fallback = () => { try { maybeHeroCardNotice(scene); } catch (e) { } };
+      ensureGuest().then(() => {
+        showGoogleBindOverlay({
+          title: '☁️ 綁定 Google,換手機不丟進度',
+          sub: '一鍵綁定,之後用同個 Google 就能接著玩。\n不想綁也行,我們已幫你保管「勇者卡」。',
+          cancelLabel: '以後再說',
+          onSkip: fallback,
+        });
+      }).catch(fallback);
     }
     /* ── ☁️ 雲端存檔模組結束 ── */
     /* ── 📬 遊戲內信箱(全走 authedFetch;list 依新到舊排序,claim 逐封請領)──
@@ -1061,7 +1220,7 @@
     function canEvolve(id) {
       const c = ROSTER.find(x => x.id === id), t = getCardEvo(id);
       if (!c) return { ok: false, msg: '卡片資料不存在' };
-      if (SPIDER_EVO[id] && t >= 1) return { ok: false, msg: '已達進化上限' };   // 🕷️蜘蛛系只有 1★→2★ 兩形,evo1(2星)後不可再進到 evo2
+      if (EVO_CARDS[id] && t >= 1) return { ok: false, msg: '已達進化上限' };   // 🕷️蜘蛛系/👹鬼系只有 1★→2★ 兩形,evo1(2星)後不可再進到 evo2
       if (t >= EVO_MAX) return { ok: false, msg: '已達進化上限' };
       if (getCardLv(id) < MAXLV) return { ok: false, msg: '需先練滿 Lv.' + MAXLV };
       const req = evoReq(t);
@@ -1125,7 +1284,7 @@
       });
       return res;
     }
-    const GACHA_ROSTER = ROSTER.filter(c => !SPIDER_EVO[c.id]);   // 🕷️蜘蛛雜牌卡只從關卡掉落、不進轉蛋(否則會佔滿 genin 池、癱瘓轉蛋)
+    const GACHA_ROSTER = ROSTER.filter(c => !EVO_CARDS[c.id]);   // 🕷️蜘蛛/👹鬼 雜牌卡只從關卡掉落、不進轉蛋(否則會佔滿 genin 池、癱瘓轉蛋)
     const RANK_POOL = { genin: GACHA_ROSTER.filter(c => c.rank === 'genin'), chunin: GACHA_ROSTER.filter(c => c.rank === 'chunin'), jonin: GACHA_ROSTER.filter(c => c.rank === 'jonin'), kage: GACHA_ROSTER.filter(c => c.rank === 'kage') };
     function pickDrop(spec) {
       let pool = ROSTER; if (spec.el) pool = pool.filter(c => c.el === spec.el);
@@ -1136,13 +1295,13 @@
 
     /* ===== 轉蛋(簡單版:雙池 + 機率公示) ===== */
     const GACHA = {
-      premium: { name: '勇者召喚', cur: 'stones', icon: '💎', cost1: 5, cost10: 50, rates: [['genin', 0.50], ['chunin', 0.35], ['jonin', 0.12], ['kage', 0.03]] },
+      premium: { name: '召喚勇者', cur: 'stones', icon: '💎', cost1: 5, cost10: 50, rates: [['genin', 0.50], ['chunin', 0.35], ['jonin', 0.12], ['kage', 0.03]] },
       normal: { name: '一般轉蛋', cur: 'coins', icon: '💰', cost1: 1000, cost10: 9000, rates: [['genin', 0.70], ['chunin', 0.28], ['jonin', 0.02]] },
     };
     function rollRarity(rates) { const r = Math.random(); let acc = 0; for (let k = 0; k < rates.length; k++) { acc += rates[k][1]; if (r < acc) return rates[k][0]; } return rates[rates.length - 1][0]; }
     function gachaPull(bankey) { let pool = RANK_POOL[rollRarity(GACHA[bankey].rates)]; if (!pool || !pool.length) pool = GACHA_ROSTER; return pool[rnd(pool.length)]; }   // ⚠️ 暫時防呆:全卡★3後 genin/chunin/kage 池為空→退回(排除蜘蛛的)全卡均抽(避免崩;正式抽卡機制待定)
     function spendCoins(n) { let ok = false; mutSave(s => { if ((s.meta.coins || 0) >= n) { s.meta.coins -= n; ok = true; } }); return ok; }
-    const PITY_MAX = 50;   // 勇者召喚保底:第 50 抽必得六星(kage)
+    const PITY_MAX = 50;   // 召喚勇者保底:第 50 抽必得六星(kage)
     function getPity() { return loadSave().meta.pity || 0; }
     function setPity(n) { mutSave(s => { s.meta.pity = n; }); }
     function doGacha(bankey, count) {
@@ -1161,7 +1320,7 @@
       track('gacha');
       return out;
     }
-    function freePull10() { const out = []; for (let i = 0; i < 10; i++) { const c = gachaPull('premium'); out.push({ cd: c, isNew: !isOwned(c.id), pity: false }); addCard(c.id); } track('gacha_free'); return out; }   // 新手教學完成免費十連(不扣費、用勇者召喚池)
+    function freePull10() { const out = []; for (let i = 0; i < 10; i++) { const c = gachaPull('premium'); out.push({ cd: c, isNew: !isOwned(c.id), pity: false }); addCard(c.id); } track('gacha_free'); return out; }   // 新手教學完成免費十連(不扣費、用召喚勇者池)
 
     /* ===== 出戰編隊 ===== */
     class TeamScene extends Phaser.Scene {
@@ -1215,9 +1374,11 @@
           const dk = cardArtKey(cd.id, 'thumb'), dimg = (dk && this.textures.exists(dk)) ? this.add.image(0, 0, dk).setDisplaySize(CS2 - 6, CS2 - 6).setOrigin(0.5) : null;
           const nm = dimg ? null : this.add.text(0, -4, cardName(cd.id), { fontFamily: EMOJIFONT, fontSize: '13px', color: T.ink, fontStyle: 'bold' }).setOrigin(0.5);
           const kids = [bg]; if (dimg) kids.push(dimg); if (nm) kids.push(nm);
-          if (EL[cd.el]) { const bx = -CS2 / 2 + 13, by = -CS2 / 2 + 12;   // 左上圓角屬性徽章(屬色底白字)
+          if (EL[cd.el]) {
+            const bx = -CS2 / 2 + 13, by = -CS2 / 2 + 12;   // 左上圓角屬性徽章(屬色底白字)
             kids.push(roundRectG(this, bx, by, 22, 18, 6, EL[cd.el].color, 1, 0xffffff, 1.5));
-            kids.push(this.add.text(bx, by, EL[cd.el].name, { fontFamily: EMOJIFONT, fontSize: '11px', color: '#ffffff', fontStyle: 'bold' }).setOrigin(0.5)); }
+            kids.push(this.add.text(bx, by, EL[cd.el].name, { fontFamily: EMOJIFONT, fontSize: '11px', color: '#ffffff', fontStyle: 'bold' }).setOrigin(0.5));
+          }
           kids.push(roundRectG(this, 0, CS2 / 2 - 11, 34, 15, 7, 0x12161a, 0.72, null, 0));   // Lv 深色圓角底條
           kids.push(this.add.text(0, CS2 / 2 - 11, 'Lv' + getCardLv(cd.id), { fontFamily: EMOJIFONT, fontSize: '11px', color: '#ffffff', fontStyle: 'bold' }).setOrigin(0.5));
           const cont = this.add.container(0, 0, kids);
@@ -1436,12 +1597,16 @@
         this.load.maxParallelDownloads = 6;   // 限制同時下載數→對弱伺服器/弱網路更穩(避免一次塞太多卡住)
         const _CLS = ['grunt', 'grunt2', 'guard', 'caster', 'healer', 'shield', 'boss_baby', 'boss_beg', 'boss_nrm'];
         if (this.enemyLab) { for (const el in MONSTER_IMG) if (!this.textures.exists('mon_' + el)) this.load.image('mon_' + el, MONSTER_IMG[el]); for (const k in ENEMY_IMG) if (!this.textures.exists(k)) this.load.image(k, ENEMY_IMG[k]); }   // 敵技實驗室=全載
-        else { const _els = new Set(); const _nSt = (this.stagesEff || []).length; for (let _si = 0; _si < _nSt; _si++) { try { spawnStage(this.dungeonId, this.diff.key, _si).forEach(e => { _els.add(e.el); if (e.phases) e.phases.forEach(ph => _els.add(ph.el)); }); } catch (_e) { } }   // 只載本關屬性:用 spawnStage 產「真敵人」收集元素(涵蓋上級↑懲罰屬 pun + 魔王階段變身),與 spawnEnemies 完全對齊→動態屬不再漏載變 emoji;原無腦全載 50 檔~5.2MB 大砍
-          _els.forEach(el => { if (MONSTER_IMG[el] && !this.textures.exists('mon_' + el)) this.load.image('mon_' + el, MONSTER_IMG[el]); _CLS.forEach(c => { const k = c + '_' + el; if (ENEMY_IMG[k] && !this.textures.exists(k)) this.load.image(k, ENEMY_IMG[k]); }); }); }
+        else {
+          const _els = new Set(); const _nSt = (this.stagesEff || []).length; for (let _si = 0; _si < _nSt; _si++) { try { spawnStage(this.dungeonId, this.diff.key, _si).forEach(e => { _els.add(e.el); if (e.phases) e.phases.forEach(ph => _els.add(ph.el)); }); } catch (_e) { } }   // 只載本關屬性:用 spawnStage 產「真敵人」收集元素(涵蓋上級↑懲罰屬 pun + 魔王階段變身),與 spawnEnemies 完全對齊→動態屬不再漏載變 emoji;原無腦全載 50 檔~5.2MB 大砍
+          _els.forEach(el => { if (MONSTER_IMG[el] && !this.textures.exists('mon_' + el)) this.load.image('mon_' + el, MONSTER_IMG[el]); _CLS.forEach(c => { const k = c + '_' + el; if (ENEMY_IMG[k] && !this.textures.exists(k)) this.load.image(k, ENEMY_IMG[k]); }); });
+        }
         _loadCardArt(this, (this.presetTeam || []).map(c => c && c.id));   // 只載「出戰 5 張」卡圖(不再一次載全部 40 張)
         { const d = this.dungeonId, b = DUNGEON_BG[d]; if (b) { if (!this.textures.exists('bg_' + d + '_back')) this.load.image('bg_' + d + '_back', b.back); if (!this.textures.exists('bg_' + d + '_front')) this.load.image('bg_' + d + '_front', b.front); } }   // 只載「當前這關」背景(不再一次載全部地城)
         if (this.dungeonId === 'tower') TOWER_MID.forEach(c => { if (!this.textures.exists(c.key)) this.load.image(c.key, c.src); });   // 塔中景元素方塊→只在打塔時載
         if (this.dungeonId === 'thunder') _loadCardArt(this, ['c38']);   // 🕷️ 雷之高原借蜘蛛透明大圖當敵圖:載 c38雷蜘蛛(法師)+岩甲雷蜘蛛(魔王,_e)完整大圖
+        if (this.dungeonId === 'fire') _loadCardArt(this, ['c41']);   // 👹 火之火山借鬼卡透明大圖當敵圖:載 c41火小鬼(雜兵)+火鬼哥(魔王,_e)完整大圖(比照 thunder 分支)
+        if (this.dungeonId === 'earth') _loadCardArt(this, ['c49']);   // 🧱 土之山岳借牆怪透明大圖當盾兵/盾王圖:載 c49土牆怪(盾兵)+土城牆怪(盾王,_e)完整大圖(比照 fire 分支)
         ['fire', 'water', 'thunder', 'earth', 'wind'].forEach(el => { if (!this.textures.exists('el_' + el)) this.load.svg('el_' + el, 'art/elements/element_' + el + '.svg', { width: 96, height: 96 }); });   // 元素符號:實心剪影 SVG,疊在盤面方塊正中央(setTintFill 上白),96px 光柵→顯示縮到 ~23px 保脆
         showLoadBar(this);
       }   // ⚠️ 音訊(BGM 3~8MB + 音效)改「非阻塞」載入(見 _startStageAudio):不放阻塞 preload,否則弱網卡關甚至開不了
@@ -1467,6 +1632,14 @@
           if (e.boss && this.textures.exists('card_c38_e_full')) return 'card_c38_e_full';
           if ((e.paralyze > 0 || e.arch === 'caster') && this.textures.exists('card_c38_full')) return 'card_c38_full';
         }
+        if (this.dungeonId === 'fire') {   // 👹 火之火山=鬼窟:魔王→火鬼哥、雜兵→火小鬼(借 c41 鬼卡的方形縮圖當敵圖,完全比照 thunder 分支寫法)
+          if (e.boss && this.textures.exists('card_c41_e_full')) return 'card_c41_e_full';
+          if (!e.boss && this.textures.exists('card_c41_full')) return 'card_c41_full';
+        }
+        if (this.dungeonId === 'earth') {   // 🧱 土之山岳=牆怪:盾王→土城牆怪(e_full)、盾兵→土牆怪(借 c49);只換有盾的敵人(e.shield),非盾雜兵維持 grunt 圖
+          if (e.boss && this.textures.exists('card_c49_e_full')) return 'card_c49_e_full';
+          if (e.shield && this.textures.exists('card_c49_full')) return 'card_c49_full';
+        }
         if (e.boss) { const tier = dk === 'baby' ? 'baby' : (dk === 'beginner' ? 'beg' : 'nrm'); const k = 'boss_' + tier + '_' + el; if (this.textures.exists(k)) return k; }
         else {
           if (e.healAlly > 0 && this.textures.exists('healer_' + el)) return 'healer_' + el;   // 補師(回血)→ m006 補師圖
@@ -1491,10 +1664,12 @@
       }
       fitEnemySprite(e) {
         if (!e.img || !e.sprite) return;
-        if (e.sprite.texture.key.indexOf('card_') === 0) {   // 🕷️ 借透明橫式大圖(完整蜘蛛)當敵圖:等比縮放「不裁」、水平垂直置中;大小=倍率(小兵0.9/魔王1.3,可調),不動欄位
-          const szc = e.cardW, off = (e.boss ? -0.2 : 0.04), scl = szc * (e.boss ? 1 : 0.7) / (e.sprite.height || 1);
+        if (e.sprite.texture.key.indexOf('card_') === 0) {   // 🕷️ 借透明橫式大圖(完整蜘蛛/鬼)當敵圖:等比縮放「不裁」、置中;三檔各自獨立→單魔王(this._soloBoss)/一般魔王/小兵
+          const szc = e.cardW, solo = e.boss && this._soloBoss;   // 單魔王=全關只有這一隻魔王(生成時鎖定);比例/位置/影子皆獨立,不與中級魔王共用
+          const off = solo ? -0.15 : (e.boss ? -0.2 : -0.07), mul = solo ? 1.7 : (e.boss ? 1.2 : 1.1);   // Y偏移(負=上)/放大倍率;單魔王的 -0.15、1.7 是暫定值,你到時再調
+          const scl = szc * mul / (e.sprite.height || 1);
           e.sprite.setScale(scl); e.sprite.y = e.cy + szc * off; e.baseScale = scl;
-          if (e.shadow) e.shadow.y = e.cy + BG_GROUND_OFF + szc * (e.boss ? off : 0);   // 🕸️影子:魔王跟著上移、小兵留在地面不動
+          if (e.shadow) e.shadow.y = e.cy + BG_GROUND_OFF + szc * (solo ? -0.15 : (e.boss ? -0.1 : 0));   // 🕸️影子偏移(負=上):單魔王 -0.15 / 一般魔王 -0.1 / 小兵 0(固定地面)
           return;
         }
         const p = this.enemyFitParams(e);
@@ -2128,6 +2303,7 @@
         if (this.enemyG) this.enemyG.destroy();
         this.enemyG = this.add.container(0, 0).setDepth(DEPTH.enemy);   // 敵方整層在「我方卡」之下、背景之上
         this.enemies = this.enemyLab ? this.labBossEnemies() : (this.tut ? this.tutEnemies() : spawnStage(this.dungeonId, this.diff.key, this.stage - 1));   // 敵技實驗室=魔王陣型(王中+2小兵);headless 生敵 → data-stages.spawnStage(場景與 sim 共用同一份 model 數學);教學=固定 3 火敵
+        this._soloBoss = this.enemies.length === 1 && !!(this.enemies[0] && this.enemies[0].boss);   // 🐲 單魔王關(全關只有一隻魔王,如上級)→ fitEnemySprite 用獨立比例/位置/影子;生成時鎖定,雜兵死光/變身也不誤判
         if (this.lead && this.lead.type === 'enemyDelay') this.enemies.forEach(e => { e.timer = (e.timer || e.interval || 5) + this.lead.v; });   // 🐦藍鵲隊長:每關開場全敵延遲 +v(一次性,不改 interval)
         if (this.lead && this.lead.type === 'counterDelay' && this.lead.el) { const tEl = EL[this.lead.el] && EL[this.lead.el].beats; if (tEl) this.enemies.forEach(e => { if (e.el === tEl) e.timer = (e.timer || e.interval || 5) + this.lead.v; }); }   // 🐦鳥·控敵先制:開局「被本屬相剋」的敵 CD+v
         const n = this.enemies.length, slot = 380 / n;
@@ -2651,6 +2827,32 @@
           this.time.delayedCall(300, () => {
             this.labSnd('s_boom', 0.5); tgt.timer += 1;
             if (tgt.sprite) this.floatText(tgt.sprite.x, tgt.sprite.y - 24, '纏+1', '#b79bff');
+            this.updateEnemies();
+          });
+          return;
+        }
+        if (cid === 'c41' || cid === 'c42' || cid === 'c43' || cid === 'c44' || cid === 'c45') {   // 👹鬼系 怨擊:對指定1敵 攻×2 傷害(吃相剋),CD5(比照 c15 雲豹「裂空撲殺」的 targetEnemy()鎖定+chakraBolt 彈道+relM 相剋倍率傷害執行路徑,改為單體不分身)
+          const tgt = this.targetEnemy(); if (!tgt) return;
+          const col = EL[card.el] ? EL[card.el].color : 0xff6a4a, hot = shadeColor(col, 0.55);
+          const relM = (tel) => (EL[card.el].beats === tel) ? CONFIG.ADV_MULT : ((EL[tel] && EL[tel].beats === card.el) ? CONFIG.WEAK_MULT : CONFIG.NORM_MULT);
+          const dmg = Math.round(atk * 2 * relM(tgt.el));
+          this.chargeAt(ox, oy, col, 380, hot);
+          this.time.delayedCall(380, () => {
+            this.labSnd('s_hit_' + card.el, 0.72); this.chakraBolt(ox, oy, tgt.sprite.x, tgt.sprite.y, col, tgt, dmg, 2, hot);
+            this.cameras.main.shake(220, 0.008);
+            this.time.delayedCall(360, () => {
+              tgt.hp = Math.max(0, tgt.hp - dmg); if (tgt.hp > 0) this._activeCounter(tgt, card.el);
+              this.updateEnemies(); if (tgt.hp <= 0) this.killEnemy(tgt);
+            });
+          });
+          return;
+        }
+        if (cid === 'c46' || cid === 'c47' || cid === 'c48' || cid === 'c49' || cid === 'c50') {   // 🧱牆怪系 築牆阻擋:全體敵人出手延遲 +1,CD6(比照蜘蛛單體延遲改為全體;防禦系買時間,無傷害)
+          const col = EL[card.el] ? EL[card.el].color : 0xc9a86a;
+          this.chargeAt(ox, oy, col, 320);
+          this.time.delayedCall(320, () => {
+            this.labSnd('s_boom', 0.5);
+            this.enemies.forEach(en => { if (en && !en.dead) { en.timer += 1; if (en.sprite) this.floatText(en.sprite.x, en.sprite.y - 24, '牆+1', '#c9b892'); } });
             this.updateEnemies();
           });
           return;
@@ -3932,7 +4134,7 @@
           this.enemies.forEach(en => { if (en.paralyze > 0 && !en.dead && atkEls.some(el => EL[el] && EL[el].beats === en.el)) en._paraHit = true; });   // ⚡只有風(剋雷)打中麻痺敵→標記本手打斷施法(_paralyzeAct 跳過鎖);無屬等其他屬性不算
           victims.forEach(en => { if (en.dead || en._finOrb) return; if (atkEls.some(e => EL[e] && EL[e].beats === en.el)) en.timer += 1; });
         }   // 非蓄力的「被攻擊」敵清到剋屬→出手延後一手
-        if (this.firstClear) { this.firstClear = false; track('first_clear'); maybeHeroCardNotice(this); }   // ☁️ 首次通關提示:勇者卡已保管(一次性,見 settings.heroCard)
+        if (this.firstClear) { this.firstClear = false; track('first_clear'); }   // ☁️ 勇者卡/綁定提示改到「教學結束後」(home create → promptAccountBindAfterTutorial),不再戰鬥中打斷
         data.cells.forEach(([r, c]) => { this.board[r][c] = null; });  // 立即從模型移除,避免重複觸發
         const n = data.cells.length;
         this._placeCleared = true;   // 逐塊 combo:這塊有清到(沒清的塊由 afterAction 把 combo 歸零)
@@ -4853,9 +5055,11 @@
           if (ak && this.textures.exists(ak)) this.L(this.add.image(cx, cy, ak).setDisplaySize(cw - 6, cw - 6).setOrigin(0.5));
           else this.txt(cx, cy - 2, cardName(cd.id), '11px', T.ink, 0.5, true);
           // 左上屬性徽章(圓角,屬色底/白字屬名)
-          if (cd.el !== 'junk' && EL[cd.el]) { const bx = cx - cw / 2 + 14, by = cy - cw / 2 + 14;
+          if (cd.el !== 'junk' && EL[cd.el]) {
+            const bx = cx - cw / 2 + 14, by = cy - cw / 2 + 14;
             this.L(roundRectG(this, bx, by, 23, 20, 6, EL[cd.el].color, 1, 0xffffff, 1.5));
-            this.L(this.add.text(bx, by, EL[cd.el].name, { fontFamily: EMOJIFONT, fontSize: '11px', color: '#ffffff', fontStyle: 'bold' }).setOrigin(0.5)); }
+            this.L(this.add.text(bx, by, EL[cd.el].name, { fontFamily: EMOJIFONT, fontSize: '11px', color: '#ffffff', fontStyle: 'bold' }).setOrigin(0.5));
+          }
           // Lv 深色圓角底條
           const ly = cy + cw / 2 - 12;
           this.L(roundRectG(this, cx, ly, 38, 17, 8, 0x12161a, 0.72, null, 0));
@@ -4919,7 +5123,7 @@
         const chk = canEvolve(cd.id);
         if (!chk.ok) { this.askEvo = false; this.toast(chk.msg); return; }   // 保險:確認框開著時素材/等級被其他途徑變動→重查一次
         const req = chk.req, py = Math.round(H / 2);
-        const nextName = SPIDER_EVO[cd.id] || (cardName(cd.id) + ' ★' + (cardStars(cd.id) + 1));
+        const nextName = EVO_CARDS[cd.id] || (cardName(cd.id) + ' ★' + (cardStars(cd.id) + 1));
         this.rect(CX, H / 2, W, H, 0x000000, 0.62).setInteractive();
         this.rect(CX, py, 330, 220, 0x241a10).setStrokeStyle(2, 0x8a6a3a);
         this.txt(CX, py - 84, '✨ 確認進化?', '16px', '#ffd9a0', 0.5, true);
@@ -4958,6 +5162,7 @@
         if (dailyAvailable()) this.time.delayedCall(_lu ? 2600 : 350, () => this.showDaily());   // 每日登入獎勵(進大廳自動彈,領了才不再彈;若同時升級則延後不撞)
         maybeConfigToast(this);   // ☁️ 公告/維護訊息 toast(每 session 各一次;toast 深度 2000 疊在每日彈窗上)
         this.refreshMailBadge();   // 📬 進首頁 fire-and-forget 拉一次信箱未讀數(time-box 走 authedFetch 內建逾時,失敗靜默不阻塞)
+        if (!st.freePull && tutSeen() && !st.bindPrompted && !st.heroCard) this.time.delayedCall(700, () => promptAccountBindAfterTutorial(this));   // 🔑 教學完成後(非十連 reveal 那次)一次性邀綁 Google;拒絕→勇者卡提示
       }
       rebuild() { this.tweens.killAll(); if (this.layer) this.layer.destroy(); this.layer = this.add.container(0, 0); this.topBar(); this.body(); this.nav(); }
       L(o) { this.layer.add(o); return o; }
@@ -5134,11 +5339,13 @@
         MAP_CLOUDS.filter(c => c.back).forEach(c => this._mapCloud(c));    // 後層雲
         MAP_ISLES.forEach(is => this._mapIsle(is));                      // 7 座島
         MAP_CLOUDS.filter(c => !c.back).forEach(c => this._mapCloud(c));   // 前層雲
-        { const T = UI(), bx = 68, by = H - 100;   // 編隊鈕:白色浮動藥丸(火色點)
+        {
+          const T = UI(), bx = 68, by = H - 100;   // 編隊鈕:白色浮動藥丸(火色點)
           this.L(roundRectG(this, bx, by, 118, 44, 22, T.surf, 1, T.divider, 1.5));
           this.L(this.add.circle(bx - 38, by, 5, EL.fire.color));
           this.txt(bx + 6, by, '🛡️ 編隊', FS.cap, T.ink, 0.5, true);
-          const hit = this.rect(bx, by, 118, 44, 0x000000, 0.001).setInteractive(); tapBind(this, hit, () => this.go('team')); }   // 編隊鈕(保留)
+          const hit = this.rect(bx, by, 118, 44, 0x000000, 0.001).setInteractive(); tapBind(this, hit, () => this.go('team'));
+        }   // 編隊鈕(保留)
       }
       _mapXY(el, dw, dh) {
         const S = this._mapS, mTop = 84, mBot = H - 62;   // 位置換算:有 left/right/top/bottom(螢幕像素)就用它對齊邊界,否則用 ax/ay(原圖座標×S)
@@ -5277,7 +5484,7 @@
         this.txt(CX, cTop + 34, '🥚 轉蛋', FS.title, T.ink, 0.5, true);
         this.gachaBanner(cTop + 132, 'premium', '✨ 六星 限定 · 機率 3%', 0x7c5cd0);   // 卡頂=cTop+57,與卡片管理/商店的第一個內容頂緣一致
         this.gachaBanner(cTop + 296, 'normal', '金錢轉蛋（無六星）', 0x35a866);
-        this.txt(CX, H - 74, '※ 機率已公示;六星僅「勇者召喚」可得', FS.micro, T.ink3, 0.5);
+        this.txt(CX, H - 74, '※ 機率已公示;六星僅「召喚勇者」可得', FS.micro, T.ink3, 0.5);
         if (this.gachaResult) this.drawGachaResult();
       }
       gachaBanner(y, bankey, tagline, accent) {
@@ -5301,7 +5508,7 @@
         _loadCardArt(this, out.map(o => o.cd.id));   // 大廳只載出戰隊→抽到別的卡會沒圖:抽完先補載卡圖,載好再顯示
         if (this.load.list.size) { this.load.once('complete', () => this.rebuild()); this.load.start(); } else this.rebuild();
       }
-      _summonFX(cx, cy, el, rare, cb) {   // 🌀 勇者召喚:雙元素環展開 + 能量方塊向心聚攏 → 爆發射出方塊 →(cb)卡片現身。呼應主動技/五行/方塊主題
+      _summonFX(cx, cy, el, rare, cb) {   // 🌀 召喚勇者:雙元素環展開 + 能量方塊向心聚攏 → 爆發射出方塊 →(cb)卡片現身。呼應主動技/五行/方塊主題
         const ADD = Phaser.BlendModes.ADD, elc = EL[el].color, gold = 0xffe66a;
         const ring1 = this.L(this.add.circle(cx, cy, 92, 0, 0).setStrokeStyle(3, elc, 0.9).setBlendMode(ADD)).setScale(0.2).setAlpha(0);
         const ring2 = this.L(this.add.circle(cx, cy, 60, 0, 0).setStrokeStyle(2, elc, 0.7).setBlendMode(ADD)).setScale(0.2).setAlpha(0);
@@ -5309,9 +5516,11 @@
         this.tweens.add({ targets: ring2, scale: 1, alpha: 0.8, angle: -200, duration: 520, ease: 'Cubic.out' });
         const marks = [];
         for (let i = 0; i < 8; i++) { const a = i / 8 * Math.PI * 2; const m = this.L(this.add.rectangle(cx + Math.cos(a) * 92, cy + Math.sin(a) * 92, 14, 14, elc, 0.9).setBlendMode(ADD)).setAlpha(0); marks.push(m); this.tweens.add({ targets: m, alpha: 1, duration: 200, delay: 260 }); }
-        for (let i = 0; i < 14; i++) { const a0 = i / 14 * Math.PI * 2, r0 = 150 + Math.random() * 40; const p = this.L(this.add.rectangle(cx + Math.cos(a0) * r0, cy + Math.sin(a0) * r0, 20, 20, elc, 0.95).setBlendMode(ADD)).setAlpha(0);
+        for (let i = 0; i < 14; i++) {
+          const a0 = i / 14 * Math.PI * 2, r0 = 150 + Math.random() * 40; const p = this.L(this.add.rectangle(cx + Math.cos(a0) * r0, cy + Math.sin(a0) * r0, 20, 20, elc, 0.95).setBlendMode(ADD)).setAlpha(0);
           this.tweens.add({ targets: p, alpha: 1, duration: 140, delay: 120 });
-          this.tweens.add({ targets: p, x: cx, y: cy, scale: 0.3, duration: 480, delay: 180 + i * 14, ease: 'Cubic.in', onComplete: () => p.destroy() }); }   // 能量方塊向心(正方向,不轉)
+          this.tweens.add({ targets: p, x: cx, y: cy, scale: 0.3, duration: 480, delay: 180 + i * 14, ease: 'Cubic.in', onComplete: () => p.destroy() });
+        }   // 能量方塊向心(正方向,不轉)
         const core = this.L(this.add.circle(cx, cy, 10, 0xffffff, 0.9).setBlendMode(ADD)).setScale(0);
         this.tweens.add({ targets: core, scale: 4.5, duration: 420, delay: 520, ease: 'Quad.in' });
         this.time.delayedCall(rare ? 900 : 760, () => {   // 爆發
@@ -5320,8 +5529,10 @@
           const sw = this.L(this.add.circle(cx, cy, 40, 0, 0).setStrokeStyle(4, rare ? gold : elc, 0.95).setBlendMode(ADD)).setScale(0.3);
           this.tweens.add({ targets: sw, scale: rare ? 4.4 : 2.8, alpha: { from: 1, to: 0 }, duration: rare ? 760 : 560, ease: 'Quad.out', onComplete: () => sw.destroy() });
           const nq = rare ? 24 : 15;
-          for (let i = 0; i < nq; i++) { const a = i / nq * Math.PI * 2 + Math.random() * 0.4, d = 90 + Math.random() * 90; const q = this.L(this.add.rectangle(cx, cy, 20, 20, (rare && i % 3 === 0) ? gold : elc, 0.95).setBlendMode(ADD));
-            this.tweens.add({ targets: q, x: cx + Math.cos(a) * d, y: cy + Math.sin(a) * d, scale: 0.25, alpha: { from: 1, to: 0 }, duration: 460 + Math.random() * 240, ease: 'Quad.out', onComplete: () => q.destroy() }); }   // 方塊向外爆射(正方向,不轉)
+          for (let i = 0; i < nq; i++) {
+            const a = i / nq * Math.PI * 2 + Math.random() * 0.4, d = 90 + Math.random() * 90; const q = this.L(this.add.rectangle(cx, cy, 20, 20, (rare && i % 3 === 0) ? gold : elc, 0.95).setBlendMode(ADD));
+            this.tweens.add({ targets: q, x: cx + Math.cos(a) * d, y: cy + Math.sin(a) * d, scale: 0.25, alpha: { from: 1, to: 0 }, duration: 460 + Math.random() * 240, ease: 'Quad.out', onComplete: () => q.destroy() });
+          }   // 方塊向外爆射(正方向,不轉)
           if (rare) this.cameras.main.shake(320, 0.006);
           [ring1, ring2, core, ...marks].forEach(o => { if (o && o.active) this.tweens.add({ targets: o, alpha: 0, scaleX: '*=1.3', scaleY: '*=1.3', duration: 240, onComplete: () => o.destroy() }); });
           if (cb) cb();
@@ -5341,7 +5552,7 @@
         }
         return out;
       }
-      _summonCinematic(cx, cy, el, hi, cb) {   // 🌀 3~4s 勇者召喚:方塊自四方聚攏中心→蓄光→吸氣→爆發噴方塊→(cb)卡登場。回傳 {kill} 供跳過清場
+      _summonCinematic(cx, cy, el, hi, cb) {   // 🌀 3~4s 召喚勇者:方塊自四方聚攏中心→蓄光→吸氣→爆發噴方塊→(cb)卡登場。回傳 {kill} 供跳過清場
         const ADD = Phaser.BlendModes.ADD, elc = EL[el].color, gold = 0xffe66a;
         const all = [], seal = [], timers = [], reg = (o, s) => { all.push(o); if (s) seal.push(o); return o; };
         const ring1 = reg(this.L(this.add.circle(cx, cy, 100, 0, 0).setStrokeStyle(3, elc, 0.9).setBlendMode(ADD)).setScale(0.15).setAlpha(0), 1);
@@ -5350,10 +5561,12 @@
         this.tweens.add({ targets: ring2, scale: 1, alpha: 0.8, angle: -160, duration: 1300, ease: 'Cubic.out' });   // 雙印環慢展開對轉
         for (let i = 0; i < 8; i++) { const a = i / 8 * Math.PI * 2; const m = reg(this.L(this.add.rectangle(cx + Math.cos(a) * 100, cy + Math.sin(a) * 100, 13, 13, elc, 0.9).setBlendMode(ADD)).setAlpha(0), 1); this.tweens.add({ targets: m, alpha: 1, duration: 300, delay: 500 + i * 45 }); }   // 8 印記亮起
         const NB = 22;
-        for (let i = 0; i < NB; i++) { const a0 = i / NB * Math.PI * 2 + Math.random() * 0.5, r0 = 200 + Math.random() * 120, sz = 15 + Math.random() * 9;
+        for (let i = 0; i < NB; i++) {
+          const a0 = i / NB * Math.PI * 2 + Math.random() * 0.5, r0 = 200 + Math.random() * 120, sz = 15 + Math.random() * 9;
           const p = reg(this.L(this.add.rectangle(cx + Math.cos(a0) * r0, cy + Math.sin(a0) * r0, sz, sz, (hi && i % 4 === 0) ? gold : elc, 0.95).setBlendMode(ADD)).setAlpha(0));
           this.tweens.add({ targets: p, alpha: 0.95, duration: 220, delay: 200 + i * 42 });
-          this.tweens.add({ targets: p, x: cx, y: cy, scale: 0.25, duration: 900 + Math.random() * 320, delay: 300 + i * 42, ease: 'Cubic.in', onComplete: () => p.destroy() }); }   // 方塊漸漸聚攏到印中(慢/錯開)
+          this.tweens.add({ targets: p, x: cx, y: cy, scale: 0.25, duration: 900 + Math.random() * 320, delay: 300 + i * 42, ease: 'Cubic.in', onComplete: () => p.destroy() });
+        }   // 方塊漸漸聚攏到印中(慢/錯開)
         const core = reg(this.L(this.add.circle(cx, cy, 12, 0xffffff, 0.9).setBlendMode(ADD)).setScale(0), 1);
         this.tweens.add({ targets: core, scale: 3.6, duration: 1150, delay: 850, ease: 'Quad.in' });   // 印中蓄光
         const BURST_AT = hi ? 2250 : 1980;
@@ -5471,7 +5684,13 @@
         const addL = o => this.L(o);
         this.txt(CX - 150, cTop + 182, '🔊 音效', FS.cap, T.ink2, 0); volBar(this, addL, CX + 38, cTop + 182, 232, '', () => SFX.sfxVol(), (v) => { SFX.setSfxVol(v); SFX.button(); });   // 音效音量(可點可拖,最左=靜音)
         this.txt(CX - 150, cTop + 214, '🎵 背景', FS.cap, T.ink2, 0); volBar(this, addL, CX + 38, cTop + 214, 232, '', () => SFX.bgmVol(), (v) => { SFX.setBgmVol(v); if (this.bgmMp3) this.bgmMp3.setVolume((this._bgmBase || 0.45) * v); });   // 背景音量(即時調大廳音樂)
-        this.btn(CX, cTop + 248, 360, 44, '🎴 我的勇者卡', () => this.showHeroCard(), { col: T.surf, stroke: 0xf4b73c, color: T.ink, fs: FS.body, bold: true });   // ☁️ 勇者卡=跨裝置找回進度的 12 碼
+        this.btn(CX - 92, cTop + 248, 172, 44, '🎴 勇者卡', () => this.showHeroCard(), { col: T.surf, stroke: 0xf4b73c, color: T.ink, fs: FS.body, bold: true });   // ☁️ 勇者卡=跨裝置找回進度的 12 碼
+        const _gEmail = cloudState().googleEmail;   // 🔑 綁定狀態(前端記於 nb_cloud.googleEmail;僅顯示用)
+        this.btn(CX + 92, cTop + 248, 172, 44, _gEmail ? '✅ Google已綁' : '🔗 綁定Google', () => {
+          const em = cloudState().googleEmail;
+          if (em) showGoogleBindOverlay({ title: '✅ 已綁定 Google', sub: em + '\n換手機用同個 Google 就能接著玩。', cancelLabel: '關閉', bound: true });
+          else showGoogleBindOverlay({ title: '☁️ 綁定 Google 帳號', sub: '換手機、換裝置都能接著玩,\n進度不怕丟。', cancelLabel: '關閉', onDone: () => this.rebuild() });
+        }, { col: T.surf, stroke: _gEmail ? 0x35a866 : 0x5aa9e6, color: T.ink, fs: FS.body, bold: true });   // 🔑 Google 帳號綁定/狀態
         this.btn(CX, cTop + 296, 360, 40, '🔄 重置存檔', () => { if (!confirm('確定要重置存檔?將清空全部進度(含雲端備份)')) return; backupLocalSave('reset'); localStorage.removeItem('ninja_save'); localStorage.removeItem('ninja_owned'); loadSave(); flushCloudPush(); this.toast('已重置'); this.switchTab('dungeon'); }, { col: T.surf, stroke: 0xe0603a, color: '#c0492c', fs: FS.cap });   // ☁️ 重置=備份→清→重建 default→立即推雲(雲端 rev 前進到新空檔,舊資料才不會下次開場復活)
         // ── 🧪 測試工具(只在本機開發顯示;正式站 blockyusha.com 玩家看不到,防經濟作弊。本區塊是本方法尾段,用早退 gate 全擋)──
         if (location.hostname !== 'localhost' && location.hostname !== '127.0.0.1') return;
@@ -5485,7 +5704,7 @@
         this.btn(CX, cTop + 390, 112, 38, '💎 +100 鑽石', () => { mutSave(s => { s.meta.stones = (s.meta.stones || 0) + 100; }); this.toast('💎 +100 鑽石!'); this.rebuild(); }, { col: T.surf, stroke: 0x8c6aff, color: T.ink, bold: true, fs: FS.micro });
         this.btn(CX + 120, cTop + 390, 112, 38, '🔓 解鎖全關', () => { devUnlockAll(); this.toast('已解鎖全關(含塔魔王)'); this.rebuild(); }, { col: T.surf, stroke: 0x8c6aff, color: T.ink, bold: true, fs: FS.micro });
         const giveTeam = (name, ids) => { ids.forEach(id => addCard(id)); this.toast(name + ' ×5 已放進包包!'); this.rebuild(); };   // 測試:一鍵入手該隊 5 張(火水雷土風)
-        const teams = [['🐕 狗狗隊', ['c03', 'c06', 'c19', 'c10', 'c12'], 0xc8803a], ['🐱 貓隊', ['c02', 'c05', 'c08', 'c09', 'c11'], 0x35a866], ['🐹 鼠隊', ['c13', 'c16', 'c20', 'c23', 'c27'], 0xb08040], ['🇹🇼 台灣隊', ['c15', 'c18', 'c22', 'c26', 'c30'], 0x2f8a5b], ['🐟 魚隊', ['c14', 'c17', 'c21', 'c24', 'c28'], 0x2e9be0], ['🐰 兔隊', ['c31', 'c32', 'c33', 'c34', 'c35'], 0xe07ba0], ['🐦 鳥隊', ['c01', 'c04', 'c07', 'c25', 'c29'], 0x8c6aff]];
+        const teams = [['🐕 狗狗隊', ['c03', 'c06', 'c19', 'c10', 'c12'], 0xc8803a], ['🐱 貓隊', ['c02', 'c05', 'c08', 'c09', 'c11'], 0x35a866], ['🐹 鼠隊', ['c13', 'c16', 'c20', 'c23', 'c27'], 0xb08040], ['🇹🇼 台灣隊', ['c15', 'c18', 'c22', 'c26', 'c30'], 0x2f8a5b], ['🐟 魚隊', ['c14', 'c17', 'c21', 'c24', 'c28'], 0x2e9be0], ['🐰 兔隊', ['c31', 'c32', 'c33', 'c34', 'c35'], 0xe07ba0], ['🐦 鳥隊', ['c01', 'c04', 'c07', 'c25', 'c29'], 0x8c6aff], ['🕷️ 蜘蛛隊', ['c36', 'c37', 'c38', 'c39', 'c40'], 0xb79bff], ['👹 小鬼隊', ['c41', 'c42', 'c43', 'c44', 'c45'], 0xff6a4a], ['🧱 牆怪隊', ['c46', 'c47', 'c48', 'c49', 'c50'], 0xc9a86a]];
         teams.forEach((t, i) => { const col = (i % 2 === 0) ? CX - 92 : CX + 92, row = Math.floor(i / 2); this.btn(col, cTop + 430 + row * 38, 172, 34, t[0], () => giveTeam(t[0], t[1]), { col: T.surf, stroke: t[2], color: T.ink, bold: true, fs: FS.micro }); });
       }
       showHeroCard() {   // 🎴 我的勇者卡:大字顯示 12 碼(顯示 XXXX-XXXX-XXXX 分組,複製給原始 12 碼)+複製+找回;點外面可關
@@ -5787,28 +6006,40 @@
         const owned = loadOwned();
         const T = UI();
         const txt = (x, yy, s, fs, col, ox, bold) => A(this.add.text(x, yy, s, { fontFamily: EMOJIFONT, fontSize: fs, color: col || T.ink, fontStyle: bold ? 'bold' : 'normal' }).setOrigin(ox == null ? 0.5 : ox, 0.5));
-        const drawCell = (x, yy, sz, id) => {
-          const cd = id && ROSTER.find(c => c.id === id), got = cd && (owned[id] || 0) > 0;   // 圖鑑表 id 不在卡表→畫未擁有格,不崩
+        const drawCell = (x, yy, sz, id, force) => {   // force:'base'強制基礎形 / 'evo'強制進化形 / null 目前形
+          const cd = id && ROSTER.find(c => c.id === id), isEvo = force === 'evo';
+          const got = cd && (isEvo ? getCardEvo(id) >= 1 : (owned[id] || 0) > 0);   // 進化格:進化過才解鎖;圖鑑表 id 不在卡表→畫未擁有格,不崩
           if (got) {
-            A(roundRectG(this, x, yy, sz, sz, 12, EL[cd.el].color, 1, cd.rank === 'kage' ? T.gold : T.divider, cd.rank === 'kage' ? 3 : 2));
+            A(roundRectG(this, x, yy, sz, sz, 12, EL[cd.el].color, 1, (isEvo || cd.rank === 'kage') ? T.gold : T.divider, (isEvo || cd.rank === 'kage') ? 3 : 2));
             const hit = A(this.add.rectangle(x, yy, sz, sz, 0x000000, 0.001).setInteractive());
-            const ak = cardArtKey(cd.id, 'thumb'); if (ak && this.textures.exists(ak)) A(this.add.image(x, yy, ak).setDisplaySize(sz, sz).setOrigin(0.5)); else txt(x, yy - 2, cardName(cd.id), FS.micro, '#1a1208', 0.5, true);
+            const ak = isEvo ? ('card_' + id + '_e_thumb') : (force === 'base' ? (CARD_ART[id] ? 'card_' + id + '_thumb' : null) : cardArtKey(cd.id, 'thumb'));
+            const nm = isEvo ? (EVO_CARDS[id] || cardName(cd.id)) : (force === 'base' ? cd.name : cardName(cd.id));
+            if (ak && this.textures.exists(ak)) A(this.add.image(x, yy, ak).setDisplaySize(sz, sz).setOrigin(0.5)); else txt(x, yy - 2, nm, FS.micro, '#1a1208', 0.5, true);
             txt(x, yy + sz / 2 - 10, 'Lv' + getCardLv(cd.id), FS.micro, '#ffffff', 0.5, true).setStroke('#000000', 3.5);
             hit.on('pointerup', () => { if (this.dragMoved < 12) this.showDetail(cd); });
           } else {
             A(roundRectG(this, x, yy, sz, sz, 12, T.surf2, 1, T.divider, 1.5));
             txt(x, yy, '❓', Math.round(sz * 0.46) + 'px', T.ink3, 0.5);
-            if (id) { const hit = A(this.add.rectangle(x, yy, sz, sz, 0x000000, 0.001).setInteractive()); hit.on('pointerup', () => { if (this.dragMoved < 12) this.toast('尚未收集'); }); }
+            if (id) { const hit = A(this.add.rectangle(x, yy, sz, sz, 0x000000, 0.001).setInteractive()); hit.on('pointerup', () => { if (this.dragMoved < 12) this.toast(isEvo ? '進化後解鎖' : '尚未收集'); }); }
           }
         };
         let y = 72;
         SPECIES_TEAMS.forEach(tm => {
+          const isEvoSp = tm.cards && !!EVO_CARDS[tm.cards.fire];   // 蜘蛛/鬼系→多一列進化型
           const have = tm.cards ? DEX_EL5.filter(el => (owned[tm.cards[el]] || 0) > 0).length : 0;
           txt(34, y, tm.emoji + ' ' + tm.name, FS.sub, tm.color, 0, true);
           txt(W - 28, y, tm.cards ? (have + '/5') : '即將推出', FS.micro, tm.cards ? T.ink2 : T.ink3, 1);
           y += 28; const sz = 52, gx = 66, x0 = CX - 2 * gx;
-          DEX_EL5.forEach((el, i) => drawCell(x0 + i * gx, y + sz / 2, sz, tm.cards ? tm.cards[el] : null));
+          DEX_EL5.forEach((el, i) => drawCell(x0 + i * gx, y + sz / 2, sz, tm.cards ? tm.cards[el] : null, isEvoSp ? 'base' : null));
           y += sz + 20;
+          if (isEvoSp) {   // 進化型另起一列(進化過才解鎖)
+            const haveEvo = DEX_EL5.filter(el => getCardEvo(tm.cards[el]) >= 1).length;
+            txt(52, y, '↳ 進化型', FS.micro, tm.color, 0, true);
+            txt(W - 28, y, haveEvo + '/5', FS.micro, T.ink3, 1);
+            y += 22;
+            DEX_EL5.forEach((el, i) => drawCell(x0 + i * gx, y + sz / 2, sz, tm.cards[el], 'evo'));
+            y += sz + 20;
+          }
         });
         const rest = ROSTER.filter(c => !DEX_ASSIGNED.has(c.id)); const haveRest = rest.filter(c => (owned[c.id] || 0) > 0).length;
         txt(34, y, '📦 未歸隊(現有卡)', FS.sub, T.ink, 0, true); txt(W - 28, y, haveRest + '/' + rest.length, FS.micro, T.ink2, 1); y += 30;
@@ -5839,26 +6070,26 @@
     }
 
     function bootGame() {
-    window.GAME = new Phaser.Game({
-      type: Phaser.AUTO, parent: 'game', backgroundColor: '#160f18',
-      scale: { mode: Phaser.Scale.FIT, autoCenter: Phaser.Scale.CENTER_BOTH, width: W, height: H },
-      scene: [HomeScene, TeamScene, GameScene, CollectionScene, FuseScene, DexScene],
-    });
-    track('open');   // 開遊戲心跳(回流追蹤;ANALYTICS_URL 空時自動 no-op)
-    mutSave(s => { if (!s.stats) s.stats = { playMs: 0, sessions: 0 }; s.stats.sessions++; });   // 📊 開場次數 +1
-    _playTick = Date.now();   // 📊 前景遊玩計時起點(見下方 _flushPlayMs)
-    // 預載 HIT/COMBO 數字字型(Russo One)→ 首次展演就已是設計字型,不掉回退
-    try {
-      if (document.fonts && document.fonts.load) {
-        document.fonts.load("400 40px 'Russo One'", '0123456789 HITCOMBO');
-      }
-    } catch (e) { }
-    // 實驗室入口:網址加 #hitlab(招式)或 #enemylab(敵技)→ 直接進對應 lab 模式
-    window.GAME.events.once('ready', function () {
-      const team = ['fire', 'water', 'thunder', 'earth', 'wind'].map(el => ROSTER.find(c => c.el === el) || ROSTER[0]);
-      if (location.hash === '#hitlab') { window.GAME.scene.start('game', { team: team, dungeonId: 'tower', lab: true }); window.GAME.scene.stop('home'); }
-      else if (location.hash === '#enemylab') { window.GAME.scene.start('game', { team: team, dungeonId: 'tower', elab: true, diff: 'hell' }); window.GAME.scene.stop('home'); }   // 敵技實驗室(地獄=敵人帶行為,看意圖圖示)
-    });
+      window.GAME = new Phaser.Game({
+        type: Phaser.AUTO, parent: 'game', backgroundColor: '#160f18',
+        scale: { mode: Phaser.Scale.FIT, autoCenter: Phaser.Scale.CENTER_BOTH, width: W, height: H },
+        scene: [HomeScene, TeamScene, GameScene, CollectionScene, FuseScene, DexScene],
+      });
+      track('open');   // 開遊戲心跳(回流追蹤;ANALYTICS_URL 空時自動 no-op)
+      mutSave(s => { if (!s.stats) s.stats = { playMs: 0, sessions: 0 }; s.stats.sessions++; });   // 📊 開場次數 +1
+      _playTick = Date.now();   // 📊 前景遊玩計時起點(見下方 _flushPlayMs)
+      // 預載 HIT/COMBO 數字字型(Russo One)→ 首次展演就已是設計字型,不掉回退
+      try {
+        if (document.fonts && document.fonts.load) {
+          document.fonts.load("400 40px 'Russo One'", '0123456789 HITCOMBO');
+        }
+      } catch (e) { }
+      // 實驗室入口:網址加 #hitlab(招式)或 #enemylab(敵技)→ 直接進對應 lab 模式
+      window.GAME.events.once('ready', function () {
+        const team = ['fire', 'water', 'thunder', 'earth', 'wind'].map(el => ROSTER.find(c => c.el === el) || ROSTER[0]);
+        if (location.hash === '#hitlab') { window.GAME.scene.start('game', { team: team, dungeonId: 'tower', lab: true }); window.GAME.scene.stop('home'); }
+        else if (location.hash === '#enemylab') { window.GAME.scene.start('game', { team: team, dungeonId: 'tower', elab: true, diff: 'hell' }); window.GAME.scene.stop('home'); }   // 敵技實驗室(地獄=敵人帶行為,看意圖圖示)
+      });
     }
     // ☁️ 開場閘門:new Phaser.Game 前先做雲端調和(hydrateFromCloud,硬上限 2.5 秒),逾時/失敗照常開場絕不卡玩家
     async function gatedBoot() {
