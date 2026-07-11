@@ -1308,7 +1308,7 @@
     const RANK_POOL = { genin: GACHA_ROSTER.filter(c => c.rank === 'genin'), chunin: GACHA_ROSTER.filter(c => c.rank === 'chunin'), jonin: GACHA_ROSTER.filter(c => c.rank === 'jonin'), kage: GACHA_ROSTER.filter(c => c.rank === 'kage') };
     function pickDrop(spec) {
       let pool = ROSTER; if (spec.el) pool = pool.filter(c => c.el === spec.el);
-      if (spec.rank) pool = pool.filter(c => c.rank === spec.rank); else pool = pool.filter(c => c.rank !== 'kage');   // 六星只能抽卡取得,不從刷關掉落
+      if (spec.rank) pool = pool.filter(c => c.rank === spec.rank); else pool = pool.filter(c => c.rank !== 'kage' && c.rank !== 'jonin');   // 掉落上限2星(關卡只到中級;3★/4★只出轉蛋,2026-07-11定案):未指定 rank 的屬性掉落排除 jonin/kage
       return pool.length ? pool[rnd(pool.length)] : null;
     }
     function rollDrops(table) { const out = []; (table || []).forEach(d => { if (Math.random() < d.rate) { const c = pickDrop(d); if (c) out.push(c); } }); return out; }
@@ -5755,6 +5755,8 @@
           g.add(this.add.text(CX, H / 2 - 38, '目前離線或連線中,\n連上後就會自動發卡', { fontFamily: EMOJIFONT, fontSize: FS.body, color: T.ink2, align: 'center', lineSpacing: 8 }).setOrigin(0.5));
           ensureGuest().then(() => { if (this._heroG === g && g.active) this.showHeroCard(); }).catch(() => { });
         }
+        const _em = cloudState().googleEmail;   // 📧 客服比對用:玩家打客服唸「勇者卡碼+綁定信箱」,後台一查就對上
+        g.add(this.add.text(CX, H / 2, _em ? ('📧 綁定信箱: ' + _em) : '📧 尚未綁定 Google', { fontFamily: EMOJIFONT, fontSize: FS.cap, color: _em ? '#35a866' : T.ink3 }).setOrigin(0.5));   // y=H/2:上距複製鈕下緣(-14)與下距說明文字上緣(約+22)各留 >6px,不擠
         g.add(this.add.text(CX, H / 2 + 38, '換裝置時輸入這組代碼即可找回進度,\n請截圖保存', { fontFamily: EMOJIFONT, fontSize: FS.body, color: T.ink2, align: 'center', lineSpacing: 8 }).setOrigin(0.5));
         mkB(H / 2 + 122, 310, 52, '🔑 用勇者卡找回進度', 0x5a76e0, () => { close(); heroCardRestore(this); });
         g.add(this.add.text(CX, H / 2 + 182, '點視窗外可關閉', { fontFamily: EMOJIFONT, fontSize: FS.cap, color: T.ink3 }).setOrigin(0.5));

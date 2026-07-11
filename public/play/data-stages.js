@@ -10,37 +10,37 @@ const DUNGEONS = {
       {es:[{el:'wind',hp:450,atk:90,turns:2}]},
       {es:[{el:'earth',hp:380,atk:80,turns:2},{el:'earth',hp:380,atk:80,turns:2}]},
       {es:[{el:'thunder',hp:340,atk:70,turns:2},{el:'fire',hp:1500,atk:190,turns:3,boss:true},{el:'thunder',hp:340,atk:70,turns:2}]},
-    ],drops:[[{rank:'genin',rate:0.6}],[{rank:'genin',rate:1.0},{rank:'chunin',rate:0.25}],[{rank:'chunin',rate:1.0},{rank:'jonin',rate:0.18}]]},
+    ],drops:[[{rank:'genin',rate:0.6}],[{rank:'genin',rate:1.0},{rank:'chunin',rate:0.25}],[{rank:'chunin',rate:1.0}]]},   // 掉落上限2星(關卡只到中級;3★/4★只出轉蛋,2026-07-11定案)
   fire:{id:'fire',name:'火之火山',emoji:'🌋',el:'fire',cost:12,stages:[
       {es:[{el:'fire',hp:650,atk:100,turns:2}]},
       {es:[{el:'fire',hp:560,atk:90,turns:2},{el:'fire',hp:560,atk:90,turns:2}]},
       {es:[{el:'fire',hp:480,atk:90,turns:2,arch:'artillery'},{el:'fire',hp:1900,atk:200,turns:3,boss:true},{el:'fire',hp:480,atk:90,turns:2,arch:'healer'}]},
-    ],drops:[[{el:'fire',rate:0.8}],[{el:'fire',rate:1.0}],[{el:'fire',rate:1.0},{rank:'jonin',rate:0.2}]]},
+    ],drops:[[{el:'fire',rate:0.8}],[{el:'fire',rate:1.0}],[{el:'fire',rate:1.0}]]},
   water:{id:'water',name:'水之深淵',emoji:'🌊',el:'water',cost:12,stages:[
       {es:[{el:'water',hp:700,atk:110,turns:3}]},
       {es:[{el:'water',hp:600,atk:100,turns:2},{el:'water',hp:600,atk:100,turns:2}]},
       {es:[{el:'water',hp:520,atk:100,turns:2,arch:'caster'},{el:'water',hp:2000,atk:210,turns:3,boss:true},{el:'water',hp:520,atk:100,turns:2,arch:'artillery'}]},
-    ],drops:[[{el:'water',rate:0.8}],[{el:'water',rate:1.0}],[{el:'water',rate:1.0},{rank:'jonin',rate:0.2}]]},
+    ],drops:[[{el:'water',rate:0.8}],[{el:'water',rate:1.0}],[{el:'water',rate:1.0}]]},
   thunder:{id:'thunder',name:'雷之高原',emoji:'⚡',el:'thunder',cost:12,stages:[
       {es:[{el:'thunder',hp:720,atk:110,turns:3}]},
       {es:[{el:'thunder',hp:600,atk:100,turns:2},{el:'thunder',hp:600,atk:100,turns:2}]},
       {es:[{el:'thunder',hp:500,atk:100,turns:2},{el:'thunder',hp:2000,atk:210,turns:3,boss:true},{el:'thunder',hp:500,atk:100,turns:2}]},
-    ],drops:[[{el:'thunder',rate:0.8}],[{el:'thunder',rate:1.0}],[{el:'thunder',rate:1.0},{rank:'jonin',rate:0.2}]]},
+    ],drops:[[{el:'thunder',rate:0.8}],[{el:'thunder',rate:1.0}],[{el:'thunder',rate:1.0}]]},
   earth:{id:'earth',name:'土之山岳',emoji:'⛰️',el:'earth',cost:12,stages:[
       {es:[{el:'earth',hp:700,atk:100,turns:2}]},
       {es:[{el:'earth',hp:580,atk:90,turns:2,arch:'artillery'},{el:'earth',hp:580,atk:90,turns:2}]},
       {es:[{el:'earth',hp:520,atk:90,turns:2,arch:'archmage'},{el:'earth',hp:2000,atk:200,turns:3,boss:true},{el:'earth',hp:520,atk:90,turns:2,arch:'healer'}]},
-    ],drops:[[{el:'earth',rate:0.8}],[{el:'earth',rate:1.0}],[{el:'earth',rate:1.0},{rank:'jonin',rate:0.2}]]},
+    ],drops:[[{el:'earth',rate:0.8}],[{el:'earth',rate:1.0}],[{el:'earth',rate:1.0}]]},
   wind:{id:'wind',name:'風之峽谷',emoji:'🌪️',el:'wind',cost:12,stages:[
       {es:[{el:'wind',hp:680,atk:100,turns:2}]},
       {es:[{el:'wind',hp:580,atk:90,turns:2},{el:'wind',hp:580,atk:90,turns:2}]},
       {es:[{el:'wind',hp:500,atk:90,turns:2},{el:'wind',hp:1900,atk:200,turns:3,boss:true},{el:'wind',hp:500,atk:90,turns:2}]},
-    ],drops:[[{el:'wind',rate:0.8}],[{el:'wind',rate:1.0}],[{el:'wind',rate:1.0},{rank:'jonin',rate:0.2}]]},
+    ],drops:[[{el:'wind',rate:0.8}],[{el:'wind',rate:1.0}],[{el:'wind',rate:1.0}]]},
   tower:{id:'tower',name:'召喚之塔',emoji:'🗼',cost:20,stages:[
       {es:[{el:'fire',hp:800,atk:120,turns:2},{el:'water',hp:800,atk:120,turns:2}]},
       {es:[{el:'thunder',hp:750,atk:110,turns:2,arch:'archmage'},{el:'earth',hp:750,atk:110,turns:2},{el:'wind',hp:750,atk:110,turns:2}]},
       {es:[{el:'fire',hp:3200,atk:210,turns:3,boss:true,phases:[{el:'fire',beh:'burn'},{el:'water',beh:'regen'},{el:'thunder',beh:'paralyze'},{el:'earth',beh:'hit'},{el:'wind',beh:'combo'}]}]},   // 魔王:五屬階段變身(每 20% 血換屬+換招牌行為,逼平衡隊);血砍3200讓強隊在超級/地獄打得死(模擬5000時連★3LV20都0%)
-    ],drops:[[{rank:'chunin',rate:1.0}],[{rank:'chunin',rate:1.0}],[{rank:'jonin',rate:1.0},{rank:'kage',rate:0.2}]]},
+    ],drops:[[{rank:'chunin',rate:1.0}],[{rank:'chunin',rate:1.0}],[{rank:'chunin',rate:1.0}]]},   // 塔3★100%+4★20%已移除:掉落上限2星,4★只出轉蛋(2026-07-11定案;伺服器端掉落做好後改由後台配卡)
 };
 const STAGES = DUNGEONS.prologue.stages;   // 相容舊引用
 const ELEM_DUNGEONS=['fire','water','earth','thunder','wind'];   // 地圖五邊形順時針=相剋環(各被順時針鄰居剋:水剋火→土剋水→雷剋土→風剋雷→火剋風)
