@@ -558,7 +558,8 @@
     }
 
     /* ===== F5 收集系統(localStorage 持有卡 + 關卡掉落) ===== */
-    const STARTER = ['c03', 'c06', 'c19', 'c10', 'c12'];   // 新手起始=狗狗隊(火c03/水c06/雷c19/土c10/風c12):有美術圖 + 新手互動教學可直接用
+    const STARTER = [];   // 新手起始「不送卡」(2026-07):狗狗隊只在新手教學「借用」(教學團隊直接從 ROSTER 查表、不需擁有),真正第一批卡=教學後的免費十連。教學觸發改看 !tutSeen()、且一啟動就設 freePull 保證發放(見 HomeScene.create),避免 0 卡死鎖
+    const TUTORIAL_TEAM = ['c03', 'c06', 'c19', 'c10', 'c12'];   // 新手教學借用隊(火c03/水c06/雷c19/土c10/風c12):自動教學與其他頁「重看教學」都用這個,不需玩家擁有
     const RANKNAME = { genin: '一星', chunin: '二星', jonin: '三星', kage: '四星' };
     const RANKSTAR = { genin: '★', chunin: '★★', jonin: '★★★', kage: '★★★★' };
     const EL_SKILL = { fire: '🔥 清火宮 → 生成「可自由轉」形狀塊存卡', water: '💧 清水宮 → 生成「直落」形狀塊存卡(可預測)', thunder: '⚡ 清雷宮 → 生成「鋸齒閃電」塊存卡', earth: '🪨 清土宮 → 生成「方塊系」塊存卡(疊2張更強)', wind: '🌀 清風宮 → 生成「橫吹」形狀塊存卡(可預測)' };
@@ -5261,8 +5262,9 @@
         if (this.cache.audio.exists(_bk)) _playHome(); else { this.load.audio(_bk, 'snd/bgm_home.mp3'); this.load.once('complete', _playHome); try { this.load.start(); } catch (e) { } }   // 大廳 BGM 非阻塞:先開畫面,BGM 載好再播→大廳秒開
         this.events.once('shutdown', () => { this._homeLeft = true; if (this.bgmMp3) { this.bgmMp3.stop(); this.bgmMp3.destroy(); this.bgmMp3 = null; } });   // 離開大廳(進關等)→停大廳音樂
         bindSceneResize(this, () => { const o = H; recomputeLayout(); if (Math.abs(H - o) > 3) { this.scale.setGameSize(W, H); this.rebuild(); } });
-        if (!tutSeen() && ['c03', 'c06', 'c19', 'c10', 'c12'].every(id => isOwned(id))) {   // 首次啟動 + 有狗狗隊 → 自動進互動教學(先設 tutSeen 保證只跑一次,任何方式離開都不再自動觸發)
-          setTutSeen(); this.time.delayedCall(300, () => { const team = ['c03', 'c06', 'c19', 'c10', 'c12'].map(id => ROSTER.find(c => c.id === id)); this.scene.manager.start('game', { team: team, dungeonId: 'prologue', tutorial: true }); this.scene.manager.stop('home'); }); return;
+        if (!tutSeen()) {   // 首次啟動 → 自動進互動教學(不再要求「擁有狗狗隊」:狗狗隊改教學借用)。一啟動就設 tutSeen(只跑一次)+ freePull(不管之後通關/放棄/戰敗/關分頁怎麼離開,回大廳都保證發新手十連→堵死鎖:見上方 L5258 消費點)
+          setTutSeen(); mutSave(s => { s.settings = s.settings || {}; s.settings.freePull = true; });
+          this.time.delayedCall(300, () => { const team = TUTORIAL_TEAM.map(id => ROSTER.find(c => c.id === id)); this.scene.manager.start('game', { team: team, dungeonId: 'prologue', tutorial: true }); this.scene.manager.stop('home'); }); return;
         }
         const _lu = getMeta()._lvUp; if (_lu) { mutSave(s => { delete s.meta._lvUp; }); this.time.delayedCall(400, () => this.toast('🎉 升級! Lv.' + _lu.rank + '\n⚡ 體力已補滿')); }   // 戰鬥升級→回大廳彈 5 秒升級公告(體力已補滿)
         if (dailyAvailable()) this.time.delayedCall(_lu ? 2600 : 350, () => this.showDaily());   // 每日登入獎勵(進大廳自動彈,領了才不再彈;若同時升級則延後不撞)
