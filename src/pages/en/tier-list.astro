@@ -27,14 +27,6 @@ const tiers: TierDef[] = [
   },
 ];
 
-// Taiwan endemic heroes get English names; the other 30 keep their original (Chinese) names.
-const enNames: Record<string, string> = {
-  c15: 'Taiwan Clouded Leopard',
-  c18: 'Formosan Landlocked Salmon',
-  c22: 'Taiwan Blue Magpie',
-  c26: 'Formosan Black Bear',
-  c30: 'Formosan Macaque',
-};
 const elLabelEn: Record<string, string> = { fire: 'Fire', water: 'Water', thunder: 'Thunder', earth: 'Earth', wind: 'Wind' };
 ---
 <Base title="Character Tier List — Blockyusha" path="/en/tier-list/" navActive="tier" lang="en" alt="/tier-list/"
@@ -59,10 +51,10 @@ const elLabelEn: Record<string, string> = { fire: 'Fire', water: 'Water', thunde
           <a class="tl-cell" href={`/dex/${c.id}/`} style={`--el:${meta.elColor[c.el]}`}>
             <div class="tl-pic">
               {c.hero && <span class="tl-hero">⭐</span>}
-              <img loading="lazy" src={`/play/art/cards/${c.id}_thumb.webp`} alt={enNames[c.id] ?? c.name} />
+              <img loading="lazy" src={`/play/art/cards/${c.id}_thumb.webp`} alt={c.en} />
             </div>
             <div class="tl-el" style={`background:${meta.elColor[c.el]}`}>{elLabelEn[c.el]}</div>
-            <div class="tl-nm">{enNames[c.id] ?? c.name}</div>
+            <div class="tl-nm">{c.en}</div>
           </a>
         ))}
       </div>
