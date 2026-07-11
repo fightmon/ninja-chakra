@@ -1,0 +1,112 @@
+---
+import Base from '../../layouts/Base.astro';
+import { byId, meta } from '../../data/cards';
+
+interface TierDef { tier: 'S' | 'A' | 'B' | 'C'; ids: string[]; desc: string; }
+
+const tiers: TierDef[] = [
+  {
+    tier: 'S',
+    ids: ['c15', 'c18', 'c22', 'c26', 'c30', 'c13', 'c16', 'c20', 'c23', 'c27'],
+    desc: "The five Taiwan endemic heroes bring unique kits (Clouded Leopard's focus/split damage, Blue Magpie's board-wide stall, Black Bear's shield, Salmon's auto-revive, Macaque's on-clear sneak hits), plus the Rat family's \"Big-Clear Burst\" leader skill (conditional ×2 same-element attack — the highest damage ceiling).",
+  },
+  {
+    tier: 'A',
+    ids: ['c31', 'c32', 'c33', 'c34', 'c35', 'c14', 'c17', 'c21', 'c24', 'c28'],
+    desc: "Rabbit family's \"Breeding Amp\" plus the board-converting active for combo-crit setups, and Fish family's \"Chain Amp\" (×1.8 at combo ≥2) for the most reliable sustained damage. Strong scaling and snowball potential.",
+  },
+  {
+    tier: 'B',
+    ids: ['c02', 'c05', 'c08', 'c09', 'c11', 'c03', 'c06', 'c19', 'c10', 'c12'],
+    desc: "Cat family's \"Self Burst\" (flat ×1.5 same-element — simple and reliable) and Dog family's \"Balanced\" leader (×1.2 HP and ×1.2 ATK — tanky but lower damage). Dependable mid-tier picks.",
+  },
+  {
+    tier: 'C',
+    ids: ['c01', 'c04', 'c07', 'c25', 'c29'],
+    desc: "Bird family's \"Control\" leader (delay countered enemies by CD+2 — pure crowd control, no damage multiplier). Situationally useful but low offense.",
+  },
+];
+
+// Taiwan endemic heroes get English names; the other 30 keep their original (Chinese) names.
+const enNames: Record<string, string> = {
+  c15: 'Taiwan Clouded Leopard',
+  c18: 'Formosan Landlocked Salmon',
+  c22: 'Taiwan Blue Magpie',
+  c26: 'Formosan Black Bear',
+  c30: 'Formosan Macaque',
+};
+const elLabelEn: Record<string, string> = { fire: 'Fire', water: 'Water', thunder: 'Thunder', earth: 'Earth', wind: 'Wind' };
+---
+<Base title="Character Tier List — Blockyusha" path="/en/tier-list/" navActive="tier" lang="en" alt="/tier-list/"
+  description="Blockyusha character tier list: all 35 blocky animal heroes ranked S/A/B/C by leader-skill multiplier, active-skill utility, and stat efficiency.">
+
+<div class="tl">
+
+<div class="tl-wrap tl-title">
+  <h1>Character Tier List</h1>
+  <p>35 blocky heroes, ranked by real battle strength</p>
+</div>
+
+<div class="tl-wrap">
+  {tiers.map((t) => (
+    <section class="tl-row">
+      <div class="tl-head">
+        <div class={`tl-badge tl-badge-${t.tier}`}>{t.tier}</div>
+        <p class="tl-desc">{t.desc}</p>
+      </div>
+      <div class="tl-grid">
+        {t.ids.map((id) => byId[id]).filter(Boolean).map((c) => (
+          <a class="tl-cell" href={`/dex/${c.id}/`} style={`--el:${meta.elColor[c.el]}`}>
+            <div class="tl-pic">
+              {c.hero && <span class="tl-hero">⭐</span>}
+              <img loading="lazy" src={`/play/art/cards/${c.id}_thumb.webp`} alt={enNames[c.id] ?? c.name} />
+            </div>
+            <div class="tl-el" style={`background:${meta.elColor[c.el]}`}>{elLabelEn[c.el]}</div>
+            <div class="tl-nm">{enNames[c.id] ?? c.name}</div>
+          </a>
+        ))}
+      </div>
+    </section>
+  ))}
+</div>
+
+<div class="tl-wrap tl-method">
+  <h2>How This Is Scored</h2>
+  <p>Ranked by "leader-skill multiplier × active-skill utility × stat efficiency." Element only affects type advantage on specific stages, not the tier itself; cards within the same family share a skill set, and individual differences come mainly from element and stats. The game is still in development and balance will keep changing — this list is for reference only.</p>
+</div>
+
+</div>
+
+<style is:global>
+.tl-wrap{max-width:900px;margin:0 auto;padding:0 16px}
+.tl-title{text-align:center;padding:28px 16px 4px}
+.tl-title h1{font-size:clamp(26px,7vw,40px);font-weight:900;background:linear-gradient(120deg,#ff8a2a,#ff5a3d);-webkit-background-clip:text;background-clip:text;color:transparent}
+.tl-title p{color:var(--ink2);font-size:14px;margin-top:6px}
+.tl-row{margin:22px auto 30px}
+.tl-head{display:flex;align-items:center;gap:14px;margin-bottom:14px}
+.tl-badge{flex:0 0 auto;width:52px;height:52px;border-radius:16px;display:grid;place-items:center;font-size:26px;font-weight:900;color:#fff;box-shadow:0 6px 16px rgba(140,90,20,.25)}
+.tl-badge-S{background:linear-gradient(120deg,#ff5a3d,#ff8a2a)}
+.tl-badge-A{background:linear-gradient(120deg,#ffd23b,#ffb020);color:#3a2a10}
+.tl-badge-B{background:linear-gradient(120deg,#c9b795,#a8916b);color:#3a2a10}
+.tl-badge-C{background:linear-gradient(120deg,#e3dac6,#cfc3a6);color:#5a4c34}
+.tl-desc{font-size:14px;line-height:1.55;color:var(--ink2)}
+.tl-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:8px}
+.tl-cell{background:#fff;border-radius:14px;padding:6px 4px 9px;text-align:center;box-shadow:0 4px 12px rgba(140,90,20,.13);border-bottom:4px solid var(--el);transition:transform .12s}
+.tl-cell:hover{transform:translateY(-3px)}
+.tl-cell .tl-pic{position:relative;border-radius:10px;overflow:hidden;background:var(--el)}
+.tl-cell .tl-pic img{width:100%;aspect-ratio:1;object-fit:cover}
+.tl-hero{position:absolute;right:3px;top:2px;font-size:12px}
+.tl-el{margin-top:5px;font-size:10px;font-weight:800;color:#fff;border-radius:999px;padding:1px 8px;display:inline-block}
+.tl-nm{font-size:13px;font-weight:800;margin-top:4px;line-height:1.25}
+.tl-method{padding:10px 16px 60px}
+.tl-method h2{font-size:19px;font-weight:900;margin-bottom:8px}
+.tl-method p{font-size:13.5px;line-height:1.65;color:var(--ink2)}
+[data-theme="dark"] .tl-cell{background:#231d14}
+[data-theme="dark"] .tl-badge-A{color:#241a08}
+[data-theme="dark"] .tl-badge-B{color:#241a08}
+[data-theme="dark"] .tl-badge-C{color:#2c2114}
+@media(max-width:440px){.tl-cell .tl-nm{font-size:11px}.tl-grid{gap:6px}}
+@media(min-width:640px){.tl-grid{gap:12px}.tl-cell .tl-nm{font-size:15px}}
+</style>
+
+</Base>

@@ -1,0 +1,114 @@
+---
+import Base from '../layouts/Base.astro';
+
+const qa = [
+  {
+    q: '塊頭勇者 Blockyusha 是什麼遊戲？',
+    a: '免費網頁遊戲，把 Woodoku 方塊消除縫進轉珠 RPG：方塊拖進 9×9 盤，湊滿整列／行／九宮就消除並攻擊敵人，同時收集可愛的方塊頭動物勇者組隊闖塔。',
+  },
+  {
+    q: '免費嗎？要付費嗎？',
+    a: '完全免費，打開網頁就能玩，目前是開發中 Demo。',
+  },
+  {
+    q: '需要下載或安裝嗎？',
+    a: '不用，網頁遊戲，到 blockyusha.com 點「開始遊戲」直接玩。',
+  },
+  {
+    q: '手機可以玩嗎？',
+    a: '可以，以手機直式操作為主，手指拖方塊；手機、平板、電腦瀏覽器都能玩。',
+  },
+  {
+    q: '這是像 Woodoku 的遊戲嗎？有什麼不同？',
+    a: '核心「拖方塊湊列消除」很像 Woodoku／Block Blast，但多了一整層 RPG：每次消除是攻擊、五屬相剋、收集角色組隊、大招與闖塔。＝Woodoku × 轉珠 RPG × 卡片收集。',
+  },
+  {
+    q: '怎麼玩？基本規則？',
+    a: '把方塊拖進盤面，湊滿整列／行／九宮就消除攻擊；傷害依角色屬性，帶剋制屬性傷害更高。詳見<a href="/devlog/how-to-play/">玩法教學</a>。',
+    plain: '把方塊拖進盤面，湊滿整列／行／九宮就消除攻擊；傷害依角色屬性，帶剋制屬性傷害更高。詳見玩法教學。',
+  },
+  {
+    q: '有幾隻角色？怎麼收集？',
+    a: '目前 35 隻方塊頭動物勇者，分貓犬鳥鼠兔魚與台灣特有種等家族，可在<a href="/dex/">角色圖鑑</a>看數值與技能。',
+    plain: '目前 35 隻方塊頭動物勇者，分貓犬鳥鼠兔魚與台灣特有種等家族，可在角色圖鑑看數值與技能。',
+  },
+  {
+    q: '五屬相剋是什麼？',
+    a: '火→風→雷→土→水→火 成環相剋，剋制對方傷害提高、被剋降低，組隊挑對屬性能輕鬆很多。',
+  },
+  {
+    q: '要註冊帳號嗎？',
+    a: '不用，點開就玩。',
+  },
+  {
+    q: '哪裡追蹤最新消息？',
+    a: '追蹤 @blockyusha（X、YouTube、Instagram），或看<a href="/devlog/">開發日誌</a>。',
+    plain: '追蹤 @blockyusha（X、YouTube、Instagram），或看開發日誌。',
+  },
+];
+
+const jsonLd = {
+  '@context': 'https://schema.org',
+  '@type': 'FAQPage',
+  mainEntity: qa.map((item) => ({
+    '@type': 'Question',
+    name: item.q,
+    acceptedAnswer: {
+      '@type': 'Answer',
+      text: item.plain ?? item.a,
+    },
+  })),
+};
+---
+<Base title="常見問題 FAQ — 塊頭勇者 Blockyusha" path="/faq/" navActive="faq" lang="zh-TW" alt="/en/faq/"
+  description="塊頭勇者 Blockyusha 常見問題：遊戲介紹、是否免費、怎麼玩、角色收集、五屬相剋一次看懂。">
+
+<div class="faq">
+  <header class="faq-hero">
+    <p class="eyebrow">FAQ</p>
+    <h1>常見問題</h1>
+    <p class="sub">關於塊頭勇者，你可能想知道的事</p>
+  </header>
+
+  <div class="faq-wrap">
+    {qa.map((item) => (
+      <details class="qa">
+        <summary class="q">{item.q}</summary>
+        <p class="a" set:html={item.a} />
+      </details>
+    ))}
+
+    <div class="faq-footer">
+      <p class="muted">還有問題？</p>
+      <a class="btn" href="/play/">▶ 開始試玩</a>
+    </div>
+  </div>
+</div>
+
+<script type="application/ld+json" is:inline set:html={JSON.stringify(jsonLd)} />
+
+<style is:global>
+.faq-hero{text-align:center;padding:34px 18px 8px}
+.faq-hero .eyebrow{font-size:13px;letter-spacing:4px;color:var(--sun2);font-weight:800;text-transform:uppercase;margin-bottom:6px}
+.faq-hero h1{font-size:clamp(28px,7vw,40px);font-weight:900;letter-spacing:-.5px;margin:6px 0 4px;
+  background:linear-gradient(120deg,#ff8a2a,#ff5a3d);-webkit-background-clip:text;background-clip:text;color:transparent}
+.faq-hero .sub{margin:4px 0 0;color:var(--ink2);font-size:15px}
+.faq-wrap{max-width:640px;margin:0 auto;padding:0 18px 70px}
+.faq .muted{color:var(--ink2);font-size:14px}
+.faq .qa{background:#fff;border:1px solid rgba(200,140,40,.18);border-radius:16px;padding:4px 18px;margin:10px 0;box-shadow:var(--shadow)}
+.faq .q{cursor:pointer;font-size:16.5px;font-weight:800;color:var(--ink);padding:14px 0;list-style:none;
+  display:flex;align-items:center;justify-content:space-between;gap:10px}
+.faq .q::-webkit-details-marker{display:none}
+.faq .q::after{content:'+';flex:none;font-size:22px;font-weight:900;color:var(--sun2);transition:transform .15s}
+.faq details[open] .q::after{transform:rotate(45deg)}
+.faq .a{margin:0 0 16px;font-size:15px;line-height:1.7;color:var(--ink2)}
+.faq .a a{color:var(--fire);font-weight:800;text-decoration:underline}
+.faq-footer{text-align:center;margin-top:40px;padding-top:22px;border-top:1px solid rgba(200,140,40,.18)}
+.faq-footer .btn{display:inline-block;margin-top:10px;font-weight:900;color:#3a1f00;font-size:16px;
+  background:linear-gradient(120deg,var(--cta1),var(--cta2));padding:14px 34px;border-radius:999px;
+  box-shadow:0 8px 0 #d96a00,0 14px 22px rgba(180,90,0,.3);transition:transform .12s,box-shadow .12s}
+.faq-footer .btn:active{transform:translateY(4px);box-shadow:0 4px 0 #d96a00,0 8px 14px rgba(180,90,0,.3)}
+[data-theme="dark"] .faq .qa{background:#231d14;border-color:rgba(255,178,32,.16)}
+[data-theme="dark"] .faq-footer{border-top-color:rgba(255,178,32,.16)}
+</style>
+</Base>

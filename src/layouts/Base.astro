@@ -5,37 +5,71 @@ export interface Props {
   description?: string;
   image?: string;          // OG 圖(絕對或相對 /)；預設 og-image
   path?: string;           // 目前路徑(canonical)，如 '/dex/c15/'
-  navActive?: 'dex' | 'devlog' | 'howto' | '';
+  navActive?: 'dex' | 'devlog' | 'howto' | 'faq' | 'tier' | 'home' | '';
+  lang?: 'zh-TW' | 'en';   // 頁面語言；預設繁中
+  alt?: string;            // 另一語言版本的路徑；有值才輸出 hreflang 互指
 }
 const {
   title,
-  description = '塊頭勇者 Blockyusha 是一款把 Woodoku 方塊消除縫進轉珠 RPG 的卡片收集手機遊戲：拖方塊消除觸發五屬攻擊，收集可愛的方塊頭動物勇者一路闖塔。免下載，開網頁就能玩。',
+  description,
   image = '/og-image.webp',
   path = '/',
   navActive = '',
+  lang = 'zh-TW',
+  alt,
 } = Astro.props;
-const canonical = new URL(path, Astro.site ?? 'https://blockyusha.com').href;
-const ogImage = new URL(image, Astro.site ?? 'https://blockyusha.com').href;
+const isEn = lang === 'en';
+const desc = description ?? (isEn
+  ? 'Blockyusha is a free browser game that fuses Woodoku block puzzles with a card-battle RPG: drag blocks to clear lines, unleash 5-element attacks, and collect cute blocky animal heroes. No download — just open your browser and play.'
+  : '塊頭勇者 Blockyusha 是一款把 Woodoku 方塊消除縫進轉珠 RPG 的卡片收集手機遊戲：拖方塊消除觸發五屬攻擊，收集可愛的方塊頭動物勇者一路闖塔。免下載，開網頁就能玩。');
+const site = Astro.site ?? 'https://blockyusha.com';
+const canonical = new URL(path, site).href;
+const ogImage = new URL(image, site).href;
+// hreflang 互指(只有提供 alt 的頁面才輸出)
+const enPath = alt ? (isEn ? path : alt) : null;
+const zhPath = alt ? (isEn ? alt : path) : null;
+// 語系化 nav
+const nav = isEn ? [
+  { href: '/dex/',            label: 'Characters',  key: 'dex' },
+  { href: '/en/tier-list/',   label: 'Tier List',   key: 'tier' },
+  { href: '/en/how-to-play/', label: 'How to Play', key: 'howto' },
+  { href: '/en/faq/',         label: 'FAQ',         key: 'faq' },
+] : [
+  { href: '/dex/',                label: '角色圖鑑', key: 'dex' },
+  { href: '/tier-list/',          label: 'Tier 榜',  key: 'tier' },
+  { href: '/devlog/how-to-play/', label: '玩法',     key: 'howto' },
+  { href: '/faq/',                label: 'FAQ',      key: 'faq' },
+  { href: '/devlog/',             label: '日誌',     key: 'devlog' },
+];
+const brand = isEn ? 'Blockyusha' : '塊頭勇者';
+const homeHref = isEn ? '/en/' : '/';
+const playLabel = isEn ? 'Play' : '開始遊戲';
+const switchHref = alt ?? (isEn ? '/' : '/en/');
+const switchLabel = isEn ? '中' : 'EN';
 ---
 <!doctype html>
-<html lang="zh-TW">
+<html lang={lang}>
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 <script is:inline>(function(){try{var t=localStorage.getItem('bytheme')||((window.matchMedia&&matchMedia('(prefers-color-scheme:dark)').matches)?'dark':'light');document.documentElement.setAttribute('data-theme',t);}catch(e){}})();</script>
 <title>{title}</title>
-<meta name="description" content={description} />
+<meta name="description" content={desc} />
 <link rel="canonical" href={canonical} />
+{zhPath && <link rel="alternate" hreflang="zh-TW" href={new URL(zhPath, site).href} />}
+{enPath && <link rel="alternate" hreflang="en" href={new URL(enPath, site).href} />}
+{enPath && <link rel="alternate" hreflang="x-default" href={new URL(enPath, site).href} />}
 <meta name="theme-color" content="#ffd43b" />
 <meta property="og:type" content="website" />
 <meta property="og:site_name" content="塊頭勇者 Blockyusha" />
 <meta property="og:title" content={title} />
-<meta property="og:description" content={description} />
+<meta property="og:description" content={desc} />
 <meta property="og:url" content={canonical} />
 <meta property="og:image" content={ogImage} />
+<meta property="og:locale" content={isEn ? 'en_US' : 'zh_TW'} />
 <meta name="twitter:card" content="summary_large_image" />
 <meta name="twitter:title" content={title} />
-<meta name="twitter:description" content={description} />
+<meta name="twitter:description" content={desc} />
 <meta name="twitter:image" content={ogImage} />
 <link rel="icon" href="/play/art/cards/c15_thumb.webp" />
 <link rel="apple-touch-icon" href="/play/art/cards/c15_thumb.webp" />
@@ -44,15 +78,14 @@ const ogImage = new URL(image, Astro.site ?? 'https://blockyusha.com').href;
 
 <header>
   <div class="nav wrap">
-    <a class="brand" href="/">塊頭勇者</a>
+    <a class="brand" href={homeHref}>{brand}</a>
     <nav class="links">
-      <a href="/dex/" class={navActive === 'dex' ? 'on' : ''}>角色圖鑑</a>
-      <a href="/devlog/how-to-play/" class={navActive === 'howto' ? 'on' : ''}>玩法</a>
-      <a href="/devlog/" class={navActive === 'devlog' ? 'on' : ''}>日誌</a>
+      {nav.map((n) => <a href={n.href} class={navActive === n.key ? 'on' : ''}>{n.label}</a>)}
     </nav>
     <div class="navr">
+      <a class="langsw" href={switchHref} aria-label="Switch language / 切換語言">{switchLabel}</a>
       <button class="themebtn" type="button" onclick="toggleTheme()" aria-label="切換日夜模式">🌙</button>
-      <a class="miniplay" href="/play/">開始遊戲</a>
+      <a class="miniplay" href="/play/">{playLabel}</a>
     </div>
   </div>
 </header>
@@ -60,8 +93,10 @@ const ogImage = new URL(image, Astro.site ?? 'https://blockyusha.com').href;
 <slot />
 
 <footer>
-  <a href="/">首頁</a><a href="/dex/">角色圖鑑</a><a href="/play/">開始遊戲</a><a href="/devlog/">開發日誌</a>
-  <div class="cp">塊頭勇者 Blockyusha · 開發中 · © 2026 fightmon</div>
+  {isEn
+    ? <><a href="/en/">Home</a><a href="/dex/">Characters</a><a href="/play/">Play</a><a href="/en/faq/">FAQ</a><a href="/terms/">Terms</a><a href="/privacy/">Privacy</a></>
+    : <><a href="/">首頁</a><a href="/dex/">角色圖鑑</a><a href="/play/">開始遊戲</a><a href="/devlog/">開發日誌</a><a href="/terms/">服務條款</a><a href="/privacy/">隱私權政策</a></>}
+  <div class="cp">塊頭勇者 Blockyusha · {isEn ? 'in development' : '開發中'} · © 2026 fightmon</div>
 </footer>
 
 <script is:inline>
@@ -93,6 +128,10 @@ header{position:sticky;top:0;z-index:50;background:rgba(255,248,236,.92);backdro
 .links{display:none;gap:22px;font-size:15px;font-weight:700;color:var(--ink2)}
 .links a:hover,.links a.on{color:var(--fire)}
 .navr{display:flex;align-items:center;gap:10px}
+.langsw{display:grid;place-items:center;min-width:40px;height:40px;padding:0 10px;border-radius:20px;font-size:13px;font-weight:800;
+  color:var(--ink2);background:rgba(255,255,255,.55);box-shadow:0 3px 10px rgba(140,90,20,.16);transition:transform .12s,color .12s}
+.langsw:hover{color:var(--fire)}
+.langsw:active{transform:scale(.9)}
 .themebtn{width:40px;height:40px;border:none;border-radius:50%;cursor:pointer;font-size:19px;line-height:1;
   background:rgba(255,255,255,.55);box-shadow:0 3px 10px rgba(140,90,20,.16);transition:transform .12s}
 .themebtn:active{transform:scale(.9)}
@@ -108,6 +147,7 @@ footer .cp{margin-top:12px;font-size:12px;color:#8a795c}
 [data-theme="dark"] body{background:#15120b}
 [data-theme="dark"] header{background:rgba(20,16,10,.9);border-bottom-color:rgba(255,178,32,.16)}
 [data-theme="dark"] .themebtn{background:rgba(255,255,255,.1)}
+[data-theme="dark"] .langsw{background:rgba(255,255,255,.1)}
 [data-theme="dark"] footer{background:#0d0b07}
 @media(min-width:720px){.links{display:flex}}
 </style>

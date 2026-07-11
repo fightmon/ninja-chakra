@@ -1,0 +1,102 @@
+---
+import Base from '../layouts/Base.astro';
+import { byId, meta } from '../data/cards';
+
+interface TierDef { tier: 'S' | 'A' | 'B' | 'C'; ids: string[]; desc: string; }
+
+const tiers: TierDef[] = [
+  {
+    tier: 'S',
+    ids: ['c15', 'c18', 'c22', 'c26', 'c30', 'c13', 'c16', 'c20', 'c23', 'c27'],
+    desc: '台灣特有種 5 隻各有獨特招式（雲豹傷害集中/均分、藍鵲全場控場、黑熊護盾、櫻花鉤吻鮭自動回生、獼猴每消偷打）＋鼠系「大清爆發」隊長技（同屬攻可觸發 ×2，傷害天花板最高）。',
+  },
+  {
+    tier: 'A',
+    ids: ['c31', 'c32', 'c33', 'c34', 'c35', 'c14', 'c17', 'c21', 'c24', 'c28'],
+    desc: '兔系「繁殖增幅」＋化境（全盤變同屬做相剋爆發）、魚系「連鎖增幅」（combo≥2 攻×1.8，最好觸發的持續輸出）。強力的組合技與滾雪球能力。',
+  },
+  {
+    tier: 'B',
+    ids: ['c02', 'c05', 'c08', 'c09', 'c11', 'c03', 'c06', 'c19', 'c10', 'c12'],
+    desc: '貓系「自我爆發」（同屬攻×1.5，簡單穩定）、犬系「攻守雙修」（HP＋攻各×1.2，坦度高但輸出偏低）。可靠的中堅。',
+  },
+  {
+    tier: 'C',
+    ids: ['c01', 'c04', 'c07', 'c25', 'c29'],
+    desc: '鳥系「控敵先制」（剋屬敵 CD+2，純控場、無傷害倍率），看場合好用但輸出低。',
+  },
+];
+---
+<Base title="角色 Tier List 最強排行 — 塊頭勇者 Blockyusha" path="/tier-list/" navActive="tier" lang="zh-TW" alt="/en/tier-list/"
+  description="塊頭勇者 Blockyusha 角色 Tier List：35 隻方塊頭勇者依隊長技倍率、主動技效用與三圍效率分為 S/A/B/C 四級，找出最強排行組合。">
+
+<div class="tl">
+
+<div class="tl-wrap tl-title">
+  <h1>角色 Tier List — 最強排行</h1>
+  <p>35 隻方塊頭勇者，依實戰強度分級</p>
+</div>
+
+<div class="tl-wrap">
+  {tiers.map((t) => (
+    <section class="tl-row">
+      <div class="tl-head">
+        <div class={`tl-badge tl-badge-${t.tier}`}>{t.tier}</div>
+        <p class="tl-desc">{t.desc}</p>
+      </div>
+      <div class="tl-grid">
+        {t.ids.map((id) => byId[id]).filter(Boolean).map((c) => (
+          <a class="tl-cell" href={`/dex/${c.id}/`} style={`--el:${meta.elColor[c.el]}`}>
+            <div class="tl-pic">
+              {c.hero && <span class="tl-hero">⭐</span>}
+              <img loading="lazy" src={`/play/art/cards/${c.id}_thumb.webp`} alt={c.name} />
+            </div>
+            <div class="tl-el" style={`background:${meta.elColor[c.el]}`}>{meta.elName[c.el]}</div>
+            <div class="tl-nm">{c.name}</div>
+          </a>
+        ))}
+      </div>
+    </section>
+  ))}
+</div>
+
+<div class="tl-wrap tl-method">
+  <h2>評分方式</h2>
+  <p>依「隊長技倍率 × 主動技效用 × 三圍效率」綜合評比；屬性只影響對特定關卡的相剋、不影響 tier 本身；同家族共用招式，個體差異主要在屬性與三圍。遊戲開發中、平衡會持續調整，本表僅供參考。</p>
+</div>
+
+</div>
+
+<style is:global>
+.tl-wrap{max-width:900px;margin:0 auto;padding:0 16px}
+.tl-title{text-align:center;padding:28px 16px 4px}
+.tl-title h1{font-size:clamp(26px,7vw,40px);font-weight:900;background:linear-gradient(120deg,#ff8a2a,#ff5a3d);-webkit-background-clip:text;background-clip:text;color:transparent}
+.tl-title p{color:var(--ink2);font-size:14px;margin-top:6px}
+.tl-row{margin:22px auto 30px}
+.tl-head{display:flex;align-items:center;gap:14px;margin-bottom:14px}
+.tl-badge{flex:0 0 auto;width:52px;height:52px;border-radius:16px;display:grid;place-items:center;font-size:26px;font-weight:900;color:#fff;box-shadow:0 6px 16px rgba(140,90,20,.25)}
+.tl-badge-S{background:linear-gradient(120deg,#ff5a3d,#ff8a2a)}
+.tl-badge-A{background:linear-gradient(120deg,#ffd23b,#ffb020);color:#3a2a10}
+.tl-badge-B{background:linear-gradient(120deg,#c9b795,#a8916b);color:#3a2a10}
+.tl-badge-C{background:linear-gradient(120deg,#e3dac6,#cfc3a6);color:#5a4c34}
+.tl-desc{font-size:14px;line-height:1.55;color:var(--ink2)}
+.tl-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:8px}
+.tl-cell{background:#fff;border-radius:14px;padding:6px 4px 9px;text-align:center;box-shadow:0 4px 12px rgba(140,90,20,.13);border-bottom:4px solid var(--el);transition:transform .12s}
+.tl-cell:hover{transform:translateY(-3px)}
+.tl-cell .tl-pic{position:relative;border-radius:10px;overflow:hidden;background:var(--el)}
+.tl-cell .tl-pic img{width:100%;aspect-ratio:1;object-fit:cover}
+.tl-hero{position:absolute;right:3px;top:2px;font-size:12px}
+.tl-el{margin-top:5px;font-size:10px;font-weight:800;color:#fff;border-radius:999px;padding:1px 8px;display:inline-block}
+.tl-nm{font-size:13px;font-weight:800;margin-top:4px;line-height:1.25}
+.tl-method{padding:10px 16px 60px}
+.tl-method h2{font-size:19px;font-weight:900;margin-bottom:8px}
+.tl-method p{font-size:13.5px;line-height:1.65;color:var(--ink2)}
+[data-theme="dark"] .tl-cell{background:#231d14}
+[data-theme="dark"] .tl-badge-A{color:#241a08}
+[data-theme="dark"] .tl-badge-B{color:#241a08}
+[data-theme="dark"] .tl-badge-C{color:#2c2114}
+@media(max-width:440px){.tl-cell .tl-nm{font-size:11px}.tl-grid{gap:6px}}
+@media(min-width:640px){.tl-grid{gap:12px}.tl-cell .tl-nm{font-size:15px}}
+</style>
+
+</Base>

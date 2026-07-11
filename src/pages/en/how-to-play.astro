@@ -1,21 +1,21 @@
 ---
 import Base from '../../layouts/Base.astro';
 ---
-<Base title="30 秒上手 — 塊頭勇者 Blockyusha" path="/devlog/how-to-play/" navActive="howto" alt="/en/how-to-play/"
-  description="塊頭勇者 30 秒上手教學：隊伍、屬性塊保存、CD技、combo、相剋一次看懂，還有核心循環動畫，看完就會玩。">
+<Base title="How to Play (30-sec guide) — Blockyusha" path="/en/how-to-play/" navActive="howto" lang="en" alt="/devlog/how-to-play/"
+  description="Blockyusha 30-second guide: team, saved element blocks, CD skills, combos, and elemental counters — plus a core-loop animation. Watch it once and you'll know how to play.">
 
 <div class="htp">
   <header class="htp-hero">
     <p class="eyebrow">How to Play</p>
-    <h1>30 秒上手</h1>
-    <p class="sub">拼方塊 × 卡牌 RPG — 看完就會玩</p>
+    <h1>30-Second Guide</h1>
+    <p class="sub">Block Puzzle × Card-Battle RPG — watch and you'll know how to play</p>
   </header>
 
   <div class="htp-wrap">
 
     <div class="card lead">
-      <p class="big">🧩 <b>一句話：</b>把方塊拼進 <b>9×9</b> 盤面，填滿一整<b>列／行／宮</b>就「消除」→ 對敵人造成傷害，消光敵人就過關。</p>
-      <p class="muted">就像「<b style="color:var(--ink)">Woodoku 方塊消除</b>」，但每次消除都是在打怪。</p>
+      <p class="big">🧩 <b>In one line:</b> fit blocks onto a <b>9×9</b> board, fill a full <b>row / column / box</b> to "clear" it → deal damage to the enemy. Clear all enemies to win.</p>
+      <p class="muted">Just like <b style="color:var(--ink)">Woodoku block puzzle</b>, but every clear is an attack.</p>
     </div>
 
     <div class="demo" aria-hidden="true">
@@ -24,88 +24,88 @@ import Base from '../../layouts/Base.astro';
         <div class="dhp"><div class="dhp-fill" id="dhp"></div></div>
       </div>
       <div class="dboard" id="dboard"></div>
-      <div class="dcard"><span class="dslot" id="dslot"></span><span>屬塊存到卡上</span></div>
-      <div class="dcap" id="dcap">拖方塊，填滿一個宮…</div>
+      <div class="dcard"><span class="dslot" id="dslot"></span><span>Element block saved to your card</span></div>
+      <div class="dcap" id="dcap">Drag a block to fill a box…</div>
     </div>
 
-    <h2><span class="n">1</span>你的隊伍</h2>
+    <h2><span class="n">1</span>Your Team</h2>
     <div class="card">
-      <p>一隊 <b>5 張勇者卡</b>，每張各「鎮守」盤面上的一個<b>宮（3×3）</b>，決定那個宮的<b>屬性</b>。</p>
-      <p class="muted">盤面 = 9 個宮，對應你 5 張卡的屬性地圖。</p>
+      <p>A team of <b>5 hero cards</b>, each one "guarding" a <b>box (3×3)</b> on the board — that determines the box's <b>element</b>.</p>
+      <p class="muted">The board = 9 boxes, mapped to the elements of your 5 cards.</p>
     </div>
 
-    <h2><span class="n">2</span>招牌玩法：屬塊保存 ⭐</h2>
+    <h2><span class="n">2</span>Signature mechanic: saving element blocks ⭐</h2>
     <div class="card">
-      <p class="big">這是本作最特別的地方 👇</p>
-      <p>① 填滿一個<b>宮</b>消除時 → 那屬性會生成一塊「<b>屬性塊</b>」，<b>存到對應的勇者卡上</b>（卡上出現小方塊）。</p>
-      <p>② 想用時，<b>從卡上把它「拖」到盤面</b> → 它是萬用塊，填任何空格、湊出更多消除（<b>連環爆發引擎</b>）。</p>
-      <p>③ <b>不一定要馬上用！</b>可以一路囤 ——
-        <b>前面小怪慢慢養塊，第 3 關 boss 一次狂放</b>，超有爽度。</p>
-      <p class="muted">塊越大＝等級越高（清越多格生越大塊）。一張卡最高到 LV3；同屬疊兩張可衝 LV4～5。每張卡最多存 1 塊（留最高等的）。</p>
+      <p class="big">This is what makes the game special 👇</p>
+      <p>① When you clear a <b>box</b> → its element generates an "<b>element block</b>", <b>saved onto the matching hero card</b> (a small block appears on the card).</p>
+      <p>② When you want it, <b>drag it off the card</b> onto the board → it's a wildcard block that fills any empty cell and sets up more clears (a <b>combo-chain engine</b>).</p>
+      <p>③ <b>You don't have to use it right away!</b> You can stockpile them ——
+        <b>grind small blocks against early mobs, then unleash everything on stage-3 boss</b> for maximum satisfaction.</p>
+      <p class="muted">Bigger blocks = higher level (clearing more cells at once makes bigger blocks). Each card caps at LV3; stacking two of the same element can push it to LV4–5. Each card can only hold 1 block (the highest level replaces the rest).</p>
     </div>
 
-    <h2><span class="n">3</span>五屬 & 形狀</h2>
+    <h2><span class="n">3</span>5 Elements & Shapes</h2>
     <div class="card" id="elements"></div>
     <div class="card">
-      <p>🔥 火 / 🪨 土 / ⚡ 雷 的塊 <b>生成時就自動隨機轉好方向</b>（你不用手動轉，每次拿到不一樣）。</p>
-      <p>💧 水 / 🌀 風 <b>方向固定</b>（直落 / 橫吹）→ 永遠知道會拿到什麼，最好規劃。</p>
+      <p>🔥 Fire / 🪨 Earth / ⚡ Thunder blocks <b>auto-rotate randomly when generated</b> (no need to rotate manually — you get a different orientation each time).</p>
+      <p>💧 Water / 🌀 Wind blocks have a <b>fixed orientation</b> (vertical / horizontal) → you always know what you're getting, easiest to plan around.</p>
     </div>
 
-    <h2><span class="n">4</span>CD技（大招）</h2>
+    <h2><span class="n">4</span>CD Skills (Ultimates)</h2>
     <div class="card">
-      <p class="muted" style="margin-top:0">每張卡<b style="color:var(--ink2)">上方有一顆小按鈕</b>，打幾手蓄滿後會發亮 → 點一下放招：</p>
-      <div class="skill"><div class="ic">🔥</div><div class="tx"><b>業火奔流</b><div class="d">鎖定一隻敵人，打出 攻擊×3 的重擊</div></div></div>
-      <div class="skill"><div class="ic">💧</div><div class="tx"><b>回春之泉</b><div class="d">回復 30% 生命</div></div></div>
-      <div class="skill"><div class="ic">⚡</div><div class="tx"><b>封雷結界</b><div class="d">全體敵人延後 3 手才出手</div></div></div>
-      <div class="skill"><div class="ic">🪨</div><div class="tx"><b>大地整復</b><div class="d">洗換手中的能量塊（換新一手）</div></div></div>
-      <div class="skill"><div class="ic">🌀</div><div class="tx"><b>疾風亂舞</b><div class="d">清掉最滿的一宮，化風刃單體重擊（順帶 +1 combo）</div></div></div>
+      <p class="muted" style="margin-top:0">Each card has a <b style="color:var(--ink2)">small button above it</b> — land enough hits to charge it up, then tap to unleash:</p>
+      <div class="skill"><div class="ic">🔥</div><div class="tx"><b>Blazing Torrent</b><div class="d">Locks onto one enemy, deals a heavy hit at ATK ×3</div></div></div>
+      <div class="skill"><div class="ic">💧</div><div class="tx"><b>Spring of Renewal</b><div class="d">Restores 30% HP</div></div></div>
+      <div class="skill"><div class="ic">⚡</div><div class="tx"><b>Thunder Seal</b><div class="d">Delays all enemies' next turn by 3 moves</div></div></div>
+      <div class="skill"><div class="ic">🪨</div><div class="tx"><b>Earthen Rework</b><div class="d">Reshuffles your current hand of blocks</div></div></div>
+      <div class="skill"><div class="ic">🌀</div><div class="tx"><b>Gale Dance</b><div class="d">Clears the fullest box, turns it into a wind blade hitting one enemy (also grants +1 combo)</div></div></div>
     </div>
 
-    <h2><span class="n">5</span>combo（連擊獎勵）</h2>
+    <h2><span class="n">5</span>Combos (Chain Bonus)</h2>
     <div class="card">
-      <p>每放一塊<b>只要有消除</b>，combo 就 <b>+1</b> 疊上去；哪一手<b>沒消到</b>，combo 就<b>歸零</b>重來 → 爽度全在「連消不斷手」。</p>
-      <p>combo 越高<b>傷害倍率越高</b>，而且<b>越疊越兇</b>：<span class="muted">2 連 ×1.25、3 連 ×1.6、4 連 ×2.1、6 連 ×3.5……不封頂。</span></p>
-      <p class="muted">💥 <b>單手清掉 15 格以上</b>（囤好屬塊一次狂放最容易達成）→ 這一擊直接<b>打全體敵人</b>。</p>
+      <p>Every block you place <b>that clears something</b> adds <b>+1</b> to your combo; any move that <b>clears nothing</b> resets combo to zero → the thrill is all about "keep clearing, don't stop."</p>
+      <p>The higher the combo, <b>the higher the damage multiplier</b> — and it <b>ramps up fast</b>: <span class="muted">2-combo ×1.25, 3-combo ×1.6, 4-combo ×2.1, 6-combo ×3.5… no cap.</span></p>
+      <p class="muted">💥 <b>Clear 15+ cells in a single move</b> (easiest when you unload stockpiled element blocks all at once) → that hit <b>strikes all enemies</b>.</p>
     </div>
 
-    <h2><span class="n">6</span>相剋（帶對屬性更強）</h2>
+    <h2><span class="n">6</span>Elemental Counters (matching elements hit harder)</h2>
     <div class="card">
       <div class="ring">
-        <span class="e" style="background:var(--fire)">火</span><span class="ar">→</span>
-        <span class="e" style="background:var(--wind)">風</span><span class="ar">→</span>
-        <span class="e" style="background:var(--thunder)">雷</span><span class="ar">→</span>
-        <span class="e" style="background:var(--earth)">土</span><span class="ar">→</span>
-        <span class="e" style="background:var(--water)">水</span><span class="ar">→</span>
-        <span class="e" style="background:var(--fire)">火</span>
+        <span class="e" style="background:var(--fire)">Fire</span><span class="ar">→</span>
+        <span class="e" style="background:var(--wind)">Wind</span><span class="ar">→</span>
+        <span class="e" style="background:var(--thunder)">Thunder</span><span class="ar">→</span>
+        <span class="e" style="background:var(--earth)">Earth</span><span class="ar">→</span>
+        <span class="e" style="background:var(--water)">Water</span><span class="ar">→</span>
+        <span class="e" style="background:var(--fire)">Fire</span>
       </div>
-      <p style="text-align:center;margin-top:10px" class="muted">箭頭 = 剋。</p>
+      <p style="text-align:center;margin-top:10px" class="muted">Arrow = counters.</p>
       <div class="pill">
-        <span>剋到敵人 → 傷害 <b>×1.6</b></span>
-        <span>被敵人剋 → 傷害 <b>×0.7</b></span>
+        <span>Hit a weakness → damage <b>×1.6</b></span>
+        <span>Get countered → damage <b>×0.7</b></span>
       </div>
-      <p class="muted">帶相剋的屬性去打對應關卡，會輕鬆很多 —— 但帶錯屬性只要操作夠好（衝combo、囤塊），一樣翻得回來。</p>
+      <p class="muted">Bringing the right element to a stage makes things much easier — but bring the wrong one and good play (chaining combos, stockpiling blocks) can still turn it around.</p>
     </div>
 
-    <h2><span class="n">7</span>卡住了？別怕</h2>
+    <h2><span class="n">7</span>Stuck? Don't worry</h2>
     <div class="card">
-      <p>盤面塞滿、手上的塊放不下時 —— 只要卡上有<b>能用的屬塊</b>，它會<b>跳動發亮</b>提醒你，把它拖下去解圍，<b>不扣血</b>。</p>
-      <p class="muted">真的連存的塊也救不了，才會花一點生命重洗。<b style="color:var(--ink2)">所以會玩的人幾乎不掉血。</b></p>
+      <p>When the board is full and your current blocks won't fit — if a card has a <b>usable element block</b>, it will <b>pulse and glow</b> to remind you. Drag it out to bail yourself out, <b>no HP lost</b>.</p>
+      <p class="muted">Only if even your saved blocks can't save you will you spend a bit of HP to reshuffle. <b style="color:var(--ink2)">So skilled players almost never lose HP.</b></p>
     </div>
 
-    <h2><span class="n">8</span>一局心法</h2>
+    <h2><span class="n">8</span>Match Strategy</h2>
     <div class="card">
       <div class="flow">
-        <div class="step"><div class="e">🌱</div><b>前期：養</b><div class="d">小怪關囤屬塊、衝combo</div></div>
+        <div class="step"><div class="e">🌱</div><b>Early: Build</b><div class="d">Stockpile element blocks and chain combos on mob stages</div></div>
         <div class="arrow">→</div>
-        <div class="step"><div class="e">💥</div><b>Boss：放</b><div class="d">狂拖屬塊＋放大招爆發</div></div>
+        <div class="step"><div class="e">💥</div><b>Boss: Unleash</b><div class="d">Dump your stockpiled blocks and pop your ultimates</div></div>
       </div>
-      <p class="muted" style="margin-top:12px">盤面、combo、屬塊都會<b>帶到下一關</b>，所以一城 3 關是一場「連續戰」。</p>
+      <p class="muted" style="margin-top:12px">Your board, combo, and element blocks all <b>carry over into the next stage</b>, so each 3-stage city is one continuous fight.</p>
     </div>
 
     <div class="footer">
-      <p class="muted">準備好了嗎？</p>
-      <a class="btn" href="/play/">▶ 開始試玩</a>
-      <p class="muted" style="margin-top:16px;font-size:12px;">塊頭勇者 · 開發中 Demo</p>
+      <p class="muted">Ready?</p>
+      <a class="btn" href="/play/">▶ Start Playing</a>
+      <p class="muted" style="margin-top:16px;font-size:12px;">Blockyusha · In-development Demo</p>
     </div>
 
   </div>
@@ -197,11 +197,11 @@ import Base from '../../layouts/Base.astro';
 
 <script is:inline>
 const SHAPES = {
-  water:  {color:'#37b6ff', emoji:'💧', name:'水', ps:'直落 · 可靠好規劃', s:{1:[[0,0]],2:[[0,0],[1,0]],3:[[0,0],[1,0],[2,0]],4:[[0,0],[1,0],[2,0],[3,0]],5:[[0,0],[1,0],[2,0],[3,0],[4,0]]}},
-  wind:   {color:'#3fbf54', emoji:'🌀', name:'風', ps:'橫吹 · 可靠好規劃', s:{1:[[0,0]],2:[[0,0],[0,1]],3:[[0,0],[0,1],[0,2]],4:[[0,0],[0,1],[0,2],[0,3]],5:[[0,0],[0,1],[0,2],[0,3],[0,4]]}},
-  fire:   {color:'#ff6a3d', emoji:'🔥', name:'火', ps:'萬能可轉 · 每階都好用', s:{1:[[0,0]],2:[[0,0],[0,1]],3:[[0,0],[1,0],[1,1]],4:[[0,0],[0,1],[0,2],[1,1]],5:[[0,1],[1,0],[1,1],[1,2],[2,1]]}},
-  earth:  {color:'#c8873f', emoji:'🪨', name:'土', ps:'方塊系 · 高手向，疊兩張超強', s:{1:[[0,0]],2:[[0,0],[1,1]],3:[[0,0],[1,1],[2,2]],4:[[0,0],[0,1],[1,0],[1,1]],5:[[0,0],[0,2],[1,0],[1,1],[1,2]]}},
-  thunder:{color:'#f0b410', emoji:'⚡', name:'雷', ps:'鋸齒閃電 · 慢熱，LV3 後很猛', s:{1:[[0,0]],2:[[0,0],[1,1]],3:[[0,0],[1,0],[1,1]],4:[[0,1],[0,2],[1,0],[1,1]],5:[[0,0],[0,1],[1,1],[2,1],[2,2]]}},
+  water:  {color:'#37b6ff', emoji:'💧', name:'Water', ps:'Vertical · reliable, easy to plan', s:{1:[[0,0]],2:[[0,0],[1,0]],3:[[0,0],[1,0],[2,0]],4:[[0,0],[1,0],[2,0],[3,0]],5:[[0,0],[1,0],[2,0],[3,0],[4,0]]}},
+  wind:   {color:'#3fbf54', emoji:'🌀', name:'Wind', ps:'Horizontal · reliable, easy to plan', s:{1:[[0,0]],2:[[0,0],[0,1]],3:[[0,0],[0,1],[0,2]],4:[[0,0],[0,1],[0,2],[0,3]],5:[[0,0],[0,1],[0,2],[0,3],[0,4]]}},
+  fire:   {color:'#ff6a3d', emoji:'🔥', name:'Fire', ps:'Rotates freely · great at every level', s:{1:[[0,0]],2:[[0,0],[0,1]],3:[[0,0],[1,0],[1,1]],4:[[0,0],[0,1],[0,2],[1,1]],5:[[0,1],[1,0],[1,1],[1,2],[2,1]]}},
+  earth:  {color:'#c8873f', emoji:'🪨', name:'Earth', ps:'Blocky · advanced, stacking two is strong', s:{1:[[0,0]],2:[[0,0],[1,1]],3:[[0,0],[1,1],[2,2]],4:[[0,0],[0,1],[1,0],[1,1]],5:[[0,0],[0,2],[1,0],[1,1],[1,2]]}},
+  thunder:{color:'#f0b410', emoji:'⚡', name:'Thunder', ps:'Zigzag lightning · slow start, fierce at LV3+', s:{1:[[0,0]],2:[[0,0],[1,1]],3:[[0,0],[1,0],[1,1]],4:[[0,1],[0,2],[1,0],[1,1]],5:[[0,0],[0,1],[1,1],[2,1],[2,2]]}},
 };
 function makeShape(cells,color){
   let mr=0,mc=0; cells.forEach(([r,c])=>{mr=Math.max(mr,r);mc=Math.max(mc,c);});
@@ -248,18 +248,18 @@ Object.values(SHAPES).forEach((el,i)=>{
   function run(){
     timers.forEach(clearTimeout); timers=[];
     cells.forEach(function(c){c.className='dc';}); slot.className='dslot';
-    cap.textContent='拖方塊，填滿一個宮…';
+    cap.textContent='Drag a block to fill a box…';
     order.forEach(function(idx,k){ T(function(){cells[idx].classList.add('on');}, 200+k*180); });
     var full=200+9*180;
-    T(function(){ cap.textContent='整宮填滿 → 消除！'; board.classList.add('flash'); }, full);
+    T(function(){ cap.textContent='Box filled → clear!'; board.classList.add('flash'); }, full);
     T(function(){
       board.classList.remove('flash');
       cells.forEach(function(c){c.className='dc';});
-      cap.textContent='→ 對敵人造成傷害 💥';
+      cap.textContent='→ Damage the enemy 💥';
       enemy.classList.add('hit'); T(function(){enemy.classList.remove('hit');},320);
       hpVal=Math.max(0,hpVal-34); hp.style.width=hpVal+'%';
     }, full+440);
-    T(function(){ slot.classList.add('filled'); cap.textContent='屬塊存到卡上 ⭐（下次可拖出用）'; }, full+1000);
+    T(function(){ slot.classList.add('filled'); cap.textContent='Element block saved to your card ⭐'; }, full+1000);
     T(function(){ if(hpVal<=0){hpVal=100;hp.style.width='100%';} run(); }, full+2500);
   }
   run();

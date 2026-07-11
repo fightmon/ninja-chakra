@@ -1,0 +1,114 @@
+---
+import Base from '../../layouts/Base.astro';
+
+const qa = [
+  {
+    q: 'What is Blockyusha?',
+    a: 'A free browser game fusing Woodoku-style block puzzles with a card-battle RPG. Drag blocks onto a 9×9 board; clearing a full row, column, or 3×3 box attacks the enemy. Collect cute blocky animal heroes, build a team, climb the tower.',
+  },
+  {
+    q: 'Is Blockyusha free?',
+    a: 'Yes, completely free to play in your browser. It’s currently an in-development demo.',
+  },
+  {
+    q: 'Do I need to download or install anything?',
+    a: 'No. It runs in your browser — no download, no install. Just go to blockyusha.com and press Play.',
+  },
+  {
+    q: 'Can I play on mobile?',
+    a: 'Yes. It’s designed mobile-first — drag blocks with your finger. Works on phone, tablet, and desktop browsers.',
+  },
+  {
+    q: 'Is it like Woodoku? How is it different?',
+    a: 'The core drag-and-clear loop feels familiar if you like Woodoku or Block Blast, but Blockyusha adds a full RPG layer: every clear is an attack, elements counter each other, you collect and team up heroes, and there are active skills and tower stages. In short: Woodoku × card-battle RPG.',
+  },
+  {
+    q: 'How do I play?',
+    a: 'Drag blocks onto the board and fill a full row, column, or 3×3 box to clear and attack. Damage depends on your heroes’ elements — hit a weakness for extra damage. See the full <a href="/en/how-to-play/">How to Play guide</a>.',
+    plain: 'Drag blocks onto the board and fill a full row, column, or 3×3 box to clear and attack. Damage depends on your heroes’ elements — hit a weakness for extra damage. See the full How to Play guide.',
+  },
+  {
+    q: 'How many characters are there?',
+    a: '35 blocky animal heroes across families like cat, dog, bird, rat, rabbit, fish, and Taiwan’s endemic species. Browse every hero’s stats and skills in the <a href="/dex/">Character Dex</a>.',
+    plain: '35 blocky animal heroes across families like cat, dog, bird, rat, rabbit, fish, and Taiwan’s endemic species. Browse every hero’s stats and skills in the Character Dex.',
+  },
+  {
+    q: 'What is the 5-element system?',
+    a: 'Five elements form a counter ring: Fire → Wind → Thunder → Earth → Water → Fire. Attacking the element you beat deals more; being countered deals less.',
+  },
+  {
+    q: 'Do I need an account?',
+    a: 'No account needed — just open and play.',
+  },
+  {
+    q: 'Where can I follow updates?',
+    a: 'Follow @blockyusha on X, YouTube and Instagram, or read the <a href="/devlog/">devlog</a>.',
+    plain: 'Follow @blockyusha on X, YouTube and Instagram, or read the devlog.',
+  },
+];
+
+const jsonLd = {
+  '@context': 'https://schema.org',
+  '@type': 'FAQPage',
+  mainEntity: qa.map((item) => ({
+    '@type': 'Question',
+    name: item.q,
+    acceptedAnswer: {
+      '@type': 'Answer',
+      text: item.plain ?? item.a,
+    },
+  })),
+};
+---
+<Base title="FAQ — Blockyusha" path="/en/faq/" navActive="faq" lang="en" alt="/faq/"
+  description="Blockyusha FAQ: what the game is, whether it's free, how to play, character collection, and the 5-element counter system.">
+
+<div class="faq">
+  <header class="faq-hero">
+    <p class="eyebrow">FAQ</p>
+    <h1>Frequently Asked Questions</h1>
+    <p class="sub">Everything you might want to know about Blockyusha</p>
+  </header>
+
+  <div class="faq-wrap">
+    {qa.map((item) => (
+      <details class="qa">
+        <summary class="q">{item.q}</summary>
+        <p class="a" set:html={item.a} />
+      </details>
+    ))}
+
+    <div class="faq-footer">
+      <p class="muted">Still have questions?</p>
+      <a class="btn" href="/play/">▶ Play Now</a>
+    </div>
+  </div>
+</div>
+
+<script type="application/ld+json" is:inline set:html={JSON.stringify(jsonLd)} />
+
+<style is:global>
+.faq-hero{text-align:center;padding:34px 18px 8px}
+.faq-hero .eyebrow{font-size:13px;letter-spacing:4px;color:var(--sun2);font-weight:800;text-transform:uppercase;margin-bottom:6px}
+.faq-hero h1{font-size:clamp(28px,7vw,40px);font-weight:900;letter-spacing:-.5px;margin:6px 0 4px;
+  background:linear-gradient(120deg,#ff8a2a,#ff5a3d);-webkit-background-clip:text;background-clip:text;color:transparent}
+.faq-hero .sub{margin:4px 0 0;color:var(--ink2);font-size:15px}
+.faq-wrap{max-width:640px;margin:0 auto;padding:0 18px 70px}
+.faq .muted{color:var(--ink2);font-size:14px}
+.faq .qa{background:#fff;border:1px solid rgba(200,140,40,.18);border-radius:16px;padding:4px 18px;margin:10px 0;box-shadow:var(--shadow)}
+.faq .q{cursor:pointer;font-size:16.5px;font-weight:800;color:var(--ink);padding:14px 0;list-style:none;
+  display:flex;align-items:center;justify-content:space-between;gap:10px}
+.faq .q::-webkit-details-marker{display:none}
+.faq .q::after{content:'+';flex:none;font-size:22px;font-weight:900;color:var(--sun2);transition:transform .15s}
+.faq details[open] .q::after{transform:rotate(45deg)}
+.faq .a{margin:0 0 16px;font-size:15px;line-height:1.7;color:var(--ink2)}
+.faq .a a{color:var(--fire);font-weight:800;text-decoration:underline}
+.faq-footer{text-align:center;margin-top:40px;padding-top:22px;border-top:1px solid rgba(200,140,40,.18)}
+.faq-footer .btn{display:inline-block;margin-top:10px;font-weight:900;color:#3a1f00;font-size:16px;
+  background:linear-gradient(120deg,var(--cta1),var(--cta2));padding:14px 34px;border-radius:999px;
+  box-shadow:0 8px 0 #d96a00,0 14px 22px rgba(180,90,0,.3);transition:transform .12s,box-shadow .12s}
+.faq-footer .btn:active{transform:translateY(4px);box-shadow:0 4px 0 #d96a00,0 8px 14px rgba(180,90,0,.3)}
+[data-theme="dark"] .faq .qa{background:#231d14;border-color:rgba(255,178,32,.16)}
+[data-theme="dark"] .faq-footer{border-top-color:rgba(255,178,32,.16)}
+</style>
+</Base>
