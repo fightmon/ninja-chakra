@@ -4983,7 +4983,7 @@
         panel.add(this.add.text(CX, cy - 112, win ? (wasTut ? '你已學會核心:放塊→清屬性宮→相剋打弱點。出發吧!' : (this.dungeon.name + ' · ' + this.stagesEff.length + ' 關全清!')) : '第 ' + this.stage + ' 關失敗', { fontFamily: EMOJIFONT, fontSize: FS.cap, color: T.ink, align: 'center', wordWrap: { width: W - 60 } }).setOrigin(0.5));
         if (win) {
           const drops = this.runDrops || [], m = Math.min(drops.length, 8);
-          panel.add(this.add.text(CX, cy - 90, drops.length ? ('🎁 戰利品 ×' + drops.length) : '(這趟沒有掉落)', { fontFamily: EMOJIFONT, fontSize: FS.sub, color: T.goldTx, fontStyle: 'bold' }).setOrigin(0.5));
+          panel.add(this.add.text(CX, cy - 90, drops.length ? ('戰利品 ×' + drops.length) : '(這趟沒有掉落)', { fontFamily: EMOJIFONT, fontSize: FS.sub, color: T.goldTx, fontStyle: 'bold' }).setOrigin(0.5));   // 移除 🎁 emoji(部分裝置算繪成怪字);純文字更清楚
           const per = m ? Math.min(86, Math.floor((W - 20) / m)) : 0, sq = Math.min(per - 6, 74);   // 正方形卡;字級隨卡大小放大
           const fn = Math.max(13, Math.round(sq * 0.23)), fr = Math.max(11, Math.round(sq * 0.18));
           drops.slice(0, 8).forEach((d, i) => {
@@ -4991,8 +4991,8 @@
             const cardC = this.add.container(dx, dy); panel.add(cardC);   // 每張戰利品=子容器→逐張彈出
             cardC.add(roundRectG(this, 0, 0, sq, sq, 12, EL[d.cd.el].color, 1, d.isNew ? T.gold : T.divider, d.isNew ? 3 : 1.5));
             { const _dk = cardArtKey(d.cd.id, 'thumb'); if (_dk && this.textures.exists(_dk)) cardC.add(this.add.image(0, 0, _dk).setDisplaySize(sq - 4, sq - 4).setOrigin(0.5)); }   // 戰利品狗圖
-            cardC.add(this.add.text(0, -sq * 0.12, cardName(d.cd.id), { fontFamily: EMOJIFONT, fontSize: fn + 'px', color: T.ink, fontStyle: 'bold', align: 'center', wordWrap: { width: sq - 4 } }).setOrigin(0.5));
-            cardC.add(this.add.text(0, sq * 0.26, RANKSTAR[d.cd.rank], { fontFamily: EMOJIFONT, fontSize: fr + 'px', color: T.ink2, fontStyle: 'bold' }).setOrigin(0.5));
+            // 戰利卡片不顯示卡名(使用者要求 2026-07):只留卡圖 + 星等 + NEW,畫面更乾淨(fn 名稱字級因此不再使用)
+            cardC.add(this.add.text(0, sq * 0.30, RANKSTAR[d.cd.rank], { fontFamily: EMOJIFONT, fontSize: fr + 'px', color: '#ffffff', fontStyle: 'bold', stroke: '#000000', strokeThickness: 3 }).setOrigin(0.5));   // 星等下移+白字黑邊:名稱拿掉後疊在卡圖上仍清楚
             if (d.isNew) cardC.add(this.add.text(0, -sq / 2 - 10, '✦NEW', { fontFamily: EMOJIFONT, fontSize: FS.micro, color: T.goldTx, fontStyle: 'bold' }).setOrigin(0.5));
             cardC.setScale(0); this.tweens.add({ targets: cardC, scale: 1, duration: 300, ease: 'Back.out', delay: 260 + i * 90 });
           });
