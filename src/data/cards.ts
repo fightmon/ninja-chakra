@@ -20,7 +20,7 @@ export const meta = {
   elName:  { fire: '火', water: '水', thunder: '雷', earth: '土', wind: '風' } as Record<string, string>,
   elColor: { fire: '#ff6a3d', water: '#37b6ff', thunder: '#f0b410', earth: '#c8873f', wind: '#3fbf54' } as Record<string, string>,
   famName: { cat: '貓', dog: '犬', bird: '鳥', rat: '鼠', fish: '魚', rabbit: '兔', taiwan: '台灣特有種' } as Record<string, string>,
-  raceName:{ human: '人忍', yokai: '妖怪', beast: '靈獸' } as Record<string, string>,
+  raceName:{ human: '人類', yokai: '妖怪', beast: '靈獸' } as Record<string, string>,
   note: '三圍為家族公式重算後的實際值；LV1＝基礎、滿級＝LV20（未進化）。星級基礎一律 ★3，可進化再 +2（最高 ★5）。屬性相剋：火→風→雷→土→水→火。',
   teams: [
     { emoji: '🐱', name: '貓系', fam: 'cat',    color: '#8fd16a', ids: ['c02','c05','c08','c09','c11'] },
