@@ -5,7 +5,7 @@ export interface Props {
   description?: string;
   image?: string;          // OG 圖(絕對或相對 /)；預設 og-image
   path?: string;           // 目前路徑(canonical)，如 '/dex/c15/'
-  navActive?: 'dex' | 'devlog' | '';
+  navActive?: 'dex' | 'devlog' | 'howto' | '';
 }
 const {
   title,
@@ -47,7 +47,7 @@ const ogImage = new URL(image, Astro.site ?? 'https://blockyusha.com').href;
     <a class="brand" href="/">塊頭勇者</a>
     <nav class="links">
       <a href="/dex/" class={navActive === 'dex' ? 'on' : ''}>角色圖鑑</a>
-      <a href="/devlog/how-to-play/">玩法</a>
+      <a href="/devlog/how-to-play/" class={navActive === 'howto' ? 'on' : ''}>玩法</a>
       <a href="/devlog/" class={navActive === 'devlog' ? 'on' : ''}>日誌</a>
     </nav>
     <div class="navr">

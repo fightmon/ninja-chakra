@@ -1,8 +1,8 @@
 ---
 import Base from '../../layouts/Base.astro';
 ---
-<Base title="30 秒上手 — 塊頭勇者 Blockyusha" path="/devlog/how-to-play/" navActive="devlog"
-  description="塊頭勇者 30 秒上手教學：隊伍、屬性塊保存、CD技、combo、相剋、陰陽全部一次看懂，看完就會玩。">
+<Base title="30 秒上手 — 塊頭勇者 Blockyusha" path="/devlog/how-to-play/" navActive="howto"
+  description="塊頭勇者 30 秒上手教學：隊伍、屬性塊保存、CD技、combo、相剋一次看懂，還有核心循環動畫，看完就會玩。">
 
 <div class="htp">
   <header class="htp-hero">
@@ -16,6 +16,16 @@ import Base from '../../layouts/Base.astro';
     <div class="card lead">
       <p class="big">🧩 <b>一句話：</b>把方塊拼進 <b>9×9</b> 盤面，填滿一整<b>列／行／宮</b>就「消除」→ 對敵人造成傷害，消光敵人就過關。</p>
       <p class="muted">就像「<b style="color:var(--ink)">Woodoku 方塊消除</b>」，但每次消除都是在打怪。</p>
+    </div>
+
+    <div class="demo" aria-hidden="true">
+      <div class="demo-top">
+        <div class="denemy" id="denemy">👹</div>
+        <div class="dhp"><div class="dhp-fill" id="dhp"></div></div>
+      </div>
+      <div class="dboard" id="dboard"></div>
+      <div class="dcard"><span class="dslot" id="dslot"></span><span>屬塊存到卡上</span></div>
+      <div class="dcap" id="dcap">拖方塊，填滿一個宮…</div>
     </div>
 
     <h2><span class="n">1</span>你的隊伍</h2>
@@ -76,20 +86,13 @@ import Base from '../../layouts/Base.astro';
       <p class="muted">帶相剋的屬性去打對應關卡，會輕鬆很多 —— 但帶錯屬性只要操作夠好（衝combo、囤塊），一樣翻得回來。</p>
     </div>
 
-    <h2><span class="n">7</span>陰陽（卡片副屬）</h2>
-    <div class="card">
-      <p>有些卡帶副屬性，消除時額外觸發：</p>
-      <p>☯ <b>陰</b> — 這一手的傷害 <b>×2</b>（爆發向）</p>
-      <p>☯ <b>陽</b> — <b>回血</b>（續航向）</p>
-    </div>
-
-    <h2><span class="n">8</span>卡住了？別怕</h2>
+    <h2><span class="n">7</span>卡住了？別怕</h2>
     <div class="card">
       <p>盤面塞滿、手上的塊放不下時 —— 只要卡上有<b>能用的屬塊</b>，它會<b>跳動發亮</b>提醒你，把它拖下去解圍，<b>不扣血</b>。</p>
       <p class="muted">真的連存的塊也救不了，才會花一點生命重洗。<b style="color:var(--ink2)">所以會玩的人幾乎不掉血。</b></p>
     </div>
 
-    <h2><span class="n">9</span>一局心法</h2>
+    <h2><span class="n">8</span>一局心法</h2>
     <div class="card">
       <div class="flow">
         <div class="step"><div class="e">🌱</div><b>前期：養</b><div class="d">小怪關囤屬塊、衝combo</div></div>
@@ -160,6 +163,26 @@ import Base from '../../layouts/Base.astro';
 .htp .flow .step b{display:block;margin-top:3px}
 .htp .flow .step .d{font-size:12.5px;color:var(--ink2)}
 .htp .arrow{align-self:center;color:var(--sun2);font-size:20px;font-weight:900}
+/* ===== 核心循環動畫 demo ===== */
+.htp .demo{max-width:230px;margin:16px auto 2px;text-align:center}
+.htp .demo-top{display:flex;align-items:center;gap:8px;justify-content:center;margin-bottom:10px}
+.htp .denemy{font-size:26px;line-height:1}
+.htp .denemy.hit{animation:dshake .3s}
+@keyframes dshake{0%,100%{transform:translateX(0)}25%{transform:translateX(-4px)}75%{transform:translateX(4px)}}
+.htp .dhp{flex:0 0 96px;height:8px;background:rgba(0,0,0,.12);border-radius:99px;overflow:hidden}
+.htp .dhp-fill{height:100%;width:100%;background:linear-gradient(90deg,#ff5a3d,#ff8a2a);border-radius:99px;transition:width .45s}
+.htp .dboard{display:grid;grid-template-columns:repeat(3,1fr);gap:4px;width:126px;margin:0 auto;padding:6px;background:rgba(200,140,40,.1);border-radius:12px}
+.htp .dboard .dc{aspect-ratio:1;border-radius:5px;background:rgba(200,140,40,.14);transition:background .15s}
+.htp .dboard .dc.on{background:var(--fire)}
+.htp .dboard.flash .dc.on{background:#fff;box-shadow:0 0 10px rgba(255,255,255,.9)}
+.htp .dcard{display:inline-flex;align-items:center;gap:6px;margin-top:11px;font-size:12px;color:var(--ink2)}
+.htp .dslot{width:16px;height:16px;border-radius:4px;border:1.5px dashed rgba(200,140,40,.55);display:inline-block;transition:.2s}
+.htp .dslot.filled{background:var(--fire);border-style:solid;border-color:var(--fire);transform:scale(1.15)}
+.htp .dcap{margin-top:11px;font-size:13px;font-weight:800;color:var(--sun2);min-height:18px}
+[data-theme="dark"] .htp .dhp{background:rgba(255,255,255,.1)}
+[data-theme="dark"] .htp .dboard{background:rgba(255,255,255,.05)}
+[data-theme="dark"] .htp .dboard .dc{background:rgba(255,255,255,.07)}
+[data-theme="dark"] .htp .dslot{border-color:rgba(255,178,32,.5)}
 /* dark */
 [data-theme="dark"] .htp .card{background:#231d14;border-color:rgba(255,178,32,.16)}
 [data-theme="dark"] .htp .card.lead{background:linear-gradient(135deg,#2c2413,#231d14);border-color:rgba(255,178,32,.3)}
@@ -213,5 +236,33 @@ Object.values(SHAPES).forEach((el,i)=>{
   block.appendChild(row);
   host.appendChild(block);
 });
+
+/* ===== 核心循環動畫 demo：填宮→消除→攻擊→存塊，循環 ===== */
+(function(){
+  var board=document.getElementById('dboard'); if(!board)return;
+  var cells=[]; for(var i=0;i<9;i++){var c=document.createElement('div');c.className='dc';board.appendChild(c);cells.push(c);}
+  var hp=document.getElementById('dhp'), enemy=document.getElementById('denemy'),
+      slot=document.getElementById('dslot'), cap=document.getElementById('dcap');
+  var order=[0,1,2,5,4,3,6,7,8], hpVal=100, timers=[];
+  function T(fn,ms){timers.push(setTimeout(fn,ms));}
+  function run(){
+    timers.forEach(clearTimeout); timers=[];
+    cells.forEach(function(c){c.className='dc';}); slot.className='dslot';
+    cap.textContent='拖方塊，填滿一個宮…';
+    order.forEach(function(idx,k){ T(function(){cells[idx].classList.add('on');}, 200+k*180); });
+    var full=200+9*180;
+    T(function(){ cap.textContent='整宮填滿 → 消除！'; board.classList.add('flash'); }, full);
+    T(function(){
+      board.classList.remove('flash');
+      cells.forEach(function(c){c.className='dc';});
+      cap.textContent='→ 對敵人造成傷害 💥';
+      enemy.classList.add('hit'); T(function(){enemy.classList.remove('hit');},320);
+      hpVal=Math.max(0,hpVal-34); hp.style.width=hpVal+'%';
+    }, full+440);
+    T(function(){ slot.classList.add('filled'); cap.textContent='屬塊存到卡上 ⭐（下次可拖出用）'; }, full+1000);
+    T(function(){ if(hpVal<=0){hpVal=100;hp.style.width='100%';} run(); }, full+2500);
+  }
+  run();
+})();
 </script>
 </Base>
