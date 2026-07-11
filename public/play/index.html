@@ -949,6 +949,18 @@
 
       if (opt.bound) { gbtn.style.display = 'none'; cancel.textContent = opt.cancelLabel || '關閉'; return; }   // 已綁定:只顯示資訊+關閉
 
+      // ✅ 綁定=正式註冊,須先勾同意服務條款/隱私權政策才顯示 Google 登入鈕(遊戲首次進入建的 guest 帳號不擋,只在綁定時要求)
+      const consent = document.createElement('label');
+      consent.style.cssText = 'display:flex;align-items:flex-start;gap:9px;text-align:left;font-size:13px;color:#c9c2d6;line-height:1.6;margin:2px 4px 16px;cursor:pointer;';
+      const cbx = document.createElement('input'); cbx.type = 'checkbox'; cbx.style.cssText = 'margin-top:2px;width:18px;height:18px;flex:0 0 auto;cursor:pointer;accent-color:#5aa9e6;';
+      const cbtxt = document.createElement('span');
+      cbtxt.innerHTML = '我已閱讀並同意 <a href="https://blockyusha.com/terms/" target="_blank" rel="noopener" style="color:#8ab4ff;text-decoration:underline;">服務條款</a> 與 <a href="https://blockyusha.com/privacy/" target="_blank" rel="noopener" style="color:#8ab4ff;text-decoration:underline;">隱私權政策</a>';
+      consent.appendChild(cbx); consent.appendChild(cbtxt);
+      const gate = document.createElement('div'); gate.textContent = '請先勾選上方同意,才能綁定 Google';
+      gate.style.cssText = 'font-size:13px;color:#9b93ad;margin-bottom:14px;';
+      card.insertBefore(consent, gbtn); card.insertBefore(gate, gbtn);
+      gbtn.style.display = 'none';   // 未同意前不顯示 Google 鈕
+
       let busy = false;
       const onCred = async (credential) => {
         if (!credential || busy) return; busy = true; gbtn.style.opacity = '.5'; gbtn.style.pointerEvents = 'none';
@@ -965,18 +977,26 @@
         }
       };
 
-      if (!ensureGoogleInit()) {   // GIS 未就緒(離線/被擋):退回勇者卡
-        setErr('Google 登入暫時無法載入(可能離線或被封鎖)。\n別擔心,你的「勇者卡」12 碼一樣能跨手機找回進度。');
-        gbtn.style.display = 'none'; cancel.textContent = '知道了';
-        return;
-      }
-      _gsiPendingCb = onCred;
-      try {
-        window.google.accounts.id.renderButton(gbtn, { theme: 'filled_blue', size: 'large', text: 'continue_with', shape: 'pill', width: 260, locale: 'zh_TW' });
-      } catch (e) {
-        gbtn.style.display = 'none';
-        try { window.google.accounts.id.prompt(); } catch (x) { setErr('無法開啟 Google 登入,請稍後再試'); }
-      }
+      let rendered = false;
+      const renderGoogleBtn = () => {   // 勾同意後才 init + render Google 鈕
+        if (rendered) return;
+        if (!ensureGoogleInit()) {   // GIS 未就緒(離線/被擋):退回勇者卡
+          setErr('Google 登入暫時無法載入(可能離線或被封鎖)。\n別擔心,你的「勇者卡」12 碼一樣能跨手機找回進度。');
+          gate.style.display = 'none'; return;
+        }
+        _gsiPendingCb = onCred;
+        try {
+          window.google.accounts.id.renderButton(gbtn, { theme: 'filled_blue', size: 'large', text: 'continue_with', shape: 'pill', width: 260, locale: 'zh_TW' });
+          rendered = true;
+        } catch (e) {
+          gbtn.style.display = 'none';
+          try { window.google.accounts.id.prompt(); } catch (x) { setErr('無法開啟 Google 登入,請稍後再試'); }
+        }
+      };
+      cbx.onchange = () => {   // 勾=顯示並 render Google 鈕;取消勾=收回,回到必須同意才能綁定
+        if (cbx.checked) { gate.style.display = 'none'; gbtn.style.display = 'flex'; renderGoogleBtn(); }
+        else { gate.style.display = ''; gbtn.style.display = 'none'; }
+      };
     }
     function promptAccountBindAfterTutorial(scene) {   // 教學後一次性:邀綁 Google(換機不丟進度);拒絕→退回勇者卡 12 碼提示
       if ((loadSave().settings || {}).bindPrompted) return;
