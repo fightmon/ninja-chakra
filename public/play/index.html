@@ -930,7 +930,7 @@
       const h = document.createElement('div'); h.textContent = opt.title || '綁定 Google 帳號';
       h.style.cssText = 'font-size:21px;font-weight:800;color:#ffe04a;line-height:1.4;margin-bottom:12px;';
       const p = document.createElement('div'); p.textContent = opt.sub || '';
-      p.style.cssText = 'font-size:15px;color:#e8e2f0;line-height:1.7;white-space:pre-line;margin-bottom:22px;';
+      p.style.cssText = 'font-size:16.5px;color:#e8e2f0;line-height:1.7;white-space:pre-line;margin-bottom:22px;';
       const gbtn = document.createElement('div'); gbtn.id = 'gbind-btn'; gbtn.style.cssText = 'min-height:44px;display:flex;justify-content:center;margin-bottom:14px;';
       const cancel = document.createElement('button'); cancel.textContent = opt.cancelLabel || '放棄';
       cancel.style.cssText = 'background:none;border:none;color:#9b93ad;font-size:15px;padding:8px 16px;cursor:pointer;';
@@ -951,13 +951,13 @@
 
       // ✅ 綁定=正式註冊,須先勾同意服務條款/隱私權政策才顯示 Google 登入鈕(遊戲首次進入建的 guest 帳號不擋,只在綁定時要求)
       const consent = document.createElement('label');
-      consent.style.cssText = 'display:flex;align-items:flex-start;gap:9px;text-align:left;font-size:13px;color:#c9c2d6;line-height:1.6;margin:2px 4px 16px;cursor:pointer;';
-      const cbx = document.createElement('input'); cbx.type = 'checkbox'; cbx.style.cssText = 'margin-top:2px;width:18px;height:18px;flex:0 0 auto;cursor:pointer;accent-color:#5aa9e6;';
+      consent.style.cssText = 'display:flex;align-items:flex-start;gap:10px;text-align:left;font-size:16px;color:#d7d1e0;line-height:1.65;margin:2px 2px 18px;cursor:pointer;';
+      const cbx = document.createElement('input'); cbx.type = 'checkbox'; cbx.style.cssText = 'margin-top:3px;width:22px;height:22px;flex:0 0 auto;cursor:pointer;accent-color:#5aa9e6;';
       const cbtxt = document.createElement('span');
       cbtxt.innerHTML = '我已閱讀並同意 <a href="https://blockyusha.com/terms/" target="_blank" rel="noopener" style="color:#8ab4ff;text-decoration:underline;">服務條款</a> 與 <a href="https://blockyusha.com/privacy/" target="_blank" rel="noopener" style="color:#8ab4ff;text-decoration:underline;">隱私權政策</a>';
       consent.appendChild(cbx); consent.appendChild(cbtxt);
       const gate = document.createElement('div'); gate.textContent = '請先勾選上方同意,才能綁定 Google';
-      gate.style.cssText = 'font-size:13px;color:#9b93ad;margin-bottom:14px;';
+      gate.style.cssText = 'font-size:15px;color:#a49cb5;margin-bottom:14px;';
       card.insertBefore(consent, gbtn); card.insertBefore(gate, gbtn);
       gbtn.style.display = 'none';   // 未同意前不顯示 Google 鈕
 
@@ -2229,7 +2229,20 @@
           this.refreshBoard && this.refreshBoard(); this.renderStored && this.renderStored(); this.updateEnemies && this.updateEnemies();
         }
       }
-      tutSkip() { this.tutClearHint(); if (this.tutG) { this.tutG.destroy(); this.tutG = null; } if (this.tutBg) { this.tutBg.destroy(); this.tutBg = null; } this.tut = null; mutSave(s => { if (!s.settings) s.settings = {}; s.settings.tut = true; }); SFX.stopBgm(); this.scene.manager.start('home'); this.scene.manager.stop('game'); }
+      tutSkip() {   // 改:先問「是否老手」→老手跳過一樣送新手十連(不因跳過而漏發);新手可回去玩教學。修「跳過教學拿不到十連」坑
+        if (this._tutSkipG) return;
+        const T = UI(), g = this.overlay(); this._tutSkipG = g; const cy = H / 2;
+        g.add(roundRectG(this, CX, cy, Math.min(W - 24, 360), 268, 18, T.surf, 1, T.divider, 1.5));
+        g.add(this.add.text(CX, cy - 98, '你已經不是新手了嗎?', { fontFamily: EMOJIFONT, fontSize: FS.title, color: T.ink, fontStyle: 'bold' }).setOrigin(0.5));
+        g.add(this.add.text(CX, cy - 44, '老玩家可以跳過教學,\n一樣送你「新手十連抽」!', { fontFamily: EMOJIFONT, fontSize: FS.body, color: T.ink2, align: 'center', lineSpacing: 8 }).setOrigin(0.5));
+        this.mkBtn(g, cy + 26, '✅ 我是老手,跳過領十連', () => { this._tutSkipG = null; this._doTutSkip(true); }, T.ok);
+        this.mkBtn(g, cy + 86, '🎓 還是玩教學吧', () => { g.destroy(); this._tutSkipG = null; }, null);
+      }
+      _doTutSkip(giveFreePull) {   // 真正執行跳過(原 tutSkip 內容)+ 視情況設免費十連旗標(大廳 create 讀到 settings.freePull 就 reveal)
+        this.tutClearHint(); if (this.tutG) { this.tutG.destroy(); this.tutG = null; } if (this.tutBg) { this.tutBg.destroy(); this.tutBg = null; } this.tut = null;
+        mutSave(s => { if (!s.settings) s.settings = {}; s.settings.tut = true; if (giveFreePull) s.settings.freePull = true; });
+        SFX.stopBgm(); this.scene.manager.start('home'); this.scene.manager.stop('game');
+      }
       tutDone() { this.tutClearHint(); if (this.tutG) { this.tutG.destroy(); this.tutG = null; } if (this.tutBg) { this.tutBg.destroy(); this.tutBg = null; } this.tut = null; mutSave(s => { if (!s.settings) s.settings = {}; s.settings.tut = true; }); }   // 步驟跑完;this.tut=null→殘留的 tutAdvance 失效(不會畫訊息蓋到結算);勝利收尾交給正常 showResult
       tutClearHint() {
         if (this._tutHints) this._tutHints.forEach(o => { try { this.tweens.killTweensOf(o); o.destroy(); } catch (e) { } }); this._tutHints = [];
@@ -4974,7 +4987,7 @@
           this.mkBtn(g, cy + 166, last ? '開始戰鬥! ⚔' : '下一步 →', () => { g.destroy(); if (last) { if (!replay) { setTutSeen(); track('tut_done'); } this.resultOpen = false; } else { i++; show(); } }, last ? 0x3a5a2c : 0x3a2c1d);
           if (!last) {
             const sk = this.add.text(CX, cy + 218, '跳過教學', { fontFamily: EMOJIFONT, fontSize: '13px', color: '#9fb0c0' }).setOrigin(0.5).setInteractive();
-            sk.on('pointerup', () => { g.destroy(); if (!replay) { setTutSeen(); track('tut_skip'); } this.resultOpen = false; }); g.add(sk);
+            sk.on('pointerup', () => { g.destroy(); if (!replay) { setTutSeen(); mutSave(s => { s.settings = s.settings || {}; s.settings.freePull = true; }); track('tut_skip'); } this.resultOpen = false; }); g.add(sk);   // 首次跳過也補送新手十連(不因跳過而漏發)
           }
         };
         show();
