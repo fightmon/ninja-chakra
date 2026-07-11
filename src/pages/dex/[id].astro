@@ -10,7 +10,6 @@ export function getStaticPaths() {
 const { card } = Astro.props as { card: Card };
 const el = meta.elName[card.el];
 const fam = meta.famName[card.fam];
-const race = meta.raceName[card.race];
 const pos = order.indexOf(card.id);
 const prev = pos > 0 ? byId[order[pos - 1]] : null;
 const next = pos < order.length - 1 ? byId[order[pos + 1]] : null;
@@ -34,7 +33,6 @@ const desc = `${card.name}（${el}屬性・${fam}）是塊頭勇者 Blockyusha �
       <div class="badges">
         <span class="badge">{el}</span>
         <span class="badge g">{fam}</span>
-        <span class="badge g">{race}</span>
       </div>
       <div class="stars">★★★<small>基礎 ★3 · 可進化 +2</small></div>
     </div>
