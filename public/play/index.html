@@ -415,43 +415,43 @@
     // ELEMENT_BOXES / NEUTRAL_FILL/DARK / SHAPES / WSUM → battle-core.js
     // 角色:個人名 + 種族(human/yokai/beast) + 三圍(攻/血/回,同星總量公平、分配不同) + rank(沿用:gacha/掉落/★用,genin=★1…kage=★4)
     const ROSTER = [
-      { id: 'c01', name: '朱', el: 'fire', race: 'yokai', rank: 'jonin', atk: 300, hp: 375, rcv: 38, attrs: ['fire'] },
-      { id: 'c02', name: '茜', el: 'fire', race: 'human', rank: 'chunin', atk: 192, hp: 240, rcv: 24, attrs: ['fire'] },
-      { id: 'c03', name: '炎助', el: 'fire', race: 'human', rank: 'genin', atk: 120, hp: 150, rcv: 15, attrs: ['fire'] },
-      { id: 'c04', name: '凪', el: 'water', race: 'yokai', rank: 'jonin', atk: 125, hp: 525, rcv: 100, attrs: ['water'] },
-      { id: 'c05', name: '雫', el: 'water', race: 'human', rank: 'chunin', atk: 80, hp: 336, rcv: 64, attrs: ['water'] },
-      { id: 'c06', name: '水無', el: 'water', race: 'human', rank: 'genin', atk: 50, hp: 210, rcv: 40, attrs: ['water'] },
-      { id: 'c07', name: '鳴', el: 'thunder', race: 'yokai', rank: 'jonin', atk: 275, hp: 300, rcv: 63, attrs: ['thunder'] },
-      { id: 'c08', name: '響', el: 'thunder', race: 'human', rank: 'chunin', atk: 176, hp: 192, rcv: 40, attrs: ['thunder'] },
-      { id: 'c09', name: '椿', el: 'earth', race: 'human', rank: 'chunin', atk: 64, hp: 576, rcv: 32, attrs: ['earth'] },
-      { id: 'c10', name: '土丸', el: 'earth', race: 'human', rank: 'genin', atk: 40, hp: 360, rcv: 20, attrs: ['earth'] },
-      { id: 'c11', name: '空', el: 'wind', race: 'human', rank: 'chunin', atk: 122, hp: 355, rcv: 40, attrs: ['wind'] },
-      { id: 'c12', name: '疾風', el: 'wind', race: 'human', rank: 'genin', atk: 76, hp: 222, rcv: 25, attrs: ['wind'] },
+      { id: 'c01', name: '曦曦', el: 'fire', race: 'yokai', rank: 'jonin', atk: 300, hp: 375, rcv: 38, attrs: ['fire'] },
+      { id: 'c02', name: '暖暖', el: 'fire', race: 'human', rank: 'chunin', atk: 192, hp: 240, rcv: 24, attrs: ['fire'] },
+      { id: 'c03', name: '焰焰', el: 'fire', race: 'human', rank: 'genin', atk: 120, hp: 150, rcv: 15, attrs: ['fire'] },
+      { id: 'c04', name: '漣漣', el: 'water', race: 'yokai', rank: 'jonin', atk: 125, hp: 525, rcv: 100, attrs: ['water'] },
+      { id: 'c05', name: '露露', el: 'water', race: 'human', rank: 'chunin', atk: 80, hp: 336, rcv: 64, attrs: ['water'] },
+      { id: 'c06', name: '潑潑', el: 'water', race: 'human', rank: 'genin', atk: 50, hp: 210, rcv: 40, attrs: ['water'] },
+      { id: 'c07', name: '嗶嗶', el: 'thunder', race: 'yokai', rank: 'jonin', atk: 275, hp: 300, rcv: 63, attrs: ['thunder'] },
+      { id: 'c08', name: '霹霹', el: 'thunder', race: 'human', rank: 'chunin', atk: 176, hp: 192, rcv: 40, attrs: ['thunder'] },
+      { id: 'c09', name: '礫礫', el: 'earth', race: 'human', rank: 'chunin', atk: 64, hp: 576, rcv: 32, attrs: ['earth'] },
+      { id: 'c10', name: '岩岩', el: 'earth', race: 'human', rank: 'genin', atk: 40, hp: 360, rcv: 20, attrs: ['earth'] },
+      { id: 'c11', name: '飄飄', el: 'wind', race: 'human', rank: 'chunin', atk: 122, hp: 355, rcv: 40, attrs: ['wind'] },
+      { id: 'c12', name: '颯颯', el: 'wind', race: 'human', rank: 'genin', atk: 76, hp: 222, rcv: 25, attrs: ['wind'] },
       /* ── 擴充:補滿五屬階梯 + 四星(kage ★4)SSR 層,共 30 張;★4 靈獸=五屬神主角 ── */
-      { id: 'c13', name: '豆', el: 'fire', race: 'yokai', rank: 'genin', atk: 120, hp: 150, rcv: 15, attrs: ['fire'] },
-      { id: 'c14', name: '緋貂', el: 'fire', race: 'beast', rank: 'chunin', atk: 192, hp: 240, rcv: 24, attrs: ['fire'] },
-      { id: 'c15', name: '臺灣雲豹', el: 'fire', race: 'beast', rank: 'kage', atk: 360, hp: 445, rcv: 45, attrs: ['fire'], hero: true },
-      { id: 'c16', name: '露', el: 'water', race: 'yokai', rank: 'genin', atk: 50, hp: 210, rcv: 40, attrs: ['water'] },
-      { id: 'c17', name: '蒼蛟', el: 'water', race: 'beast', rank: 'chunin', atk: 80, hp: 336, rcv: 64, attrs: ['water'] },
-      { id: 'c18', name: '櫻花鉤吻鮭', el: 'water', race: 'beast', rank: 'kage', atk: 150, hp: 625, rcv: 120, attrs: ['water'], hero: true },
-      { id: 'c19', name: '雷太', el: 'thunder', race: 'human', rank: 'genin', atk: 110, hp: 120, rcv: 25, attrs: ['thunder'] },
-      { id: 'c20', name: '智', el: 'thunder', race: 'yokai', rank: 'genin', atk: 110, hp: 120, rcv: 25, attrs: ['thunder'] },
-      { id: 'c21', name: '紫豹', el: 'thunder', race: 'beast', rank: 'chunin', atk: 176, hp: 192, rcv: 40, attrs: ['thunder'] },
-      { id: 'c22', name: '臺灣藍鵲', el: 'thunder', race: 'beast', rank: 'kage', atk: 330, hp: 355, rcv: 75, attrs: ['thunder'], hero: true },
-      { id: 'c23', name: '栗', el: 'earth', race: 'yokai', rank: 'genin', atk: 40, hp: 360, rcv: 20, attrs: ['earth'] },
-      { id: 'c24', name: '石龜', el: 'earth', race: 'beast', rank: 'chunin', atk: 64, hp: 576, rcv: 32, attrs: ['earth'] },
-      { id: 'c25', name: '梟', el: 'earth', race: 'yokai', rank: 'jonin', atk: 100, hp: 900, rcv: 50, attrs: ['earth'] },
-      { id: 'c26', name: '臺灣黑熊', el: 'earth', race: 'beast', rank: 'kage', atk: 120, hp: 1070, rcv: 60, attrs: ['earth'], hero: true },
-      { id: 'c27', name: '楓', el: 'wind', race: 'yokai', rank: 'genin', atk: 76, hp: 222, rcv: 25, attrs: ['wind'] },
-      { id: 'c28', name: '風隼', el: 'wind', race: 'beast', rank: 'chunin', atk: 122, hp: 355, rcv: 40, attrs: ['wind'] },
-      { id: 'c29', name: '翔', el: 'wind', race: 'yokai', rank: 'jonin', atk: 190, hp: 555, rcv: 63, attrs: ['wind'] },
-      { id: 'c30', name: '臺灣獼猴', el: 'wind', race: 'beast', rank: 'kage', atk: 226, hp: 660, rcv: 75, attrs: ['wind'], hero: true },
+      { id: 'c13', name: '烘烘', el: 'fire', race: 'yokai', rank: 'genin', atk: 120, hp: 150, rcv: 15, attrs: ['fire'] },
+      { id: 'c14', name: '燦燦', el: 'fire', race: 'beast', rank: 'chunin', atk: 192, hp: 240, rcv: 24, attrs: ['fire'] },
+      { id: 'c15', name: '大武', el: 'fire', race: 'beast', rank: 'kage', atk: 360, hp: 445, rcv: 45, attrs: ['fire'], hero: true },
+      { id: 'c16', name: '沁沁', el: 'water', race: 'yokai', rank: 'genin', atk: 50, hp: 210, rcv: 40, attrs: ['water'] },
+      { id: 'c17', name: '澄澄', el: 'water', race: 'beast', rank: 'chunin', atk: 80, hp: 336, rcv: 64, attrs: ['water'] },
+      { id: 'c18', name: '武陵', el: 'water', race: 'beast', rank: 'kage', atk: 150, hp: 625, rcv: 120, attrs: ['water'], hero: true },
+      { id: 'c19', name: '轟轟', el: 'thunder', race: 'human', rank: 'genin', atk: 110, hp: 120, rcv: 25, attrs: ['thunder'] },
+      { id: 'c20', name: '滋滋', el: 'thunder', race: 'yokai', rank: 'genin', atk: 110, hp: 120, rcv: 25, attrs: ['thunder'] },
+      { id: 'c21', name: '嘶嘶', el: 'thunder', race: 'beast', rank: 'chunin', atk: 176, hp: 192, rcv: 40, attrs: ['thunder'] },
+      { id: 'c22', name: '太魯閣', el: 'thunder', race: 'beast', rank: 'kage', atk: 330, hp: 355, rcv: 75, attrs: ['thunder'], hero: true },
+      { id: 'c23', name: '栗栗', el: 'earth', race: 'yokai', rank: 'genin', atk: 40, hp: 360, rcv: 20, attrs: ['earth'] },
+      { id: 'c24', name: '磊磊', el: 'earth', race: 'beast', rank: 'chunin', atk: 64, hp: 576, rcv: 32, attrs: ['earth'] },
+      { id: 'c25', name: '苔苔', el: 'earth', race: 'yokai', rank: 'jonin', atk: 100, hp: 900, rcv: 50, attrs: ['earth'] },
+      { id: 'c26', name: '玉山', el: 'earth', race: 'beast', rank: 'kage', atk: 120, hp: 1070, rcv: 60, attrs: ['earth'], hero: true },
+      { id: 'c27', name: '旋旋', el: 'wind', race: 'yokai', rank: 'genin', atk: 76, hp: 222, rcv: 25, attrs: ['wind'] },
+      { id: 'c28', name: '咻咻', el: 'wind', race: 'beast', rank: 'chunin', atk: 122, hp: 355, rcv: 40, attrs: ['wind'] },
+      { id: 'c29', name: '翔翔', el: 'wind', race: 'yokai', rank: 'jonin', atk: 190, hp: 555, rcv: 63, attrs: ['wind'] },
+      { id: 'c30', name: '阿里', el: 'wind', race: 'beast', rank: 'kage', atk: 226, hp: 660, rcv: 75, attrs: ['wind'], hero: true },
       /* ── 🐰 兔家族(占位:名/圖/三圍待補,★3 暫用現值;技能=家族扛「化境/繁殖增幅」)── */
-      { id: 'c31', name: '莓', el: 'fire', race: 'beast', rank: 'jonin', atk: 300, hp: 375, rcv: 38, attrs: ['fire'] },
-      { id: 'c32', name: '雪', el: 'water', race: 'beast', rank: 'jonin', atk: 125, hp: 525, rcv: 100, attrs: ['water'] },
-      { id: 'c33', name: '鈴', el: 'thunder', race: 'beast', rank: 'jonin', atk: 275, hp: 300, rcv: 63, attrs: ['thunder'] },
-      { id: 'c34', name: '餅', el: 'earth', race: 'beast', rank: 'jonin', atk: 100, hp: 900, rcv: 50, attrs: ['earth'] },
-      { id: 'c35', name: '萌', el: 'wind', race: 'beast', rank: 'jonin', atk: 190, hp: 555, rcv: 63, attrs: ['wind'] },
+      { id: 'c31', name: '焙焙', el: 'fire', race: 'beast', rank: 'jonin', atk: 300, hp: 375, rcv: 38, attrs: ['fire'] },
+      { id: 'c32', name: '雪雪', el: 'water', race: 'beast', rank: 'jonin', atk: 125, hp: 525, rcv: 100, attrs: ['water'] },
+      { id: 'c33', name: '閃閃', el: 'thunder', race: 'beast', rank: 'jonin', atk: 275, hp: 300, rcv: 63, attrs: ['thunder'] },
+      { id: 'c34', name: '墩墩', el: 'earth', race: 'beast', rank: 'jonin', atk: 100, hp: 900, rcv: 50, attrs: ['earth'] },
+      { id: 'c35', name: '蓬蓬', el: 'wind', race: 'beast', rank: 'jonin', atk: 190, hp: 555, rcv: 63, attrs: ['wind'] },
       /* ── 🕷️ 蜘蛛系(雜牌卡,故意不進 CARD_FAMILY/TW_IDS→保留 genin ★1、低三圍;1★→2★進化=換名換圖「岩甲◯蜘蛛」,見 SPIDER_EVO)── */
       { id: 'c36', name: '火蜘蛛', el: 'fire', race: 'yokai', rank: 'genin', atk: 130, hp: 90, rcv: 8, attrs: ['fire'] },
       { id: 'c37', name: '水蜘蛛', el: 'water', race: 'yokai', rank: 'genin', atk: 65, hp: 110, rcv: 24, attrs: ['water'] },
@@ -673,21 +673,21 @@
     /* F6 統一存檔:持有卡 / 編隊 / 進度 / 設定 一個物件全自動存 localStorage */
     const SAVE_KEY = 'ninja_save';
     function defaultMeta() { return { name: '塊頭勇者', rank: 1, exp: 0, coins: 0, stones: 0, stamina: 50, staminaMax: 50, staTs: null, pity: 0, boxBuy: 0, dayKey: null, dailyN: 0 }; }   // 新帳號 30 鑽改由伺服器 signup 發(wallets),此欄僅顯示快取;name=用戶名稱(其他可改);pity=召喚保底;boxBuy=魔法石擴背包次數;dayKey/dailyN=每日登入
-    function defaultSave() { const cards = STARTER.map((id, i) => ({ u: 'k' + (i + 1), id })); return { ver: 1, cards, uidSeq: STARTER.length, team: STARTER.slice(), cardLv: {}, cardEvo: {}, gems: { fire: 0, water: 0, thunder: 0, earth: 0, wind: 0 }, progress: { cleared: false, clears: 0, bestStage: 0, runStats: {} }, stats: { playMs: 0, sessions: 0 }, meta: defaultMeta(), settings: { welcome: true } }; }   // 個體制:每張卡=cards 陣列裡一個獨立個體(各佔一背包格);stats=遊玩時數+開場次數;progress.runStats=每場出擊漏斗
+    function defaultSave() { const cards = STARTER.map((id, i) => ({ u: 'k' + (i + 1), id, lv: 1, exp: 0, evo: 0 })); return { ver: 1, cards, uidSeq: STARTER.length, team: STARTER.slice(), cardLv: {}, cardEvo: {}, gems: { fire: 0, water: 0, thunder: 0, earth: 0, wind: 0 }, progress: { cleared: false, clears: 0, bestStage: 0, runStats: {} }, stats: { playMs: 0, sessions: 0 }, meta: defaultMeta(), settings: { welcome: true } }; }   // 個體制:每張卡=cards 陣列裡一個獨立個體(各佔一背包格);stats=遊玩時數+開場次數;progress.runStats=每場出擊漏斗
     function writeSave(s) { try { s.updatedAt = Date.now(); localStorage.setItem(SAVE_KEY, JSON.stringify(s)); if (!hydrating) scheduleCloudPush(); } catch (e) { } }   // 每次寫入蓋時間戳(雲端衝突解決:新覆舊);寫入成功→排推雲(開場調和中不推)
     function loadSave() {
       let s = null; try { s = JSON.parse(localStorage.getItem(SAVE_KEY)); } catch (e) { }
       if (!s || typeof s !== 'object') {
         s = defaultSave();
         let old = null; try { old = JSON.parse(localStorage.getItem('ninja_owned')); } catch (e) { }   // 遷移更舊版持有卡(計數map)
-        if (old && typeof old === 'object') { let seq = 0; s.cards = []; Object.keys(old).forEach(id => { const n = old[id] || 0; for (let k = 0; k < n; k++)s.cards.push({ u: 'k' + (++seq), id }); }); s.uidSeq = seq; }
+        if (old && typeof old === 'object') { let seq = 0; s.cards = []; Object.keys(old).forEach(id => { const n = old[id] || 0; for (let k = 0; k < n; k++)s.cards.push({ u: 'k' + (++seq), id, lv: 1, exp: 0, evo: 0 }); }); s.uidSeq = seq; }
         writeSave(s);
       }
       // ── 個體制遷移:舊存檔 owned{id:張數} → cards[{u,id}](每張各一個個體、各佔一格)──
       if (!Array.isArray(s.cards)) {
         let seq = 0; s.cards = []; const o = (s.owned && typeof s.owned === 'object') ? s.owned : {};
-        Object.keys(o).forEach(id => { const n = o[id] || 0; for (let k = 0; k < n; k++)s.cards.push({ u: 'k' + (++seq), id }); });
-        if (!s.cards.length) STARTER.forEach(id => s.cards.push({ u: 'k' + (++seq), id }));
+        Object.keys(o).forEach(id => { const n = o[id] || 0; for (let k = 0; k < n; k++)s.cards.push({ u: 'k' + (++seq), id, lv: 1, exp: 0, evo: 0 }); });
+        if (!s.cards.length) STARTER.forEach(id => s.cards.push({ u: 'k' + (++seq), id, lv: 1, exp: 0, evo: 0 }));
         s.uidSeq = seq;
       }
       if (s.uidSeq == null) s.uidSeq = s.cards.length;
@@ -720,8 +720,18 @@
     function mutSave(fn) { const s = loadSave(); fn(s); writeSave(s); return s; }
     function ownedMap() { const m = {}; loadSave().cards.forEach(c => { m[c.id] = (m[c.id] || 0) + 1; }); return m; }   // 由 cards 派生「id→張數」(相容舊呼叫)
     function loadOwned() { return ownedMap(); }
-    function addCard(id) { let u = null; mutSave(s => { u = 'k' + (s.uidSeq = (s.uidSeq || s.cards.length) + 1); s.cards.push({ u, id }); }); return u; }   // 新增一個個體(各佔一格);回傳 uid
+    function addCard(id) { let u = null; mutSave(s => { u = 'k' + (s.uidSeq = (s.uidSeq || s.cards.length) + 1); s.cards.push({ u, id, lv: 1, exp: 0, evo: 0 }); }); return u; }   // 新增一個個體(各佔一格,lv/exp/evo 各自起始 1/0/0);回傳 uid
     function isOwned(id) { return loadSave().cards.some(c => c.id === id); }
+    function bestInstanceOf(id) {   // 🆕 per-instance level:該卡種你擁有個體中「最強」的一張(evo 最高→同 evo 取 lv 最高→同分取先加入者,排序同後端 bestInstanceUidOf);回 {u,lv,exp,evo} 或 null(無個體)
+      const arr = loadSave().cards.filter(c => c.id === id);
+      if (!arr.length) return null;
+      let best = arr[0];
+      for (let i = 1; i < arr.length; i++) {
+        const c = arr[i], be = best.evo || 0, ce = c.evo || 0;
+        if (ce > be || (ce === be && (c.lv || 1) > (best.lv || 1))) best = c;
+      }
+      return { u: best.u, lv: best.lv || 1, exp: best.exp || 0, evo: best.evo || 0 };
+    }
     /* 背包(個體制):每張卡一格;上限=基礎50 + 帳號等級(前10級每級+6、之後+3) + 魔法石加購(每顆+8) */
     function boxCount() { return loadSave().cards.length; }
     function boxCap(s) { s = s || loadSave(); const r = s.meta.rank || 1; return 50 + Math.min(Math.max(r - 1, 0), 9) * 10 + Math.max(0, r - 10) * 5 + (s.meta.boxBuy || 0) * 5; }   // 全 5 的倍數:基礎50 + 前10級每級+10(早期快) + 之後每級+5 + 魔法石每顆+5
@@ -1036,16 +1046,19 @@
       mutSave(s => { if (!s.gems) s.gems = { fire: 0, water: 0, thunder: 0, earth: 0, wind: 0 }; Object.keys(g).forEach(el => { if (typeof g[el] === 'number') s.gems[el] = g[el]; }); });
     }
     async function walletFetch() { try { const r = await authedFetch('/api/wallet'); if (r.ok) syncWallet(await r.json()); } catch (e) { } }   // fire-and-forget 拉錢包(離線/失敗靜默,沿用本地快取)
-    function syncCards(d) {   // 🔐 伺服器收藏回應→落地本地快取(真相在 user_cards/user_card_progress 表);cards 整包覆蓋、cardLv/cardEvo 依 progress 重建(清掉本地多餘鍵,以伺服器為準)
+    function syncCards(d) {   // 🔐 伺服器收藏回應→落地本地快取(真相在 user_cards 表,每張個體各自 lv/exp/evo;見 per-instance-level-spec.md)。
+      // cards 整包覆蓋(帶各自 lv/exp/evo);cardLv/cardEvo 不再是真相,改為「每卡種目前擁有個體中最強(evo 最高→lv 最高)」的 derived 快取,
+      // 寫回維持舊形狀 {lv,exp}/int → 沒改到的既有讀取點(團隊/圖鑑/成就/戰鬥面板等)自動拿到 Option B「最強個體」語意,一次覆蓋大多數顯示點。
+      // ⚠️ 不再讀 d.progress(伺服器過渡期相容欄位,新前端別依賴,見 card-server-spec.md);cardLv/cardEvo 完全從 d.cards 現算。
       if (!d) return;
       mutSave(s => {
-        if (Array.isArray(d.cards)) s.cards = d.cards.map(c => ({ u: c.u, id: c.id }));
-        const prog = (d.progress && typeof d.progress === 'object') ? d.progress : null;
-        if (prog) {
-          const cardLv = {}, cardEvo = {};
-          Object.keys(prog).forEach(id => { const p = prog[id] || {}; cardLv[id] = { lv: p.lv || 1, exp: p.exp || 0 }; if (p.evo) cardEvo[id] = p.evo; });
-          s.cardLv = cardLv; s.cardEvo = cardEvo;
-        }
+        if (Array.isArray(d.cards)) s.cards = d.cards.map(c => ({ u: c.u, id: c.id, lv: c.lv || 1, exp: c.exp || 0, evo: c.evo || 0 }));
+        const cardLv = {}, cardEvo = {};
+        (s.cards || []).forEach(c => {
+          const evo = c.evo || 0, lv = c.lv || 1, curEvo = cardEvo[c.id], curLv = cardLv[c.id] && cardLv[c.id].lv;
+          if (curEvo === undefined || evo > curEvo || (evo === curEvo && lv > curLv)) { cardEvo[c.id] = evo; cardLv[c.id] = { lv: lv, exp: c.exp || 0 }; }
+        });
+        s.cardLv = cardLv; s.cardEvo = cardEvo;
       });
     }
     function cardsFetch() { authedFetch('/api/cards').then(r => r.ok ? r.json() : null).then(d => { if (d) syncCards(d); }).catch(() => { }); }   // 🔐 fire-and-forget 拉收藏(離線/失敗靜默,沿用本地快取);開場/切帳/找回後強制校正用
@@ -1225,30 +1238,40 @@
       });
       return res;
     }
-    const FEED_EXP = { genin: 60, chunin: 150, jonin: 400, kage: 900 };   // 各稀有度素材給的經驗
-    // 🔐 多素材一次餵入(神魔/龍族式)改打伺服器 POST /api/cards/feed;us=要吃掉的個體 u 陣列;成功→syncWallet(coins)+syncCards(collection);離線/失敗→回 { ok:false, msg }
+    const FEED_EXP = { genin: 60, chunin: 150, jonin: 400, kage: 900 };   // 各稀有度素材"基礎值"(per-instance level 後:實際經驗還要加上素材自己已投入的經驗,見 fodderFeedExp)
+    const FEED_RETURN_RATIO = 0.6;   // 素材吃回自己已投入經驗的比例;數值與後端 _lib/gamedata.ts FEED_RETURN_RATIO 一致(見 per-instance-level-spec.md「素材經驗新公式」)
+    function fodderFeedExp(rank, level, sameEl) {   // 🆕 per-instance level:素材給的經驗看素材自己幾級(不再只看稀有度)。accInvested=素材已投入總經驗=25×(lv-1)×lv(封閉式,等價 expToNext(1..lv-1)累加);exp=round(base+accInvested×0.6)×(同屬?1.5:1)。公式須與後端 _lib/cards.ts cardFeedExp 一致
+      const lv = (level || 1) < 1 ? 1 : (level || 1);
+      const base = FEED_EXP[rank] || FEED_EXP.genin;
+      const accInvested = 25 * (lv - 1) * lv;
+      const raw = Math.round(base + accInvested * FEED_RETURN_RATIO);
+      return raw * (sameEl ? 1.5 : 1);
+    }
+    // 🔐 多素材一次餵入(神魔/龍族式)改打伺服器 POST /api/cards/feed;targetId=卡種(底層固定解析成該卡種目前最強個體的 uid 當 targetUid,見 per-instance-level-spec.md「簡化」決定);us=要吃掉的個體 u 陣列;成功→syncWallet(coins)+syncCards(collection);離線/失敗→回 { ok:false, msg }
     async function feedFodderMany(targetId, us) {
       if (!us || !us.length) return { ok: false, msg: '未選素材' };
       const beforeLv = getCardLv(targetId);
+      const inst = bestInstanceOf(targetId);   // per-instance level:target 改成「指定個體 uid」,固定用該卡種目前最強那張
+      if (!inst) return { ok: false, msg: '對象卡不存在' };
       let r;
-      try { r = await authedFetch('/api/cards/feed', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ targetId: targetId, fodderUids: us }) }); }
+      try { r = await authedFetch('/api/cards/feed', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ targetUid: inst.u, fodderUids: us }) }); }
       catch (e) { return { ok: false, msg: '需要連線,請稍後再試' }; }
       if (!r.ok) { let body = {}; try { body = await r.json(); } catch (e2) { } return { ok: false, msg: body.error || '合成失敗' }; }
-      const d = await r.json();   // {coins, progress:{targetId:{lv,exp}}, removed:[uid], collection}
+      const d = await r.json();   // {coins, target:{u,lv,exp}, removed:[uid], collection}
       if (typeof d.coins === 'number') syncWallet({ coins: d.coins });
       if (d.collection) syncCards(d.collection); else cardsFetch();
-      const p = (d.progress && d.progress[targetId]) || {};
+      const p = d.target || {};
       const eaten = Array.isArray(d.removed) ? d.removed.length : us.length;
       return { ok: true, lv: p.lv != null ? p.lv : beforeLv, ups: Math.max(0, (p.lv != null ? p.lv : beforeLv) - beforeLv), eaten: eaten };
     }
-    // 合成預覽(不變更存檔):回傳餵入後的 Lv/經驗/花費
+    // 合成預覽(不變更存檔):回傳餵入後的 Lv/經驗/花費;每張素材依「自己的 lv」算經驗(fodderFeedExp),不再只看稀有度
     function previewFeed(targetId, us) {
       const s = loadSave(), t = ROSTER.find(c => c.id === targetId);
       let lv = getCardLv(targetId), e = getCardExp(targetId) + 0, gained = 0, eaten = 0;
       if (!t) return { fromLv: lv, toLv: lv, exp: e, need: expToNext(lv), gained: 0, cost: 0, willMax: false, ups: 0, eaten: 0 };   // 目標卡不在卡表→空預覽,不崩
       (us || []).forEach(u => {
         const c = s.cards.find(x => x.u === u); if (!c) return; const f = ROSTER.find(r => r.id === c.id); if (!f) return;
-        gained += Math.round((FEED_EXP[f.rank] || 60) * (f.el === t.el ? 1.5 : 1)); eaten++;
+        gained += fodderFeedExp(f.rank, c.lv, f.el === t.el); eaten++;
       });
       let l = lv; e += gained;
       while (l < MAXLV && e >= expToNext(l)) { e -= expToNext(l); l++; }
@@ -1298,15 +1321,17 @@
     // 🔐 進化改打伺服器 POST /api/cards/evolve {cardId};canEvolve 保留當前端「先擋一次」的友善錯誤訊息(伺服器仍會再驗一次,真相在後端)
     async function evolveCard(id) {
       const chk = canEvolve(id); if (!chk.ok) return chk;
+      const inst = bestInstanceOf(id);   // per-instance level:target 改成「指定個體 uid」,固定用該卡種目前最強那張(canEvolve 本就靠 getCardLv/getCardEvo=derived 最強個體驗證,兩者一致)
+      if (!inst) return { ok: false, msg: '對象卡不存在' };
       let r;
-      try { r = await authedFetch('/api/cards/evolve', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ cardId: id }) }); }
+      try { r = await authedFetch('/api/cards/evolve', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ targetUid: inst.u }) }); }
       catch (e) { return { ok: false, msg: '需要連線,請稍後再試' }; }
       if (!r.ok) { let body = {}; try { body = await r.json(); } catch (e2) { } return { ok: false, msg: body.error || '進化失敗' }; }
-      const d = await r.json();   // {gems:{[el]:n}, coins, progress:{cardId:{lv,exp,evo}}, collection}
+      const d = await r.json();   // {gems:{[el]:n}, coins, target:{u,lv:1,exp:0,evo}, collection}
       if (d.gems) syncGems(d.gems);
       if (typeof d.coins === 'number') syncWallet({ coins: d.coins });
       if (d.collection) syncCards(d.collection); else cardsFetch();
-      const p = (d.progress && d.progress[id]) || {};
+      const p = d.target || {};
       return { ok: true, tier: p.evo != null ? p.evo : getCardEvo(id) };
     }
     /* 經濟:體力(時間回復)/ 經驗·等級 / 金錢 / 魔法石 */
@@ -6095,13 +6120,19 @@
         this.L(roundRectG(this, 40 + bw / 2, 144, bw, 13, 6.5, T.surf2, 1, null, 0));
         if (ratio > 0) this.L(roundRectG(this, 40 + (bw * ratio) / 2, 144, bw * ratio, 13, 6.5, T.ok, 1, null, 0));
         this.txt(40 + bw, 144, mx ? 'MAX' : (pv ? ('+' + pv.gained + ' exp') : (exp + '/' + need)), '13px', pv ? '#163f0a' : '#10303f', 1, true);
+        this.txt(CX, 162, '（強化你目前最強的那張）', '11px', T.ink3, 0.5);   // 🆕 per-instance level:target 底層固定=該卡種最強個體,提醒玩家強化的是哪一張
         this.btn(CX, 186, 150, 32, '🔄 換強化對象', () => { this.mode = 'pick'; this.sel = []; this.rebuild(); }, { color: UI().ink, fs: FS.cap });
         this.txt(CX - 12, 216, '點素材選取(可多選,最多 5)', '13px', '#9a8a6a', 0.5);
         if (sel.length) this.btn(W - 46, 216, 64, 26, '清空', () => { this.sel = []; this.rebuild(); }, { color: UI().ink2, fs: FS.micro });
-        // 素材格(toggle 選取;每種留 1 張保護;同屬優先排序)
+        // 素材格(toggle 選取;每種留「最強個體」1 張保護;同屬優先排序)
         const cards = loadSave().cards, byType = {}; cards.forEach(c => { (byType[c.id] = byType[c.id] || []).push(c); });
         let feedList = [];
-        Object.keys(byType).forEach(id => { const arr = byType[id]; if (arr.length >= 2) { const cd = ROSTER.find(x => x.id === id); if (!cd) return; for (let k = 1; k < arr.length; k++)feedList.push({ cd, u: arr[k].u }); } });   // 卡表已移除的 id 不進素材清單(feedFodderMany 也會擋)
+        Object.keys(byType).forEach(id => {
+          const arr = byType[id]; if (arr.length < 2) return;
+          const cd = ROSTER.find(x => x.id === id); if (!cd) return;   // 卡表已移除的 id 不進素材清單(feedFodderMany 也會擋)
+          const protectU = bestInstanceOf(id).u;   // 🆕 per-instance level:保護的是「該卡種目前最強」那張(不再是陣列第0個),與 feedFodderMany 實際 target 的那張一致,絕不會被列進素材
+          arr.forEach(c => { if (c.u !== protectU) feedList.push({ cd, u: c.u, lv: c.lv || 1 }); });
+        });
         feedList.sort((a, b) => ((b.cd.el === t.el ? 1 : 0) - (a.cd.el === t.el ? 1 : 0)) || a.cd.id.localeCompare(b.cd.id));
         const cols = 5, cw = 58, gx = 74, gy = 64, x0 = CX - 2 * gx, y0 = 250;
         const rowsFit = Math.max(3, Math.floor((H - 96 - 30 - y0) / gy)), perPage = cols * rowsFit;   // 自適應排數(一般手機高度約 5 排)
@@ -6115,8 +6146,8 @@
           this.L(roundRectG(this, cx, cy, cw, cw, 12, EL[c.el].color, 1, (on || same) ? T.gold : T.divider, on ? 4 : 2));
           cardImgOn(this, cx, cy, cw - 4, c.id, 'thumb');   // 素材狗圖
           this.txt(cx, cy - 15, cardName(c.id), '10px', '#1a1208', 0.5, true);
-          this.txt(cx, cy + 3, starStr(c.id), '9px', '#3a2c12', 0.5);
-          this.txt(cx, cy + 19, same ? '同屬×1.5' : '素材', '9px', same ? '#7a3000' : '#3a2c12', 0.5);
+          this.txt(cx, cy + 3, 'Lv' + (it.lv || 1), '9px', '#3a2c12', 0.5);   // 🆕 per-instance level:顯示這張素材個體自己的等級(不是型別最強)
+          this.txt(cx, cy + 19, '+' + fodderFeedExp(c.rank, it.lv, same) + 'exp' + (same ? '(同屬)' : ''), '9px', same ? '#7a3000' : '#3a2c12', 0.5);   // 🆕 每張顯示自己會給多少經驗(依自己 lv 算,同屬×1.5)
           if (on) { this.L(roundRectG(this, cx + cw / 2 - 12, cy - cw / 2 + 12, 20, 20, 6, T.ok, 1, T.surf, 2)); this.txt(cx + cw / 2 - 12, cy - cw / 2 + 12, String(oi + 1), '13px', '#ffffff', 0.5, true); }
           const hit = this.rect(cx, cy, cw, cw, 0x000000, 0.001).setInteractive(); tapBind(this, hit, () => this.toggleSel(u));   // 命中區(透明方形覆蓋整格;圓角只是視覺)
         });   // 選取序號角標
