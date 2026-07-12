@@ -28,15 +28,19 @@ const filters: [string, string, string][] = [
 </div>
 
 <div class="teams">
-  {meta.teams.map((t) => (
+  {meta.teams.map((t) => {
+    const cards = t.ids.map((id) => byId[id]).filter(Boolean);
+    const evos = cards.filter((c) => (c as any).dropOnly && (c as any).evo);
+    const cellN = cards.length + evos.length;
+    return (
     <section class="team">
       <div class="team-h" style={`--tc:${t.color}`}>
         <span class="em">{t.emoji}</span>{t.name}
         {(byId[t.ids[0]] as any)?.dropOnly && <span class="dropchip">🎯 僅關卡掉落</span>}
-        <small class="cnt">{t.ids.length} 隻</small>
+        <small class="cnt">{cellN} 張</small>
       </div>
       <div class="team-grid">
-        {t.ids.map((id) => byId[id]).filter(Boolean).map((c) => (
+        {cards.map((c) => (
           <a class="cell" href={`/dex/${c.id}/`} style={`--el:${meta.elColor[c.el]}`} data-el={c.el} data-name={c.name} data-n={c.n}>
             <div class="pic">
               <span class="num">{c.n}</span>
@@ -46,9 +50,19 @@ const filters: [string, string, string][] = [
             <div class="nm">{c.name}</div>
           </a>
         ))}
+        {evos.map((c) => (
+          <a class="cell" href={`/dex/${c.id}/`} style={`--el:${meta.elColor[c.el]}`} data-el={c.el} data-name={(c as any).evo.name} data-n={c.n}>
+            <div class="pic">
+              <span class="e2">★2</span>
+              <img loading="lazy" src={`/play/art/cards/${c.id}_e_thumb.webp`} alt={(c as any).evo.name} />
+            </div>
+            <div class="nm">{(c as any).evo.name}</div>
+          </a>
+        ))}
       </div>
     </section>
-  ))}
+    );
+  })}
   <div class="empty" id="empty" style="display:none">找不到符合的角色 🥲</div>
 </div>
 
@@ -65,7 +79,7 @@ const filters: [string, string, string][] = [
         var vis=okEl&&okQ; c.style.display=vis?'':'none'; if(vis)shown++;
       });
       sec.style.display=shown?'':'none';
-      var cnt=sec.querySelector('.cnt'); if(cnt)cnt.textContent=shown+' 隻';
+      var cnt=sec.querySelector('.cnt'); if(cnt)cnt.textContent=shown+' 張';
     });
     document.getElementById('empty').style.display=[].some.call(teams,function(s){return s.style.display!=='none';})?'none':'';
   }
@@ -96,6 +110,7 @@ const filters: [string, string, string][] = [
 .cell .pic{position:relative;border-radius:10px;overflow:hidden;background:var(--el)}
 .cell .pic img{width:100%;aspect-ratio:1;object-fit:cover}
 .cell .num{position:absolute;left:4px;top:3px;font-size:10px;font-weight:800;color:#fff;background:rgba(0,0,0,.45);border-radius:5px;padding:0 5px}
+.cell .e2{position:absolute;left:4px;top:3px;font-size:10px;font-weight:900;color:#5a3a00;background:#ffe36b;border-radius:5px;padding:0 5px}
 .cell .hero{position:absolute;right:3px;top:2px;font-size:12px}
 .cell .nm{font-size:13px;font-weight:800;margin-top:5px;line-height:1.25}
 .empty{text-align:center;color:var(--ink2);padding:40px}
