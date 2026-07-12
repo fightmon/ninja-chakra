@@ -13,6 +13,12 @@ const fam = meta.famName[card.fam];
 const pos = order.indexOf(card.id);
 const prev = pos > 0 ? byId[order[pos - 1]] : null;
 const next = pos < order.length - 1 ? byId[order[pos + 1]] : null;
+// 雜牌卡的 ★2 進化形態滿級三圍(EVO_MULT★2=1.6 × LV20倍率1.95 = base×3.12)；有進化立繪 _e_full 的才顯示
+const evoMax = card.dropOnly && card.evo ? {
+  atk: Math.round(card.lv1.atk * 3.12),
+  hp: Math.round(card.lv1.hp * 3.12),
+  rcv: Math.round(card.lv1.rcv * 3.12),
+} : null;
 
 const title = `${card.name} — 塊頭勇者 圖鑑`;
 const leadDesc = card.lead ? `；隊長技「${card.lead.name}」：${card.lead.desc}` : '';
@@ -57,6 +63,20 @@ const desc = `${card.name}（${card.en}${card.species ? '・' + card.species : '
     </table>
   </div>
 
+  {evoMax && (
+  <div class="sec" style={`--el:${meta.elColor[card.el]}`}>
+    <h2>★2 進化形態</h2>
+    <div class="evoform">
+      <img src={`/play/art/cards/${card.id}_e_full.webp`} alt={card.evo.name} />
+      <div class="evometa">
+        <div class="evon">{card.evo.name}<span>{card.evo.en}</span></div>
+        <div class="evostats"><span>⚔️ {evoMax.atk}</span><span>❤️ {evoMax.hp}</span><span>➕ {evoMax.rcv}</span></div>
+        <small>★2 滿級三圍（LV20）</small>
+      </div>
+    </div>
+  </div>
+  )}
+
   {card.lead && (
   <div class="sec" style={`--el:${meta.elColor[card.el]}`}>
     <h2>隊長技</h2>
@@ -90,6 +110,14 @@ const desc = `${card.name}（${card.en}${card.species ? '・' + card.species : '
 .info h1{font-size:28px;font-weight:900;line-height:1.2}
 .romaji{color:var(--ink2);font-size:14px;font-weight:700;margin-top:2px}
 .evo-badge{display:inline-block;margin-top:10px;font-size:13px;font-weight:800;color:#fff;background:linear-gradient(120deg,#ff8a2a,#ff5a3d);border-radius:999px;padding:5px 14px}
+.evoform{display:flex;gap:14px;align-items:center;background:#fff;border-radius:14px;padding:14px;box-shadow:0 6px 16px rgba(140,90,20,.1)}
+.evoform>img{width:120px;height:120px;object-fit:contain;border-radius:12px;background:var(--el);flex:none}
+.evometa{flex:1;min-width:0}
+.evon{font-size:17px;font-weight:900;color:var(--ink)}
+.evon span{display:block;font-size:13px;font-weight:700;color:var(--ink2);margin-top:2px}
+.evostats{display:flex;gap:14px;flex-wrap:wrap;margin-top:10px;font-weight:800;font-size:15px;color:var(--ink)}
+.evometa small{color:var(--ink2);font-size:12px;display:block;margin-top:5px}
+[data-theme="dark"] .evoform{background:#231d14}
 .badges{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0 4px}
 .badge{font-size:13px;font-weight:800;border-radius:999px;padding:4px 13px;color:#fff;background:var(--el)}
 .badge.g{background:#fff;color:var(--ink2);border:2px solid rgba(200,140,40,.22)}
