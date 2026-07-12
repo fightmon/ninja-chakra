@@ -11,11 +11,11 @@ const filters: [string, string, string][] = [
 ];
 ---
 <Base title="角色圖鑑 — 塊頭勇者 Blockyusha" path="/dex/" navActive="dex"
-  description="塊頭勇者 Blockyusha 全角色圖鑑：7 大物種隊、35 隻方塊頭動物勇者的屬性、HP、攻擊、回復、隊長技與主動技一覽。">
+  description="塊頭勇者 Blockyusha 全角色圖鑑：7 大物種隊＋4 個僅關卡掉落的妖怪雜牌家族，55 隻方塊頭動物勇者的屬性、HP、攻擊、回復、隊長技與主動技一覽。">
 
 <div class="title">
   <h1>角色圖鑑</h1>
-  <p>7 大物種隊 · 35 隻方塊頭勇者 · 點擊看詳細數值</p>
+  <p>7 大物種隊＋4 個雜牌家族 · 55 隻方塊頭勇者 · 點擊看詳細數值</p>
 </div>
 
 <div class="tools">
@@ -31,7 +31,9 @@ const filters: [string, string, string][] = [
   {meta.teams.map((t) => (
     <section class="team">
       <div class="team-h" style={`--tc:${t.color}`}>
-        <span class="em">{t.emoji}</span>{t.name}<small class="cnt">{t.ids.length} 隻</small>
+        <span class="em">{t.emoji}</span>{t.name}
+        {(byId[t.ids[0]] as any)?.dropOnly && <span class="dropchip">🎯 僅關卡掉落</span>}
+        <small class="cnt">{t.ids.length} 隻</small>
       </div>
       <div class="team-grid">
         {t.ids.map((id) => byId[id]).filter(Boolean).map((c) => (
@@ -86,6 +88,7 @@ const filters: [string, string, string][] = [
 .team{margin-bottom:26px}
 .team-h{display:flex;align-items:center;gap:10px;font-size:18px;font-weight:900;padding:8px 14px;border-radius:14px;color:#3a2a10;background:linear-gradient(100deg,var(--tc),#fff8ec 90%);border-left:6px solid var(--tc);margin-bottom:12px}
 .team-h .em{font-size:22px}
+.team-h .dropchip{font-size:12px;font-weight:800;color:#5a3a00;background:#ffe36b;border-radius:999px;padding:2px 10px;white-space:nowrap}
 .team-h small{margin-left:auto;font-size:13px;font-weight:800;color:var(--ink2);background:rgba(255,255,255,.6);border-radius:999px;padding:2px 10px}
 .team-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:8px}
 .cell{background:#fff;border-radius:14px;padding:6px 4px 9px;text-align:center;box-shadow:0 4px 12px rgba(140,90,20,.13);border-bottom:4px solid var(--el);transition:transform .12s}

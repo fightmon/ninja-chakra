@@ -15,7 +15,9 @@ const prev = pos > 0 ? byId[order[pos - 1]] : null;
 const next = pos < order.length - 1 ? byId[order[pos + 1]] : null;
 
 const title = `${card.name} — 塊頭勇者 圖鑑`;
-const desc = `${card.name}（${card.en}${card.species ? '・' + card.species : ''}・${el}屬性・${fam}）是塊頭勇者 Blockyusha 的角色。滿級 HP ${card.max.hp}／攻擊 ${card.max.atk}／回復 ${card.max.rcv}；隊長技「${card.lead.name}」：${card.lead.desc}；主動技「${card.act.name}」（CD ${card.act.cd}）。`;
+const leadDesc = card.lead ? `；隊長技「${card.lead.name}」：${card.lead.desc}` : '';
+const dropDesc = card.dropOnly ? '（僅關卡掉落，不進轉蛋）' : '';
+const desc = `${card.name}（${card.en}${card.species ? '・' + card.species : ''}・${el}屬性・${fam}）${dropDesc}是塊頭勇者 Blockyusha 的角色。滿級 HP ${card.max.hp}／攻擊 ${card.max.atk}／回復 ${card.max.rcv}${leadDesc}；主動技「${card.act.name}」（CD ${card.act.cd}）。`;
 ---
 <Base title={title} description={desc} path={`/dex/${card.id}/`} image={`/play/art/cards/${card.id}_full.webp`} navActive="dex">
 
@@ -26,6 +28,7 @@ const desc = `${card.name}（${card.en}${card.species ? '・' + card.species : '
     <div class="art">
       <span class="num">No.{card.n}</span>
       {card.hero && <span class="hero">⭐ 台灣特有種</span>}
+      {card.dropOnly && <span class="drop">🎯 僅關卡掉落</span>}
       <img src={`/play/art/cards/${card.id}_full.webp`} alt={card.name} />
     </div>
     <div class="info">
@@ -35,8 +38,10 @@ const desc = `${card.name}（${card.en}${card.species ? '・' + card.species : '
         <span class="badge">{el}</span>
         <span class="badge g">{fam}</span>
       </div>
-      <div class="stars">★★★<small>基礎 ★3 · 可進化 +2</small></div>
-      {card.evo && <div class="evo-badge">★4 進化 → {card.evo.name} {card.evo.en}</div>}
+      {card.dropOnly
+        ? <div class="stars">★<small>基礎 ★1 · 進化上限 ★2</small></div>
+        : <div class="stars">★★★<small>基礎 ★3 · 可進化 +2</small></div>}
+      {card.evo && <div class="evo-badge">{card.dropOnly ? '★2 進化 → ' : '★4 進化 → '}{card.evo.name} {card.evo.en}</div>}
     </div>
   </div>
 
@@ -52,10 +57,12 @@ const desc = `${card.name}（${card.en}${card.species ? '・' + card.species : '
     </table>
   </div>
 
+  {card.lead && (
   <div class="sec" style={`--el:${meta.elColor[card.el]}`}>
     <h2>隊長技</h2>
     <div class="skill"><div class="sk-h"><span class="sk-n">{card.lead.name}</span></div><p>{card.lead.desc}</p></div>
   </div>
+  )}
 
   <div class="sec" style={`--el:${meta.elColor[card.el]}`}>
     <h2>主動技</h2>
@@ -78,6 +85,7 @@ const desc = `${card.name}（${card.en}${card.species ? '・' + card.species : '
 .art img{width:100%;max-height:360px;object-fit:contain;background:var(--el)}
 .art .num{position:absolute;left:12px;top:10px;font-size:14px;font-weight:800;color:#fff;background:rgba(0,0,0,.45);border-radius:8px;padding:2px 12px}
 .art .hero{position:absolute;right:12px;top:10px;font-size:13px;font-weight:900;color:#7a4e00;background:#ffe36b;border-radius:999px;padding:3px 12px}
+.art .drop{position:absolute;right:12px;top:10px;font-size:13px;font-weight:900;color:#7a4e00;background:#ffe36b;border-radius:999px;padding:3px 12px}
 .info{padding:20px}
 .info h1{font-size:28px;font-weight:900;line-height:1.2}
 .romaji{color:var(--ink2);font-size:14px;font-weight:700;margin-top:2px}
