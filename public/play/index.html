@@ -1069,6 +1069,7 @@
         if (typeof d.staminaMax === 'number') m.staminaMax = d.staminaMax;
         if (typeof d.stamina === 'number') { m.stamina = d.stamina; m.staTs = (typeof d.staminaTs === 'number') ? d.staminaTs * 1000 : Date.now(); }
         if (Array.isArray(d.cleared)) m.cleared = d.cleared;   // 已破地城 id 陣列落地快取,供未來 UI 灰掉未解鎖城(目前未接顯示,僅存起來)
+        if (Array.isArray(d.diffCleared)) { m.diffCleared = m.diffCleared || {}; d.diffCleared.forEach(k => { m.diffCleared[k] = true; }); }   // 🔐[難度解鎖]伺服器真相「城:難度」字串陣列→union 疊加落地,不覆蓋既有(避免離線樂觀解鎖被伺服器回應洗掉;一旦解鎖就永久解鎖)
         if (!s.gems) s.gems = { fire: 0, water: 0, thunder: 0, earth: 0, wind: 0 };
         ['fire', 'water', 'thunder', 'earth', 'wind'].forEach(el => { const k = 'gem_' + el; if (typeof d[k] === 'number') s.gems[el] = d[k]; });
       });
@@ -1101,7 +1102,7 @@
       if (r.ok) {
         const d = await r.json(); syncWallet(d); if (d.gems) syncGems(d.gems);
         mutSave(s => { s.pendingRuns = (s.pendingRuns || []).filter(x => x.runId !== item.runId); });
-        return { ok: true, drops: Array.isArray(d.drops) ? d.drops : [] };
+        return { ok: true, drops: Array.isArray(d.drops) ? d.drops : [], firstClearStones: d.firstClearStones || 0 };   // 🔐[首通石]非首通/序章/重放=0,伺服器已算好直接帶出
       }
       if (r.status === 400 || r.status === 429) { mutSave(s => { s.pendingRuns = (s.pendingRuns || []).filter(x => x.runId !== item.runId); }); console.warn('run/complete rejected', r.status, item.runId); return { ok: false, rejected: true }; }   // 非法/被限流:不重試,丟棄該筆
       return null;   // 其他失敗狀態:保留該筆,下次再試
@@ -1200,7 +1201,7 @@
     const RANK_DUNGEONS = ['fire', 'water', 'thunder', 'earth', 'wind', 'tower'];
     const RANK_DIFFS = ['baby', 'beginner', 'normal', 'advanced', 'super', 'hell'];
     const KAGE_HEROES = ['c15', 'c18', 'c22', 'c26', 'c30'];   // 5 主角神
-    function recordClear(dungeonId, diffKey) { mutSave(s => { s.progress.clearsByDiff = s.progress.clearsByDiff || {}; s.progress.clearsByDiff[dungeonId + ':' + diffKey] = true; }); }
+    function recordClear(dungeonId, diffKey) { mutSave(s => { s.progress.clearsByDiff = s.progress.clearsByDiff || {}; s.progress.clearsByDiff[dungeonId + ':' + diffKey] = true; s.meta.diffCleared = s.meta.diffCleared || {}; s.meta.diffCleared[dungeonId + ':' + diffKey] = true; }); }   // 🔐[難度解鎖]全清當下樂觀寫入 s.meta.diffCleared(跟伺服器同一份 key 空間),下一難度立刻在 UI 解鎖,不用等 wallet 重新同步;伺服器回應之後 union(syncWallet)也不會洗掉
     function bumpRecords(hit, combo) { mutSave(s => { s.records = s.records || { bestHit: 0, bestCombo: 0 }; if (hit > (s.records.bestHit || 0)) s.records.bestHit = hit; if (combo > (s.records.bestCombo || 0)) s.records.bestCombo = combo; }); }
     /* ===== 出擊漏斗(每場攻略統計;key=dungeonId+"|"+diffKey)===== */
     function _runStatOf(s, key) { s.progress.runStats = s.progress.runStats || {}; return s.progress.runStats[key] || (s.progress.runStats[key] = { att: 0, clr: 0, fail: 0, clrMs: 0, failAt: {} }); }
@@ -2234,7 +2235,7 @@
         this.maxHP = Math.round(teamHp * ((this.lead && (this.lead.type === 'hp' || this.lead.type === 'dog')) ? this.lead.v : 1));   // 🐶犬攻守雙修:也吃 HP×v
         this.teamRcv = (this.presetTeam || []).reduce((s, c) => s + (c.rcv || 0), 0) || 0;   // 隊伍回復力總和(清無屬區回血用)
         this.teamMaxAtk = (this.presetTeam || []).reduce((m, c) => Math.max(m, c.atk || 0), 0) || 0;   // 隊伍最高攻擊(無屬傷害基準=此值×普通×0.08,= 屬·普通)
-        this.playerHP = this.maxHP; this.stage = 1; this.resultOpen = false; this.chests = 0; this.gold = 0; this.runDrops = []; this._runDropsPending = false; this.runExp = 0; this.runCoins = 0; this._runGranted = false; this._runRw = null;   // 🔐 掉落/寶玉改伺服器 run/complete 決定,不再前端 runGems 預累積
+        this.playerHP = this.maxHP; this.stage = 1; this.resultOpen = false; this.chests = 0; this.gold = 0; this.runDrops = []; this._runDropsPending = false; this.runExp = 0; this.runCoins = 0; this._runGranted = false; this._runRw = null; this._firstClearStones = 0;   // 🔐 掉落/寶玉改伺服器 run/complete 決定,不再前端 runGems 預累積;🔐[首通石]每場重置,避免殘留上一場的值
         this.charge = [0, 0, 0, 0, 0];   // 主動技蓄力(整場累積、跨關保留)
         this.stored = [null, null, null, null, null];   // 每卡存放的屬塊 {el,lv}(跨關保留,新局/重挑才清)
         this.firstClear = true;   // 新手鉤子:本場第一次消除=隆重慶祝
@@ -4675,6 +4676,7 @@
         });
         _sendRunComplete(item).then(res => {   // 🔐 立即嘗試送出(在場景還開著時,盡量讓結算畫面就能顯示真實掉落);離線/失敗會保留在 pendingRuns,由 flushPendingRuns 之後補發
           if (!res || !res.ok) return;   // res.ok 才代表這筆已經被伺服器接受(冪等重放也算,drops 可能是空陣列)
+          this._firstClearStones = res.firstClearStones || 0;   // 🔐[首通石]showResult 若已畫完面板不會補畫(同下方掉落的邊角案例註解);正常情況下這裡拿到得夠快
           const drops = res.drops || [];
           this.runDrops = drops.map(x => { const cd = ROSTER.find(c => c.id === x.id); return cd ? { cd: cd, isNew: !!x.isNew } : null; }).filter(Boolean);
           this._runDropsPending = false;
@@ -5092,6 +5094,7 @@
             });
           }
           panel.add(this.add.text(CX, cy + 32, '🎉 EXP +' + (this.runExp || 0) + '   💰 +' + (this.runCoins || 0), { fontFamily: EMOJIFONT, fontSize: FS.sub, color: T.goldTx, fontStyle: 'bold' }).setOrigin(0.5));
+          if (this._firstClearStones > 0) panel.add(this.add.text(CX, cy + 56, '🎁 首次通關獎勵 +' + this._firstClearStones + ' 💎', { fontFamily: EMOJIFONT, fontSize: FS.cap, color: T.goldTx, fontStyle: 'bold' }).setOrigin(0.5));   // 🔐[首通石]非首通/序章/重放為 0 不顯示;stones 餘額顯示靠 syncWallet 已更新
           this.mkBtn(panel, cy + 72, '📖 看卡冊', () => { this.scene.manager.start('collection'); this.scene.manager.stop('game'); });
           this.mkBtn(panel, cy + 130, '🏠 回大廳', () => { this.scene.manager.start('home'); this.scene.manager.stop('game'); });
         } else {
@@ -5630,7 +5633,7 @@
         const g = this.add.container(0, 0).setDepth(1500); this._diffG = g;
         let ready = false;                                   // 登場動畫期間鎖輸入→上一層連點不會誤入關卡
         const close = () => { g.destroy(); this._diffG = null; };
-        const T = UI(), cb = loadSave().progress.clearsByDiff || {};
+        const T = UI(), cb = loadSave().progress.clearsByDiff || {}, dc = m.diffCleared || {};   // cb=本地清單快取(僅供 CLEAR 章顯示);dc=伺服器真相「城:難度」→判「是否解鎖」一律用它,不用 cb(老玩家 cb 有舊記錄會跟伺服器不一致)
         const bg = this.add.rectangle(CX, H / 2, W, H, 0x0e0a16, 0).setInteractive().on('pointerup', () => { if (ready) close(); });
         g.add(bg); this.tweens.add({ targets: bg, fillAlpha: { from: 0, to: 0.72 }, duration: 170 });   // 半暗底(亮色列在上更跳)
         const title = this.add.text(CX, H * 0.075, d.emoji + ' ' + d.name, { fontFamily: EMOJIFONT, fontSize: FS.title, color: '#ffffff', fontStyle: 'bold' }).setOrigin(0.5).setStroke('#000000', 4);
@@ -5643,18 +5646,20 @@
         const rw = W - 24, Lx = -rw / 2 + 18;
         list.forEach((df, i) => {
           const y = blockTop + rh * i + rh / 2, cost = this.diffCost(id, df), afford = m.stamina >= cost;
-          const done = !!cb[id + ':' + df.key], nStages = resolveStages(d, df.key).length;   // 該難度是否過過 + 幾關
+          const unlocked = (i === 0) || !!dc[id + ':' + list[i - 1].key];   // 🔐[難度解鎖]第一列(該城最低難度;塔已排除 baby→第一列即 beginner)恆解鎖,其餘要「前一難度」已在伺服器記錄破過
+          const usable = afford && unlocked;   // 灰階顯示沿用舊 afford 判斷,但鎖住/體力不足都算「不可動作」
+          const done = !!cb[id + ':' + df.key], nStages = resolveStages(d, df.key).length;   // 該難度是否過過(CLEAR 章,沿用本地清單快取即可) + 幾關
           const kids = [];
-          kids.push(roundRectG(this, 0, 0, rw, rh - 8, 15, afford ? T.surf : T.surf2, 1, df.col, afford ? 2.5 : 1.5));   // 白圓角列 + 難度色框
+          kids.push(roundRectG(this, 0, 0, rw, rh - 8, 15, usable ? T.surf : T.surf2, 1, df.col, usable ? 2.5 : 1.5));   // 白圓角列 + 難度色框
           const hit = this.add.rectangle(0, 0, rw, rh - 8, 0x000000, 0.001).setInteractive(); kids.push(hit);
-          kids.push(this.add.text(Lx + 6, 0, df.emoji, { fontFamily: EMOJIFONT, fontSize: '26px' }).setOrigin(0, 0.5).setAlpha(afford ? 1 : 0.45));
-          kids.push(this.add.text(Lx + 44, -11, d.name + ' · ' + df.name, { fontFamily: EMOJIFONT, fontSize: '16px', color: afford ? T.ink : T.ink3, fontStyle: 'bold' }).setOrigin(0, 0.5));   // 關卡獨特名 · 難度(取代亂玩都過等)
-          kids.push(this.add.text(Lx + 44, 13, '⚡ ' + cost + '　·　' + nStages + ' 關', { fontFamily: EMOJIFONT, fontSize: '13px', color: afford ? T.ink2 : '#c0492c', fontStyle: afford ? 'normal' : 'bold' }).setOrigin(0, 0.5));   // 體力 + 關數(取代 🎁×N)
+          kids.push(this.add.text(Lx + 6, 0, unlocked ? df.emoji : '🔒', { fontFamily: EMOJIFONT, fontSize: '26px' }).setOrigin(0, 0.5).setAlpha(usable ? 1 : 0.45));
+          kids.push(this.add.text(Lx + 44, -11, d.name + ' · ' + df.name, { fontFamily: EMOJIFONT, fontSize: '16px', color: usable ? T.ink : T.ink3, fontStyle: 'bold' }).setOrigin(0, 0.5));   // 關卡獨特名 · 難度(取代亂玩都過等)
+          kids.push(this.add.text(Lx + 44, 13, unlocked ? ('⚡ ' + cost + '　·　' + nStages + ' 關') : ('🔒 未解鎖(先破 ' + list[i - 1].name + ')'), { fontFamily: EMOJIFONT, fontSize: '13px', color: !unlocked ? T.ink3 : (afford ? T.ink2 : '#c0492c'), fontStyle: (unlocked && !afford) ? 'bold' : 'normal' }).setOrigin(0, 0.5));   // 未解鎖→提示要先破哪個難度;已解鎖沿用原本體力+關數顯示
           if (done) { kids.push(roundRectG(this, rw / 2 - 52, 0, 78, 26, 13, 0x35a866, 1, null, 0)); kids.push(this.add.text(rw / 2 - 52, 0, '✓ CLEAR', { fontFamily: EMOJIFONT, fontSize: '13px', color: '#ffffff', fontStyle: 'bold' }).setOrigin(0.5)); }   // 過關=綠 CLEAR 章
           const rc = this.add.container(CX, y, kids); g.add(rc);
           rc.alpha = 0; rc.y = y + 18;
           this.tweens.add({ targets: rc, alpha: 1, y: y, delay: 70 + i * 50, duration: 240, ease: 'Cubic.out' });   // 逐列滑入淡入
-          hit.on('pointerup', () => { if (!ready) return; if (!afford) { this.toast('體力不足!去商店回復'); return; } close(); this.startBattle(id, df); });
+          hit.on('pointerup', () => { if (!ready) return; if (!unlocked) { this.toast('先破【' + list[i - 1].name + '】才能挑戰'); return; } if (!afford) { this.toast('體力不足!去商店回復'); return; } close(); this.startBattle(id, df); });   // 🔐[難度解鎖]優先擋未解鎖(不管體力),解鎖後才看體力
         });
         // 底部:返回大廳(白色藥丸)
         const bb = roundRectG(this, 0, 0, rw, backH, backH / 2, T.surf, 1, T.divider, 2), bhit = this.add.rectangle(0, 0, rw, backH, 0x000000, 0.001).setInteractive();
@@ -5679,7 +5684,12 @@
             this.toast(sec > 0 ? ('體力不足!約 ' + Math.ceil(sec / 60) + ' 分後回 1 點') : '體力不足!去商店回復');
             this.rebuild(); return;
           }
-          if (r && r.status === 400) { this._startBusy = false; this.toast('尚未解鎖'); this.rebuild(); return; }   // 尚未解鎖(理論上 UI 已灰掉,防禦性擋)
+          if (r && r.status === 400) {   // 尚未解鎖(理論上 UI 已灰掉,這裡是防禦性擋);區分「城沒解鎖」vs「難度沒解鎖」給不同提示
+            this._startBusy = false;
+            const body400 = await r.json().catch(() => ({}));
+            this.toast(body400 && body400.error === 'diff_locked' ? '尚未解鎖此難度,先破前一難度' : '尚未解鎖此關卡');
+            this.rebuild(); return;
+          }
           if (r && r.ok) { const d2 = await r.json(); serverRunId = (d2 && d2.runId) || null; if (d2) syncWallet(d2); }
           // else:其他非預期狀態(非 200/402/400)→ 比照離線放行,不卡玩家(serverRunId 留 null,走本地 runId fallback)
         } catch (e) { }   // 🔐 網路失敗/離線 → 照舊進戰鬥,不扣伺服器體力(維持離線可玩!既有殘留:離線這次不算錢)
