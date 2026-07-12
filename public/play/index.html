@@ -1023,21 +1023,55 @@
         });
       }).catch(fallback);
     }
-    function syncWallet(d) { if (!d) return; mutSave(s => { const m = s.meta; if (typeof d.stones === 'number') m.stones = d.stones; if (typeof d.coins === 'number') m.coins = d.coins; if (typeof d.pity === 'number') m.pity = d.pity; if (typeof d.boxBuy === 'number') m.boxBuy = d.boxBuy; }); }   // 🔐 伺服器錢包回應→落地本地顯示快取(真相在後端 wallets 表)
+    function syncWallet(d) {   // 🔐 伺服器錢包回應→落地本地顯示快取(真相在後端 wallets 表);寶玉欄位 gem_<el> 為絕對值(GET /api/wallet 回應含 gem_fire/gem_water/gem_thunder/gem_earth/gem_wind)
+      if (!d) return;
+      mutSave(s => {
+        const m = s.meta; if (typeof d.stones === 'number') m.stones = d.stones; if (typeof d.coins === 'number') m.coins = d.coins; if (typeof d.pity === 'number') m.pity = d.pity; if (typeof d.boxBuy === 'number') m.boxBuy = d.boxBuy;
+        if (!s.gems) s.gems = { fire: 0, water: 0, thunder: 0, earth: 0, wind: 0 };
+        ['fire', 'water', 'thunder', 'earth', 'wind'].forEach(el => { const k = 'gem_' + el; if (typeof d[k] === 'number') s.gems[el] = d[k]; });
+      });
+    }
+    function syncGems(g) {   // 🔐 部分端點(run/complete、evolve)回 gems:{el:n}(該元素目前絕對值,非差額)→比照其餘 sync 函式慣例覆蓋
+      if (!g || typeof g !== 'object') return;
+      mutSave(s => { if (!s.gems) s.gems = { fire: 0, water: 0, thunder: 0, earth: 0, wind: 0 }; Object.keys(g).forEach(el => { if (typeof g[el] === 'number') s.gems[el] = g[el]; }); });
+    }
     async function walletFetch() { try { const r = await authedFetch('/api/wallet'); if (r.ok) syncWallet(await r.json()); } catch (e) { } }   // fire-and-forget 拉錢包(離線/失敗靜默,沿用本地快取)
+    function syncCards(d) {   // 🔐 伺服器收藏回應→落地本地快取(真相在 user_cards/user_card_progress 表);cards 整包覆蓋、cardLv/cardEvo 依 progress 重建(清掉本地多餘鍵,以伺服器為準)
+      if (!d) return;
+      mutSave(s => {
+        if (Array.isArray(d.cards)) s.cards = d.cards.map(c => ({ u: c.u, id: c.id }));
+        const prog = (d.progress && typeof d.progress === 'object') ? d.progress : null;
+        if (prog) {
+          const cardLv = {}, cardEvo = {};
+          Object.keys(prog).forEach(id => { const p = prog[id] || {}; cardLv[id] = { lv: p.lv || 1, exp: p.exp || 0 }; if (p.evo) cardEvo[id] = p.evo; });
+          s.cardLv = cardLv; s.cardEvo = cardEvo;
+        }
+      });
+    }
+    function cardsFetch() { authedFetch('/api/cards').then(r => r.ok ? r.json() : null).then(d => { if (d) syncCards(d); }).catch(() => { }); }   // 🔐 fire-and-forget 拉收藏(離線/失敗靜默,沿用本地快取);開場/切帳/找回後強制校正用
+    async function _sendRunComplete(item) {   // 🔐 送出單筆通關(POST /api/run/complete,idem 靠 runId);成功→syncWallet(coins/stones/gem_*)+從 pendingRuns 佇列移除,回 {ok:true,drops};冪等重放 drops 會是空陣列;失敗/離線→回 null(呼叫端自行決定要不要保留佇列等下次)
+      let r;
+      try { r = await authedFetch('/api/run/complete', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ dungeonId: item.dungeonId, diff: item.diff, runId: item.runId }) }); }
+      catch (e) { return null; }   // 網路失敗:保留該筆,下次再試
+      if (r.ok) {
+        const d = await r.json(); syncWallet(d); if (d.gems) syncGems(d.gems);
+        mutSave(s => { s.pendingRuns = (s.pendingRuns || []).filter(x => x.runId !== item.runId); });
+        return { ok: true, drops: Array.isArray(d.drops) ? d.drops : [] };
+      }
+      if (r.status === 400 || r.status === 429) { mutSave(s => { s.pendingRuns = (s.pendingRuns || []).filter(x => x.runId !== item.runId); }); console.warn('run/complete rejected', r.status, item.runId); return { ok: false, rejected: true }; }   // 非法/被限流:不重試,丟棄該筆
+      return null;   // 其他失敗狀態:保留該筆,下次再試
+    }
     let _prFlushing = false;
-    async function flushPendingRuns() {   // 🔐 逐筆送出待補的通關金幣(POST /api/run/complete,idem 靠 runId);併發鎖防重疊呼叫
+    async function flushPendingRuns() {   // 🔐 逐筆送出待補的通關(併發鎖防重疊呼叫);補發到的掉落(離線期間累積、這時才連上線)記一筆待領通知,供下次進大廳 toast
       if (_prFlushing) return; _prFlushing = true;
       try {
         const list = (loadSave().pendingRuns || []).slice();
+        let grantedN = 0;
         for (const item of list) {
-          let r;
-          try { r = await authedFetch('/api/run/complete', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ dungeonId: item.dungeonId, diff: item.diff, runId: item.runId }) }); }
-          catch (e) { continue; }   // 網路失敗:保留該筆,下次再試
-          if (r.ok) { const d = await r.json(); syncWallet(d); mutSave(s => { s.pendingRuns = (s.pendingRuns || []).filter(x => x.runId !== item.runId); }); }
-          else if (r.status === 400 || r.status === 429) { mutSave(s => { s.pendingRuns = (s.pendingRuns || []).filter(x => x.runId !== item.runId); }); console.warn('run/complete rejected', r.status, item.runId); }   // 非法/被限流:不重試,丟棄該筆
-          // 其他失敗狀態:保留該筆,下次再試
+          const res = await _sendRunComplete(item);
+          if (res && res.ok && res.drops && res.drops.length) { res.drops.forEach(x => addCard(x.id)); grantedN += res.drops.length; }
         }
+        if (grantedN > 0) { cardsFetch(); mutSave(s => { s.meta._pendingDropsNotice = (s.meta._pendingDropsNotice || 0) + grantedN; }); }
       } finally { _prFlushing = false; }
     }
     /* ── ☁️ 雲端存檔模組結束 ── */
@@ -1065,12 +1099,9 @@
       if (attach.cards && attach.cards.length) { const seen = {}; attach.cards.forEach(id => { seen[id] = (seen[id] || 0) + 1; }); Object.keys(seen).forEach(id => parts.push(cardName(id) + 'x' + seen[id])); }
       return parts.join('  ');
     }
-    function applyMailAttach(attach) {   // 套用附件:寶玉走 mutSave、卡片走 addCard;⚠️石/金已由伺服器 mail/claim 直接入錢包,前端「不再自套」(否則重複計)→改由 claimMail 成功後 walletFetch 帶回顯示
+    function applyMailAttach(attach, grantedCards) {   // 套用附件摘要文字;⚠️石/金/寶玉已由伺服器 mail/claim 直接入錢包,前端不再自套(改由 claimMail 成功後 walletFetch 帶回顯示);卡片改用伺服器驗證後的 grantedCards(不再信 attach.cards)落地本地鏡像,cardsFetch 再校正 uid
       if (!attach) return '';
-      mutSave(s => {
-        if (attach.gems) { s.gems = s.gems || { fire: 0, water: 0, thunder: 0, earth: 0, wind: 0 }; Object.keys(attach.gems).forEach(el => { s.gems[el] = (s.gems[el] || 0) + (attach.gems[el] || 0); }); }
-      });
-      if (attach.cards && attach.cards.length) attach.cards.forEach(id => addCard(id));   // addCard 本身各自 mutSave,故獨立迴圈(避免巢狀 mutSave)
+      if (grantedCards && grantedCards.length) grantedCards.forEach(gc => addCard(gc.id));   // addCard 本身各自 mutSave,故獨立迴圈(避免巢狀 mutSave)
       return mailAttachSummary(attach);
     }
     /* ── 📬 遊戲內信箱模組結束 ── */
@@ -1195,31 +1226,20 @@
       return res;
     }
     const FEED_EXP = { genin: 60, chunin: 150, jonin: 400, kage: 900 };   // 各稀有度素材給的經驗
-    // 多素材一次餵入(神魔/龍族式):us=要吃掉的個體 u 陣列;每張扣 FEED_COST、同屬×1.5;升級後回結果
-    function feedFodderMany(targetId, us) {
-      let res = { ok: false, msg: '' };
-      mutSave(s => {
-        if (!us || !us.length) { res.msg = '未選素材'; return; }
-        if (!s.cardLv[targetId]) s.cardLv[targetId] = { lv: 1, exp: 0 };
-        const cl = s.cardLv[targetId]; if (cl.lv >= MAXLV) { res.msg = '已達滿級 Lv.' + MAXLV; return; }
-        const t = ROSTER.find(c => c.id === targetId);
-        if (!t) { res.msg = '卡片資料不存在'; return; }   // 卡表已移除的目標 id→安全拒絕
-        // 先全部驗證(找出存在的個體、算經驗/花費)——確認金錢足夠後才真正吃卡,避免半途扣卡
-        const valid = []; let total = 0;
-        us.forEach(u => {
-          const i = s.cards.findIndex(c => c.u === u); if (i < 0) return; const f = ROSTER.find(c => c.id === s.cards[i].id); if (!f) return;   // 未知素材卡跳過(不吃不扣)
-          total += Math.round((FEED_EXP[f.rank] || 60) * (f.el === t.el ? 1.5 : 1)); valid.push(u);
-        });
-        if (!valid.length) { res.msg = '素材已不存在'; return; }
-        const cost = FEED_COST * valid.length;
-        if ((s.meta.coins || 0) < cost) { res.msg = '金錢不足(需' + cost + ')'; return; }
-        valid.forEach(u => { const i = s.cards.findIndex(c => c.u === u); if (i >= 0) s.cards.splice(i, 1); });   // 通過檢查→才吃卡
-        s.meta.coins -= cost; cl.exp += total;
-        let ups = 0; while (cl.lv < MAXLV && cl.exp >= expToNext(cl.lv)) { cl.exp -= expToNext(cl.lv); cl.lv++; ups++; }
-        if (cl.lv >= MAXLV) cl.exp = 0;
-        res = { ok: true, total: total, lv: cl.lv, ups: ups, eaten: valid.length };
-      });
-      return res;
+    // 🔐 多素材一次餵入(神魔/龍族式)改打伺服器 POST /api/cards/feed;us=要吃掉的個體 u 陣列;成功→syncWallet(coins)+syncCards(collection);離線/失敗→回 { ok:false, msg }
+    async function feedFodderMany(targetId, us) {
+      if (!us || !us.length) return { ok: false, msg: '未選素材' };
+      const beforeLv = getCardLv(targetId);
+      let r;
+      try { r = await authedFetch('/api/cards/feed', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ targetId: targetId, fodderUids: us }) }); }
+      catch (e) { return { ok: false, msg: '需要連線,請稍後再試' }; }
+      if (!r.ok) { let body = {}; try { body = await r.json(); } catch (e2) { } return { ok: false, msg: body.error || '合成失敗' }; }
+      const d = await r.json();   // {coins, progress:{targetId:{lv,exp}}, removed:[uid], collection}
+      if (typeof d.coins === 'number') syncWallet({ coins: d.coins });
+      if (d.collection) syncCards(d.collection); else cardsFetch();
+      const p = (d.progress && d.progress[targetId]) || {};
+      const eaten = Array.isArray(d.removed) ? d.removed.length : us.length;
+      return { ok: true, lv: p.lv != null ? p.lv : beforeLv, ups: Math.max(0, (p.lv != null ? p.lv : beforeLv) - beforeLv), eaten: eaten };
     }
     // 合成預覽(不變更存檔):回傳餵入後的 Lv/經驗/花費
     function previewFeed(targetId, us) {
@@ -1235,25 +1255,25 @@
       if (l >= MAXLV) e = 0;
       return { fromLv: lv, toLv: l, exp: e, need: expToNext(l), gained: gained, cost: FEED_COST * eaten, willMax: l >= MAXLV, ups: l - lv, eaten: eaten };
     }
-    function dissolveCard(id) {
-      let res = { ok: false, msg: '' };   // 分解重複個體換金幣(保護最後一張)
-      mutSave(s => {
-        const cnt = s.cards.filter(c => c.id === id).length; if (cnt < 2) { res.msg = '只剩 1 張,無法分解'; return; }
-        const c = ROSTER.find(x => x.id === id), gain = { genin: 50, chunin: 150, jonin: 400, kage: 800 }[c ? c.rank : 'genin'] || 50;   // 未知卡→按最低階回收,別崩
-        const i = s.cards.findIndex(x => x.id === id); if (i >= 0) s.cards.splice(i, 1);
-        s.meta.coins = (s.meta.coins || 0) + gain; res = { ok: true, gain: gain, left: cnt - 1 };
-      });
-      return res;
+    // 🔐 批次分解(個體 uid 陣列)改打伺服器 POST /api/cards/dissolve;伺服器保護「每種至少留 1 張」,回 {coins, removed:[uid], collection};離線/失敗→丟錯給呼叫端(呼叫端 toast「需要連線」)
+    async function dissolveUids(uids) {
+      const r = await authedFetch('/api/cards/dissolve', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ uids: uids }) });
+      if (!r.ok) { const e = new Error('dissolve ' + r.status); e.status = r.status; throw e; }
+      const d = await r.json();
+      if (d.collection) syncCards(d.collection); else cardsFetch();
+      if (typeof d.coins === 'number') syncWallet({ coins: d.coins });
+      return d;
     }
-    function dissolveUids(uids) {   // 批次分解(個體 uid 陣列):每種保留至少 1 張、其餘換金幣
-      const res = { n: 0, gain: 0, kept: 0 };
-      mutSave(s => {
-        const set = new Set(uids), tc = {}; s.cards.forEach(c => tc[c.id] = (tc[c.id] || 0) + 1);
-        const rm = new Set();
-        s.cards.forEach(c => { if (set.has(c.u)) { if (tc[c.id] > 1) { tc[c.id]--; rm.add(c.u); const cd = ROSTER.find(x => x.id === c.id); res.gain += ({ genin: 50, chunin: 150, jonin: 400, kage: 800 }[cd ? cd.rank : 'genin'] || 50); res.n++; } else res.kept++; } });
-        s.cards = s.cards.filter(c => !rm.has(c.u)); s.meta.coins = (s.meta.coins || 0) + res.gain;
-      });
-      return res;
+    // 單張版(卡冊詳情頁「解散這張卡」):找該卡種任一個體 uid,轉呼共用的伺服器端點(同一保護規則)
+    async function dissolveCard(id) {
+      const c = loadSave().cards.find(x => x.id === id);
+      if (!c) return { ok: false, msg: '只剩 1 張,無法分解' };
+      const before = getMeta().coins || 0;
+      let d;
+      try { d = await dissolveUids([c.u]); } catch (e) { return { ok: false, msg: '需要連線,請稍後再試' }; }
+      const removed = Array.isArray(d.removed) ? d.removed.length : 0;
+      if (!removed) return { ok: false, msg: '只剩 1 張,無法分解' };
+      return { ok: true, gain: Math.max(0, (d.coins || 0) - before) };
     }
     function setLeader(id) { mutSave(s => { const t = [id].concat((s.team || []).filter(x => x !== id)).slice(0, 5); s.team = t; if (s.teams && s.teams[s.teamIdx || 0]) s.teams[s.teamIdx || 0].ids = t.slice(); }); }   // 設為隊長(放隊首)
     /* 進化(PAD/神魔共通:滿級+寶玉素材→升階):gems 寶玉 + cardEvo 進化階 */
@@ -1275,13 +1295,19 @@
       if ((getMeta().coins || 0) < req.coins) return { ok: false, msg: '需 ' + req.coins + ' 金' };
       return { ok: true, req: req };
     }
-    function evolveCard(id) {
-      const chk = canEvolve(id); if (!chk.ok) return chk; const c = ROSTER.find(x => x.id === id);
-      mutSave(s => {
-        const req = evoReq(s.cardEvo[id] || 0); s.gems[c.el] -= req.gems; s.meta.coins -= req.coins;
-        s.cardEvo[id] = (s.cardEvo[id] || 0) + 1; s.cardLv[id] = { lv: 1, exp: 0 };
-      });
-      return { ok: true, tier: getCardEvo(id) };
+    // 🔐 進化改打伺服器 POST /api/cards/evolve {cardId};canEvolve 保留當前端「先擋一次」的友善錯誤訊息(伺服器仍會再驗一次,真相在後端)
+    async function evolveCard(id) {
+      const chk = canEvolve(id); if (!chk.ok) return chk;
+      let r;
+      try { r = await authedFetch('/api/cards/evolve', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ cardId: id }) }); }
+      catch (e) { return { ok: false, msg: '需要連線,請稍後再試' }; }
+      if (!r.ok) { let body = {}; try { body = await r.json(); } catch (e2) { } return { ok: false, msg: body.error || '進化失敗' }; }
+      const d = await r.json();   // {gems:{[el]:n}, coins, progress:{cardId:{lv,exp,evo}}, collection}
+      if (d.gems) syncGems(d.gems);
+      if (typeof d.coins === 'number') syncWallet({ coins: d.coins });
+      if (d.collection) syncCards(d.collection); else cardsFetch();
+      const p = (d.progress && d.progress[id]) || {};
+      return { ok: true, tier: p.evo != null ? p.evo : getCardEvo(id) };
     }
     /* 經濟:體力(時間回復)/ 經驗·等級 / 金錢 / 魔法石 */
     const REGEN_MS = 20000;   // 體力每 20 秒 +1
@@ -1644,6 +1670,11 @@
       init(data) {
         this.presetTeam = (data && data.team) ? data.team : null; this.dungeonId = (data && data.dungeonId) || 'prologue'; this.dungeon = DUNGEONS[this.dungeonId] || DUNGEONS.prologue; this.hitLab = !!(data && data.lab); this.enemyLab = !!(data && data.elab); this._elabFilled = false; this.diff = DIFFS_BY[(data && data.diff)] || DIFFS_BY.normal;
         this.tut = (data && data.tutorial) ? { i: -1 } : null;   // 新手教學:腳本化引導模式(全程 if(this.tut) 包住)
+        this.serverRunId = null;   // 🔐 戰鬥真實性:開戰向伺服器領 HMAC 票券(run/start),全清時 _grantRun 優先用它送 run/complete(時間閘+一次性);拿不到(離線/失敗)→退回本地 runId 走離線 fallback。教學/實驗室不領票
+        if (!this.hitLab && !this.enemyLab && !this.tut) {
+          const _rsDun = this.dungeon.id, _rsDiff = (this.diff && this.diff.key) || 'normal';   // 與 _grantRun 送出的 dungeonId/diff 完全同源,票券 d/f 才不會 mismatch
+          authedFetch('/api/run/start', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ dungeonId: _rsDun, diff: _rsDiff }) }).then(r => r.ok ? r.json() : null).then(d => { if (d && d.runId) this.serverRunId = d.runId; }).catch(() => { });
+        }
         this.dive = (data && data.dive) || null;   // 🎬從大廳俯衝進來的元素色(有值才播進場淡入+關卡橫幅)
         this.stagesEff = resolveStages(this.dungeon, this.diff.key);   // (b) 依難度解析「有效關卡結構」(規則+覆寫);slice1 規則=0 → 與 base 全等
         this.battleSeed = startBattleSeed((data && data.seed) != null ? data.seed : null);
@@ -2150,7 +2181,7 @@
         this.maxHP = Math.round(teamHp * ((this.lead && (this.lead.type === 'hp' || this.lead.type === 'dog')) ? this.lead.v : 1));   // 🐶犬攻守雙修:也吃 HP×v
         this.teamRcv = (this.presetTeam || []).reduce((s, c) => s + (c.rcv || 0), 0) || 0;   // 隊伍回復力總和(清無屬區回血用)
         this.teamMaxAtk = (this.presetTeam || []).reduce((m, c) => Math.max(m, c.atk || 0), 0) || 0;   // 隊伍最高攻擊(無屬傷害基準=此值×普通×0.08,= 屬·普通)
-        this.playerHP = this.maxHP; this.stage = 1; this.resultOpen = false; this.chests = 0; this.gold = 0; this.runDrops = []; this.runExp = 0; this.runCoins = 0; this.runGems = 0; this._runGranted = false; this._runRw = null;
+        this.playerHP = this.maxHP; this.stage = 1; this.resultOpen = false; this.chests = 0; this.gold = 0; this.runDrops = []; this._runDropsPending = false; this.runExp = 0; this.runCoins = 0; this._runGranted = false; this._runRw = null;   // 🔐 掉落/寶玉改伺服器 run/complete 決定,不再前端 runGems 預累積
         this.charge = [0, 0, 0, 0, 0];   // 主動技蓄力(整場累積、跨關保留)
         this.stored = [null, null, null, null, null];   // 每卡存放的屬塊 {el,lv}(跨關保留,新局/重挑才清)
         this.firstClear = true;   // 新手鉤子:本場第一次消除=隆重慶祝
@@ -4541,18 +4572,9 @@
       }
       stageClear() {
         if (this.tut) { if (this.tutG) { this.tutG.destroy(); this.tutG = null; } this.time.delayedCall(500, () => this.showResult(true)); return; }   // 教學:打完 3 敵即勝利,不給獎勵、不進下一關
-        rollDrops(this.dungeon.drops[this.stage - 1]).forEach((cd, i) => {
-          const isNew = !isOwned(cd.id); this.runDrops.push({ cd, isNew });   // 全清制:只累積,通關才入袋(不當關 addCard)
-          this.time.delayedCall(i * 240, () => this.tonFloat('🎁 ' + cardName(cd.id) + (isNew ? ' ✦NEW' : '') + '(通關入袋)', isNew ? '#ffe04a' : '#ffe08a'));
-        });
-        _loadCardArt(this, this.runDrops.map(d => d.cd.id)); if (this.load.list.size) this.load.start();   // 掉落確定當下就背景補載卡圖(戰鬥 preload 只載出戰隊)→通關結算時圖早就在,不會臨時跳出
         recordStage(this.stage, false);   // 記最佳關
         const rm = (this.diff && this.diff.rwd) || 1;   // 難度獎勵倍率
-        if (this.dungeon.el && Math.random() < Math.min(0.95, 0.6 * rm)) {
-          this.runGems++;   // 元素關掉「寶玉」→只累積,通關才入
-          this.time.delayedCall(120, () => this.tonFloat('🔮 ' + EL[this.dungeon.el].name + '寶玉(通關入袋)', '#c5b0ff'));
-        }
-        this.runExp += Math.round(40 * rm); this.runCoins += Math.round(300 * rm);   // 🏆全清制:EXP/金錢只累積,通關才一次入帳(中途放棄/戰敗全沒收)
+        this.runExp += Math.round(40 * rm); this.runCoins += Math.round(300 * rm);   // 🏆全清制:EXP/金錢只累積,通關才一次入帳(中途放棄/戰敗全沒收);🔐 卡片掉落/寶玉不再前端擲骰預覽,全清時交伺服器 run/complete 決定真相(見 _grantRun),避免假發/重複發
         if (this.stage >= this.stagesEff.length) { markDungeonCleared(this.dungeonId); recordClear(this.dungeonId, (this.diff && this.diff.key) || 'normal'); this._grantRun(); this.creditRun(); this.chests++; this.finalBlow(this._finalEnemy); return; }   // 最後一關全清→_grantRun 一次入帳 + 記完成率/成就 → 最後一擊特寫
         this.stage++; this.chests++; this.playerHP = Math.min(this.maxHP, this.playerHP + 150);
         this.time.delayedCall(700, () => { try { this.stageAdvanceFX(); } catch (e) { } this.time.delayedCall(380, () => { try { this.startStage(true); } catch (e) { console.error('startStage error', e); } }); });   // 過關:前進演出 → 下一關敵人自遠方逼近入場(不清盤,盤面累積)
@@ -4587,16 +4609,29 @@
       }
       creditRun() { bumpRecords(this.runMaxHit || 0, this.runMaxCombo || 0); const nw = checkAchievements(); nw.forEach((t, i) => this.time.delayedCall(i * 320, () => { try { this.tonFloat('🏅 解鎖稱號:' + t, '#ffe04a'); } catch (e) { } })); }   // 提交本局紀錄 + 檢查成就解鎖(過關與戰敗都跑)
       _grantRun() {
-        if (this._runGranted) return; this._runGranted = true;   // 🏆全清結算:整趟累積的掉落/寶玉/EXP/金錢一次入帳(只有全清才呼叫→中途放棄/戰敗自然全沒收)
-        (this.runDrops || []).forEach(d => { if (d && d.cd) addCard(d.cd.id); });   // 掉落一次入收集
-        for (let i = 0; i < (this.runGems || 0); i++)addGem(this.dungeon.el);   // 寶玉一次入
-        this._runRw = addRewards(this.runExp || 0, 0); if (this._runRw._ups > 0) this.tonFloat('🆙 等級提升! Lv.' + this._runRw.rank, '#ffe04a');   // 🔐 金幣不再本地入帳(displayed runCoins 照舊,入帳走伺服器 pendingRuns 佇列)
+        if (this._runGranted) return; this._runGranted = true;   // 🏆全清結算:整趟累積的 EXP 一次入帳(只有全清才呼叫→中途放棄/戰敗自然全沒收);🔐 卡片掉落/寶玉/金幣改由伺服器 run/complete 回應決定(見下),不再前端算
+        this._runRw = addRewards(this.runExp || 0, 0); if (this._runRw._ups > 0) this.tonFloat('🆙 等級提升! Lv.' + this._runRw.rank, '#ffe04a');   // 金幣不再本地入帳(displayed runCoins 照舊,入帳走伺服器 run/complete)
+        const item = { dungeonId: this.dungeon.id, diff: (this.diff && this.diff.key) || 'normal', runId: this.serverRunId || ('r' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8)) };   // 🔐 優先用開戰領到的伺服器票券(含'.',run/complete 走時間閘+一次性);拿不到→本地 runId 走離線 fallback(限流)
+        this.runDrops = []; this._runDropsPending = true;   // showResult 顯示「連線後發放」暫態,直到下面拿到結果或確認離線
         mutSave(s => {
           const q = (s.pendingRuns = s.pendingRuns || []);
-          q.push({ dungeonId: this.dungeon.id, diff: (this.diff && this.diff.key) || 'normal', runId: 'r' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8) });
+          q.push(item);
           while (q.length > 20) q.shift();   // 佇列上限 20 筆,超過丟最舊
         });
-        flushPendingRuns();   // fire-and-forget 送出(離線失敗留佇列,下次開場/進大廳再試)
+        _sendRunComplete(item).then(res => {   // 🔐 立即嘗試送出(在場景還開著時,盡量讓結算畫面就能顯示真實掉落);離線/失敗會保留在 pendingRuns,由 flushPendingRuns 之後補發
+          if (!res || !res.ok) return;   // res.ok 才代表這筆已經被伺服器接受(冪等重放也算,drops 可能是空陣列)
+          const drops = res.drops || [];
+          this.runDrops = drops.map(x => { const cd = ROSTER.find(c => c.id === x.id); return cd ? { cd: cd, isNew: !!x.isNew } : null; }).filter(Boolean);
+          this._runDropsPending = false;
+          if (this.runDrops.length) {
+            this.runDrops.forEach(o => addCard(o.cd.id));   // 本地鏡像,cardsFetch 再校正 uid
+            _loadCardArt(this, this.runDrops.map(o => o.cd.id)); if (this.load.list.size) this.load.start();
+            cardsFetch();
+          }
+          // ⚠️ 若結算面板(showResult)這時已經畫完(回應很慢的邊角案例):卡片仍已正確入帳(上面 addCard),
+          // 只是這次面板不會回頭補畫戰利品格子(overlay() 不支援重繪、貿然重叫會疊出第二層面板,风险更高)。
+          // 玩家下次進卡冊/大廳會看到正確收藏(cardsFetch 已校正),只是少一次「當下的」視覺確認。
+        }).catch(() => { });
         if (this._runStatsKey) recordRunClear(this._runStatsKey, Date.now() - (this._runStartMs || Date.now()));   // 📊 出擊漏斗:全清入帳
       }
       restartStage() { this.playerHP = this.maxHP; this.startStage(); }
@@ -4983,20 +5018,24 @@
         panel.add(this.add.text(CX, cy - 152, win ? (wasTut ? '🎓 教學完成!' : '🏆 通關 ' + this.dungeon.name + '!') : '☠️ 敗北', { fontFamily: EMOJIFONT, fontSize: FS.title, color: win ? T.goldTx : T.badTx, fontStyle: 'bold' }).setOrigin(0.5));
         panel.add(this.add.text(CX, cy - 112, win ? (wasTut ? '你已學會核心:放塊→清屬性宮→相剋打弱點。出發吧!' : (this.dungeon.name + ' · ' + this.stagesEff.length + ' 關全清!')) : '第 ' + this.stage + ' 關失敗', { fontFamily: EMOJIFONT, fontSize: FS.cap, color: T.ink, align: 'center', wordWrap: { width: W - 60 } }).setOrigin(0.5));
         if (win) {
-          const drops = this.runDrops || [], m = Math.min(drops.length, 8);
-          panel.add(this.add.text(CX, cy - 90, drops.length ? ('戰利品 ×' + drops.length) : '(這趟沒有掉落)', { fontFamily: EMOJIFONT, fontSize: FS.sub, color: T.goldTx, fontStyle: 'bold' }).setOrigin(0.5));   // 移除 🎁 emoji(部分裝置算繪成怪字);純文字更清楚
-          const per = m ? Math.min(86, Math.floor((W - 20) / m)) : 0, sq = Math.min(per - 6, 74);   // 正方形卡;字級隨卡大小放大
-          const fn = Math.max(13, Math.round(sq * 0.23)), fr = Math.max(11, Math.round(sq * 0.18));
-          drops.slice(0, 8).forEach((d, i) => {
-            const dx = CX + (i - (m - 1) / 2) * per, dy = cy - 40;
-            const cardC = this.add.container(dx, dy); panel.add(cardC);   // 每張戰利品=子容器→逐張彈出
-            cardC.add(roundRectG(this, 0, 0, sq, sq, 12, EL[d.cd.el].color, 1, d.isNew ? T.gold : T.divider, d.isNew ? 3 : 1.5));
-            { const _dk = cardArtKey(d.cd.id, 'thumb'); if (_dk && this.textures.exists(_dk)) cardC.add(this.add.image(0, 0, _dk).setDisplaySize(sq - 4, sq - 4).setOrigin(0.5)); }   // 戰利品狗圖
-            // 戰利卡片不顯示卡名(使用者要求 2026-07):只留卡圖 + 星等 + NEW,畫面更乾淨(fn 名稱字級因此不再使用)
-            cardC.add(this.add.text(0, sq * 0.30, RANKSTAR[d.cd.rank], { fontFamily: EMOJIFONT, fontSize: fr + 'px', color: '#ffffff', fontStyle: 'bold', stroke: '#000000', strokeThickness: 3 }).setOrigin(0.5));   // 星等下移+白字黑邊:名稱拿掉後疊在卡圖上仍清楚
-            if (d.isNew) cardC.add(this.add.text(0, -sq / 2 - 10, '✦NEW', { fontFamily: EMOJIFONT, fontSize: FS.micro, color: T.goldTx, fontStyle: 'bold' }).setOrigin(0.5));
-            cardC.setScale(0); this.tweens.add({ targets: cardC, scale: 1, duration: 300, ease: 'Back.out', delay: 260 + i * 90 });
-          });
+          if (this._runDropsPending) {   // 🔐 全清當下還沒拿到伺服器掉落結果(離線/連線慢):不假顯示具體卡片,顯示暫態,實際掉落會在連線後靜默入袋(見 flushPendingRuns 的待領通知)
+            panel.add(this.add.text(CX, cy - 60, '⏳ 戰利品連線後發放', { fontFamily: EMOJIFONT, fontSize: FS.sub, color: T.goldTx, fontStyle: 'bold' }).setOrigin(0.5));
+          } else {
+            const drops = this.runDrops || [], m = Math.min(drops.length, 8);
+            panel.add(this.add.text(CX, cy - 90, drops.length ? ('戰利品 ×' + drops.length) : '(這趟沒有掉落)', { fontFamily: EMOJIFONT, fontSize: FS.sub, color: T.goldTx, fontStyle: 'bold' }).setOrigin(0.5));   // 移除 🎁 emoji(部分裝置算繪成怪字);純文字更清楚
+            const per = m ? Math.min(86, Math.floor((W - 20) / m)) : 0, sq = Math.min(per - 6, 74);   // 正方形卡;字級隨卡大小放大
+            const fn = Math.max(13, Math.round(sq * 0.23)), fr = Math.max(11, Math.round(sq * 0.18));
+            drops.slice(0, 8).forEach((d, i) => {
+              const dx = CX + (i - (m - 1) / 2) * per, dy = cy - 40;
+              const cardC = this.add.container(dx, dy); panel.add(cardC);   // 每張戰利品=子容器→逐張彈出
+              cardC.add(roundRectG(this, 0, 0, sq, sq, 12, EL[d.cd.el].color, 1, d.isNew ? T.gold : T.divider, d.isNew ? 3 : 1.5));
+              { const _dk = cardArtKey(d.cd.id, 'thumb'); if (_dk && this.textures.exists(_dk)) cardC.add(this.add.image(0, 0, _dk).setDisplaySize(sq - 4, sq - 4).setOrigin(0.5)); }   // 戰利品狗圖
+              // 戰利卡片不顯示卡名(使用者要求 2026-07):只留卡圖 + 星等 + NEW,畫面更乾淨(fn 名稱字級因此不再使用)
+              cardC.add(this.add.text(0, sq * 0.30, RANKSTAR[d.cd.rank], { fontFamily: EMOJIFONT, fontSize: fr + 'px', color: '#ffffff', fontStyle: 'bold', stroke: '#000000', strokeThickness: 3 }).setOrigin(0.5));   // 星等下移+白字黑邊:名稱拿掉後疊在卡圖上仍清楚
+              if (d.isNew) cardC.add(this.add.text(0, -sq / 2 - 10, '✦NEW', { fontFamily: EMOJIFONT, fontSize: FS.micro, color: T.goldTx, fontStyle: 'bold' }).setOrigin(0.5));
+              cardC.setScale(0); this.tweens.add({ targets: cardC, scale: 1, duration: 300, ease: 'Back.out', delay: 260 + i * 90 });
+            });
+          }
           panel.add(this.add.text(CX, cy + 32, '🎉 EXP +' + (this.runExp || 0) + '   💰 +' + (this.runCoins || 0), { fontFamily: EMOJIFONT, fontSize: FS.sub, color: T.goldTx, fontStyle: 'bold' }).setOrigin(0.5));
           this.mkBtn(panel, cy + 72, '📖 看卡冊', () => { this.scene.manager.start('collection'); this.scene.manager.stop('game'); });
           this.mkBtn(panel, cy + 130, '🏠 回大廳', () => { this.scene.manager.start('home'); this.scene.manager.stop('game'); });
@@ -5198,7 +5237,18 @@
           const sel = this.dsel ? this.dsel.size : 0;
           this.rect(CX, H - 62, W, 40, T.surf, 0.98).setStrokeStyle(1, T.divider, 1); this.txt(CX, H - 62, '已勾選 ' + sel + ' 張 → 一次分解', '15px', '#c07a3a', 0.5, true);
           this.btn(CX - 92, H - 24, 168, 42, '✖ 取消', () => { this.selMode = false; this.dsel = new Set(); this.rebuild(); }, { col: T.surf, stroke: T.divider, color: T.ink2, bold: true, fs: '15px' });
-          this.btn(CX + 92, H - 24, 168, 42, '✔ 分解 ' + sel + ' 張', () => { if (!sel) { this.toast('還沒勾選卡'); return; } const r = dissolveUids([...this.dsel]); this.selMode = false; this.dsel = new Set(); this.toast('分解 ' + r.n + ' 張,+' + r.gain + ' 金' + (r.kept ? '\n(每種保留最後 ' + r.kept + ' 張)' : '')); this.rebuild(); }, { col: 0xe0663a, stroke: 0xe0663a, color: '#ffffff', bold: true, fs: '15px' });
+          this.btn(CX + 92, H - 24, 168, 42, '✔ 分解 ' + sel + ' 張', () => {   // 🔐 分解改打伺服器,async 期間防連點(_busyDis);先關選取畫面,拿到伺服器結果才 toast(不樂觀更新)
+            if (!sel) { this.toast('還沒勾選卡'); return; }
+            if (this._busyDis) return; this._busyDis = true;
+            const uids = [...this.dsel], total = uids.length, before = getMeta().coins || 0;
+            this.selMode = false; this.dsel = new Set(); this.rebuild();
+            dissolveUids(uids).then(d => {
+              this._busyDis = false;
+              const n = Array.isArray(d.removed) ? d.removed.length : 0, kept = total - n, gain = Math.max(0, (d.coins || 0) - before);
+              this.toast('分解 ' + n + ' 張,+' + gain + ' 金' + (kept ? '\n(每種保留最後 ' + kept + ' 張)' : ''));
+              this.rebuild();
+            }).catch(() => { this._busyDis = false; this.toast('需要連線,請稍後再試'); this.rebuild(); });
+          }, { col: 0xe0663a, stroke: 0xe0663a, color: '#ffffff', bold: true, fs: '15px' });
         }
         if (this.sel && !this.selMode) this.drawDetail();
       }
@@ -5224,7 +5274,10 @@
         this.txt(CX, py - 26, cardName(cd.id) + '(持有 ' + n + ' 張)', '12px', '#cfc0a8', 0.5);
         this.txt(CX, py + 2, '解散可得 💰 ' + gain + ' 金', '15px', '#ffe08a', 0.5, true);
         this.btn(CX - 80, py + 52, 144, 40, '✖ 取消', () => { this.askDis = false; this.rebuild(); }, { col: 0x2a2218, stroke: 0x5a4a32, color: '#cfc0a8', bold: true, fs: '14px' });
-        this.btn(CX + 80, py + 52, 144, 40, '✔ 確認解散', () => { const r = dissolveCard(cd.id); this.askDis = false; this.toast(r.ok ? ('解散 +' + r.gain + ' 金') : r.msg); this.rebuild(); }, { col: 0x3a2a1a, stroke: 0x8a6a3a, color: '#ffd9a0', bold: true, fs: '14px' });
+        this.btn(CX + 80, py + 52, 144, 40, '✔ 確認解散', () => {   // 🔐 分解改打伺服器,async 期間防連點(_busyDis)
+          if (this._busyDis) return; this._busyDis = true; this.askDis = false; this.rebuild();
+          dissolveCard(cd.id).then(r => { this._busyDis = false; this.toast(r.ok ? ('解散 +' + r.gain + ' 金') : r.msg); this.rebuild(); });
+        }, { col: 0x3a2a1a, stroke: 0x8a6a3a, color: '#ffd9a0', bold: true, fs: '14px' });
       }
       drawEvoConfirm(cd) {   // 進化確認框(比照 drawDissolveConfirm 版型;多一行「換名」+ 進化後歸1級提醒)
         const chk = canEvolve(cd.id);
@@ -5238,10 +5291,13 @@
         this.txt(CX, py - 20, '需 ' + req.gems + ' 顆' + EL[cd.el].name + '寶玉 + ' + req.coins + ' 金幣', '14px', '#ffe08a', 0.5, true);
         this.txt(CX, py + 6, '(等級會歸 1 重練)', '12px', '#cfc0a8', 0.5);
         this.btn(CX - 80, py + 62, 144, 40, '✖ 取消', () => { this.askEvo = false; this.rebuild(); }, { col: 0x2a2218, stroke: 0x5a4a32, color: '#cfc0a8', bold: true, fs: '14px' });
-        this.btn(CX + 80, py + 62, 144, 40, '✔ 確定進化', () => {
-          const r = evolveCard(cd.id); this.askEvo = false;
-          this.toast(r.ok ? '✨ 進化成功!' : (r.msg || '進化失敗'));
-          this.rebuild();
+        this.btn(CX + 80, py + 62, 144, 40, '✔ 確定進化', () => {   // 🔐 進化改打伺服器,async 期間防連點(_busyEvo)
+          if (this._busyEvo) return; this._busyEvo = true; this.askEvo = false; this.rebuild();
+          evolveCard(cd.id).then(r => {
+            this._busyEvo = false;
+            this.toast(r.ok ? '✨ 進化成功!' : (r.msg || '進化失敗'));
+            this.rebuild();
+          });
         }, { col: 0x3a2a1a, stroke: 0x8a6a3a, color: '#ffd9a0', bold: true, fs: '14px' });
       }
     }
@@ -5271,6 +5327,8 @@
         maybeConfigToast(this);   // ☁️ 公告/維護訊息 toast(每 session 各一次;toast 深度 2000 疊在每日彈窗上)
         this.refreshMailBadge();   // 📬 進首頁 fire-and-forget 拉一次信箱未讀數(time-box 走 authedFetch 內建逾時,失敗靜默不阻塞)
         flushPendingRuns();   // 🔐 進大廳順帶再試一次補送離線期間累積的通關金幣佇列(fire-and-forget)
+        cardsFetch();   // 🔐 每次進大廳強制校正收藏(切帳/找回都會 reload 回大廳,不靠時間戳比較)
+        { const _pdn = getMeta()._pendingDropsNotice; if (_pdn) { mutSave(s => { delete s.meta._pendingDropsNotice; }); this.time.delayedCall(_lu ? 3000 : 500, () => this.toast('🎁 你有 ' + _pdn + ' 張待領戰利品已入袋!')); } }   // 離線期間補發的通關掉落(見 flushPendingRuns)
         if (!st.freePull && tutSeen() && !st.bindPrompted && !st.heroCard) this.time.delayedCall(700, () => promptAccountBindAfterTutorial(this));   // 🔑 教學完成後(非十連 reveal 那次)一次性邀綁 Google;拒絕→勇者卡提示
       }
       async _doFreePull() {   // 🔐 新手免費十連改打伺服器(POST /api/gacha/pull {poolId:'premium',count:10,free:true});防重放
@@ -5281,7 +5339,8 @@
         if (!r.ok) { this.toast('新手十連需要連線,稍後自動再試'); return; }   // 其他失敗:保留旗標下次再試
         const d = await r.json();
         mutSave(s => { s.settings.freePull = false; }); syncWallet(d);
-        const out = d.results.map(x => { const cd = ROSTER.find(c => c.id === x.id); const isNew = !isOwned(x.id); addCard(x.id); return { cd, isNew, pity: false }; });   // isOwned 須在 addCard 前判
+        const out = d.results.map(x => { const cd = ROSTER.find(c => c.id === x.id); addCard(x.id); return { cd, isNew: !!x.isNew, pity: false }; });   // 🔐 isNew 改由伺服器回
+        cardsFetch();   // 背景校正 uid
         this.tab = 'gacha'; this.gachaResult = out; this.gachaRevealed = false; this._afterPull = 'team';
         this.rebuild();
       }
@@ -5645,7 +5704,8 @@
           this.rebuild(); return;
         }
         const d = await r.json(); syncWallet(d);
-        const out = d.results.map(x => { const cd = ROSTER.find(c => c.id === x.id); const isNew = !isOwned(x.id); addCard(x.id); return { cd, isNew, pity: false }; });   // isOwned 須在 addCard 前判(新卡判斷)
+        const out = d.results.map(x => { const cd = ROSTER.find(c => c.id === x.id); addCard(x.id); return { cd, isNew: !!x.isNew, pity: false }; });   // 🔐 isNew 改由伺服器回(不再前端 isOwned 算,避免快取漂移誤判)
+        cardsFetch();   // 背景校正 uid(addCard 只是本地鏡像)
         this.gachaDetail = null; this.gachaRevealed = false; this.gachaResult = out;
         _loadCardArt(this, out.map(o => o.cd.id));   // 大廳只載出戰隊→抽到別的卡會沒圖:抽完先補載卡圖,載好再顯示
         if (this.load.list.size) { this.load.once('complete', () => this.rebuild()); this.load.start(); } else this.rebuild();
@@ -5966,8 +6026,9 @@
       }
       claimMail(m) {   // 領取:成功→mutSave 套用附件(自動觸發雲同步)+ toast 實得 + 重繪面板/未讀紅點;409/404/410 依規格分流
         mailClaim(m.id).then(res => {
-          const summary = applyMailAttach(res.attach);
-          if (res.attach && (res.attach.stones || res.attach.coins)) walletFetch();   // 石/金已入伺服器錢包→拉回更新顯示(前端已不自套)
+          const summary = applyMailAttach(res.attach, res.grantedCards);
+          if (res.attach && (res.attach.stones || res.attach.coins || res.attach.gems)) walletFetch();   // 石/金/寶玉已入伺服器錢包→拉回更新顯示(前端不再自套)
+          if (res.grantedCards && res.grantedCards.length) cardsFetch();   // 背景校正 uid(addCard 只是本地鏡像)
           m.claimed = true; const c = this._mailCache && this._mailCache.find(x => x.id === m.id); if (c) c.claimed = true;
           this._mailUnread = Math.max(0, (this._mailUnread || 1) - 1);
           this.toast('已領取!' + (summary ? '  ' + summary : ''));
@@ -6100,12 +6161,16 @@
         mk(CX - 78, '取消', T.surf, T.divider, T.ink, () => { g.destroy(); this._cfg = null; });
         mk(CX + 78, '確定合成', T.ok, T.ok, T.onAccent, () => { g.destroy(); this._cfg = null; this.doFuse(); });
       }
-      doFuse() {
-        const sel = (this.sel || []).slice(), r = feedFodderMany(this.target, sel);
-        if (!r.ok) { this.toast(r.msg); return; }
-        this.sel = []; this.feedPage = 0;
-        this.toast(r.ups > 0 ? ('🆙 升級! Lv.' + r.lv + '(吃 ' + r.eaten + ' 張 · +' + r.total + ' exp)') : ('+' + r.total + ' exp(吃 ' + r.eaten + ' 張)'));
-        this.rebuild();
+      doFuse() {   // 🔐 合成改打伺服器,async 期間防連點(_busyFuse);伺服器不回精確 exp 增量(僅回最終 lv/exp),訊息簡化為 lv+吃卡數
+        if (this._busyFuse) return; this._busyFuse = true;
+        const sel = (this.sel || []).slice();
+        feedFodderMany(this.target, sel).then(r => {
+          this._busyFuse = false;
+          if (!r.ok) { this.toast(r.msg); return; }
+          this.sel = []; this.feedPage = 0;
+          this.toast(r.ups > 0 ? ('🆙 升級! Lv.' + r.lv + '(吃 ' + r.eaten + ' 張)') : ('吃 ' + r.eaten + ' 張素材'));
+          this.rebuild();
+        });
       }
       drawPick() {
         const T = UI();
@@ -6241,7 +6306,7 @@
       checkConfig();   // 公告/維護(fire-and-forget,不 await)
       try { await Promise.race([hydrateFromCloud(), new Promise(function (res) { setTimeout(res, 2500); })]); } catch (e) { }
       window._nbBootDone = true;   // 此後 hydrateFromCloud 不得再套雲端資料(本輪放棄,下次開場再調和)
-      walletFetch(); flushPendingRuns();   // 🔐 伺服器錢包/待補通關獎勵(fire-and-forget,不阻塞開場)
+      walletFetch(); flushPendingRuns(); cardsFetch();   // 🔐 伺服器錢包/待補通關獎勵/收藏校正(fire-and-forget,不阻塞開場)
       cloudFetch('/api/gacha/rates').then(r => r.ok ? r.json() : null).then(d => { if (d && d.pools) window._nbGachaRates = d; }).catch(() => { });   // 轉蛋機率公示改讀伺服器(失敗 fallback 前端常數,見 gachaBanner)
       bootGame();
     }
