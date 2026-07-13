@@ -387,6 +387,10 @@
       { key: 'cloud_lbf', w: 491, h: 307, left: 0, bottom: -10 },
     ];
     const MAP_KEYS = ['map_bg'].concat(MAP_ISLES.map(i => i.key), MAP_CLOUDS.map(c => c.key));
+    const UI_ICONS = [   // 🎨 大廳狀態列/導覽的美術圖示(取代 emoji;art/ui/*.webp,2026-07-13):tab id 直接對到 ui_<id>
+      ['ui_dungeon', 'nav_dungeon'], ['ui_monster', 'nav_monster'], ['ui_shop', 'nav_shop'], ['ui_gacha', 'nav_gacha'], ['ui_village', 'nav_village'],
+      ['ui_gem', 'res_gem'], ['ui_coin', 'res_coin'], ['ui_energy', 'res_energy'],
+    ];
     const DIVE_COLOR = { fire: [255, 90, 42], water: [58, 160, 220], thunder: [245, 205, 60], earth: [180, 130, 70], wind: [120, 210, 150], tower: [220, 200, 120] };   // 🎬大廳俯衝進關轉場的「有轉場城」清單(6 城全開;值目前僅當有無轉場的旗標,暗霧色固定 0x1b1620)。prologue 教學不列入(有專屬教學流程)
     // 各敵圖「角色實體」在 320 畫布的高度佔比 h 與底緣 bottom(量測值)。渲染時改以「實體高度」對齊→不同圖體型一致;bottom 用來對齊腳底基準線。魔王再乘 BOSS_MUL 刻意略大。
     const ENEMY_FIT = { grunt: { h: 0.65, bottom: 0.867 }, grunt2: { h: 0.65, bottom: 0.867 }, guard: { h: 0.69, bottom: 0.869 }, caster: { h: 0.72, bottom: 0.867 }, boss_baby: { h: 0.65, bottom: 0.867 }, boss_beg: { h: 0.69, bottom: 0.869 }, boss_nrm: { h: 0.88, bottom: 0.902 } };   // caster 略含尖帽→h 高一點
@@ -700,6 +704,45 @@
         setTimeout(() => { try { el.remove(); } catch (e) { } }, holdMs || 4200);
       } catch (e) { }
     }
+    // 🔐 頁內自製對話框(取代原生 confirm/prompt——iframe sandbox 沒 allow-modals、LINE/FB in-app 瀏覽器都會靜默封鎖原生對話框)。
+    //    全 DOM overlay:不依賴 Phaser scene、跨場景可用、樣式跟遊戲一致。uiPrompt→Promise(字串|null);uiConfirm→Promise(true|false)。
+    function _nbModal(opts) {
+      return new Promise(resolve => {
+        const isPrompt = opts.type === 'prompt';
+        let done = false;
+        const finish = (val) => { if (done) return; done = true; try { document.removeEventListener('keydown', onKey, true); wrap.remove(); } catch (e) { } resolve(val); };
+        const wrap = document.createElement('div');
+        wrap.style.cssText = 'position:fixed;inset:0;z-index:99998;display:flex;align-items:center;justify-content:center;background:rgba(14,10,22,.72);padding:24px;font-family:GenSen,system-ui,-apple-system,"Noto Sans TC",sans-serif;';
+        const card = document.createElement('div');
+        card.style.cssText = 'width:min(340px,88vw);background:#fff;border:1.5px solid #e4ded4;border-radius:18px;box-shadow:0 12px 40px rgba(0,0,0,.35);padding:22px 20px 18px;box-sizing:border-box;';
+        const h = document.createElement('div'); h.textContent = opts.title || '';
+        h.style.cssText = 'font-weight:700;font-size:19px;color:#2b333a;text-align:center;line-height:1.35;';
+        card.appendChild(h);
+        if (opts.message) { const p = document.createElement('div'); p.textContent = opts.message; p.style.cssText = 'font-size:15px;color:#6c7780;text-align:center;margin-top:8px;line-height:1.5;white-space:pre-line;'; card.appendChild(p); }
+        let input = null;
+        if (isPrompt) {
+          input = document.createElement('input'); input.type = 'text'; input.value = opts.value || '';
+          if (opts.maxLen) input.maxLength = opts.maxLen;
+          if (opts.placeholder) input.placeholder = opts.placeholder;
+          input.style.cssText = 'display:block;width:100%;margin-top:14px;padding:11px 12px;font-size:16px;font-family:inherit;color:#2b333a;background:#f6f4f1;border:1.5px solid #e4ded4;border-radius:12px;box-sizing:border-box;outline:none;text-align:center;';   // 16px→防 iOS focus 自動縮放
+          input.addEventListener('focus', () => { input.style.borderColor = '#5aa9e6'; });
+          card.appendChild(input);
+        }
+        const row = document.createElement('div'); row.style.cssText = 'display:flex;gap:10px;margin-top:18px;';
+        const mkBtn = (label, fill, textCol, cb) => { const b = document.createElement('button'); b.textContent = label; b.style.cssText = 'flex:1;height:46px;border:none;border-radius:14px;font-family:inherit;font-size:16px;font-weight:700;cursor:pointer;background:' + fill + ';color:' + textCol + ';'; b.addEventListener('click', cb); return b; };
+        row.appendChild(mkBtn(opts.cancelLabel || '取消', '#f0ece5', '#6c7780', () => finish(isPrompt ? null : false)));
+        row.appendChild(mkBtn(opts.okLabel || '確定', opts.danger ? '#d0574a' : '#35a866', '#fff', () => finish(isPrompt ? (input.value != null ? input.value : '') : true)));
+        card.appendChild(row);
+        wrap.appendChild(card);
+        wrap.addEventListener('click', (e) => { if (e.target === wrap) finish(isPrompt ? null : false); });   // 點外面=取消
+        const onKey = (e) => { if (e.key === 'Escape') { e.preventDefault(); finish(isPrompt ? null : false); } else if (e.key === 'Enter' && isPrompt) { e.preventDefault(); finish(input.value != null ? input.value : ''); } };
+        document.addEventListener('keydown', onKey, true);
+        document.body.appendChild(wrap);
+        if (input) { try { input.focus(); input.select(); } catch (e) { } }
+      });
+    }
+    function uiConfirm(opts) { return _nbModal(Object.assign({ type: 'confirm' }, typeof opts === 'string' ? { title: opts } : opts)); }
+    function uiPrompt(opts) { return _nbModal(Object.assign({ type: 'prompt' }, typeof opts === 'string' ? { title: opts } : opts)); }
     function writeSave(s) {   // 每次寫入蓋時間戳(雲端衝突解決:新覆舊);寫入成功→排推雲(開場調和中不推)
       try { s.updatedAt = Date.now(); localStorage.setItem(SAVE_KEY, JSON.stringify(s)); if (!hydrating) scheduleCloudPush(); return; } catch (e) { }
       // 🔐[7] setItem 失敗(多半是配額滿):先清最舊 1 份 ninja_save_bak_* 騰空間、重試一次;仍失敗才視為真的存不進去
@@ -817,17 +860,34 @@
       })();
       return _guestP;
     }
+    let _reregP = null;
+    function reregisterFreshGuest() {   // 🩹 孤兒帳號自癒:token 有效但伺服器 users 列已被刪(account_gone)→清雲端登入、建全新 guest、rev 歸 0、標 dirty(下次推雲把本機存檔搬過去)。併發鎖防同時多請求各建一個號
+      if (_reregP) return _reregP;
+      _reregP = (async () => {
+        try {
+          try { localStorage.removeItem(CLOUD_KEY); } catch (e) { }
+          const r = await cloudFetch('/api/auth/guest', { method: 'POST' });
+          if (!r.ok) throw new Error('reregister ' + r.status);
+          const d = await r.json();
+          return cloudSet({ uid: d.uid, guestCode: d.guestCode, token: d.token, rev: 0, dirty: true });
+        } finally { _reregP = null; }
+      })();
+      return _reregP;
+    }
     async function cloudLogin(guestCode) {   // 勇者卡代碼換 token;404=找不到 / 403=停權 → 丟帶 status 的錯給呼叫端分流
       const r = await cloudFetch('/api/auth/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ guestCode: guestCode }) });
       if (!r.ok) { const e = new Error('login ' + r.status); e.status = r.status; throw e; }
       const d = await r.json();
       return cloudSet({ uid: d.uid, guestCode: guestCode, token: d.token });
     }
-    async function authedFetch(path, opt) {   // 帶 Bearer;token 401 且有 guestCode → 靜默 login 換 token 重試一次
+    async function authedFetch(path, opt) {   // 帶 Bearer;401→(a)有勇者碼先靜默 login 換 token;(b)連 login 都失敗=帳號已被刪的孤兒 token→自動重建新 guest 再試一次(自癒,見 reregisterFreshGuest)
       const c = await ensureGuest();
       const go = tok => cloudFetch(path, Object.assign({}, opt, { headers: Object.assign({ Authorization: 'Bearer ' + tok }, (opt || {}).headers) }));
       let r = await go(c.token);
-      if (r.status === 401 && c.guestCode) { const c2 = await cloudLogin(c.guestCode); r = await go(c2.token); }
+      if (r.status === 401) {
+        if (c.guestCode) { try { const c2 = await cloudLogin(c.guestCode); r = await go(c2.token); } catch (e) { } }   // token 過期但帳號還在:換 token 成功→r 變 200,跳過下面自癒
+        if (r.status === 401) { try { const c3 = await reregisterFreshGuest(); if (c3 && c3.token) r = await go(c3.token); } catch (e) { } }   // 仍 401=account_gone:重建帳號(本機存檔照舊,下次推雲搬過去)
+      }
       return r;
     }
     async function cloudPull() { const r = await authedFetch('/api/save'); if (!r.ok) throw new Error('pull ' + r.status); const d = await r.json(); _cloudUnverified = false; return d; }   // → {rev,data|null};🔐[6] 任何一次成功 GET(不論從 hydrateFromCloud/heroCardRestore/applyGoogleAuth 呼叫)都代表已拿到權威 rev→解除 unverified
@@ -900,7 +960,7 @@
       if (cfg.maintenance && !window._nbMaintShown) { window._nbMaintShown = true; scene.time.delayedCall(dly, () => scene.toast('🛠 ' + (cfg.maintenanceMsg || '維護中,雲端同步可能暫停'))); }
     }
     async function heroCardRestore(scene) {   // 🔑 用勇者卡(12 碼)找回雲端進度;失敗還原原本身分,不動本地存檔
-      let code = window.prompt('輸入 12 碼勇者卡代碼(可含 - 分隔)'); if (code == null) return;
+      let code = await uiPrompt({ title: '找回進度', message: '輸入 12 碼勇者卡代碼(可含 - 分隔)', placeholder: 'XXXX-XXXX-XXXX' }); if (code == null) return;
       code = code.trim().toUpperCase().replace(/[^A-Z0-9]/g, ''); if (!code) return;
       const prev = JSON.stringify(cloudState());   // 快照原身分:pull 失敗時還原,避免半套切帳
       try {
@@ -1664,7 +1724,7 @@
         const sx = Math.round(CX - (tw + gap + nw + penGap) / 2);
         this.titleTxt.x = sx; this.swName.x = sx + tw + gap; this._pen.x = this.swName.x + nw + penGap; this._pen.y = 26;
       }
-      doRename() { const i = getTeamIdx(), v = window.prompt('隊伍名稱(最多 6 字,留空=隊' + (i + 1) + ')', teamCustomName(i)); if (v != null) { renameTeam(i, v); this.updateSwitcher(); } }
+      async doRename() { const i = getTeamIdx(), v = await uiPrompt({ title: '隊伍名稱', message: '最多 6 字,留空=隊' + (i + 1), value: teamCustomName(i), maxLen: 6 }); if (v != null) { renameTeam(i, v); this.updateSwitcher(); } }
       confirm() { saveTeamAt(getTeamIdx(), this.slots.map(s => s.cardId).filter(Boolean)); this.scene.manager.start('home'); this.scene.manager.stop('team'); }   // 存當前隊 + 回大廳(未滿也可離開,出戰時再擋)
       tutTeamCoach() {   // 編隊教學:綠框說明(統一教學風格)
         const g = this.add.container(0, 0).setDepth(200);
@@ -5394,7 +5454,7 @@
     class HomeScene extends Phaser.Scene {
       constructor() { super('home'); }
       init(d) { this.tab = (d && d.tab) || this.tab || 'dungeon'; }
-      preload() { _loadCardArt(this, loadTeam()); MAP_KEYS.forEach(k => { if (!this.textures.exists(k)) this.load.image(k, 'art/map/' + k + '.webp'); }); showLoadBar(this); }   // 大廳:當前隊卡圖 + 世界地圖素材;bgm_home 非阻塞→大廳秒開
+      preload() { _loadCardArt(this, loadTeam()); MAP_KEYS.forEach(k => { if (!this.textures.exists(k)) this.load.image(k, 'art/map/' + k + '.webp'); }); UI_ICONS.forEach(([key, file]) => { if (!this.textures.exists(key)) this.load.image(key, 'art/ui/' + file + '.webp'); }); showLoadBar(this); }   // 大廳:當前隊卡圖 + 世界地圖素材 + UI 圖示;bgm_home 非阻塞→大廳秒開
       create() {
         this.add.rectangle(CX, H / 2, W, H, 0x160f18);
         this._diving = false; try { this.cameras.main.resetFX(); } catch (e) { }   // 🎬回大廳:重置出擊轉場鎖(否則第二次進火城被擋)+ 清相機殘留淡出
@@ -5481,55 +5541,49 @@
         const m = getMeta(), T = UI();
         this.rect(CX, 42, W, 84, T.surf); this.rect(CX, 84, W, 1.5, T.divider);   // 白底資源列(84 高,2 排) + 底部細線
         const _l = loadTeam().map(id => ROSTER.find(c => c.id === id)).filter(Boolean)[0];
-        // 右對齊資源 chip(量測文字寬→畫白底圓角 chip→文字疊上)
-        const chipR = (xR, y, label, col) => {
-          const t = this.add.text(0, 0, label, { fontFamily: EMOJIFONT, fontSize: FS.cap, color: col || T.ink, fontStyle: 'bold' });
-          const w = Math.ceil(t.width) + 22, cx = xR - w / 2;
-          t.setPosition(cx, y).setOrigin(0.5);
-          this.L(roundRectG(this, cx, y, w, 25, 12, T.surf2, 1, T.divider, 1)); this.L(t);
+        // 🎨 資源顯示(照 demo .coin:美術圖示 16px + 數字,右緣對齊 xR,無灰底)
+        const resR = (xR, y, iconKey, numStr, col) => {
+          const t = this.add.text(xR, y, numStr, { fontFamily: EMOJIFONT, fontSize: FS.cap, color: col || T.ink, fontStyle: 'bold' }).setOrigin(1, 0.5);
+          this.L(this.add.image(xR - Math.ceil(t.width) - 11, y, iconKey).setDisplaySize(16, 16)); this.L(t);
         };
-        // 列1:頭像 + 名稱 + 稱號金 chip(左);💎/💰 chip(右,堆疊)
-        this.L(this.add.circle(24, 24, 15, _l ? EL[_l.el].color : 0xc9c2b8).setStrokeStyle(2, 0xffffff)); this.txt(24, 24, _l ? EL[_l.el].face : '🥷', '16px', '#ffffff', 0.5);
-        this.txt(48, 18, (m.name || '塊頭勇者'), FS.body, T.ink, 0, true);
-        if (getTitle()) { const lb = '🏅 ' + titleName(getTitle()); const tt = this.add.text(0, 0, lb, { fontFamily: EMOJIFONT, fontSize: '11px', color: '#6a4a00', fontStyle: 'bold' }); const w = Math.ceil(tt.width) + 16; tt.setPosition(48 + w / 2, 42).setOrigin(0.5); this.L(roundRectG(this, 48 + w / 2, 42, w, 19, 9.5, T.gold, 1, null, 0)); this.L(tt); }
-        chipR(W - 10, 20, '💎 ' + m.stones);
-        chipR(W - 10, 48, '💰 ' + m.coins.toLocaleString());
-        // ── 📬 信箱入口:量測名字/稱號(左)與 💎/💰 chip(右)實際寬度,取中間空隙擺放
-        //    → 名字可改到 8 字、金錢會漲到很多位數,固定座標一定會撞,量測後動態夾在空隙中央最穩 ──
-        {
-          const nmM = this.add.text(0, 0, (m.name || '塊頭勇者'), { fontFamily: EMOJIFONT, fontSize: FS.body, fontStyle: 'bold' });
-          let leftEnd = 48 + Math.ceil(nmM.width); nmM.destroy();
-          if (getTitle()) { const ttM = this.add.text(0, 0, '🏅 ' + titleName(getTitle()), { fontFamily: EMOJIFONT, fontSize: '11px', fontStyle: 'bold' }); leftEnd = Math.max(leftEnd, 48 + Math.ceil(ttM.width) + 16); ttM.destroy(); }
-          const g1 = this.add.text(0, 0, '💎 ' + m.stones, { fontFamily: EMOJIFONT, fontSize: FS.cap, fontStyle: 'bold' });
-          const g2 = this.add.text(0, 0, '💰 ' + m.coins.toLocaleString(), { fontFamily: EMOJIFONT, fontSize: FS.cap, fontStyle: 'bold' });
-          const rightStart = (W - 10) - Math.max(Math.ceil(g1.width), Math.ceil(g2.width)) - 22;
-          g1.destroy(); g2.destroy();
-          const mx = Math.max(leftEnd + 30, Math.min(rightStart - 30, (leftEnd + rightStart) / 2));
-          this.mailBtn(mx, 28);
-        }
-        // 列2:Lv + EXP條(圓角) + ⚡體力(綠字)
+        // 頭像(左,跨兩排置中,照 demo)
+        this.L(this.add.circle(28, 42, 17, _l ? EL[_l.el].color : 0xc9c2b8).setStrokeStyle(2, 0xffffff)); this.txt(28, 42, _l ? EL[_l.el].face : '🥷', '18px', '#ffffff', 0.5);
+        // 列1:名稱 + 稱號 chip(並排,照 demo:淡雷色底 + 金字)
+        const nameT = this.txt(54, 28, (m.name || '塊頭勇者'), FS.body, T.ink, 0, true);
+        if (getTitle()) { const tt = this.add.text(0, 0, '🏅 ' + titleName(getTitle()), { fontFamily: EMOJIFONT, fontSize: FS.micro, color: T.goldTx, fontStyle: 'bold' }); const cw = Math.ceil(tt.width) + 16, cx = 54 + Math.ceil(nameT.width) + 8 + cw / 2; this.L(roundRectG(this, cx, 28, cw, 20, 10, T.elTint.thunder, 1, null, 0)); tt.setPosition(cx, 28).setOrigin(0.5); this.L(tt); }
+        // 💎/💰(右欄堆疊,無底,照 demo:鑽石藍字/金幣金字),右緣讓開齒輪
+        resR(W - 50, 28, 'ui_gem', '' + m.stones, '#3a9be8');
+        resR(W - 50, 60, 'ui_coin', m.coins.toLocaleString(), T.goldTx);
+        // ⚙️ 設定齒輪(右,跨兩排置中,照 demo)→switchTab('other') 進設定;📬 信箱已移入村落,頂欄不放(照 demo statusbar)
+        this.L(this.add.circle(W - 24, 42, 17, T.surf2, 1).setStrokeStyle(1.5, T.divider, 1.5));
+        this.txt(W - 24, 42, '⚙️', '18px', null, 0.5);
+        const gearHit = this.rect(W - 24, 42, 40, 40, 0x000000, 0.001).setInteractive();
+        tapBind(this, gearHit, () => this.switchTab('other'));
+        // 列2:Lv + EXP條(窄,照 demo max~120) + ⚡體力(緊接 EXP 條右側,照 demo 併排)
         const need = expForLevel(m.rank);
-        this.txt(12, 70, 'Lv.' + m.rank, FS.cap, T.ink, 0, true);
-        const barL = 58, barW = W - 158;
-        this.L(roundRectG(this, barL + barW / 2, 70, barW, 9, 4.5, T.divider, 1, null, 0));
-        { const p = Math.min(1, m.exp / need); if (p > 0.02) this.L(roundRectG(this, barL + barW * p / 2, 70, barW * p, 9, 4.5, 0x5a7ff0, 1, null, 0)); }
-        const f = staFullSec();
-        this.txt(W - 12, 70, '⚡ ' + m.stamina + '/' + m.staminaMax + (f > 0 ? '  ' + Math.floor(f / 60) + ':' + ('0' + f % 60).slice(-2) : ''), FS.cap, '#2f9a58', 1, true);
+        this.txt(54, 60, 'Lv.' + m.rank, FS.cap, T.ink, 0, true);
+        const barL = 96, barW = 104;
+        this.L(roundRectG(this, barL + barW / 2, 60, barW, 7, 3.5, T.divider, 1, null, 0));
+        { const p = Math.min(1, m.exp / need); if (p > 0.02) this.L(roundRectG(this, barL + barW * p / 2, 60, barW * p, 7, 3.5, 0x5a7ff0, 1, null, 0)); }
+        const staIX = barL + barW + 14;   // ⚡ 緊接 EXP 條右側(照 demo);頂欄只顯示 N/max、不放回充倒數(避免與金幣撞;倒數在商店/宿屋可見)
+        this.L(this.add.image(staIX, 60, 'ui_energy').setDisplaySize(16, 16));
+        this.txt(staIX + 12, 60, m.stamina + '/' + m.staminaMax, FS.cap, '#2f9a58', 0, true);
       }
       nav() {
         if (this.gachaResult) return;   // 抽卡翻牌=全螢幕彈窗時隱藏導航,否則蓋住「確定」鈕
-        const tabs = [['dungeon', '🏯', '關卡'], ['monster', '🐲', '卡片'], ['shop', '🛒', '商店'], ['gacha', '🥚', '抽卡'], ['friend', '🏆', '排行'], ['other', '⚙️', '其他']];
-        const bw = W / 6, navY = H - 30, T = UI();
+        const tabs = [['dungeon', '關卡'], ['monster', '卡片'], ['shop', '商店'], ['gacha', '抽卡'], ['village', '村落']];   // 圖示=art/ui/nav_<id>.webp(取代 emoji);排行→村落·殿堂、其他→頂欄⚙️(2026-07-13 5tab,鏡射 007_UI_demo)
+        const bw = W / 5, navY = H - 30, T = UI();
         this.rect(CX, navY, W, 60, T.surf); this.rect(CX, navY - 30, W, 1.5, T.divider);   // 白底導航 + 頂部細線
         tabs.forEach((t, i) => {
           const x = bw * (i + 0.5), on = this.tab === t[0];
           if (on) this.L(roundRectG(this, x, navY, bw - 6, 52, 15, T.elTint.fire, 1, null, 0));   // 當前分頁:淡火色圓角高亮
-          this.txt(x, navY - 9, t[1], '22px', null, 0.5).setAlpha(on ? 1 : 0.5); this.txt(x, navY + 15, t[2], '11px', on ? '#e0663a' : T.ink3, 0.5, on);
+          this.L(this.add.image(x, navY - 10, 'ui_' + t[0]).setDisplaySize(26, 26)).setAlpha(on ? 1 : 0.5);   // 🎨 美術圖示 26px(照 demo .ic img);未選淡化 0.5
+          this.txt(x, navY + 14, t[1], FS.micro, on ? '#e8513a' : T.ink3, 0.5, on);   // 13px 照 demo fs-micro;選中=火紅 --fire
           const hit = this.rect(x, navY, bw - 2, 56, 0x000000, 0.001).setInteractive();
           tapBind(this, hit, () => { if (this.tab !== t[0]) this.switchTab(t[0]); });
         });
       }
-      body() { const f = { dungeon: this.bDungeon, monster: this.bMonster, shop: this.bShop, gacha: this.bGacha, friend: this.bRank, other: this.bOther }[this.tab]; if (f) f.call(this); }
+      body() { const f = { dungeon: this.bDungeon, monster: this.bMonster, shop: this.bShop, gacha: this.bGacha, friend: this.bRank, other: this.bOther, village: this.bVillage }[this.tab]; if (f) f.call(this); }   // friend(殿堂)/other(⚙️設定)不在 footer,由 村落選單/頂欄齒輪 進入
       setRankTab(t) { this.rankTab = t; this.rebuild(); }
       bRank() {
         const T = UI(), cTop = 84, cBot = H - 60;
@@ -5999,7 +6053,7 @@
         this.rect(CX, (cTop + cBot) / 2, W, cBot - cTop, T.page);   // 亮色 body 底(同卡片/商店/排行)
         this.txt(CX, cTop + 30, '⚙️ 其他', FS.title, T.ink, 0.5, true);
         this.txt(CX, cTop + 56, '🏆 序章通關 ×' + pr.clears + '    📖 收集 ' + ownedCount() + '/' + ROSTER.length, FS.cap, T.ink2, 0.5);
-        this.btn(CX, cTop + 88, 360, 44, '✏️ 改名(目前:' + (getMeta().name || '塊頭勇者') + ')', () => { const cur = getMeta().name || '塊頭勇者'; const n = prompt('輸入用戶名稱(最多 8 字)', cur); if (n != null) { const nm = (n.trim().slice(0, 8)) || '塊頭勇者'; mutSave(s => { s.meta.name = nm; }); this.toast('已改名:' + nm); this.rebuild(); } }, { col: T.surf, stroke: 0x5aa9e6, color: T.ink, fs: FS.body });
+        this.btn(CX, cTop + 88, 360, 44, '✏️ 改名(目前:' + (getMeta().name || '塊頭勇者') + ')', async () => { const cur = getMeta().name || '塊頭勇者'; const n = await uiPrompt({ title: '改名', message: '輸入用戶名稱(最多 8 字)', value: cur, maxLen: 8 }); if (n != null) { const nm = (n.trim().slice(0, 8)) || '塊頭勇者'; mutSave(s => { s.meta.name = nm; }); this.toast('已改名:' + nm); this.rebuild(); } }, { col: T.surf, stroke: 0x5aa9e6, color: T.ink, fs: FS.body });
         this.btn(CX - 92, cTop + 138, 172, 48, '📖 卡片圖鑑', () => this.go('dex'), { col: T.surf, stroke: 0x5aa9e6, color: T.ink, fs: FS.body, bold: true });
         this.btn(CX + 92, cTop + 138, 172, 48, '🎓 新手教學', () => { const team = ['c03', 'c06', 'c19', 'c10', 'c12'].map(id => ROSTER.find(c => c.id === id)).filter(Boolean); if (team.length < 5) { this.toast('教學需要狗狗隊(先到其他→給狗狗隊)'); return; } this.scene.manager.start('game', { team: team, dungeonId: 'prologue', tutorial: true }); this.scene.manager.stop('home'); }, { col: T.surf, stroke: 0x35a866, color: T.ink, fs: FS.body, bold: true });
         const addL = o => this.L(o);
@@ -6012,7 +6066,7 @@
           if (em) showGoogleBindOverlay({ title: '✅ 已綁定 Google', sub: em + '\n換手機用同個 Google 就能接著玩。', cancelLabel: '關閉', bound: true });
           else showGoogleBindOverlay({ title: '☁️ 綁定 Google 帳號', sub: '換手機、換裝置都能接著玩,\n進度不怕丟。', cancelLabel: '關閉', onDone: () => this.rebuild() });
         }, { col: T.surf, stroke: _gEmail ? 0x35a866 : 0x5aa9e6, color: T.ink, fs: FS.body, bold: true });   // 🔑 Google 帳號綁定/狀態
-        this.btn(CX, cTop + 296, 360, 40, '🔄 重置存檔', () => { if (!confirm('確定要重置存檔?將清空全部進度(含雲端備份)')) return; backupLocalSave('reset'); localStorage.removeItem('ninja_save'); localStorage.removeItem('ninja_owned'); loadSave(); flushCloudPush(); this.toast('已重置'); this.switchTab('dungeon'); }, { col: T.surf, stroke: 0xe0603a, color: '#c0492c', fs: FS.cap });   // ☁️ 重置=備份→清→重建 default→立即推雲(雲端 rev 前進到新空檔,舊資料才不會下次開場復活)
+        this.btn(CX, cTop + 296, 360, 40, '🔄 重置存檔', async () => { if (!(await uiConfirm({ title: '重置存檔', message: '將清空全部進度(含雲端備份),無法復原', okLabel: '重置', danger: true }))) return; backupLocalSave('reset'); localStorage.removeItem('ninja_save'); localStorage.removeItem('ninja_owned'); loadSave(); flushCloudPush(); this.toast('已重置'); this.switchTab('dungeon'); }, { col: T.surf, stroke: 0xe0603a, color: '#c0492c', fs: FS.cap });   // ☁️ 重置=備份→清→重建 default→立即推雲(雲端 rev 前進到新空檔,舊資料才不會下次開場復活)
         // ── 🧪 測試工具(只在本機開發顯示;正式站 blockyusha.com 玩家看不到,防經濟作弊。本區塊是本方法尾段,用早退 gate 全擋)──
         if (location.hostname !== 'localhost' && location.hostname !== '127.0.0.1') return;
         this.txt(CX, cTop + 328, '🧪 測試工具(限本機顯示)', FS.micro, T.ink3, 0.5);
@@ -6027,6 +6081,39 @@
         const giveTeam = (name, ids) => { ids.forEach(id => addCard(id)); this.toast(name + ' ×5 已放進包包!'); this.rebuild(); };   // 測試:一鍵入手該隊 5 張(火水雷土風)
         const teams = [['🐕 狗狗隊', ['c03', 'c06', 'c19', 'c10', 'c12'], 0xc8803a], ['🐱 貓隊', ['c02', 'c05', 'c08', 'c09', 'c11'], 0x35a866], ['🐹 鼠隊', ['c13', 'c16', 'c20', 'c23', 'c27'], 0xb08040], ['🇹🇼 台灣隊', ['c15', 'c18', 'c22', 'c26', 'c30'], 0x2f8a5b], ['🐟 魚隊', ['c14', 'c17', 'c21', 'c24', 'c28'], 0x2e9be0], ['🐰 兔隊', ['c31', 'c32', 'c33', 'c34', 'c35'], 0xe07ba0], ['🐦 鳥隊', ['c01', 'c04', 'c07', 'c25', 'c29'], 0x8c6aff], ['🕷️ 蜘蛛隊', ['c36', 'c37', 'c38', 'c39', 'c40'], 0xb79bff], ['👹 小鬼隊', ['c41', 'c42', 'c43', 'c44', 'c45'], 0xff6a4a], ['🧱 牆怪隊', ['c46', 'c47', 'c48', 'c49', 'c50'], 0xc9a86a], ['🔮 魔女隊', ['c51', 'c52', 'c53', 'c54', 'c55'], 0xb06ad0], ['💊 藥師隊', ['c56', 'c57', 'c58', 'c59', 'c60'], 0x4fbf8f]];
         teams.forEach((t, i) => { const col = (i % 2 === 0) ? CX - 92 : CX + 92, row = Math.floor(i / 2); this.btn(col, cTop + 430 + row * 38, 172, 34, t[0], () => giveTeam(t[0], t[1]), { col: T.surf, stroke: t[2], color: T.ink, bold: true, fs: FS.micro }); });
+      }
+      bVillage() {   // 🏘️ 村落聚合頁(2026-07-13,鏡射 007_UI_demo village.html):5 顆白底綠框 3D 大按鈕→接既有功能,不重造
+        const T = UI(), cTop = 84, cBot = H - 60, m = getMeta();
+        this.rect(CX, (cTop + cBot) / 2, W, cBot - cTop, T.page);   // 亮色 body 底(同商店/排行,全站一致;demo 的深底是它的外框、遊戲走光色主題)
+        this.txt(CX, cTop + 34, '🏘️ 村落', FS.title, T.ink, 0.5, true);
+        const full = m.stamina >= m.staminaMax;
+        const items = [
+          ['🛏️ 宿屋（恢復體力）' + (full ? '' : '　💎1'), () => this.villageRest()],
+          ['📬 信箱（通知・獎勵）', () => this.openMailPanel()],
+          ['🏆 殿堂（排行・成就・紀錄）', () => this.switchTab('friend')],
+          ['📖 圖鑑（卡片收集）', () => this.go('dex')],
+          ['⛩️ 神社（每日參拜）', () => this.showDaily()],
+        ];
+        let y = cTop + 96;
+        items.forEach(it => {
+          this.L(roundRectG(this, CX, y + 3, W - 44, 56, 28, 0x57a877, 1, null, 0));   // 底部綠唇邊(3D 立體感,demo .menu-btn 的 0 3px 0 #57a877)
+          this.L(roundRectG(this, CX, y, W - 44, 56, 28, T.surf, 1, 0x7fc99a, 2));       // 白面 + 綠框
+          this.txt(CX, y, it[0], FS.sub, T.ink, 0.5, true);
+          const hit = this.rect(CX, y, W - 44, 60, 0x000000, 0.001).setInteractive();
+          tapBind(this, hit, it[1]);
+          y += 78;
+        });
+      }
+      async villageRest() {   // 🛏️ 宿屋=商店同一條補體力邏輯(POST /api/wallet/spend stamina_refill,💎1,_busyStamina 防連點)
+        const m = getMeta();
+        if (m.stamina >= m.staminaMax) { this.toast('體力已滿'); return; }
+        if (this._busyStamina) return; this._busyStamina = true;
+        let r;
+        try { r = await authedFetch('/api/wallet/spend', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'stamina_refill' }) }); }
+        catch (e) { this._busyStamina = false; this.toast('需要連線,請稍後再試'); return; }
+        if (r.status === 402) { this._busyStamina = false; this.toast('魔法石不足'); return; }
+        if (!r.ok) { this._busyStamina = false; this.toast('需要連線,請稍後再試'); return; }
+        const d = await r.json(); syncWallet(d); refillStamina(); this._busyStamina = false; this.toast('體力回滿!'); this.rebuild();
       }
       showHeroCard() {   // 🎴 我的勇者卡:大字顯示 12 碼(顯示 XXXX-XXXX-XXXX 分組,複製給原始 12 碼)+複製+找回;點外面可關
         if (this._heroG) { this._heroG.destroy(); this._heroG = null; }
@@ -6048,8 +6135,8 @@
           g.add(this.add.text(CX, H / 2 - 100, disp, { fontFamily: 'Consolas,"Courier New",monospace', fontSize: FS.display, color: T.goldTx, fontStyle: 'bold' }).setOrigin(0.5));
           mkB(H / 2 - 38, 200, 48, '📋 複製', 0x35a866, () => {
             const done = () => this.toast('已複製!');
-            if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(code).then(done, () => window.prompt('請手動複製這組代碼', code));   // 失敗 fallback:prompt 手動複製(給原始 12 碼)
-            else window.prompt('請手動複製這組代碼', code);
+            if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(code).then(done, () => uiPrompt({ title: '手動複製代碼', message: '長按選取後複製', value: code }));   // 失敗 fallback:頁內框顯示,長按選取複製
+            else uiPrompt({ title: '手動複製代碼', message: '長按選取後複製', value: code });
           });
         } else {   // 帳號還沒建成(離線/初次連線中)→ 背景補建,建好且視窗還開著就自動重開
           g.add(this.add.text(CX, H / 2 - 100, '連線中…', { fontFamily: EMOJIFONT, fontSize: FS.title, color: T.ink2 }).setOrigin(0.5));
