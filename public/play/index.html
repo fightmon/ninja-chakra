@@ -1081,6 +1081,7 @@
         if (typeof d.stamina === 'number') { m.stamina = d.stamina; m.staTs = (typeof d.staminaTs === 'number') ? d.staminaTs * 1000 : Date.now(); }
         if (Array.isArray(d.cleared)) m.cleared = d.cleared;   // 已破地城 id 陣列落地快取,供未來 UI 灰掉未解鎖城(目前未接顯示,僅存起來)
         if (Array.isArray(d.diffCleared)) { m.diffCleared = m.diffCleared || {}; d.diffCleared.forEach(k => { m.diffCleared[k] = true; }); }   // 🔐[難度解鎖]伺服器真相「城:難度」字串陣列→union 疊加落地,不覆蓋既有(避免離線樂觀解鎖被伺服器回應洗掉;一旦解鎖就永久解鎖)
+        if (d.firstClearConfig && typeof d.firstClearConfig === 'object') m.firstClearConfig = d.firstClearConfig;   // 🎁 首通石設定(後台可調)→難度選單「未破」顯示「首通 +N💎」
         if (!s.gems) s.gems = { fire: 0, water: 0, thunder: 0, earth: 0, wind: 0 };
         ['fire', 'water', 'thunder', 'earth', 'wind'].forEach(el => { const k = 'gem_' + el; if (typeof d[k] === 'number') s.gems[el] = d[k]; });
       });
@@ -5674,7 +5675,8 @@
           const y = blockTop + rh * i + rh / 2, cost = this.diffCost(id, df), afford = m.stamina >= cost;
           const unlocked = (i === 0) || !!dc[id + ':' + list[i - 1].key];   // 🔐[難度解鎖]第一列(該城最低難度;塔已排除 baby→第一列即 beginner)恆解鎖,其餘要「前一難度」已在伺服器記錄破過
           const usable = afford && unlocked;   // 灰階顯示沿用舊 afford 判斷,但鎖住/體力不足都算「不可動作」
-          const done = !!cb[id + ':' + df.key], nStages = resolveStages(d, df.key).length;   // 該難度是否過過(CLEAR 章,沿用本地清單快取即可) + 幾關
+          const done = !!dc[id + ':' + df.key], nStages = resolveStages(d, df.key).length;   // 🔐 CLEAR 章改讀伺服器真相 dc(不用本地 cb)→跟解鎖判定同源,老玩家不會再「CLEAR＋鎖」打架(存檔難度進度已由伺服器 getOrSeedDiffClears 搬入)
+          const fcReward = (id !== 'prologue') ? ((m.firstClearConfig || {})[df.key] || 0) : 0;   // 🎁 該難度首通給幾石(後台可調)
           const kids = [];
           kids.push(roundRectG(this, 0, 0, rw, rh - 8, 15, usable ? T.surf : T.surf2, 1, df.col, usable ? 2.5 : 1.5));   // 白圓角列 + 難度色框
           const hit = this.add.rectangle(0, 0, rw, rh - 8, 0x000000, 0.001).setInteractive(); kids.push(hit);
@@ -5682,6 +5684,7 @@
           kids.push(this.add.text(Lx + 44, -11, d.name + ' · ' + df.name, { fontFamily: EMOJIFONT, fontSize: '16px', color: usable ? T.ink : T.ink3, fontStyle: 'bold' }).setOrigin(0, 0.5));   // 關卡獨特名 · 難度(取代亂玩都過等)
           kids.push(this.add.text(Lx + 44, 13, unlocked ? ('⚡ ' + cost + '　·　' + nStages + ' 關') : ('🔒 未解鎖(先破 ' + list[i - 1].name + ')'), { fontFamily: EMOJIFONT, fontSize: '13px', color: !unlocked ? T.ink3 : (afford ? T.ink2 : '#c0492c'), fontStyle: (unlocked && !afford) ? 'bold' : 'normal' }).setOrigin(0, 0.5));   // 未解鎖→提示要先破哪個難度;已解鎖沿用原本體力+關數顯示
           if (done) { kids.push(roundRectG(this, rw / 2 - 52, 0, 78, 26, 13, 0x35a866, 1, null, 0)); kids.push(this.add.text(rw / 2 - 52, 0, '✓ CLEAR', { fontFamily: EMOJIFONT, fontSize: '13px', color: '#ffffff', fontStyle: 'bold' }).setOrigin(0.5)); }   // 過關=綠 CLEAR 章
+          else if (unlocked && fcReward > 0) { kids.push(this.add.text(rw / 2 - 14, 0, '🎁 首通 +' + fcReward + '💎', { fontFamily: EMOJIFONT, fontSize: '13px', color: '#ffd56a', fontStyle: 'bold' }).setOrigin(1, 0.5)); }   // 🎁 未破且已解鎖→顯示首通獎勵石數
           const rc = this.add.container(CX, y, kids); g.add(rc);
           rc.alpha = 0; rc.y = y + 18;
           this.tweens.add({ targets: rc, alpha: 1, y: y, delay: 70 + i * 50, duration: 240, ease: 'Cubic.out' });   // 逐列滑入淡入
