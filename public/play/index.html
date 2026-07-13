@@ -58,7 +58,7 @@
     /* ===== 純邏輯(N/EL/SHAPES/CONFIG/computeClears/種子亂數 等戰鬥核心已抽到 battle-core.js,瀏覽器當共用全域)===== */
     const KEYS = ['fire', 'wind', 'thunder', 'earth', 'water'];
     const MONSTER_IMG = { water: 'art/monsters/slime_water.png', fire: 'art/monsters/slime_fire.png', thunder: 'art/monsters/slime_thunder.png', earth: 'art/monsters/slime_earth.png', wind: 'art/monsters/slime_wind.png' };   // 舊五屬史萊姆(fallback);無對應則用 emoji 臉。圖檔放 001_website/art/monsters/
-    const CARD_ART = { c03: 1, c06: 1, c19: 1, c10: 1, c12: 1, c02: 1, c05: 1, c08: 1, c09: 1, c11: 1, c13: 1, c16: 1, c20: 1, c23: 1, c27: 1, c15: 1, c18: 1, c22: 1, c26: 1, c30: 1, c31: 1, c32: 1, c33: 1, c34: 1, c35: 1, c14: 1, c17: 1, c21: 1, c24: 1, c28: 1, c01: 1, c04: 1, c07: 1, c25: 1, c29: 1, c36: 1, c37: 1, c38: 1, c39: 1, c40: 1, c41: 1, c42: 1, c43: 1, c44: 1, c45: 1, c46: 1, c47: 1, c48: 1, c49: 1, c50: 1, c51: 1, c52: 1, c53: 1, c54: 1, c55: 1 };   // 有角色圖的卡:犬/貓/鼠/台灣/兔/魚(c14,17,21,24,28)/鳥(c01,04,07,25,29)/妖·蜘蛛(c36-c40,1→2星換_e圖)/妖·鬼(c41-c45,1→2星換_e圖),各火水雷土風 → art/cards/<id>_thumb.webp+_full.webp
+    const CARD_ART = { c03: 1, c06: 1, c19: 1, c10: 1, c12: 1, c02: 1, c05: 1, c08: 1, c09: 1, c11: 1, c13: 1, c16: 1, c20: 1, c23: 1, c27: 1, c15: 1, c18: 1, c22: 1, c26: 1, c30: 1, c31: 1, c32: 1, c33: 1, c34: 1, c35: 1, c14: 1, c17: 1, c21: 1, c24: 1, c28: 1, c01: 1, c04: 1, c07: 1, c25: 1, c29: 1, c36: 1, c37: 1, c38: 1, c39: 1, c40: 1, c41: 1, c42: 1, c43: 1, c44: 1, c45: 1, c46: 1, c47: 1, c48: 1, c49: 1, c50: 1, c51: 1, c52: 1, c53: 1, c54: 1, c55: 1, c56: 1, c57: 1, c58: 1, c59: 1, c60: 1 };   // 有角色圖的卡:犬/貓/鼠/台灣/兔/魚(c14,17,21,24,28)/鳥(c01,04,07,25,29)/妖·蜘蛛(c36-c40,1→2星換_e圖)/妖·鬼(c41-c45,1→2星換_e圖),各火水雷土風 → art/cards/<id>_thumb.webp+_full.webp
     function cardArtKey(id, size) { if (id && EVO_CARDS[id] && getCardEvo(id) >= 1) return 'card_' + id + '_e_' + size; return (id && CARD_ART[id]) ? ('card_' + id + '_' + size) : null; }   // 回傳 texture key(thumb/full),無圖回 null→退回 emoji;進化雜牌卡(evo≥1)→改回 <id>_e_<size>
     function _loadCardArt(scene, ids) { (ids || []).forEach(id => { if (!id || !CARD_ART[id]) return;['thumb', 'full'].forEach(s => { const k = 'card_' + id + '_' + s; if (!scene.textures.exists(k)) scene.load.image(k, 'art/cards/' + id + '_' + s + '.webp'); }); if (EVO_CARDS[id]) { ['thumb', 'full'].forEach(s => { const k = 'card_' + id + '_e_' + s; if (!scene.textures.exists(k)) scene.load.image(k, 'art/cards/' + id + '_e_' + s + '.webp'); }); } }); }   // 按需載卡圖(戰鬥/大廳只載出戰隊);繪製端皆有 textures.exists 保護→沒載到退回 emoji;進化雜牌卡額外多載 _e 進化圖(兩形都要有)
     function _loadAllCardArt(scene) { _loadCardArt(scene, Object.keys(CARD_ART)); }   // 卡冊/編隊/合成/圖鑑=看全部卡→進場才載全部
@@ -91,9 +91,10 @@
       { emoji: '👹', name: '妖·鬼', color: '#ff6a4a', cards: { fire: 'c41', water: 'c42', thunder: 'c43', earth: 'c44', wind: 'c45' } },   // 雜牌卡(未標家族,保留 genin 1星,進化2星換鬼哥圖)
       { emoji: '🧱', name: '妖·牆', color: '#c9a86a', cards: { fire: 'c46', water: 'c47', thunder: 'c48', earth: 'c49', wind: 'c50' } },   // 雜牌卡(未標家族,保留 genin 1星,進化2星換城牆怪圖);土城盾兵/盾王借此圖
       { emoji: '🔮', name: '妖·魔女', color: '#b06ad0', cards: { fire: 'c51', water: 'c52', thunder: 'c53', earth: 'c54', wind: 'c55' } },   // 雜牌卡(未標家族,保留 genin 1星,進化2星換大魔女圖);風城消卡片塊敵人/魔王借此圖
+      { emoji: '💊', name: '妖·藥師', color: '#4fbf8f', cards: { fire: 'c56', water: 'c57', thunder: 'c58', earth: 'c59', wind: 'c60' } },   // 雜牌卡(未標家族,保留 genin 1星,進化2星換大藥師圖,完全鏡射魔女);補血系高rcv中攻;水城補師怪/魔王借此圖
     ];
     const DEX_EL5 = ['fire', 'water', 'thunder', 'earth', 'wind'];
-    const DEX_ASSIGNED = new Set(['c03', 'c06', 'c19', 'c10', 'c12', 'c02', 'c05', 'c08', 'c09', 'c11', 'c13', 'c16', 'c20', 'c23', 'c27', 'c15', 'c18', 'c22', 'c26', 'c30', 'c14', 'c17', 'c21', 'c24', 'c28', 'c31', 'c32', 'c33', 'c34', 'c35', 'c01', 'c04', 'c07', 'c25', 'c29', 'c36', 'c37', 'c38', 'c39', 'c40', 'c41', 'c42', 'c43', 'c44', 'c45', 'c46', 'c47', 'c48', 'c49', 'c50', 'c51', 'c52', 'c53', 'c54', 'c55']);   // 已歸物種隊(犬/貓/鳥/鼠/魚/兔/台灣/妖蜘蛛/妖鬼/妖牆)的卡 → 不重複進「未歸隊」
+    const DEX_ASSIGNED = new Set(['c03', 'c06', 'c19', 'c10', 'c12', 'c02', 'c05', 'c08', 'c09', 'c11', 'c13', 'c16', 'c20', 'c23', 'c27', 'c15', 'c18', 'c22', 'c26', 'c30', 'c14', 'c17', 'c21', 'c24', 'c28', 'c31', 'c32', 'c33', 'c34', 'c35', 'c01', 'c04', 'c07', 'c25', 'c29', 'c36', 'c37', 'c38', 'c39', 'c40', 'c41', 'c42', 'c43', 'c44', 'c45', 'c46', 'c47', 'c48', 'c49', 'c50', 'c51', 'c52', 'c53', 'c54', 'c55', 'c56', 'c57', 'c58', 'c59', 'c60']);   // 已歸物種隊(犬/貓/鳥/鼠/魚/兔/台灣/妖蜘蛛/妖鬼/妖牆/妖魔女/妖藥師)的卡 → 不重複進「未歸隊」
     // 物種「種族」顯示(覆蓋詳細頁的人類/妖怪/靈獸;只改顯示,不動底層 race)→ 已歸隊的卡顯示其物種
     const CARD_SPECIES = {};
     [['🐱', '貓', '#8fd16a', 0x1d3a1f, ['c02', 'c05', 'c08', 'c09', 'c11']],
@@ -106,7 +107,8 @@
     ['🕷️', '妖', '#b79bff', 0x241a2e, ['c36', 'c37', 'c38', 'c39', 'c40']],
     ['👹', '妖', '#ff6a4a', 0x2e1a1a, ['c41', 'c42', 'c43', 'c44', 'c45']],
     ['🧱', '妖', '#c9a86a', 0x2a2418, ['c46', 'c47', 'c48', 'c49', 'c50']],
-    ['🔮', '妖', '#b06ad0', 0x241a2e, ['c51', 'c52', 'c53', 'c54', 'c55']]
+    ['🔮', '妖', '#b06ad0', 0x241a2e, ['c51', 'c52', 'c53', 'c54', 'c55']],
+    ['💊', '妖', '#4fbf8f', 0x18332a, ['c56', 'c57', 'c58', 'c59', 'c60']]
     ].forEach(([e, n, c, bg, ids]) => ids.forEach(id => CARD_SPECIES[id] = { e, n, c, bg }));
     // ===== 程序化音效(WebAudio 即時合成,零檔案/零版權/離線)=====
     const SFX = (() => {
@@ -476,6 +478,12 @@
       { id: 'c53', name: '雷魔女', el: 'thunder', race: 'yokai', rank: 'genin', atk: 125, hp: 95, rcv: 14, attrs: ['thunder'] },
       { id: 'c54', name: '土魔女', el: 'earth', race: 'yokai', rank: 'genin', atk: 95, hp: 145, rcv: 14, attrs: ['earth'] },
       { id: 'c55', name: '風魔女', el: 'wind', race: 'yokai', rank: 'genin', atk: 115, hp: 105, rcv: 16, attrs: ['wind'] },
+      /* ── 💊 藥師系(雜牌卡,完全鏡射魔女系:不進 CARD_FAMILY/TW_IDS→保留 genin ★1;補血系高rcv,atk比魔女略降,水/土屬更肉更高rcv;1★→2★進化換名換圖「大◯藥師」,見 YAKUSHI_EVO;水城補師怪/魔王借圖)── */
+      { id: 'c56', name: '火藥師', el: 'fire', race: 'yokai', rank: 'genin', atk: 110, hp: 90, rcv: 20, attrs: ['fire'] },
+      { id: 'c57', name: '水藥師', el: 'water', race: 'yokai', rank: 'genin', atk: 65, hp: 150, rcv: 34, attrs: ['water'] },
+      { id: 'c58', name: '雷藥師', el: 'thunder', race: 'yokai', rank: 'genin', atk: 100, hp: 100, rcv: 24, attrs: ['thunder'] },
+      { id: 'c59', name: '土藥師', el: 'earth', race: 'yokai', rank: 'genin', atk: 70, hp: 165, rcv: 26, attrs: ['earth'] },
+      { id: 'c60', name: '風藥師', el: 'wind', race: 'yokai', rank: 'genin', atk: 90, hp: 115, rcv: 26, attrs: ['wind'] },
     ];
     // 蜘蛛系 1★→2★進化換名換圖表:進化階(getCardEvo)≥1 → 顯示「岩甲◯蜘蛛」+ <id>_e_ 圖(canEvolve 已擋≥1 不可再進到 evo2,只有兩形)
     const SPIDER_EVO = { c36: '岩甲火蜘蛛', c37: '岩甲水蜘蛛', c38: '岩甲雷蜘蛛', c39: '岩甲土蜘蛛', c40: '岩甲風蜘蛛' };
@@ -483,7 +491,8 @@
     const GHOST_EVO = { c41: '火鬼哥', c42: '水鬼哥', c43: '雷鬼哥', c44: '土鬼哥', c45: '風鬼哥' };
     const WALL_EVO = { c46: '火城牆怪', c47: '水城牆怪', c48: '雷城牆怪', c49: '土城牆怪', c50: '風城牆怪' };   // 牆怪 1★→2★進化換名換圖(鏡像蜘蛛/鬼系):進化階≥1 → 顯示「◯城牆怪」+ <id>_e_ 圖;土城盾王借城牆怪 e_full
     const WITCH_EVO = { c51: '大火魔女', c52: '大水魔女', c53: '大雷魔女', c54: '大土魔女', c55: '大風魔女' };   // 魔女 1★→2★進化換名換圖(鏡像牆怪):進化階≥1 → 顯示「大◯魔女」+ <id>_e_ 圖;風城魔王借大魔女 e_full
-    const EVO_CARDS = Object.assign({}, SPIDER_EVO, GHOST_EVO, WALL_EVO, WITCH_EVO);   // 合併進化雜牌卡名表:凡是「進化換名換圖」共用邏輯(cardArtKey/_loadCardArt/_loadCardThumbs/_ensureFullArt/canEvolve/GACHA_ROSTER/cardName/進化預覽)一律讀這裡,不分蜘蛛/鬼/牆/魔女
+    const YAKUSHI_EVO = { c56: '大火藥師', c57: '大水藥師', c58: '大雷藥師', c59: '大土藥師', c60: '大風藥師' };   // 藥師 1★→2★進化換名換圖(鏡射魔女):進化階≥1 → 顯示「大◯藥師」+ <id>_e_ 圖;水城魔王借大水藥師 e_full
+    const EVO_CARDS = Object.assign({}, SPIDER_EVO, GHOST_EVO, WALL_EVO, WITCH_EVO, YAKUSHI_EVO);   // 合併進化雜牌卡名表:凡是「進化換名換圖」共用邏輯(cardArtKey/_loadCardArt/_loadCardThumbs/_ensureFullArt/canEvolve/GACHA_ROSTER/cardName/進化預覽)一律讀這裡,不分蜘蛛/鬼/牆/魔女/藥師
     function cardName(id) { const c = ROSTER.find(x => x.id === id) || {}; return (EVO_CARDS[id] && getCardEvo(id) >= 1) ? EVO_CARDS[id] : c.name; }   // 卡片顯示名字統一入口(進化雜牌卡進化後換名,其餘卡直接回 ROSTER.name)
     // CONFIG → battle-core.js
     const KATA = ['一之型', '二之型', '三之型', '四之型', '五之型', '禁術', '奧義'];   // LV1~7(簡單數字,日文漢字通用)
@@ -627,6 +636,7 @@
     const GHOST_ACTIVE = { name: '怨擊', cd: 5, icon: '👊', desc: '對指定 1 敵造成 攻擊力×2 傷害(吃相剋)' };
     const WALL_ACTIVE = { name: '築牆阻擋', cd: 6, icon: '🧱', desc: '全體敵人出手倒數 +1 手' };   // 👹鬼系(c41~c45)共用同一份主動技物件
     const WITCH_ACTIVE = { name: '魔女術式', cd: 6, icon: '🔮', desc: '對全體敵人造成 攻擊力×1.6 傷害(吃相剋)' };   // 🔮魔女系(c51~c55):全體魔法傷害(區隔🐶群擊×2、👹怨擊單體×2)
+    const YAKUSHI_ACTIVE = { name: '靈藥術式', cd: 6, icon: '💊', desc: '回復全隊 HP 35%' };   // 💊藥師系(c56~c60,鏡射魔女術式但改補血):CD6 比照水屬預設「回春之泉」CD4回30%,CD拉高故回復率略增
     const CARD_ACTIVE = {
       c15: { name: '裂空撲殺', cd: 3, icon: '🐆', desc: '總傷≈攻×2:敵單隻→集中、多隻→均分全體,各吃相剋' },
       c22: { name: '群鵲圍攻', cd: 4, icon: '🐦', desc: '全體敵出手延遲 +2 手' },
@@ -637,6 +647,7 @@
       c41: GHOST_ACTIVE, c42: GHOST_ACTIVE, c43: GHOST_ACTIVE, c44: GHOST_ACTIVE, c45: GHOST_ACTIVE,
       c46: WALL_ACTIVE, c47: WALL_ACTIVE, c48: WALL_ACTIVE, c49: WALL_ACTIVE, c50: WALL_ACTIVE,
       c51: WITCH_ACTIVE, c52: WITCH_ACTIVE, c53: WITCH_ACTIVE, c54: WITCH_ACTIVE, c55: WITCH_ACTIVE,
+      c56: YAKUSHI_ACTIVE, c57: YAKUSHI_ACTIVE, c58: YAKUSHI_ACTIVE, c59: YAKUSHI_ACTIVE, c60: YAKUSHI_ACTIVE,
     };
     // 動物家族(2026-06-29:技能綁家族,同家族 5 屬共用一套、各套自己屬性;台灣=各卡專屬例外)
     const CARD_FAMILY = {};
@@ -1750,6 +1761,7 @@
         if (this.dungeonId === 'fire') _loadCardArt(this, ['c41']);   // 👹 火之火山借鬼卡透明大圖當敵圖:載 c41火小鬼(雜兵)+火鬼哥(魔王,_e)完整大圖(比照 thunder 分支)
         if (this.dungeonId === 'earth') _loadCardArt(this, ['c49']);   // 🧱 土之山岳借牆怪透明大圖當盾兵/盾王圖:載 c49土牆怪(盾兵)+土城牆怪(盾王,_e)完整大圖(比照 fire 分支)
         if (this.dungeonId === 'wind') _loadCardArt(this, ['c55']);   // 🔮 風之峽谷借魔女透明大圖當消卡片塊敵/魔王圖:載 c55風魔女(小兵)+大風魔女(魔王,_e)完整大圖
+        if (this.dungeonId === 'water') _loadCardArt(this, ['c57']);   // 💊 水之深淵借藥師透明大圖當補血怪/魔王圖:載 c57水藥師(補師)+大水藥師(魔王,_e)完整大圖(比照 wind 分支)
         ['fire', 'water', 'thunder', 'earth', 'wind'].forEach(el => { if (!this.textures.exists('el_' + el)) this.load.svg('el_' + el, 'art/elements/element_' + el + '.svg', { width: 96, height: 96 }); });   // 元素符號:實心剪影 SVG,疊在盤面方塊正中央(setTintFill 上白),96px 光柵→顯示縮到 ~23px 保脆
         showLoadBar(this);
       }   // ⚠️ 音訊(BGM 3~8MB + 音效)改「非阻塞」載入(見 _startStageAudio):不放阻塞 preload,否則弱網卡關甚至開不了
@@ -1786,6 +1798,10 @@
         if (this.dungeonId === 'wind') {   // 🔮 風之峽谷=魔女:魔王→大風魔女(e_full)、消卡片塊敵→風魔女(借 c55);只換 eatStored 敵人,其餘維持 grunt
           if (e.boss && this.textures.exists('card_c55_e_full')) return 'card_c55_e_full';
           if (e.eatStored > 0 && this.textures.exists('card_c55_full')) return 'card_c55_full';
+        }
+        if (this.dungeonId === 'water') {   // 💊 水之深淵=藥師:魔王→大水藥師(e_full)、補血怪(healAlly)→水藥師(c57)
+          if (e.boss && this.textures.exists('card_c57_e_full')) return 'card_c57_e_full';
+          if (e.healAlly > 0 && this.textures.exists('card_c57_full')) return 'card_c57_full';
         }
         if (e.boss) { const tier = dk === 'baby' ? 'baby' : (dk === 'beginner' ? 'beg' : 'nrm'); const k = 'boss_' + tier + '_' + el; if (this.textures.exists(k)) return k; }
         else {
@@ -3028,6 +3044,16 @@
               if (en.dead) return; const dmg = Math.round(atk * 1.6 * relM(en.el)); this.chakraBolt(ox, oy, en.sprite.x, en.sprite.y, col, en, dmg, 2, hot);
               this.time.delayedCall(360 + k * 40, () => { en.hp = Math.max(0, en.hp - dmg); if (en.hp > 0) this._activeCounter(en, card.el); this.updateEnemies(); if (en.hp <= 0) this.killEnemy(en); });
             });
+          });
+          return;
+        }
+        if (cid === 'c56' || cid === 'c57' || cid === 'c58' || cid === 'c59' || cid === 'c60') {   // 💊藥師系 靈藥術式:回復全隊 HP 35%,CD6(照抄 fireActive() case 'water' 預設「回春之泉」的 this.playerHP 回血寫法,只把回復率從 30% 調到 35% 對齊較高 CD;不動傷害/延遲類邏輯,不影響其他技能)
+          const col = EL[card.el] ? EL[card.el].color : 0x4fbf8f, h = Math.round(this.maxHP * 0.35);
+          this.chargeAt(ox, oy, col, 380);
+          this.time.delayedCall(380, () => {
+            this.labSnd('s_heal', 0.7); this.playerHP = Math.min(this.maxHP, this.playerHP + h);
+            this.floatText(CX, PHP_Y - 22, '癒+' + h, '#74e09a'); this.animPlayerHP(true);
+            const au = this.add.circle(ox, oy, 16, col, 0.5).setBlendMode(Phaser.BlendModes.ADD).setDepth(DEPTH.proj); this.tweens.add({ targets: au, scale: 2.4, alpha: 0, duration: 500, onComplete: () => au.destroy() });
           });
           return;
         }
@@ -5996,7 +6022,7 @@
         this.btn(CX, cTop + 390, 112, 38, '💎 +100 鑽石', () => { mutSave(s => { s.meta.stones = (s.meta.stones || 0) + 100; }); this.toast('💎 +100 鑽石!'); this.rebuild(); }, { col: T.surf, stroke: 0x8c6aff, color: T.ink, bold: true, fs: FS.micro });
         this.btn(CX + 120, cTop + 390, 112, 38, '🔓 解鎖全關', () => { devUnlockAll(); this.toast('已解鎖全關(含塔魔王)'); this.rebuild(); }, { col: T.surf, stroke: 0x8c6aff, color: T.ink, bold: true, fs: FS.micro });
         const giveTeam = (name, ids) => { ids.forEach(id => addCard(id)); this.toast(name + ' ×5 已放進包包!'); this.rebuild(); };   // 測試:一鍵入手該隊 5 張(火水雷土風)
-        const teams = [['🐕 狗狗隊', ['c03', 'c06', 'c19', 'c10', 'c12'], 0xc8803a], ['🐱 貓隊', ['c02', 'c05', 'c08', 'c09', 'c11'], 0x35a866], ['🐹 鼠隊', ['c13', 'c16', 'c20', 'c23', 'c27'], 0xb08040], ['🇹🇼 台灣隊', ['c15', 'c18', 'c22', 'c26', 'c30'], 0x2f8a5b], ['🐟 魚隊', ['c14', 'c17', 'c21', 'c24', 'c28'], 0x2e9be0], ['🐰 兔隊', ['c31', 'c32', 'c33', 'c34', 'c35'], 0xe07ba0], ['🐦 鳥隊', ['c01', 'c04', 'c07', 'c25', 'c29'], 0x8c6aff], ['🕷️ 蜘蛛隊', ['c36', 'c37', 'c38', 'c39', 'c40'], 0xb79bff], ['👹 小鬼隊', ['c41', 'c42', 'c43', 'c44', 'c45'], 0xff6a4a], ['🧱 牆怪隊', ['c46', 'c47', 'c48', 'c49', 'c50'], 0xc9a86a], ['🔮 魔女隊', ['c51', 'c52', 'c53', 'c54', 'c55'], 0xb06ad0]];
+        const teams = [['🐕 狗狗隊', ['c03', 'c06', 'c19', 'c10', 'c12'], 0xc8803a], ['🐱 貓隊', ['c02', 'c05', 'c08', 'c09', 'c11'], 0x35a866], ['🐹 鼠隊', ['c13', 'c16', 'c20', 'c23', 'c27'], 0xb08040], ['🇹🇼 台灣隊', ['c15', 'c18', 'c22', 'c26', 'c30'], 0x2f8a5b], ['🐟 魚隊', ['c14', 'c17', 'c21', 'c24', 'c28'], 0x2e9be0], ['🐰 兔隊', ['c31', 'c32', 'c33', 'c34', 'c35'], 0xe07ba0], ['🐦 鳥隊', ['c01', 'c04', 'c07', 'c25', 'c29'], 0x8c6aff], ['🕷️ 蜘蛛隊', ['c36', 'c37', 'c38', 'c39', 'c40'], 0xb79bff], ['👹 小鬼隊', ['c41', 'c42', 'c43', 'c44', 'c45'], 0xff6a4a], ['🧱 牆怪隊', ['c46', 'c47', 'c48', 'c49', 'c50'], 0xc9a86a], ['🔮 魔女隊', ['c51', 'c52', 'c53', 'c54', 'c55'], 0xb06ad0], ['💊 藥師隊', ['c56', 'c57', 'c58', 'c59', 'c60'], 0x4fbf8f]];
         teams.forEach((t, i) => { const col = (i % 2 === 0) ? CX - 92 : CX + 92, row = Math.floor(i / 2); this.btn(col, cTop + 430 + row * 38, 172, 34, t[0], () => giveTeam(t[0], t[1]), { col: T.surf, stroke: t[2], color: T.ink, bold: true, fs: FS.micro }); });
       }
       showHeroCard() {   // 🎴 我的勇者卡:大字顯示 12 碼(顯示 XXXX-XXXX-XXXX 分組,複製給原始 12 碼)+複製+找回;點外面可關
