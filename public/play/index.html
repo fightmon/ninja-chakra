@@ -2323,8 +2323,8 @@
       // ===== 新手教學(事件推進式教練;全程 if(this.tut) 包住,不影響正常戰鬥)=====
       tutEnemies() {
         const mk = (hp) => ({ el: 'fire', max: hp, hp: hp, atk: 16, interval: 5, timer: 5, burn: 0, dead: false, boss: false, guard: false, hitGate: 0, comboGate: 0, dot: 0, regen: 0, paralyze: 0, healAlly: 0, junk: 0, phases: null, phaseIdx: 0, arch: null });
-        return [mk(1200), mk(1200), mk(160)];
-      }   // 3 火敵:e2 血低(AoE 會秒掉牠→3變2),e0/e1 高血不被誤殺(累積傷害也死不了);charge/finish setup 在對的步驟才把該死的壓低
+        return [mk(99999), mk(99999), mk(160)];
+      }   // 3 火敵:e2 血低(AoE 會秒掉牠→3變2),e0/e1 超高血=腳本外絕對殺不死(2026-07-13:原1200已被變強的AoE/累積清除誤殺→到⑥只剩1隻→單體主動技秒掉最後一隻→全滅跳過⑦屬性塊教學;拉到99999根治);charge/finish setup 在對的步驟才把該死的壓低(⑥壓130給主動技打飛一隻、⑦壓28給屬性塊收尾),血條顯示(非數字)不穿幫
       labBossEnemies() {
         const mk = (el, hp, boss) => ({ el, max: hp, hp, atk: 18, interval: 5, timer: 5, burn: 0, dead: false, boss: !!boss, guard: false, hitGate: 0, comboGate: 0, dot: 0, regen: 0, paralyze: 0, healAlly: 0, junk: 0, phases: null, phaseIdx: 0, arch: null });
         return [mk('water', 1500, false), mk('fire', 9000, true), mk('thunder', 1500, false)];
