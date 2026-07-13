@@ -6,7 +6,7 @@ export interface Card {
   id: string; n: string; name: string; en: string; species?: string; evo?: { name: string; en: string };
   el: 'fire' | 'water' | 'thunder' | 'earth' | 'wind';
   race: 'human' | 'yokai' | 'beast';
-  fam: 'cat' | 'dog' | 'bird' | 'rat' | 'fish' | 'rabbit' | 'taiwan' | 'spider' | 'ghost' | 'wall' | 'witch';
+  fam: 'cat' | 'dog' | 'bird' | 'rat' | 'fish' | 'rabbit' | 'taiwan' | 'spider' | 'ghost' | 'wall' | 'witch' | 'medic';
   hero: boolean;
   dropOnly?: boolean;
   lv1: { atk: number; hp: number; rcv: number };
@@ -20,9 +20,9 @@ export interface Team { emoji: string; name: string; fam: string; color: string;
 export const meta = {
   elName:  { fire: '火', water: '水', thunder: '雷', earth: '土', wind: '風' } as Record<string, string>,
   elColor: { fire: '#ff6a3d', water: '#37b6ff', thunder: '#f0b410', earth: '#c8873f', wind: '#3fbf54' } as Record<string, string>,
-  famName: { cat: '貓', dog: '犬', bird: '鳥', rat: '鼠', fish: '魚', rabbit: '兔', taiwan: '台灣特有種', spider: '妖·蜘蛛', ghost: '妖·鬼', wall: '妖·牆', witch: '妖·魔女' } as Record<string, string>,
+  famName: { cat: '貓', dog: '犬', bird: '鳥', rat: '鼠', fish: '魚', rabbit: '兔', taiwan: '台灣特有種', spider: '妖·蜘蛛', ghost: '妖·鬼', wall: '妖·牆', witch: '妖·魔女', medic: '妖·藥師' } as Record<string, string>,
   raceName:{ human: '人類', yokai: '妖怪', beast: '靈獸' } as Record<string, string>,
-  note: '三圍為家族公式重算後的實際值；LV1＝基礎、滿級＝LV20（未進化）。星級基礎一律 ★3，可進化再 +2（最高 ★5）。屬性相剋：火→風→雷→土→水→火。妖·蜘蛛／妖·鬼／妖·牆／妖·魔女 4 個雜牌家族僅關卡掉落、不進轉蛋，基礎 ★1、進化 ★2（無隊長技）。',
+  note: '三圍為家族公式重算後的實際值；LV1＝基礎、滿級＝LV20（未進化）。星級基礎一律 ★3，可進化再 +2（最高 ★5）。屬性相剋：火→風→雷→土→水→火。妖·蜘蛛／妖·鬼／妖·牆／妖·魔女／妖·藥師 5 個雜牌家族僅關卡掉落、不進轉蛋，基礎 ★1、進化 ★2（無隊長技）。',
   teams: [
     { emoji: '🐱', name: '貓系', fam: 'cat',    color: '#8fd16a', ids: ['c02','c05','c08','c09','c11'] },
     { emoji: '🐶', name: '犬系', fam: 'dog',    color: '#e0c890', ids: ['c03','c06','c19','c10','c12'] },
@@ -35,6 +35,7 @@ export const meta = {
     { emoji: '👹', name: '妖·鬼', fam: 'ghost', color: '#ff6a4a', ids: ['c41','c42','c43','c44','c45'] },
     { emoji: '🧱', name: '妖·牆', fam: 'wall', color: '#c9a86a', ids: ['c46','c47','c48','c49','c50'] },
     { emoji: '🔮', name: '妖·魔女', fam: 'witch', color: '#b06ad0', ids: ['c51','c52','c53','c54','c55'] },
+    { emoji: '💊', name: '妖·藥師', fam: 'medic', color: '#4fbf8f', ids: ['c56','c57','c58','c59','c60'] },
   ] as Team[],
 };
 
@@ -98,6 +99,12 @@ export const cards: Card[] = [
   { id:'c53', n:'053', name:'雷魔女', en:'Thunder Witch', evo:{name:'大雷魔女',en:'Great Thunder Witch'}, el:'thunder', race:'yokai', fam:'witch', hero:false, dropOnly:true, lv1:{atk:125,hp:95,rcv:14}, max:{atk:244,hp:185,rcv:27}, act:{name:'🔮 魔女術式',desc:'對全體敵人造成 攻擊力×1.6 傷害（吃相剋）',cd:6} },
   { id:'c54', n:'054', name:'土魔女', en:'Earth Witch', evo:{name:'大土魔女',en:'Great Earth Witch'}, el:'earth', race:'yokai', fam:'witch', hero:false, dropOnly:true, lv1:{atk:95,hp:145,rcv:14}, max:{atk:185,hp:283,rcv:27}, act:{name:'🔮 魔女術式',desc:'對全體敵人造成 攻擊力×1.6 傷害（吃相剋）',cd:6} },
   { id:'c55', n:'055', name:'風魔女', en:'Wind Witch', evo:{name:'大風魔女',en:'Great Wind Witch'}, el:'wind', race:'yokai', fam:'witch', hero:false, dropOnly:true, lv1:{atk:115,hp:105,rcv:16}, max:{atk:224,hp:205,rcv:31}, act:{name:'🔮 魔女術式',desc:'對全體敵人造成 攻擊力×1.6 傷害（吃相剋）',cd:6} },
+  // ── 💊 妖·藥師（雜牌卡：僅關卡掉落、不進轉蛋；基礎 ★1，進化 ★2＝大◯藥師；無隊長技）──
+  { id:'c56', n:'056', name:'火藥師', en:'Fire Medic', evo:{name:'大火藥師',en:'Great Fire Medic'}, el:'fire', race:'yokai', fam:'medic', hero:false, dropOnly:true, lv1:{atk:110,hp:90,rcv:20}, max:{atk:215,hp:176,rcv:39}, act:{name:'💊 靈藥術式',desc:'回復全隊 HP 35%',cd:6} },
+  { id:'c57', n:'057', name:'水藥師', en:'Water Medic', evo:{name:'大水藥師',en:'Great Water Medic'}, el:'water', race:'yokai', fam:'medic', hero:false, dropOnly:true, lv1:{atk:65,hp:150,rcv:34}, max:{atk:127,hp:293,rcv:66}, act:{name:'💊 靈藥術式',desc:'回復全隊 HP 35%',cd:6} },
+  { id:'c58', n:'058', name:'雷藥師', en:'Thunder Medic', evo:{name:'大雷藥師',en:'Great Thunder Medic'}, el:'thunder', race:'yokai', fam:'medic', hero:false, dropOnly:true, lv1:{atk:100,hp:100,rcv:24}, max:{atk:195,hp:195,rcv:47}, act:{name:'💊 靈藥術式',desc:'回復全隊 HP 35%',cd:6} },
+  { id:'c59', n:'059', name:'土藥師', en:'Earth Medic', evo:{name:'大土藥師',en:'Great Earth Medic'}, el:'earth', race:'yokai', fam:'medic', hero:false, dropOnly:true, lv1:{atk:70,hp:165,rcv:26}, max:{atk:137,hp:322,rcv:51}, act:{name:'💊 靈藥術式',desc:'回復全隊 HP 35%',cd:6} },
+  { id:'c60', n:'060', name:'風藥師', en:'Wind Medic', evo:{name:'大風藥師',en:'Great Wind Medic'}, el:'wind', race:'yokai', fam:'medic', hero:false, dropOnly:true, lv1:{atk:90,hp:115,rcv:26}, max:{atk:176,hp:224,rcv:51}, act:{name:'💊 靈藥術式',desc:'回復全隊 HP 35%',cd:6} },
 ];
 
 export const byId: Record<string, Card> = Object.fromEntries(cards.map(c => [c.id, c]));
