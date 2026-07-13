@@ -816,6 +816,7 @@
     function boxFull() { const s = loadSave(); return s.cards.length >= boxCap(s); }
     function buyBoxSlots() { let r = { ok: false, msg: '' }; mutSave(s => { if ((s.meta.stones || 0) < 1) { r.msg = '魔法石不足'; return; } s.meta.stones -= 1; s.meta.boxBuy = (s.meta.boxBuy || 0) + 1; r = { ok: true, cap: boxCap(s), per: 5 }; }); return r; }   // 1💎 = +5 格
     function tutSeen() { return !!((loadSave().settings || {}).tut); }              // 新手教學看過沒
+    function freePullDone() { return !!((loadSave().meta || {}).freePullUsed); }    // 免費新手十連是否已領(伺服器 free_pull_used 的本地鏡射,syncWallet 落地);已領→教學重玩不再提供十連
     function setTutSeen() { mutSave(s => { s.settings = s.settings || {}; s.settings.tut = true; }); }
     /* ===== 匿名埋點(D1/D7 回流;無個資)===== */
     const ANALYTICS_URL = 'https://ninja-stats.fightmon.workers.dev';   // 匿名埋點後台(D1/D7)
@@ -1135,6 +1136,7 @@
       if (!d) return;
       mutSave(s => {
         const m = s.meta; if (typeof d.stones === 'number') m.stones = d.stones; if (typeof d.coins === 'number') m.coins = d.coins; if (typeof d.pity === 'number') m.pity = d.pity; if (typeof d.boxBuy === 'number') m.boxBuy = d.boxBuy;
+        if (typeof d.freePullUsed === 'number') m.freePullUsed = d.freePullUsed;   // 🎁 免費十連已領旗標(伺服器權威 free_pull_used 落地)→教學重玩靠 freePullDone() 判斷不再提供十連
         // 🔐 體力真相搬伺服器:staminaMax/stamina 直接覆蓋(絕對值);staTs=regen 顯示基準——有 d.staminaTs(GET /api/wallet,單位秒)就轉 ms 落地,
         // 沒有(run/start、wallet/spend 等變更端點只回目前值,不回 ts)就用 Date.now() 當基準,避免拿舊 ts 疊加多算 regen(前端只做顯示層 regen,不再本地權威遞減)
         if (typeof d.staminaMax === 'number') m.staminaMax = d.staminaMax;
@@ -1174,7 +1176,7 @@
       if (r.ok) {
         const d = await r.json(); syncWallet(d); if (d.gems) syncGems(d.gems);
         mutSave(s => { s.pendingRuns = (s.pendingRuns || []).filter(x => x.runId !== item.runId); });
-        return { ok: true, drops: Array.isArray(d.drops) ? d.drops : [], firstClearStones: d.firstClearStones || 0 };   // 🔐[首通石]非首通/序章/重放=0,伺服器已算好直接帶出
+        return { ok: true, drops: Array.isArray(d.drops) ? d.drops : [], firstClearStones: d.firstClearStones || 0, bagFull: !!d.bagFull };   // 🔐[首通石]非首通/序章/重放=0,伺服器已算好直接帶出;bagFull=背包滿→伺服器跳過部分/全部掉落,前端要提示玩家清背包
       }
       if (r.status === 400 || r.status === 429) { mutSave(s => { s.pendingRuns = (s.pendingRuns || []).filter(x => x.runId !== item.runId); }); console.warn('run/complete rejected', r.status, item.runId); return { ok: false, rejected: true }; }   // 非法/被限流:不重試,丟棄該筆
       return null;   // 其他失敗狀態:保留該筆,下次再試
@@ -1184,12 +1186,14 @@
       if (_prFlushing) return; _prFlushing = true;
       try {
         const list = (loadSave().pendingRuns || []).slice();
-        let grantedN = 0;
+        let grantedN = 0, sawBagFull = false;
         for (const item of list) {
           const res = await _sendRunComplete(item);
           if (res && res.ok && res.drops && res.drops.length) { res.drops.forEach(x => addCard(x.id)); grantedN += res.drops.length; }
+          if (res && res.bagFull) sawBagFull = true;
         }
         if (grantedN > 0) { cardsFetch(); mutSave(s => { s.meta._pendingDropsNotice = (s.meta._pendingDropsNotice || 0) + grantedN; }); }
+        if (sawBagFull) domToast('🎒 背包滿了!部分掉落沒收到,快到卡片→BOX清背包', 5000);   // 離線補送時遇背包滿→DOM toast(此處可能無 scene context)
       } finally { _prFlushing = false; }
     }
     /* ── ☁️ 雲端存檔模組結束 ── */
@@ -1546,33 +1550,99 @@
         recomputeLayout();   // 確保 H 是當下裝置高度
         const T = UI();   // 亮色 tokens(同卡片/商店/排行)
         this.add.rectangle(CX, H / 2, W, H, T.page);   // 亮色不透明底(卡捲到邊緣不穿幫)
-        // ===== 固定上方:標題 + 隊伍切換器 + 5 宮位 + 排序/篩選列 =====
-        const headBot = this.headBot = 344;
-        this.add.rectangle(CX, headBot / 2, W, headBot, T.surf).setStrokeStyle(1, T.divider).setDepth(5);   // 上方固定白區(蓋住捲上來的卡)
-        const fp = this.add.graphics().setDepth(5); fp.fillGradientStyle(0x2c3a4c, 0x2c3a4c, 0x141b24, 0x141b24, 1); fp.fillRect(6, 44, W - 12, 260);   // 陣列深色漸層舞台(y44..304)→亮卡疊上、和下方卡區明顯區隔
-        // ── 標題 + 隊伍名稱 並排一列(省一行高;位置由 updateSwitcher 水平置中)──
-        this.titleTxt = this.add.text(0, 26, '出戰編隊', { fontFamily: EMOJIFONT, fontSize: FS.sub, color: T.ink, fontStyle: 'bold' }).setOrigin(0, 0.5).setDepth(6);
-        this.swName = this.add.text(0, 26, '', { fontFamily: EMOJIFONT, fontSize: FS.cap, color: T.goldTx, fontStyle: 'bold' }).setOrigin(0, 0.5).setDepth(6);
-        this._pen = this.add.text(0, 26, '✎', { fontFamily: EMOJIFONT, fontSize: '19px', color: '#2e9be0' }).setOrigin(0.5).setDepth(6).setInteractive(); tapBind(this, this._pen, () => this.doRename());
-        // ── 5 宮位(包進 formG 容器 → 可整組左右滑動切隊;上下拉開間距不相疊)──
+
+        // ===== 版面常數(比照 007_UI_demo/screens/team.html 的編成頁)=====
+        const TOPBAR_H = 54;
+        const CARD_TOP = TOPBAR_H + 8;
+        const HEAD_Y = CARD_TOP + 24;
+        const FORM_TOP = HEAD_Y + 26;
+        const FC_W = 126, FC_H = 68, FCL_W = 144, FCL_H = 78, ROW_GAP = 8;   // 一般宮位/隊長宮位(較大)
+        const ROW1_Y = FORM_TOP + FC_H / 2;
+        const ROW2_Y = ROW1_Y + FC_H / 2 + ROW_GAP + FCL_H / 2;
+        const ROW3_Y = ROW2_Y + FCL_H / 2 + ROW_GAP + FC_H / 2;
+        const DIVIDER_Y = ROW3_Y + FC_H / 2 + 14;
+        const STATS_Y = DIVIDER_Y + 20;
+        const LEAD_Y = STATS_Y + 26;
+        const CARD_BOT = LEAD_Y + 16;
+        const SORT_Y = CARD_BOT + 30;
+        this.headBot = SORT_Y + 20;   // 上方互動區下緣(卡片拖曳切隊/宮位命中判定用;排序列本就落在此區內,和原設計一樣互不干擾)
+        this.vpTop = this.headBot + 10; this.vpBot = H - 70; const vpH = this.vpBot - this.vpTop;
+
+        // ===== topbar(白底標題列,取代舊「出戰編隊」大標)=====
+        this.add.rectangle(CX, TOPBAR_H / 2, W, TOPBAR_H, T.surf).setStrokeStyle(1, T.divider).setDepth(5);
+        this.add.text(16, TOPBAR_H / 2, '🛡️ 編成', { fontFamily: EMOJIFONT, fontSize: FS.sub, color: T.ink, fontStyle: 'bold' }).setOrigin(0, 0.5).setDepth(6);
+        this.add.text(W - 16, TOPBAR_H / 2, '點角色卡編入隊伍', { fontFamily: EMOJIFONT, fontSize: FS.micro, color: T.ink2 }).setOrigin(1, 0.5).setDepth(6);
+        this.add.rectangle(CX, (TOPBAR_H + this.vpTop) / 2, W, this.vpTop - TOPBAR_H, T.surf).setDepth(4);   // 標題下方到捲動區前的固定白底(蓋住捲上來的卡)
+        this.add.rectangle(CX, this.vpTop, W, 1, T.divider).setDepth(4.5);
+
+        // ===== 隊伍卡(暖色漸層底 + 金框 + 飄浮方塊粒子;比照 demo .teamcard)=====
+        const cardW = W - 24, cardL = CX - cardW / 2, cardR = CX + cardW / 2, cardH = CARD_BOT - CARD_TOP;
+        const cardBg = this.add.graphics().setDepth(5);
+        cardBg.fillGradientStyle(0xfcf9f4, 0xfcf9f4, 0xf1ebe0, 0xf1ebe0, 1); cardBg.fillRoundedRect(cardL, CARD_TOP, cardW, cardH, 18);
+        cardBg.lineStyle(2, T.gold, 1); cardBg.strokeRoundedRect(cardL, CARD_TOP, cardW, cardH, 18);
+        this.spawnCardParticles(cardL, cardR, CARD_TOP, CARD_BOT);   // demo tc-particles:左右緣飄浮方塊
+
+        // ── tc-head:‹ 隊名 › ✎(換隊+改名,取代舊「出戰編隊」標題列)──
+        this.swName = this.add.text(CX, HEAD_Y, '', { fontFamily: EMOJIFONT, fontSize: FS.body, color: T.ink, fontStyle: 'bold' }).setOrigin(0.5).setDepth(6);
+        const mkArrow = (x, dir) => {
+          roundRectG(this, x, HEAD_Y, 28, 28, 14, T.surf2, 1, T.divider, 1).setDepth(6);
+          this.add.text(x, HEAD_Y, dir < 0 ? '‹' : '›', { fontFamily: EMOJIFONT, fontSize: '16px', color: T.ink2, fontStyle: 'bold' }).setOrigin(0.5).setDepth(7);
+          const hit = this.add.rectangle(x, HEAD_Y, 30, 30, 0x000000, 0.001).setInteractive().setDepth(7);
+          tapBind(this, hit, () => this.switchTeamBy(dir));
+        };
+        mkArrow(CX - 104, -1); mkArrow(CX + 104, 1);
+        this._pen = this.add.text(CX + 134, HEAD_Y, '✎', { fontFamily: EMOJIFONT, fontSize: '18px', color: '#2e9be0' }).setOrigin(0.5).setDepth(7).setInteractive();
+        tapBind(this, this._pen, () => this.doRename());
+
+        // ── formation:十字佈陣(5 宮位;中央=隊長,較大+👑)──
         this.formG = this.add.container(0, 0).setDepth(6);
-        const defs = [{ x: 128, y: 92 }, { x: 292, y: 92 }, { x: CX, y: 178 }, { x: 128, y: 264 }, { x: 292, y: 264 }];
+        const defs = [
+          { x: CX - 76, y: ROW1_Y, w: FC_W, h: FC_H, leader: false },
+          { x: CX + 76, y: ROW1_Y, w: FC_W, h: FC_H, leader: false },
+          { x: CX, y: ROW2_Y, w: FCL_W, h: FCL_H, leader: true },
+          { x: CX - 76, y: ROW3_Y, w: FC_W, h: FC_H, leader: false },
+          { x: CX + 76, y: ROW3_Y, w: FC_W, h: FC_H, leader: false },
+        ];
+        const GRAD = {   // 元素漸層底(比照 demo .fcard.b-*)
+          fire: [0xe8663e, 0x9c3620, 0xffb59c], water: [0x45a0e2, 0x235f8c, 0xa9d6f6], thunder: [0xe6c33d, 0xa5821c, 0xf4de8c],
+          earth: [0xcc9350, 0x875629, 0xe0b98c], wind: [0x5bbd76, 0x2e7846, 0x9fe0b8]
+        };
         this.slots = defs.map(d => {
-          const g = this.add.graphics();   // 圓角宮位(可重繪換色);不個別 setInteractive,取消宮位改場景層 slotAt 命中
-          const draw = (fill, stroke) => { g.clear(); g.fillStyle(fill, 1); g.fillRoundedRect(d.x - 62, d.y - 37, 124, 74, 16); g.lineStyle(2, stroke, 1); g.strokeRoundedRect(d.x - 62, d.y - 37, 124, 74, 16); };
-          draw(T.surf2, T.divider);   // 空宮=淺灰
-          const txt = this.add.text(d.x, d.y, '＋', { fontFamily: EMOJIFONT, fontSize: '22px', color: T.ink3 }).setOrigin(0.5);
-          this.formG.add(g); this.formG.add(txt);
-          const slot = { el: null, cardId: null, uid: null, g, draw, txt, x: d.x, y: d.y };
+          const g = this.add.graphics();   // 圓角宮位(可重繪換色/換漸層);不個別 setInteractive,取消宮位改場景層 slotAt 命中
+          const draw = (elKey) => {
+            g.clear();
+            if (elKey && GRAD[elKey]) {
+              const [top, bot, brd] = GRAD[elKey];
+              g.fillGradientStyle(top, top, bot, bot, 1); g.fillRoundedRect(d.x - d.w / 2, d.y - d.h / 2, d.w, d.h, 12);
+              g.lineStyle(d.leader ? 3 : 2.5, d.leader ? T.gold : brd, 1); g.strokeRoundedRect(d.x - d.w / 2, d.y - d.h / 2, d.w, d.h, 12);
+            } else {
+              g.fillStyle(T.surf2, 1); g.fillRoundedRect(d.x - d.w / 2, d.y - d.h / 2, d.w, d.h, 12);
+              g.lineStyle(2, T.divider, 1); g.strokeRoundedRect(d.x - d.w / 2, d.y - d.h / 2, d.w, d.h, 12);
+            }
+          };
+          draw(null);   // 空宮=淺灰
+          const plus = this.add.text(d.x, d.y, '＋', { fontFamily: EMOJIFONT, fontSize: '22px', color: T.ink3 }).setOrigin(0.5);
+          const nameTxt = this.add.text(d.x, d.y, '', { fontFamily: EMOJIFONT, fontSize: '13px', color: '#ffffff', fontStyle: 'bold' }).setOrigin(0.5).setVisible(false);   // 無大圖時的卡名退回字
+          this.formG.add(g); this.formG.add(plus); this.formG.add(nameTxt);
+          const slot = { el: null, cardId: null, uid: null, g, draw, plus, nameTxt, x: d.x, y: d.y, w: d.w, h: d.h, leader: d.leader, img: null, _ov: [] };
+          if (d.leader) { slot.crown = this.add.text(d.x - d.w / 2 + 10, d.y - d.h / 2 + 9, '👑', { fontFamily: EMOJIFONT, fontSize: '14px' }).setOrigin(0.5); this.formG.add(slot.crown); }
           return slot;
         });
-        this.formG.add(this.add.text(defs[2].x - 54, defs[2].y - 28, '👑', { fontFamily: EMOJIFONT, fontSize: '15px' }).setOrigin(0.5));   // 中央=隊長
-        // ── 陣兩側的 ◀▶ 三角(固定、不隨陣滑動;鈕中央直接畫三角,不用 emoji)──
-        const arrowY = 178, swArrow = (x, dir, cb) => { roundRectG(this, x, arrowY, 34, 58, 15, T.surf, 1, 0x35a866, 2).setDepth(8); const tri = this.add.graphics().setDepth(9); tri.fillStyle(0x2f8a5b, 1); if (dir < 0) tri.fillTriangle(x - 6, arrowY, x + 5, arrowY - 9, x + 5, arrowY + 9); else tri.fillTriangle(x + 6, arrowY, x - 5, arrowY - 9, x - 5, arrowY + 9); const hit = this.add.rectangle(x, arrowY, 34, 58, 0x000000, 0.001).setInteractive().setDepth(9); tapBind(this, hit, cb); };
-        swArrow(24, -1, () => this.switchTeamBy(-1)); swArrow(W - 24, 1, () => this.switchTeamBy(1));
+
+        // ── tc-stats:PWR/HP/RCV(分隔線 + 置中一列,標籤小字/數值放大)──
+        this.add.rectangle(CX, DIVIDER_Y, cardW - 24, 1, T.divider).setDepth(6);
+        const mkStat = (cx, label, color) => {
+          this.add.text(cx - 4, STATS_Y, label, { fontFamily: EMOJIFONT, fontSize: '12px', color: T.ink3, fontStyle: 'bold' }).setOrigin(1, 0.5).setDepth(6);
+          return this.add.text(cx + 4, STATS_Y, '0', { fontFamily: EMOJIFONT, fontSize: '21px', color, fontStyle: 'bold' }).setOrigin(0, 0.5).setDepth(6);
+        };
+        this.statPwr = mkStat(CX - 100, 'PWR', T.goldTx); this.statHp = mkStat(CX, 'HP', T.badTx); this.statRcv = mkStat(CX + 100, 'RCV', T.okTx);
+        // ── tc-lead:隊長技效果(只留效果,不放技名)──
+        this.leadTxt = this.add.text(CX, LEAD_Y, '👑 隊長技 · —', { fontFamily: EMOJIFONT, fontSize: FS.cap, color: T.ink2 }).setOrigin(0.5).setDepth(6);
+
+        // ===== 排序/篩選列(固定;沿用原 buildSortFilter 邏輯,只搬到卡片下方)=====
+        this.sortKey = 'el'; this.filterEl = null; this.buildSortFilter(SORT_Y);
 
         // ===== 下方:可捲動卡區(5 張一排、正方形、點選加入;可排序/篩選) =====
-        this.vpTop = headBot + 10; this.vpBot = H - 56; const vpH = this.vpBot - this.vpTop;
         const CS2 = 72;
         const my = loadSave().cards.filter(x => ROSTER.find(c => c.id === x.id));   // 個體制:全部背包個體(含重複),與背包一致
         this.instances = my;
@@ -1594,14 +1664,18 @@
           }
           kids.push(roundRectG(this, 0, CS2 / 2 - 11, 34, 15, 7, 0x12161a, 0.72, null, 0));   // Lv 深色圓角底條
           kids.push(this.add.text(0, CS2 / 2 - 11, 'Lv' + getCardLv(cd.id), { fontFamily: EMOJIFONT, fontSize: '11px', color: '#ffffff', fontStyle: 'bold' }).setOrigin(0.5));
+          const checkRing = roundRectG(this, 0, 0, CS2, CS2, 13, null, 0, 0x35a866, 2.5).setVisible(false);   // 已入隊標記(取代原本 alpha 變暗):綠框 + 右上 ✓
+          const checkDot = this.add.circle(CS2 / 2 - 8, -CS2 / 2 + 8, 8, 0x35a866).setVisible(false);
+          const checkTxt = this.add.text(CS2 / 2 - 8, -CS2 / 2 + 8, '✓', { fontFamily: EMOJIFONT, fontSize: '11px', color: '#ffffff', fontStyle: 'bold' }).setOrigin(0.5).setVisible(false);
+          kids.push(checkRing, checkDot, checkTxt);
           const cont = this.add.container(0, 0, kids);
-          cont._inst = inst; cont._cd = cd; this.benchG.add(cont); this.cards.push(cont);   // 不個別 setInteractive;點擊改由場景層 cardAt(座標)命中判定 → 避免容器/遮罩造成的逐物件事件誤判
+          cont._inst = inst; cont._cd = cd; cont._check = [checkRing, checkDot, checkTxt];
+          cont.setCheck = (on) => cont._check.forEach(o => o.setVisible(on));
+          this.benchG.add(cont); this.cards.push(cont);   // 不個別 setInteractive;點擊改由場景層 cardAt(座標)命中判定 → 避免容器/遮罩造成的逐物件事件誤判
         });
         this.scroll = 0;
         this.track = this.add.rectangle(411, this.vpTop + vpH / 2, 4, vpH, T.divider, 1).setDepth(2);
         this.thumb = this.add.rectangle(411, this.vpTop, 5, 40, T.gold, 0.9).setOrigin(0.5, 0).setDepth(2);
-        // ── 排序/篩選列 ──
-        this.sortKey = 'el'; this.filterEl = null; this.buildSortFilter(320);
         // ── 捲動 + 宮位區左右滑動切隊 ──
         this._moved = 0; this._down = false; this._lastY = 0;
         this.input.on('pointerdown', (p) => {
@@ -1647,22 +1721,38 @@
         this.input.on('wheel', (p, go, dx, dy) => this.scrollBy(dy * 0.4));
         this.layoutBench();   // 依排序/篩選排卡 + 定位 thumb
 
-        // ===== 固定下方:導覽列(🎲隨機 / 📖卡冊 / ✅確定)=====
-        const navY = H - 28;
-        this.add.rectangle(CX, navY, W, 58, T.surf).setStrokeStyle(1, T.divider).setDepth(5);   // 底部白列(分隔)
-        const mk = (x, label, col, sc, cb) => { roundRectG(this, x, navY, 130, 46, 23, T.surf, 1, sc, 2).setDepth(6); this.add.text(x, navY, label, { fontFamily: EMOJIFONT, fontSize: FS.cap, color: col }).setOrigin(0.5).setDepth(7); const hit = this.add.rectangle(x, navY, 130, 46, 0x000000, 0.001).setInteractive().setDepth(7); tapBind(this, hit, cb); };   // 圓角藥丸鈕
-        mk(76, '🎲 隨機', T.ink, T.divider, () => this.randomFill());
-        mk(210, '📖 卡冊 ' + ownedCount() + '/' + ROSTER.length, '#2e6ba8', 0x5aa9e6, () => { this.scene.manager.start('collection'); this.scene.manager.stop('team'); });
-        this.confirmBtn = this.add.graphics().setPosition(344, navY).setDepth(6);   // 圓角確定鈕(graphics→可重繪換色+以中心為縮放樞紐做齊隊脈動)
-        this._confirmDraw = (fill, stroke) => { const g = this.confirmBtn; g.clear(); g.fillStyle(fill, 1); g.fillRoundedRect(-65, -23, 130, 46, 23); g.lineStyle(2, stroke, 1); g.strokeRoundedRect(-65, -23, 130, 46, 23); };
+        // ===== 固定下方:單一「✔ 確定」滿寬大鈕(取代舊 🎲隨機/📖卡冊/確定 三鈕)=====
+        const navY = H - 34;
+        this.add.rectangle(CX, navY, W, 68, T.surf).setStrokeStyle(1, T.divider).setDepth(5);   // 底部白列(分隔)
+        const btnW = W - 32, btnH = 52;
+        this.confirmBtn = this.add.graphics().setPosition(CX, navY).setDepth(6);   // 圓角確定鈕(graphics→可重繪換色+以中心為縮放樞紐做齊隊脈動)
+        this._confirmDraw = (fill, stroke) => { const g = this.confirmBtn; g.clear(); g.fillStyle(fill, 1); g.fillRoundedRect(-btnW / 2, -btnH / 2, btnW, btnH, btnH / 2); g.lineStyle(2, stroke, 1); g.strokeRoundedRect(-btnW / 2, -btnH / 2, btnW, btnH, btnH / 2); };
         this._confirmDraw(T.surf2, T.divider);
-        this.confirmTxt = this.add.text(344, navY, '確定', { fontFamily: EMOJIFONT, fontSize: FS.cap, color: T.ink, fontStyle: 'bold' }).setOrigin(0.5).setDepth(7);
-        const confirmHit = this.add.rectangle(344, navY, 130, 46, 0x000000, 0.001).setInteractive().setDepth(7); tapBind(this, confirmHit, () => this.confirm());   // 確定鈕命中區(存隊+回大廳)
+        this.confirmTxt = this.add.text(CX, navY, '確定', { fontFamily: EMOJIFONT, fontSize: FS.body, color: T.ink, fontStyle: 'bold' }).setOrigin(0.5).setDepth(7);
+        const confirmHit = this.add.rectangle(CX, navY, btnW, btnH, 0x000000, 0.001).setInteractive().setDepth(7); tapBind(this, confirmHit, () => this.confirm());   // 確定鈕命中區(存隊+回大廳)
 
         if (!this.tutTeam) this.loadTeamSlots();   // 回填目前選中隊;教學編隊從空隊開始
-        this.updateSwitcher(); this.refreshStart();
+        this.updateSwitcher(); this.updateStats(); this.refreshStart();
         bindSceneResize(this, () => { const o = H; recomputeLayout(); if (Math.abs(H - o) > 3) { this.scale.setGameSize(W, H); this.scene.restart(); } });
         if (this.tutTeam) this.time.delayedCall(220, () => this.tutTeamCoach());   // 編隊教學
+      }
+      spawnCardParticles(left, right, top, bottom) {   // 飄浮方塊粒子:固定在隊伍卡左右緣,一致向上升起成能量流(比照 demo tc-particles/tc-blk)
+        const els = ['fire', 'water', 'thunder', 'earth', 'wind'];
+        const spots = [
+          [3, 16], [9, 30], [5, 46], [10, 62], [4, 78], [8, 88], [11, 22], [6, 54],
+          [97, 18], [91, 32], [96, 48], [92, 64], [95, 80], [89, 26], [94, 90], [90, 56]
+        ];
+        const w = right - left, h = bottom - top;
+        spots.forEach((s, i) => {
+          const el = els[i % els.length], col = EL[el].color;
+          const baseX = left + (s[0] / 100) * w, baseY = top + (s[1] / 100) * h;
+          const sz = 6 + (i % 4) * 2, op = +(0.55 - (i % 4) * 0.06).toFixed(2), dx = ((i % 3) - 1) * 3;
+          const dur = Math.round((7 + (i % 5) * 0.8) * 1000), delay = Math.round((i * 0.55 * 1000) % dur);
+          const blk = roundRectG(this, baseX, baseY, sz, sz, Math.max(1, Math.round(sz * 0.24)), col, 1, null, 0).setDepth(5.5).setAlpha(0);
+          blk.y = 10;   // 對應 CSS translateY(10px) 起始位移
+          this.tweens.add({ targets: blk, y: { from: 10, to: -26 }, x: { from: 0, to: dx }, duration: dur, delay, repeat: -1, ease: 'Linear' });   // 位移:每輪重置(repeat 用絕對值,不會愈飄愈遠)
+          this.tweens.add({ targets: blk, alpha: { from: 0, to: op }, duration: dur * 0.18, hold: dur * 0.64, yoyo: true, delay, repeat: -1, ease: 'Linear' });   // 淡入 18% → 維持 64% → 淡出 18%
+        });
       }
       buildSortFilter(y) {   // 排序鍵循環 + 元素篩選 chip;整列包進 sfG 容器,選取即重建(圓角藥丸)
         this._sfY = y;
@@ -1717,12 +1807,19 @@
         if (_miss.length) { _miss.forEach(id => this.load.image('card_' + id + '_full', 'art/cards/' + id + '_full.webp')); this.load.once('complete', () => this.loadTeamSlots()); try { this.load.start(); } catch (e) { } }   // 載好重載(先顯示名字→無縫換圖)
         this.slots.forEach(s => this.clearSlot(s));   // 清空 → 載入目前選中隊(逐個體找未用的)
         (loadTeam() || []).forEach((id, i) => { if (!this.slots[i]) return; const cd = ROSTER.find(c => c.id === id); if (!cd) return; const inst = this.instances.find(x => x.id === id && !this.cardUsed[x.u]); if (inst) this.assign(this.slots[i], inst, cd); });
+        this.updateStats();
       }
-      updateSwitcher() {
+      updateSwitcher() {   // 隊名文字(換隊/改名觸發);左右箭頭與 ✎ 位置固定,不隨隊名長度重排
         const i = getTeamIdx(), nm = teamCustomName(i); this.swName.setText('隊' + (i + 1) + (nm ? ' · ' + nm : ''));
-        const gap = 12, penGap = 15, tw = this.titleTxt.width, nw = this.swName.width;   // 標題+隊名+✎ 一列水平置中
-        const sx = Math.round(CX - (tw + gap + nw + penGap) / 2);
-        this.titleTxt.x = sx; this.swName.x = sx + tw + gap; this._pen.x = this.swName.x + nw + penGap; this._pen.y = 26;
+      }
+      updateStats() {   // 統計 PWR/HP/RCV(三圍加總,只算已放入的宮位) + 隊長技效果(demo tc-stats/tc-lead)
+        let pwr = 0, hp = 0, rcv = 0;
+        this.slots.forEach(s => { if (s.cardId) { pwr += cardAtk(s.cardId); hp += cardHp(s.cardId); rcv += cardRcv(s.cardId); } });
+        if (this.statPwr) this.statPwr.setText(pwr.toLocaleString());
+        if (this.statHp) this.statHp.setText(hp.toLocaleString());
+        if (this.statRcv) this.statRcv.setText(rcv.toLocaleString());
+        const leaderId = this.slots[2] && this.slots[2].cardId, ls = leaderId ? leadSkill(leaderId) : null;
+        if (this.leadTxt) this.leadTxt.setText(ls ? ('👑 隊長技 · ' + ls.desc) : '👑 隊長技 · —');
       }
       async doRename() { const i = getTeamIdx(), v = await uiPrompt({ title: '隊伍名稱', message: '最多 6 字,留空=隊' + (i + 1), value: teamCustomName(i), maxLen: 6 }); if (v != null) { renameTeam(i, v); this.updateSwitcher(); } }
       confirm() { saveTeamAt(getTeamIdx(), this.slots.map(s => s.cardId).filter(Boolean)); this.scene.manager.start('home'); this.scene.manager.stop('team'); }   // 存當前隊 + 回大廳(未滿也可離開,出戰時再擋)
@@ -1732,14 +1829,14 @@
         const cy = Math.round(H * 0.52);
         g.add(this.add.rectangle(CX, cy, W - 24, 232, 0x0d1a12, 0.97).setStrokeStyle(3, 0x6aaa4c));
         g.add(this.add.text(CX, cy - 86, '🛡️ 最後一課:出戰編隊', { fontFamily: EMOJIFONT, fontSize: '20px', color: '#bff09a', fontStyle: 'bold' }).setOrigin(0.5));
-        g.add(this.add.text(CX, cy - 18, '① 點下方卡片 → 放進上方 5 個宮位\n② 👑 中央 = 隊長\n③ 放滿 5 隻 → 按右下「✅ 確定」完成!\n(也可按 🎲 隨機 快速組隊)', { fontFamily: EMOJIFONT, fontSize: '15px', color: '#eafce0', align: 'left', lineSpacing: 9, wordWrap: { width: W - 72 } }).setOrigin(0.5));
+        g.add(this.add.text(CX, cy - 18, '① 點下方卡片 → 放進上方 5 個宮位\n② 👑 中央 = 隊長\n③ 放滿 5 隻 → 按右下「✅ 確定」完成!', { fontFamily: EMOJIFONT, fontSize: '15px', color: '#eafce0', align: 'left', lineSpacing: 9, wordWrap: { width: W - 72 } }).setOrigin(0.5));
         const ok = this.add.rectangle(CX, cy + 78, 230, 46, 0x2e5a2c, 0.97).setStrokeStyle(3, 0x6aaa4c).setInteractive(); g.add(ok);
         g.add(this.add.text(CX, cy + 78, '我知道了,開始編隊', { fontFamily: EMOJIFONT, fontSize: '16px', color: '#eafce0', fontStyle: 'bold' }).setOrigin(0.5));
         const close = () => { g.destroy(); this.tutTeamArmed = true; this.refreshStart(); };
         ok.on('pointerup', close); dim.on('pointerup', close);
       }
       cardAt(x, y) { if (y < this.vpTop || y > this.vpBot) return null; for (const c of this.cards) { if (!c.visible) continue; if (Math.abs(x - c.x) <= 36 && Math.abs(y - (c.y - this.scroll)) <= 36) return c; } return null; }   // 場景層命中:卡世界位置=(c.x, c.y-scroll),半徑 36
-      slotAt(x, y) { for (const s of this.slots) { if (Math.abs(x - (s.x + this.formG.x)) <= 62 && Math.abs(y - s.y) <= 37) return s; } return null; }   // 場景層命中宮位(124×74,含 formG 位移)
+      slotAt(x, y) { for (const s of this.slots) { if (Math.abs(x - (s.x + this.formG.x)) <= s.w / 2 && Math.abs(y - s.y) <= s.h / 2) return s; } return null; }   // 場景層命中宮位(依各宮位實際寬高,含 formG 位移)
       update() { if (this._down || this._hsDown) return; if (this._vy && Math.abs(this._vy) > 0.4) { const before = this.scroll; this.scrollBy(-this._vy); if (this.scroll === before) this._vy = 0; else { this._vy *= 0.93; if (Math.abs(this._vy) <= 0.4) this._vy = 0; } } }   // 慣性捲動:放開後帶甩動速度繼續滑,每幀 ×0.93 減速;撞邊/變慢即停
       scrollBy(d) {
         this.scroll = Math.max(0, Math.min(this.maxScroll, this.scroll + d)); this.benchG.setY(-this.scroll);
@@ -1754,20 +1851,40 @@
       tapCard(inst, cd) { if (this.cardUsed[inst.u]) return; const slot = this.slots.find(s => !s.el); if (slot) this.assign(slot, inst, cd); }
       assign(slot, inst, cd) {
         slot.el = cd.el; slot.cardId = cd.id; slot.uid = inst.u;
-        slot.draw(UI().elTint[cd.el] != null ? UI().elTint[cd.el] : UI().surf2, EL[cd.el] ? EL[cd.el].color : UI().divider); slot.txt.setText(cardName(cd.id)).setColor(UI().ink).setFontSize('14px');
-        const dk = cardArtKey(cd.id, 'full');   // 陣型用 _01 大圖(3:2 橫式,填寬格)
-        if (dk && this.textures.exists(dk)) { if (!slot.img) { slot.img = this.add.image(slot.x, slot.y, dk); this.formG.add(slot.img); } else slot.img.setTexture(dk); slot.img.setDisplaySize(108, 72).setVisible(true); slot.txt.setVisible(false); }
-        else { if (slot.img) slot.img.setVisible(false); slot.txt.setVisible(true); }
+        slot.draw(cd.el); slot.plus.setVisible(false);
+        const dk = cardArtKey(cd.id, 'full'), hasArt = !!(dk && this.textures.exists(dk));   // 陣型用 _01 大圖(3:2 橫式,填滿格子)
+        if (hasArt) { if (!slot.img) { slot.img = this.add.image(slot.x, slot.y, dk); this.formG.add(slot.img); } else slot.img.setTexture(dk); slot.img.setDisplaySize(slot.w - 6, slot.h - 6).setVisible(true); }
+        else if (slot.img) slot.img.setVisible(false);
+        slot.nameTxt.setText(cardName(cd.id)).setVisible(!hasArt);
+        if (slot.crown) this.formG.bringToTop(slot.crown);   // 圖層蓋過去→大圖不能蓋掉皇冠
+        this.rebuildSlotOverlay(slot, cd);   // 重繪右上屬性徽章 + 左下 Lv 膠囊
         this.cardUsed[inst.u] = true; const card = this.cards.find(c => c._inst.u === inst.u);
-        if (card) card.setAlpha(0.22);
-        this.refreshStart();
+        if (card) card.setCheck(true);   // 已入隊標記(取代原本 alpha 變暗)
+        this.updateStats(); this.refreshStart();
       }
       clearSlot(slot) {
         if (!slot.el) return; this.cardUsed[slot.uid] = false;
-        const card = this.cards.find(c => c._inst.u === slot.uid); if (card) card.setAlpha(1);
-        slot.el = null; slot.cardId = null; slot.uid = null; slot.draw(UI().surf2, UI().divider); slot.txt.setText('＋').setColor(UI().ink3).setFontSize('20px');
-        if (slot.img) slot.img.setVisible(false); slot.txt.setVisible(true);
-        this.refreshStart();
+        const card = this.cards.find(c => c._inst.u === slot.uid); if (card) card.setCheck(false);
+        slot.el = null; slot.cardId = null; slot.uid = null; slot.draw(null); slot.plus.setVisible(true); slot.nameTxt.setVisible(false);
+        if (slot.img) slot.img.setVisible(false);
+        this.rebuildSlotOverlay(slot, null);
+        this.updateStats(); this.refreshStart();
+      }
+      rebuildSlotOverlay(slot, cd) {   // 右上元素徽章 + 左下 Lv 膠囊(隨指派卡片重繪,先銷毀舊的避免殘留)
+        if (slot._ov && slot._ov.length) slot._ov.forEach(o => o.destroy());
+        slot._ov = [];
+        if (!cd) return;
+        const x = slot.x, y = slot.y, w = slot.w, h = slot.h;
+        if (EL[cd.el]) {
+          const bx = x + w / 2 - 14, by = y - h / 2 + 11;
+          const bBg = roundRectG(this, bx, by, 22, 18, 6, EL[cd.el].color, 1, 0xffffff, 1.5);
+          const bTxt = this.add.text(bx, by, EL[cd.el].name, { fontFamily: EMOJIFONT, fontSize: '11px', color: '#ffffff', fontStyle: 'bold' }).setOrigin(0.5);
+          this.formG.add(bBg); this.formG.add(bTxt); slot._ov.push(bBg, bTxt);
+        }
+        const lx = x - w / 2 + 22, ly = y + h / 2 - 9;
+        const lBg = roundRectG(this, lx, ly, 40, 15, 7, 0x12161a, 0.72, null, 0);
+        const lTxt = this.add.text(lx, ly, 'Lv.' + getCardLv(cd.id), { fontFamily: EMOJIFONT, fontSize: '11px', color: '#ffffff', fontStyle: 'bold' }).setOrigin(0.5);
+        this.formG.add(lBg); this.formG.add(lTxt); slot._ov.push(lBg, lTxt);
       }
       showCardDetail(cd) {   // 久按卡片→就地詳細(共用 cardDetailPanel,版面與卡冊完全一致,只少管理鈕)
         if (this._detailG) this._detailG.destroy();
@@ -1775,17 +1892,11 @@
         _ensureFullArt(this, cd.id, () => { if (this._detailG) this.showCardDetail(cd); });   // bench 卡只載縮圖→開詳情才補大圖,載好重開
         cardDetailPanel(this, o => { g.add(o); return o; }, cd, { manage: false, onClose: close });
       }
-      randomFill() {
-        this.slots.forEach(s => this.clearSlot(s));
-        const avail = this.instances.filter(x => !this.cardUsed[x.u]);
-        this.slots.forEach(slot => { if (avail.length) { const inst = avail.splice(rnd(avail.length), 1)[0]; this.assign(slot, inst, ROSTER.find(c => c.id === inst.id)); } });
-        this.refreshStart();
-      }
       refreshStart() {
         const n = this.slots.filter(s => s.el).length, ok = n === 5;   // 確定鈕外觀反映齊不齊(永遠可按=可離開,出戰時再擋)
         if (this.confirmBtn) {
           this._confirmDraw(ok ? 0x35a866 : UI().surf2, ok ? 0x35a866 : UI().divider);
-          this.confirmTxt.setText(ok ? '✅ 確定' : '確定 ' + n + '/5').setColor(ok ? '#ffffff' : UI().ink3);
+          this.confirmTxt.setText(ok ? '✔ 確定' : '確定 ' + n + '/5').setColor(ok ? '#ffffff' : UI().ink3);
         }
         if (this.tutTeamArmed && this.confirmBtn) {
           this.tweens.killTweensOf(this.confirmBtn); this.tweens.killTweensOf(this.confirmTxt); this.confirmBtn.setScale(1); this.confirmTxt.setScale(1);
@@ -2323,8 +2434,8 @@
       // ===== 新手教學(事件推進式教練;全程 if(this.tut) 包住,不影響正常戰鬥)=====
       tutEnemies() {
         const mk = (hp) => ({ el: 'fire', max: hp, hp: hp, atk: 16, interval: 5, timer: 5, burn: 0, dead: false, boss: false, guard: false, hitGate: 0, comboGate: 0, dot: 0, regen: 0, paralyze: 0, healAlly: 0, junk: 0, phases: null, phaseIdx: 0, arch: null });
-        return [mk(99999), mk(99999), mk(160)];
-      }   // 3 火敵:e2 血低(AoE 會秒掉牠→3變2),e0/e1 超高血=腳本外絕對殺不死(2026-07-13:原1200已被變強的AoE/累積清除誤殺→到⑥只剩1隻→單體主動技秒掉最後一隻→全滅跳過⑦屬性塊教學;拉到99999根治);charge/finish setup 在對的步驟才把該死的壓低(⑥壓130給主動技打飛一隻、⑦壓28給屬性塊收尾),血條顯示(非數字)不穿幫
+        return [mk(1200), mk(99999), mk(160)];
+      }   // 3 火敵(左e0/中e1/右e2):e2 血低→③AoE 秒掉(3變2);e0 到⑥被主動技打飛;e1(中間)超高血→撐過主動技(AoE會把壓到130的敵全清)活著→帶進⑦屬性塊教學(2026-07-13:主動技是AoE,原本⑥把兩隻都壓130就被一起清光→跳過⑦;改成中間這隻不壓、留高血當活口。搭配 charge setup 的 hp<=9000 才壓 條件),血條顯示(非數字)不穿幫
       labBossEnemies() {
         const mk = (el, hp, boss) => ({ el, max: hp, hp, atk: 18, interval: 5, timer: 5, burn: 0, dead: false, boss: !!boss, guard: false, hitGate: 0, comboGate: 0, dot: 0, regen: 0, paralyze: 0, healAlly: 0, junk: 0, phases: null, phaseIdx: 0, arch: null });
         return [mk('water', 1500, false), mk('fire', 9000, true), mk('thunder', 1500, false)];
@@ -2419,8 +2530,8 @@
         }
         else if (kind === 'charge') {
           this.charge = this.charge.map((v, i) => i === 0 ? 9 : 0); this.renderCharges && this.renderCharges();   // 只點亮火卡(卡0)→ 玩家不會誤按別張跳過此步
-          (this.enemies || []).forEach(e => { if (!e.dead) e.hp = Math.min(e.hp, 130); }); this.updateEnemies && this.updateEnemies();
-        }   // 把剩餘敵壓到一發可秒
+          (this.enemies || []).forEach(e => { if (!e.dead && e.hp <= 9000) e.hp = Math.min(e.hp, 130); }); this.updateEnemies && this.updateEnemies();
+        }   // 把「該被主動技秒的」敵壓到一發可秒(hp<=9000);中間 e1 超高血(99999)不壓→主動技(AoE)打不死牠→撐到⑦教屬性塊
         else if (kind === 'finish') {
           this.board = Array.from({ length: N }, () => Array(N).fill(null));   // 清盤,把「火宮」排成 U 形;用「水屬塊」填火宮→示範屬塊可填任意宮(不限同屬);水塊=直落可預測(火會自由轉、雷是鋸齒,故仍用水塊防呆)
           let fb = -1; for (let b = 0; b < 9; b++) { if (this.boxElement[b] === 'fire') { fb = b; break; } } if (fb < 0) fb = 0;
@@ -2438,13 +2549,14 @@
         const T = UI(), g = this.overlay(); this._tutSkipG = g; const cy = H / 2;
         g.add(roundRectG(this, CX, cy, Math.min(W - 24, 360), 268, 18, T.surf, 1, T.divider, 1.5));
         g.add(this.add.text(CX, cy - 98, '你已經不是新手了嗎?', { fontFamily: EMOJIFONT, fontSize: FS.title, color: T.ink, fontStyle: 'bold' }).setOrigin(0.5));
-        g.add(this.add.text(CX, cy - 44, '老玩家可以跳過教學,\n一樣送你「新手十連抽」!', { fontFamily: EMOJIFONT, fontSize: FS.body, color: T.ink2, align: 'center', lineSpacing: 8 }).setOrigin(0.5));
-        this.mkBtn(g, cy + 26, '✅ 我是老手,跳過領十連', () => { this._tutSkipG = null; this._doTutSkip(true); }, T.ok);
+        const _canPull = !freePullDone();   // 已領過(重玩複習)→不再提「送十連」,避免誤導
+        g.add(this.add.text(CX, cy - 44, _canPull ? '老玩家可以跳過教學,\n一樣送你「新手十連抽」!' : '老玩家可以直接跳過這段教學。', { fontFamily: EMOJIFONT, fontSize: FS.body, color: T.ink2, align: 'center', lineSpacing: 8 }).setOrigin(0.5));
+        this.mkBtn(g, cy + 26, _canPull ? '✅ 我是老手,跳過領十連' : '✅ 跳過教學', () => { this._tutSkipG = null; this._doTutSkip(_canPull); }, T.ok);
         this.mkBtn(g, cy + 86, '🎓 還是玩教學吧', () => { g.destroy(); this._tutSkipG = null; }, null);
       }
       _doTutSkip(giveFreePull) {   // 真正執行跳過(原 tutSkip 內容)+ 視情況設免費十連旗標(大廳 create 讀到 settings.freePull 就 reveal)
         this.tutClearHint(); if (this.tutG) { this.tutG.destroy(); this.tutG = null; } if (this.tutBg) { this.tutBg.destroy(); this.tutBg = null; } this.tut = null;
-        mutSave(s => { if (!s.settings) s.settings = {}; s.settings.tut = true; if (giveFreePull) s.settings.freePull = true; });
+        mutSave(s => { if (!s.settings) s.settings = {}; s.settings.tut = true; if (giveFreePull && !freePullDone()) s.settings.freePull = true; });   // 已領過(重玩後跳過)→不重設旗標,伺服器也會擋
         SFX.stopBgm(); this.scene.manager.start('home'); this.scene.manager.stop('game');
       }
       tutDone(graduate = true) { this.tutClearHint(); if (this.tutG) { this.tutG.destroy(); this.tutG = null; } if (this.tutBg) { this.tutBg.destroy(); this.tutBg = null; } this.tut = null; if (graduate) mutSave(s => { if (!s.settings) s.settings = {}; s.settings.tut = true; }); }   // graduate=false(教學打輸)只清 UI 不設 tutSeen→下次重進教學重試,避免「輸掉教學=畢業但沒卡沒freePull=0卡死鎖」;步驟跑完(贏)預設 graduate=true 畢業,勝利收尾交給正常 showResult
@@ -4767,6 +4879,7 @@
           const drops = res.drops || [];
           this.runDrops = drops.map(x => { const cd = ROSTER.find(c => c.id === x.id); return cd ? { cd: cd, isNew: !!x.isNew } : null; }).filter(Boolean);
           this._runDropsPending = false;
+          if (res.bagFull) this.toast('🎒 背包滿了!這趟掉落沒收到,快到卡片→BOX清背包', 4200);   // 背包滿→伺服器跳過部分/全部掉落,明講不再默默漏(結算層提示)
           if (this.runDrops.length) {
             this.runDrops.forEach(o => addCard(o.cd.id));   // 本地鏡像,cardsFetch 再校正 uid
             _loadCardArt(this, this.runDrops.map(o => o.cd.id)); if (this.load.list.size) this.load.start();
@@ -5103,9 +5216,14 @@
         const box = this.add.rectangle(CX, cy, W - 16, 278, 0x0d1a12, 0.97).setStrokeStyle(3, 0x6aaa4c); g.add(box);
         g.add(this.add.text(CX, cy - 112, '🎓 教學完成!', { fontFamily: EMOJIFONT, fontSize: '27px', color: '#bff09a', fontStyle: 'bold' }).setOrigin(0.5));
         g.add(this.add.text(CX, cy - 58, '你已學會核心:\n放塊 → 清屬性宮 → 相剋打弱點 → 屬塊覆蓋', { fontFamily: EMOJIFONT, fontSize: '15px', color: '#eafce0', align: 'center', lineSpacing: 7, wordWrap: { width: W - 56 } }).setOrigin(0.5));
-        g.add(this.add.text(CX, cy - 4, '🎁 送你「新手十連」→ 試試抽卡、拿新夥伴!', { fontFamily: EMOJIFONT, fontSize: '15px', color: '#ffe08a', fontStyle: 'bold' }).setOrigin(0.5));
-        this.tutBtn(g, cy + 46, '🎁 領取新手十連!', () => { mutSave(s => { if (!s.settings) s.settings = {}; s.settings.freePull = true; }); this.scene.manager.start('home'); this.scene.manager.stop('game'); });   // 回大廳→自動抽十連 reveal→看完導向編隊教學
-        this.tutBtn(g, cy + 106, '🏠 之後再領', () => { mutSave(s => { if (!s.settings) s.settings = {}; s.settings.freePull = true; }); this.scene.manager.start('home'); this.scene.manager.stop('game'); }, true);   // 🔐[8] 這裡能顯示=已經真正過完教學(showResult 進來前已呼叫過 tutDone());freePull 不再靠 HomeScene 進教學時搶先發,改由這兩顆鈕在真完成的當下才發,兩鈕都算「完成」只差有沒有立刻看 reveal,同樣要給十連
+        if (!freePullDone()) {   // 🎁 首次完成教學→提供新手十連(兩鈕都設 freePull 旗標,回大廳自動 reveal)
+          g.add(this.add.text(CX, cy - 4, '🎁 送你「新手十連」→ 試試抽卡、拿新夥伴!', { fontFamily: EMOJIFONT, fontSize: '15px', color: '#ffe08a', fontStyle: 'bold' }).setOrigin(0.5));
+          this.tutBtn(g, cy + 46, '🎁 領取新手十連!', () => { mutSave(s => { if (!s.settings) s.settings = {}; s.settings.freePull = true; }); this.scene.manager.start('home'); this.scene.manager.stop('game'); });   // 回大廳→自動抽十連 reveal→看完導向編隊教學
+          this.tutBtn(g, cy + 106, '🏠 之後再領', () => { mutSave(s => { if (!s.settings) s.settings = {}; s.settings.freePull = true; }); this.scene.manager.start('home'); this.scene.manager.stop('game'); }, true);   // 🔐[8] 這裡能顯示=已經真正過完教學(showResult 進來前已呼叫過 tutDone());freePull 不再靠 HomeScene 進教學時搶先發,改由這兩顆鈕在真完成的當下才發,兩鈕都算「完成」只差有沒有立刻看 reveal,同樣要給十連
+        } else {   // 🔁 已領過十連(重玩教學複習)→ 不再提供十連,純回大廳(伺服器 free_pull_used 亦會擋,此為 UI 層不再誤導)
+          g.add(this.add.text(CX, cy - 4, '複習完成!核心玩法已經熟囉 👍', { fontFamily: EMOJIFONT, fontSize: '15px', color: '#eafce0' }).setOrigin(0.5));
+          this.tutBtn(g, cy + 66, '🏠 回大廳', () => { this.scene.manager.start('home'); this.scene.manager.stop('game'); });
+        }
         g.alpha = 0; this.tweens.add({ targets: g, alpha: 1, duration: 300 });
       }
       _briefSeen(dun) { return !!((loadSave().settings || {}).briefSeen || {})[dun]; }   // 🎓本關敵情簡報已勾「不再顯示」?
@@ -5237,7 +5355,7 @@
           this.mkBtn(g, cy + 166, last ? '開始戰鬥! ⚔' : '下一步 →', () => { g.destroy(); if (last) { if (!replay) { setTutSeen(); track('tut_done'); } this.resultOpen = false; } else { i++; show(); } }, last ? 0x3a5a2c : 0x3a2c1d);
           if (!last) {
             const sk = this.add.text(CX, cy + 218, '跳過教學', { fontFamily: EMOJIFONT, fontSize: '13px', color: '#9fb0c0' }).setOrigin(0.5).setInteractive();
-            sk.on('pointerup', () => { g.destroy(); if (!replay) { setTutSeen(); mutSave(s => { s.settings = s.settings || {}; s.settings.freePull = true; }); track('tut_skip'); } this.resultOpen = false; }); g.add(sk);   // 首次跳過也補送新手十連(不因跳過而漏發)
+            sk.on('pointerup', () => { g.destroy(); if (!replay) { setTutSeen(); mutSave(s => { s.settings = s.settings || {}; if (!freePullDone()) s.settings.freePull = true; }); track('tut_skip'); } this.resultOpen = false; }); g.add(sk);   // 首次跳過也補送新手十連(不因跳過而漏發);已領過則不重設(保險,配合伺服器 free_pull_used)
           }
         };
         show();
@@ -5486,7 +5604,7 @@
         if (r.status === 409) { mutSave(s => { s.settings.freePull = false; }); this.rebuild(); return; }   // 伺服器說領過了:清旗標,不給卡
         if (!r.ok) { this.toast('新手十連需要連線,稍後自動再試'); return; }   // 其他失敗:保留旗標下次再試
         const d = await r.json();
-        mutSave(s => { s.settings.freePull = false; }); syncWallet(d);
+        mutSave(s => { s.settings.freePull = false; s.meta.freePullUsed = 1; }); syncWallet(d);   // 領成功→本地即標記已領(不必等下次 wallet 同步),立刻重玩教學就不會再被提供十連
         const out = d.results.map(x => { const cd = ROSTER.find(c => c.id === x.id); addCard(x.id); return { cd, isNew: !!x.isNew, pity: false }; });   // 🔐 isNew 改由伺服器回
         cardsFetch();   // 背景校正 uid
         this.tab = 'gacha'; this.gachaResult = out; this.gachaRevealed = false; this._afterPull = 'team';
@@ -5757,6 +5875,10 @@
         if (tm.length !== 5) { this.toast('隊伍不齊,先去編隊'); this.go('team'); return; }
         const cost = this.diffCost(id, df), m = getMeta();
         if (m.stamina < cost) { this.toast('體力不足!去商店回復'); this.rebuild(); return; }   // 本地快速預檢(全額,與伺服器算式一致):明顯不夠就不必打 API
+        if (boxFull()) {   // 🎒 背包滿→進關前先攔(PAD/ToS 做法:打之前就警告,不白打):掉落會收不到,問要不要先整理;照打也放行
+          const goClean = await uiConfirm({ title: '背包已滿', message: '背包滿了,這關掉落的卡會收不到。\n要先去整理嗎?', okLabel: '去卡片BOX', cancelLabel: '照樣打' });
+          if (goClean) { this.go('collection'); return; }
+        }
         if (this._startBusy) return; this._startBusy = true;
         let serverRunId = null;
         try {
@@ -5790,25 +5912,43 @@
         const mist = this.add.rectangle(ix, iy, W * 3, H * 3, 0x1b1620, 1).setAlpha(0).setDepth(5000);   // 暗霧(fillAlpha=1實色+物件alpha=0起,tween物件alpha 0→1才看得到漸入;大到蓋滿縮放後畫面)
         this.tweens.add({ targets: mist, alpha: 1, duration: 840, ease: 'Sine.in', onComplete: () => { this.scene.manager.start('game', { team: tm, dungeonId: id, diff: df.key, dive: true, serverRunId: serverRunId }); this.scene.manager.stop('home'); } });
       }
+      _demoBodyBg(cTop, cBot) {   // 🎨 demo 深色 body 底,精準鏡射 007_UI_demo --page:radial-gradient(ellipse 100% 70% at 50% 40%, #5e5954 0%,#383030 52%,#261e1a 100%)。canvas 橢圓徑向漸層(scale y 把圓壓成橢圓;同 tutGrad canvas 做法)
+        const bh = Math.max(1, Math.round(cBot - cTop)), key = 'demoBg2_' + bh + '_' + H;
+        if (!this.textures.exists(key)) {
+          const ct = this.textures.createCanvas(key, W, bh), c = ct.context;
+          const cx = W / 2, cy = H * 0.4 - cTop, rx = W, ry = H * 0.7, sy = ry / rx;   // 圓心=整機(50%,40%);半徑 水平=100%寬、垂直=70%高;扣 cTop 換 body 局部座標
+          c.save(); c.translate(cx, cy); c.scale(1, sy);   // scale y → 圓形漸層壓成 demo 的橢圓(x 半徑 rx、y 半徑 ry)
+          const gr = c.createRadialGradient(0, 0, 0, 0, 0, rx);
+          gr.addColorStop(0, '#5e5954'); gr.addColorStop(0.52, '#383030'); gr.addColorStop(1, '#261e1a');
+          c.fillStyle = gr; c.fillRect(-cx, -cy / sy, W, bh / sy); c.restore(); ct.refresh();
+        }
+        this.L(this.add.image(CX, Math.round((cTop + cBot) / 2), key));
+      }
       bMonster() {
         const T = UI(), cTop = 84, cBot = H - 60;   // body 區:頂欄(84)下 ~ 導航(H-60)上
-        this.rect(CX, (cTop + cBot) / 2, W, cBot - cTop, T.page);   // 亮色 body 底
-        this.txt(CX, cTop + 34, '🐲 卡片管理', FS.title, T.ink, 0.5, true);
-        // 選項列表(白色圓角藥丸;主要=火色細框、次要/待做=淡色)
-        const el = EL.fire.color, items = [
-          ['🛡️ 隊伍編成', () => this.go('team'), 'main'],
-          ['📦 卡片 BOX（' + loadSave().cards.length + '/' + boxCap() + ' 格）', () => this.go('collection'), 'main'],
-          ['⬆️ 強化合成', () => this.go('fuse'), 'main'],
-          ['✨ 進化合成（卡片詳細頁）', () => this.go('collection'), 'sub'],
-          ['💰 卡片售出 — 待做', () => this.toast('卡片售出 — 待做'), 'todo'],
+        this._demoBodyBg(cTop, cBot);   // demo 深色徑向底(取代亮色 T.page)
+        // 標題:卡片美術圖示(ui_monster/art/ui) + 「卡片管理」(深底→亮色標題,取代 emoji;置中成一組)
+        { const t = this.add.text(0, 0, '卡片管理', { fontFamily: EMOJIFONT, fontSize: FS.title, color: '#f0f2f5', fontStyle: 'bold' });
+          const tw = Math.ceil(t.width), iw = 30, gw = iw + 8 + tw, left = CX - gw / 2;
+          this.L(this.add.image(left + iw / 2, cTop + 34, 'ui_monster').setDisplaySize(iw, iw));
+          t.setPosition(left + iw + 8 + tw / 2, cTop + 34).setOrigin(0.5); this.L(t); }
+        // 4 顆白底紅框 3D 大按鈕(鏡射 007_UI_demo cards.html;強化/進化合成移入卡片詳情頁,不在此列;todo=灰)
+        const bagN = loadSave().cards.length, bagCap = boxCap(), bagFull2 = bagN >= bagCap;   // 🎒 背包滿→BOX 鈕紅字+⚠️提醒(掉落會收不到)
+        const items = [
+          ['🎴 卡片 BOX（' + bagN + ' / ' + bagCap + ' 格）' + (bagFull2 ? '  ⚠️ 滿' : ''), () => this.go('collection'), false, bagFull2 ? '#d0574a' : null],
+          ['🛡️ 隊伍編成', () => this.go('team'), false],
+          ['📖 卡片圖鑑', () => this.go('dex'), false],
+          ['💰 卡片售出 — 待做', () => this.toast('卡片售出 — 待做'), true],
         ];
-        const y0 = cTop + 84, gap = 62;
-        items.forEach((it, i) => {
-          const y = y0 + i * gap, kind = it[2];
-          const o = kind === 'todo' ? { col: T.surf2, stroke: T.divider, color: T.ink3, fs: FS.body }
-            : kind === 'sub' ? { col: T.surf, stroke: T.divider, color: T.ink, fs: FS.body }
-              : { col: T.surf, stroke: el, sw: 2, color: T.ink, fs: FS.sub, bold: true };
-          this.btn(CX, y, 360, 54, it[0], it[1], o);
+        let y = cTop + 96;
+        items.forEach(([label, action, todo, colOverride]) => {
+          const lip = todo ? 0xddd7cd : 0xdc7c66, border = todo ? (bagFull2 && colOverride ? 0xe0a090 : T.divider) : (colOverride ? 0xe0a090 : 0xee9c8a), face = todo ? T.surf2 : T.surf, tcol = colOverride || (todo ? T.ink3 : T.ink);
+          this.L(roundRectG(this, CX, y + 3, W - 44, 56, 28, lip, 1, null, 0));   // 底部唇邊(3D 立體感)
+          this.L(roundRectG(this, CX, y, W - 44, 56, 28, face, 1, border, 2));     // 白面 + 紅框
+          this.txt(CX, y, label, FS.sub, tcol, 0.5, true);
+          const hit = this.rect(CX, y, W - 44, 60, 0x000000, 0.001).setInteractive();
+          tapBind(this, hit, action);
+          y += 78;
         });
       }
       bShop() {
@@ -6084,8 +6224,12 @@
       }
       bVillage() {   // 🏘️ 村落聚合頁(2026-07-13,鏡射 007_UI_demo village.html):5 顆白底綠框 3D 大按鈕→接既有功能,不重造
         const T = UI(), cTop = 84, cBot = H - 60, m = getMeta();
-        this.rect(CX, (cTop + cBot) / 2, W, cBot - cTop, T.page);   // 亮色 body 底(同商店/排行,全站一致;demo 的深底是它的外框、遊戲走光色主題)
-        this.txt(CX, cTop + 34, '🏘️ 村落', FS.title, T.ink, 0.5, true);
+        this._demoBodyBg(cTop, cBot);   // demo 深色徑向底(取代亮色 T.page)
+        // 標題:村落美術圖示(ui_village) + 「村落」(深底→亮色;icon+文字置中成一組,同卡片管理)
+        { const t = this.add.text(0, 0, '村落', { fontFamily: EMOJIFONT, fontSize: FS.title, color: '#f0f2f5', fontStyle: 'bold' });
+          const tw = Math.ceil(t.width), iw = 30, gw = iw + 8 + tw, left = CX - gw / 2;
+          this.L(this.add.image(left + iw / 2, cTop + 34, 'ui_village').setDisplaySize(iw, iw));
+          t.setPosition(left + iw + 8 + tw / 2, cTop + 34).setOrigin(0.5); this.L(t); }
         const full = m.stamina >= m.staminaMax;
         const items = [
           ['🛏️ 宿屋（恢復體力）' + (full ? '' : '　💎1'), () => this.villageRest()],
