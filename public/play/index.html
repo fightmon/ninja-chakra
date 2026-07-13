@@ -1542,7 +1542,7 @@
     /* ===== 出戰編隊 ===== */
     class TeamScene extends Phaser.Scene {
       constructor() { super('team'); }
-      preload() { _loadAllCardThumbs(this); _loadCardArt(this, loadTeam()); showLoadBar(this); }   // 編隊:全部縮圖(bench)+當前隊大圖(宮格);切隊時 loadTeamSlots 再補
+      preload() { _loadAllCardThumbs(this); _loadCardArt(this, loadTeam()); ['fire', 'water', 'thunder', 'earth', 'wind'].forEach(el => { if (!this.textures.exists('el_' + el)) this.load.svg('el_' + el, 'art/elements/element_' + el + '.svg', { width: 96, height: 96 }); }); showLoadBar(this); }   // 編隊:全部縮圖(bench)+當前隊大圖(宮格)+屬性篩選用元素SVG(同戰鬥宮上那套);切隊時 loadTeamSlots 再補
       create(data) {
         this.tutTeam = !!(data && data.tutorial);   // 從教學完成進來 → 顯示編隊教學
         this.tutTeamArmed = false;   // 重置脈動狀態(避免上次殘留)
@@ -1724,11 +1724,16 @@
         // ===== 固定下方:單一「✔ 確定」滿寬大鈕(取代舊 🎲隨機/📖卡冊/確定 三鈕)=====
         const navY = H - 34;
         this.add.rectangle(CX, navY, W, 68, T.surf).setStrokeStyle(1, T.divider).setDepth(5);   // 底部白列(分隔)
-        const btnW = W - 32, btnH = 52;
+        const btnW = W - 36, btnH = 52, R = btnH / 2;   // demo .pill.lg:滿寬(左右各18)、高52、全圓角
         this.confirmBtn = this.add.graphics().setPosition(CX, navY).setDepth(6);   // 圓角確定鈕(graphics→可重繪換色+以中心為縮放樞紐做齊隊脈動)
-        this._confirmDraw = (fill, stroke) => { const g = this.confirmBtn; g.clear(); g.fillStyle(fill, 1); g.fillRoundedRect(-btnW / 2, -btnH / 2, btnW, btnH, btnH / 2); g.lineStyle(2, stroke, 1); g.strokeRoundedRect(-btnW / 2, -btnH / 2, btnW, btnH, btnH / 2); };
-        this._confirmDraw(T.surf2, T.divider);
-        this.confirmTxt = this.add.text(CX, navY, '確定', { fontFamily: EMOJIFONT, fontSize: FS.body, color: T.ink, fontStyle: 'bold' }).setOrigin(0.5).setDepth(7);
+        this._confirmDraw = (fillTop, fillBot, lip) => {   // demo .pill:底部深色唇邊(3D)+上→下漸層+上緣白高光
+          const g = this.confirmBtn; g.clear();
+          g.fillStyle(lip, 1); g.fillRoundedRect(-btnW / 2, -btnH / 2 + 3, btnW, btnH, R);   // 底部唇邊(往下 3px 露出深色=立體)
+          g.fillGradientStyle(fillTop, fillTop, fillBot, fillBot, 1); g.fillRoundedRect(-btnW / 2, -btnH / 2, btnW, btnH, R);   // 主體上亮下暗漸層
+          g.fillStyle(0xffffff, 0.22); g.fillRoundedRect(-btnW / 2 + 5, -btnH / 2 + 3, btnW - 10, R - 3, R - 4);   // 上緣高光(inset)
+        };
+        this._confirmDraw(0xf8f5f0, 0xeae4da, 0xddd7cd);
+        this.confirmTxt = this.add.text(CX, navY - 1, '確定', { fontFamily: EMOJIFONT, fontSize: FS.sub, color: T.ink, fontStyle: 'bold' }).setOrigin(0.5).setDepth(7);   // demo .pill.lg 字級=fs-sub(18)
         const confirmHit = this.add.rectangle(CX, navY, btnW, btnH, 0x000000, 0.001).setInteractive().setDepth(7); tapBind(this, confirmHit, () => this.confirm());   // 確定鈕命中區(存隊+回大廳)
 
         if (!this.tutTeam) this.loadTeamSlots();   // 回填目前選中隊;教學編隊從空隊開始
@@ -1758,18 +1763,23 @@
         this._sfY = y;
         if (this.sfG) this.sfG.destroy();
         const T = UI(), g = this.sfG = this.add.container(0, 0).setDepth(6), labels = { el: '屬性', lv: '等級', rank: '星數' };
-        g.add(roundRectG(this, 68, y, 96, 28, 14, T.surf, 1, T.divider, 1.5));   // 排序藥丸
-        this.sortTxt = this.add.text(68, y, '排序:' + labels[this.sortKey], { fontFamily: EMOJIFONT, fontSize: FS.micro, color: T.ink2 }).setOrigin(0.5); g.add(this.sortTxt);
-        const sortHit = this.add.rectangle(68, y, 96, 28, 0x000000, 0.001).setInteractive(); g.add(sortHit);
+        // 排序藥丸(去掉「排序」二字,只顯示鍵名+▾;demo sortsel 樣:淺灰底+底部細深邊 3D)
+        const sortX = 54, sortW = 88;
+        g.add(roundRectG(this, sortX, y + 2, sortW, 30, 15, 0xddd7cd, 1, null, 0));
+        g.add(roundRectG(this, sortX, y, sortW, 30, 15, T.surf2, 1, T.divider, 1.5));
+        this.sortTxt = this.add.text(sortX, y, labels[this.sortKey] + ' ▾', { fontFamily: EMOJIFONT, fontSize: FS.cap, color: T.ink, fontStyle: 'bold' }).setOrigin(0.5); g.add(this.sortTxt);
+        const sortHit = this.add.rectangle(sortX, y, sortW, 30, 0x000000, 0.001).setInteractive(); g.add(sortHit);
         tapBind(this, sortHit, () => { this.sortKey = this.sortKey === 'el' ? 'lv' : this.sortKey === 'lv' ? 'rank' : 'el'; this.layoutBench(); this.buildSortFilter(this._sfY); });
-        const els = [{ k: null, t: '全' }, { k: 'fire', t: '火' }, { k: 'water', t: '水' }, { k: 'thunder', t: '雷' }, { k: 'earth', t: '土' }, { k: 'wind', t: '風' }];
-        els.forEach((e, i) => {   // chip:選中=屬色填白字、未選=白底屬色字(全=深字)
-          const x = 148 + i * 45, on = this.filterEl === e.k, elc = e.k ? EL[e.k].color : 0x2b333a;
-          const fill = on ? elc : T.surf, stroke = on ? elc : T.divider;
-          const txtCol = on ? '#ffffff' : (e.k ? '#' + EL[e.k].color.toString(16).padStart(6, '0') : T.ink2);
-          g.add(roundRectG(this, x, y, 40, 28, 13, fill, 1, stroke, on ? 2 : 1.5));
-          g.add(this.add.text(x, y, e.t, { fontFamily: EMOJIFONT, fontSize: '13px', color: txtCol, fontStyle: 'bold' }).setOrigin(0.5));
-          const hit = this.add.rectangle(x, y, 40, 28, 0x000000, 0.001).setInteractive(); g.add(hit);
+        // 篩選:all + 火/水/雷/土/風(用戰鬥宮上那套元素 SVG 圖示,tint 上屬色/選中白)
+        const els = [{ k: null }, { k: 'fire' }, { k: 'water' }, { k: 'thunder' }, { k: 'earth' }, { k: 'wind' }];
+        const fx0 = 132, step = 47;
+        els.forEach((e, i) => {
+          const x = fx0 + i * step, on = this.filterEl === e.k, elc = e.k ? EL[e.k].color : T.gold;
+          g.add(roundRectG(this, x, y, 42, 30, 15, on ? elc : T.surf, 1, on ? elc : T.divider, on ? 2 : 1.5));
+          if (!e.k) g.add(this.add.text(x, y, 'all', { fontFamily: EMOJIFONT, fontSize: '13px', color: on ? '#ffffff' : T.ink2, fontStyle: 'bold' }).setOrigin(0.5));   // 全=all
+          else if (this.textures.exists('el_' + e.k)) g.add(this.add.image(x, y, 'el_' + e.k).setDisplaySize(20, 20).setTintFill(on ? 0xffffff : EL[e.k].color));   // 元素 SVG 剪影→tint 屬色/選中白
+          else g.add(this.add.text(x, y, EL[e.k].name, { fontFamily: EMOJIFONT, fontSize: '13px', color: on ? '#ffffff' : '#' + EL[e.k].color.toString(16).padStart(6, '0'), fontStyle: 'bold' }).setOrigin(0.5));   // SVG 沒載→退回文字
+          const hit = this.add.rectangle(x, y, 42, 30, 0x000000, 0.001).setInteractive(); g.add(hit);
           tapBind(this, hit, () => { this.filterEl = e.k; this.layoutBench(); this.buildSortFilter(this._sfY); });
         });
       }
@@ -1853,14 +1863,37 @@
         slot.el = cd.el; slot.cardId = cd.id; slot.uid = inst.u;
         slot.draw(cd.el); slot.plus.setVisible(false);
         const dk = cardArtKey(cd.id, 'full'), hasArt = !!(dk && this.textures.exists(dk));   // 陣型用 _01 大圖(3:2 橫式,填滿格子)
-        if (hasArt) { if (!slot.img) { slot.img = this.add.image(slot.x, slot.y, dk); this.formG.add(slot.img); } else slot.img.setTexture(dk); slot.img.setDisplaySize(slot.w - 6, slot.h - 6).setVisible(true); }
-        else if (slot.img) slot.img.setVisible(false);
+        if (hasArt) { if (!slot.img) { slot.img = this.add.image(slot.x, slot.y, dk); this.formG.add(slot.img); } else slot.img.setTexture(dk); this._fitSlotImg(slot); }
+        else { if (slot.img) slot.img.setVisible(false); if (dk) { _loadCardArt(this, [cd.id]); this.load.once('complete', () => this._refreshSlotArt()); try { this.load.start(); } catch (e) { } } }   // 🖼️ full 大圖還沒載(bench 只載縮圖、預載只載原隊)→補載,載好自動換上圖(修「加入佈陣顯示金卡+卡名缺圖」)
         slot.nameTxt.setText(cardName(cd.id)).setVisible(!hasArt);
         if (slot.crown) this.formG.bringToTop(slot.crown);   // 圖層蓋過去→大圖不能蓋掉皇冠
         this.rebuildSlotOverlay(slot, cd);   // 重繪右上屬性徽章 + 左下 Lv 膠囊
         this.cardUsed[inst.u] = true; const card = this.cards.find(c => c._inst.u === inst.u);
         if (card) card.setCheck(true);   // 已入隊標記(取代原本 alpha 變暗)
         this.updateStats(); this.refreshStart();
+      }
+      _refreshSlotArt() {   // 🖼️ full 大圖補載完成→把還在顯示卡名的已填宮位換成圖(徽章/Lv 重繪疊上、皇冠置頂;順序比照 assign)
+        this.slots.forEach(slot => {
+          if (!slot.cardId || (slot.img && slot.img.visible)) return;
+          const dk = cardArtKey(slot.cardId, 'full');
+          if (!dk || !this.textures.exists(dk)) return;
+          if (!slot.img) { slot.img = this.add.image(slot.x, slot.y, dk); this.formG.add(slot.img); } else slot.img.setTexture(dk);
+          this._fitSlotImg(slot);
+          if (slot.nameTxt) slot.nameTxt.setVisible(false);
+          if (slot.crown) this.formG.bringToTop(slot.crown);
+          const cd = ROSTER.find(c => c.id === slot.cardId); if (cd) this.rebuildSlotOverlay(slot, cd);
+        });
+      }
+      _fitSlotImg(slot) {   // 陣型宮位圖:object-fit cover(放大到覆蓋格子→置中裁切),保原圖比例不壓扁(比照 demo .fcard img)
+        const img = slot.img; if (!img) return;
+        img.setCrop();   // 先清舊裁切,讓 width/height 反映完整原圖
+        const tw = slot.w - 6, th = slot.h - 6, natW = img.width, natH = img.height;
+        if (!natW || !natH) { img.setDisplaySize(tw, th).setVisible(true); return; }   // 保底:原圖尺寸讀不到就退回填滿
+        const scale = Math.max(tw / natW, th / natH);   // cover:取較大比例,兩軸都蓋滿
+        img.setScale(scale);
+        const cw = tw / scale, ch = th / scale;   // 反算要保留的原圖區域(置中)
+        img.setCrop((natW - cw) / 2, (natH - ch) / 2, cw, ch);
+        img.setPosition(slot.x, slot.y).setVisible(true);
       }
       clearSlot(slot) {
         if (!slot.el) return; this.cardUsed[slot.uid] = false;
@@ -1895,7 +1928,8 @@
       refreshStart() {
         const n = this.slots.filter(s => s.el).length, ok = n === 5;   // 確定鈕外觀反映齊不齊(永遠可按=可離開,出戰時再擋)
         if (this.confirmBtn) {
-          this._confirmDraw(ok ? 0x35a866 : UI().surf2, ok ? 0x35a866 : UI().divider);
+          if (ok) this._confirmDraw(0x4cc07f, 0x35a866, 0x26824e);   // demo .pill.ok:綠底漸層+深綠唇邊
+          else this._confirmDraw(0xf8f5f0, 0xeae4da, 0xddd7cd);      // 未齊隊=灰(仍立體藥丸)
           this.confirmTxt.setText(ok ? '✔ 確定' : '確定 ' + n + '/5').setColor(ok ? '#ffffff' : UI().ink3);
         }
         if (this.tutTeamArmed && this.confirmBtn) {
@@ -2874,6 +2908,16 @@
       // 每幀驅動:屬塊的明暗漸層流動(沿塊身相位差→像能量在流)+ 「極」combo徽章底色漸層流動(絕好調)
       update(time) {
         if (!this.teamCards) return;
+        // 🛟 卡死保底看門狗(每~0.5秒查一次;catch 所有「盤面/托盤在某操作後變卡死卻沒補跑檢查」的漏網路徑):
+        //    盤面靜止(未鎖輸入/無彈窗/非救援演出中/非教學/沒在拖塊或用技)+托盤有未用未鎖塊+完全放不下→視為卡死。
+        //    需「連續2次(共~1秒)」確認,避免消除/展演動畫的瞬間誤判;handleStuck 自帶 anyPlaceable/resultOpen/_rescueBusy 守衛,重複觸發安全。
+        this._stuckWD = (this._stuckWD || 0) + 1;
+        if (this._stuckWD >= 30) {
+          this._stuckWD = 0;
+          const idle = !this.locked && !this.resultOpen && !this._rescueBusy && !this._stuckBanner && !this.drag && !this.earthSel && !this.earthDrag && !this.windPick && this.tut == null;
+          if (idle && this.board && this.tray && this.tray.some(t => t && !t.used && !t.locked) && !this.anyPlaceable()) { this._stuckConfirm = (this._stuckConfirm || 0) + 1; if (this._stuckConfirm >= 2) { this._stuckConfirm = 0; this.handleStuck(); } }
+          else this._stuckConfirm = 0;
+        }
         try {   // ★ 單幀繪製例外絕不可外拋,否則會中斷整個遊戲主迴圈→畫面凍住
           for (const card of this.teamCards) {
             const cs = card.storeCells; if (!cs) continue;
@@ -2973,6 +3017,7 @@
         this.time.delayedCall(340, () => {
           this.refill(); this.renderTray();
           (this.trayIcons || []).forEach(g => { g.setScale(0.08); this.tweens.add({ targets: g, scaleX: 1, scaleY: 1, duration: 380, ease: 'Quart.out' }); });
+          if (!this.anyPlaceable()) this.time.delayedCall(420, () => this.handleStuck());   // 土技換出的新塊也可能全放不下→比照 afterAction 補卡死檢查(原漏檢路徑)
         });   // 新塊從各自中心展開
       }
       // 發動主動技
@@ -4187,25 +4232,99 @@
           if (!this.anyPlaceable()) this.time.delayedCall(420, () => this.handleStuck());
         });
       }
-      // 卡死處理:空盤+只剩工具塊(土/風無從施力)→自動補一般能量塊;否則才花血重洗
+      // 卡死處理(2026-07-13 重寫):盤面無解=系統發的塊造成的,系統負責——自動【免費】重洗托盤(不扣血、不彈問詢視窗),
+      // 全螢幕大字演出讓玩家看懂發生了什麼(舊版只有 17px/1秒的 tonFloat,40+ 客群根本沒看到=「卡死沒反應」回饋的主因);
+      // 重洗後保證有解(_ensureSolvable)。舊「燃燒生命重排」問詢廢止(kind earth/wind 工具塊分支=已無生成處的死碼,一併移除)。
       handleStuck() {
-        if (this.resultOpen || this.anyPlaceable()) return;
-        const empty = this.board.every(row => row.every(c => !c));
-        const unused = this.tray.filter(t => !t.used);
-        const onlyTools = unused.length > 0 && unused.every(t => t.kind === 'earth' || t.kind === 'wind');
-        if (empty && onlyTools) {
-          const s = this.tray.findIndex(t => !t.used);
-          if (s >= 0) { this.tray[s] = { c: pickShape(), used: false }; this.renderTray(); this.tonFloat('盤面已空,自動補能量塊', '#cfe3ff'); return; }
+        if (this.resultOpen) { if (!this._stuckRetry) { this._stuckRetry = true; this.time.delayedCall(700, () => { this._stuckRetry = false; this.handleStuck(); }); } return; }   // 彈窗開著(選單/復活/簡報)→稍後重試,不吞掉(舊版直接 return=玩家關窗後永不再檢=沉默軟鎖)
+        if (this.anyPlaceable()) return;
+        if (this._rescueBusy) return; this._rescueBusy = true;   // 防重入
+        this.stopStuckFX(); this._rescueBusy = false;
+        // 第2層:卡上存塊放下去能「真的消掉一條線/宮」(非只是塞得進去)→免費解圍,常駐提示叫他拖屬塊,不扣血
+        if (this.storedCanClear()) { this.showStoredEscapeHint(); return; }
+        // 第3層:托盤沒解、存塊也解不了圍=真卡死 → 花血(或低血改💎)重洗視窗
+        this.showStuckModal();
+      }
+      // 任一存塊放某位置後有整條線/列/宮被填滿(=放下去真能消除解圍,不是只塞得進去)
+      storedCanClear() {
+        if (!this.stored) return false;
+        const F = x => x && x.el !== 'junk';   // 鐵塊不算填滿(含鐵塊的線不能消)
+        return this.stored.some(s => {
+          if (!s) return false; const cells = s.cells || chakraShape(s.el, s.lv);
+          for (let r = 0; r < N; r++)for (let c = 0; c < N; c++) {
+            if (!canPlace(this.board, cells, r, c, 'water', true)) continue;
+            const occ = new Set(cells.map(([dr, dc]) => (r + dr) + '_' + (c + dc)));
+            const fa = (rr, cc) => occ.has(rr + '_' + cc) || F(this.board[rr][cc]);
+            for (let rr = 0; rr < N; rr++) { let f = true; for (let cc = 0; cc < N; cc++)if (!fa(rr, cc)) { f = false; break; } if (f) return true; }
+            for (let cc = 0; cc < N; cc++) { let f = true; for (let rr = 0; rr < N; rr++)if (!fa(rr, cc)) { f = false; break; } if (f) return true; }
+            for (let b = 0; b < 9; b++) { const br = Math.floor(b / 3) * 3, bc = (b % 3) * 3; let f = true; for (let rr = br; rr < br + 3 && f; rr++)for (let cc = bc; cc < bc + 3; cc++)if (!fa(rr, cc)) { f = false; break; } if (f) return true; }
+          }
+          return false;
+        });
+      }
+      // 存塊能解圍→跳+脹動畫(flashStored) + 一條「不消失」的常駐提示條(玩家一動 stopStuckFX 才清)
+      showStoredEscapeHint() {
+        this.flashStored();
+        if (this._stuckBanner) this._stuckBanner.destroy();
+        const b = this._stuckBanner = this.add.container(0, 0).setDepth(2490);
+        b.add(roundRectG(this, CX, BY0 - 42, 320, 36, 18, 0x1a1206, 0.92, 0xffe066, 2));
+        b.add(this.add.text(CX, BY0 - 42, '💡 卡片上的屬塊可解圍 → 拖它上盤面!', { fontFamily: EMOJIFONT, fontSize: '15px', color: '#ffe066', fontStyle: 'bold' }).setOrigin(0.5));
+        this.tweens.add({ targets: b, alpha: { from: 0.55, to: 1 }, duration: 640, yoyo: true, repeat: -1 });
+      }
+      // 花血/💎 重洗視窗(真卡死):血夠→花當前血 50%;血 ≤ 20% 滿血=太低不放血→改花💎1(無石頭則免費送一次);另有放棄
+      showStuckModal() {
+        this.resultOpen = true; const g = this.overlay(); const cy = H / 2, T = UI();
+        const hp = this.playerHP, lowHP = hp <= Math.round(this.maxHP * 0.2);
+        g.add(roundRectG(this, CX, cy, 340, 250, 16, T.surf, 1, T.divider, 1.5));
+        g.add(this.add.text(CX, cy - 92, '盤面無解!', { fontFamily: EMOJIFONT, fontSize: FS.sub, color: T.goldTx, fontStyle: 'bold' }).setOrigin(0.5));
+        g.add(this.add.text(CX, cy - 58, '所有能量塊都放不下了', { fontFamily: EMOJIFONT, fontSize: FS.cap, color: T.ink2 }).setOrigin(0.5));
+        if (!lowHP) {
+          const cost = Math.max(1, Math.round(hp * 0.5));
+          g.add(this.add.text(CX, cy - 26, '燃燒生命重新凝聚能量?(−' + cost + ' ❤️)', { fontFamily: EMOJIFONT, fontSize: FS.cap, color: T.ink }).setOrigin(0.5));
+          this.mkBtn(g, cy + 18, '🩸 花 ' + cost + ' HP 重洗', () => { g.destroy(); this.resultOpen = false; this.playerHP = Math.max(1, hp - cost); this.animPlayerHP(false); this._doStuckReshuffle(); }, T.ok);
+        } else {
+          const gems = getMeta().stones || 0;
+          g.add(this.add.text(CX, cy - 26, gems > 0 ? ('血量偏低,改用魔法石重洗?(剩 💎' + gems + ')') : '血量與魔法石都不足,免費送你重洗一次', { fontFamily: EMOJIFONT, fontSize: FS.cap, color: T.ink }).setOrigin(0.5));
+          if (gems > 0) {
+            this.mkBtn(g, cy + 18, '💎 花 1 重洗', async () => {
+              if (this._busyReshuffle) return; this._busyReshuffle = true;
+              let r; try { r = await authedFetch('/api/wallet/spend', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'reshuffle' }) }); }
+              catch (e) { this._busyReshuffle = false; this.tonFloat('需要連線,請稍後再試', '#ff9a7a'); return; }
+              if (r.status === 402) { this._busyReshuffle = false; this.tonFloat('魔法石不足', '#ff9a7a'); return; }
+              if (!r.ok) { this._busyReshuffle = false; this.tonFloat('需要連線,請稍後再試', '#ff9a7a'); return; }
+              const d = await r.json(); syncWallet(d); this._busyReshuffle = false;
+              g.destroy(); this.resultOpen = false; this._doStuckReshuffle();
+            }, T.ok);
+          } else {
+            this.mkBtn(g, cy + 18, '🔄 免費重洗', () => { g.destroy(); this.resultOpen = false; this._doStuckReshuffle(); }, T.ok);
+          }
         }
-        if (this.anyStoredPlaceable()) { this.flashStored(); this.tonFloat('托盤卡住 → 拖卡上的屬塊解圍!', '#ffe066'); return; }   // 有存塊能解=不扣血,提示用屬塊(真沒塊可解才花血)
-        this.showReshuffleModal();
+        this.mkBtn(g, cy + 78, '放棄(認輸)', () => { g.destroy(); this.resultOpen = false; this.gameOver('放棄提煉'); }, T.bad);
+      }
+      // 執行重洗:refill+保證有解(_ensureSolvable),麻痺鎖不被洗掉
+      _doStuckReshuffle() {
+        const wasLockedSlot = this.paraLock ? this.paraLock.slot : -1;   // ⚡麻痺鎖是敵方 debuff:重洗不能順手洗掉(否則卡死反而解鎖=漏洞)
+        this.refill(); this._ensureSolvable(wasLockedSlot);
+        if (wasLockedSlot >= 0 && this.tray[wasLockedSlot]) { this.tray[wasLockedSlot].locked = true; this.tray[wasLockedSlot].paraN = (this.paraLock.rounds > 0 ? this.paraLock.rounds : 0); }   // 手動套回鎖(不走 applyParalyze,避免多倒數一輪)
+        this.renderTray(); this._trayEnter(); this.updateAll();
+        if (!this.anyPlaceable()) this.time.delayedCall(420, () => this.handleStuck());   // 理論上 _ensureSolvable 已保證有解;防禦性再檢
+      }
+      // 重洗後保證有解:仍無解→把一個「未被麻痺鎖」的托盤格換成「盤面放得下」的形狀(從 SHAPES 篩選隨機挑;保底 1×1 塞任一空格)
+      _ensureSolvable(skipSlot) {
+        if (this.anyPlaceable()) return;
+        const fits = [];
+        for (const s of SHAPES) { let ok = false; for (let r = 0; r < N && !ok; r++)for (let c = 0; c < N && !ok; c++)if (canPlace(this.board, s.c, r, c)) ok = true; if (ok) fits.push(s.c); }
+        const pick = fits.length ? fits[rnd(fits.length)].map(x => x.slice()) : (this.firstEmpty() ? [[0, 0]] : null);   // 連 1×1 都沒格放=盤面全滿(理論上不可能:滿線會消)→pick=null 交給後續防禦檢查
+        if (!pick) return;
+        const idx = this.tray.findIndex((t, i) => i !== skipSlot);   // 換一個非麻痺鎖格
+        if (idx >= 0) this.tray[idx] = { c: pick, used: false };
       }
       // 有任何「存的屬塊」放得下嗎(萬用塊只要有空格可填)
       anyStoredPlaceable() {
         if (!this.stored) return false;
         return this.stored.some(s => {
           if (!s) return false; const cells = s.cells || chakraShape(s.el, s.lv);
-          for (let r = 0; r < N; r++)for (let c = 0; c < N; c++)if (canPlace(this.board, cells, r, c, 'water')) return true; return false;
+          for (let r = 0; r < N; r++)for (let c = 0; c < N; c++)if (canPlace(this.board, cells, r, c, 'water', true)) return true; return false;   // allowJunk=true 對齊實際放置(endDrag 存塊可蓋鐵塊)——漏傳會誤報「無解」
         });
       }
       // 卡死提示:能解圍的屬塊「跳+脹」一下,叫你拖它(不扣血的救命塊)
@@ -4214,7 +4333,7 @@
         this.teamCards.forEach((card, i) => {
           const s = this.stored && this.stored[i], so = card.storeObj; if (!s || !so) return;
           const cells = s.cells || chakraShape(s.el, s.lv); let ok = false;
-          for (let r = 0; r < N && !ok; r++)for (let c = 0; c < N && !ok; c++)if (canPlace(this.board, cells, r, c, 'water')) ok = true;
+          for (let r = 0; r < N && !ok; r++)for (let c = 0; c < N && !ok; c++)if (canPlace(this.board, cells, r, c, 'water', true)) ok = true;   // allowJunk 同 anyStoredPlaceable
           if (!ok) return;
           const y0 = so.y; so._baseY = y0; this.tweens.killTweensOf(so); so.setScale(1).setY(y0);
           this.stuckBlk.push(so);
@@ -4230,6 +4349,7 @@
         if (this.stuckTw) { this.stuckTw.forEach(t => { if (t) t.stop(); }); this.stuckTw = null; }
         if (this.stuckObj) { this.stuckObj.forEach(o => { if (o && o.destroy) o.destroy(); }); this.stuckObj = null; }
         if (this.stuckBlk) { this.stuckBlk.forEach(so => { if (so && so.active) so.setScale(1).setY(so._baseY != null ? so._baseY : so.y); }); this.stuckBlk = null; }
+        if (this._stuckBanner) { this.tweens.killTweensOf(this._stuckBanner); this._stuckBanner.destroy(); this._stuckBanner = null; }   // 常駐解圍提示條也一併清
       }
       /* 土屬塊:兩段式搬移能量 — ①拖塊蓋住要抓的能量 ②再拖把它們整組搬到空位 */
       earthSelect(i, r, c) {
@@ -4832,10 +4952,6 @@
         this.stage++; this.chests++; this.playerHP = Math.min(this.maxHP, this.playerHP + 150);
         this.time.delayedCall(700, () => { try { this.stageAdvanceFX(); } catch (e) { } this.time.delayedCall(380, () => { try { this.startStage(true); } catch (e) { console.error('startStage error', e); } }); });   // 過關:前進演出 → 下一關敵人自遠方逼近入場(不清盤,盤面累積)
       }
-      reshuffle() {
-        if (this.playerHP <= CONFIG.RESHUFFLE_COST) { this.gameOver('生命不足、無法再提煉'); return; }
-        this.playerHP -= CONFIG.RESHUFFLE_COST; this.refill(); this.renderTray(); this._trayEnter(); this.updateAll();
-      }
       gameOver(reason) {
         if (this.resultOpen) return;
         if (!this.hitLab && (getMeta().stones || 0) > 0) { this.showRevive(reason); return; }   // 有魔法石→先問要不要花 1 顆復活;沒石/實驗室→直接認輸
@@ -5308,14 +5424,6 @@
         }
         panel.y = 24; panel.alpha = 0;   // 登場:由下方滑入 + 淡入(Back.out 帶輕微回彈)
         this.tweens.add({ targets: panel, y: 0, alpha: 1, duration: 380, ease: 'Back.out' });
-      }
-      showReshuffleModal() {
-        this.resultOpen = true; const g = this.overlay(); const cy = H / 2, T = UI();
-        g.add(roundRectG(this, CX, cy - 3, 340, 230, 16, T.surf, 1, T.divider, 1.5));   // 白色圓角面板(暗背幕之上)
-        g.add(this.add.text(CX, cy - 90, '能量無法順利提煉', { fontFamily: EMOJIFONT, fontSize: FS.sub, color: T.goldTx, fontStyle: 'bold' }).setOrigin(0.5));
-        g.add(this.add.text(CX, cy - 52, '燃燒生命重新排列能量?(−' + CONFIG.RESHUFFLE_COST + ' HP)', { fontFamily: EMOJIFONT, fontSize: FS.cap, color: T.ink }).setOrigin(0.5));
-        this.mkBtn(g, cy + 10, '燃燒生命重排', () => { g.destroy(); this.resultOpen = false; this.reshuffle(); }, T.ok);
-        this.mkBtn(g, cy + 68, '放棄(認輸)', () => { g.destroy(); this.resultOpen = false; this.gameOver('放棄提煉'); }, T.bad);
       }
       showMenu() {
         if (this.resultOpen) return; this.resultOpen = true; const g = this.overlay(); const cy = H / 2, T = UI();
