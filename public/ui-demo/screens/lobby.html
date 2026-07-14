@@ -10,15 +10,38 @@
   .map { position: relative; height: 100%; min-height: 620px;
     background: url('../assets/map/map_bg.webp') center/cover no-repeat; overflow: hidden; }
   .isle { position: absolute; width: 96px; filter: drop-shadow(0 6px 8px rgba(0,0,0,.28)); cursor: pointer; }
-  .isle span { position: absolute; left: 50%; bottom: 4px; transform: translateX(-50%);
-    font-size: var(--fs-micro); font-weight: 700; color: #fff; text-shadow: 0 1px 3px rgba(0,0,0,.8); white-space: nowrap; }
+  .isle img { width: 100%; display: block; }
+  .isle .nm { position: absolute; left: 50%; bottom: -8px; transform: translateX(-50%);
+    font-size: var(--fs-micro); font-weight: 700; color: #fff; white-space: nowrap;
+    background: rgba(38,30,26,.78); padding: 2px 9px; border-radius: 11px; box-shadow: 0 2px 4px rgba(0,0,0,.35); }
+  .isle .stars { position: absolute; top: -5px; left: 50%; transform: translateX(-50%);
+    font-size: 12px; letter-spacing: -1px; color: #f4b73c; text-shadow: 0 1px 2px rgba(0,0,0,.85); white-space: nowrap; z-index: 2; }
+  .isle.locked { filter: grayscale(1) brightness(.55) drop-shadow(0 6px 8px rgba(0,0,0,.28)); cursor: default; }
+  .isle .lock { position: absolute; top: 38%; left: 50%; transform: translate(-50%,-50%);
+    font-size: 26px; filter: drop-shadow(0 1px 3px rgba(0,0,0,.9)); z-index: 2; }
+  .isle.cur::before { content: ''; position: absolute; inset: -8px 6px 20px 6px; border: 3px solid #f4b73c;
+    border-radius: 50%; animation: ring 1.5s ease-out infinite; pointer-events: none; }
+  @keyframes ring { 0% { opacity: .9; transform: scale(.9); } 100% { opacity: 0; transform: scale(1.35); } }
   .isle.wind   { top: 120px; left: 24px; }
   .isle.fire   { top: 108px; right: 20px; width: 104px; }
   .isle.tower  { top: 190px; left: 148px; width: 108px; }
   .isle.thunder{ top: 300px; left: 30px; }
   .isle.earth  { top: 340px; left: 150px; width: 100px; }
   .isle.water  { top: 300px; right: 26px; }
-  .isle.home   { bottom: 26px; left: 50%; transform: translateX(-50%); width: 78px; }
+  .isle.home   { bottom: 82px; left: 50%; transform: translateX(-50%); width: 78px; }
+  .go { position: absolute; left: 12px; right: 12px; bottom: 12px; height: 54px; border-radius: 16px;
+    background: linear-gradient(180deg,#f7c458,#f4b73c); color: #5b3d0e; border: none;
+    box-shadow: 0 3px 0 #c8912a, 0 6px 14px rgba(0,0,0,.32); display: flex; align-items: center;
+    justify-content: space-between; padding: 0 16px 0 18px; cursor: pointer; }
+  .go:active { transform: translateY(2px); box-shadow: 0 1px 0 #c8912a, 0 3px 8px rgba(0,0,0,.3); }
+  .go .g-l { display: flex; flex-direction: column; align-items: flex-start; line-height: 1.18; }
+  .go .g-t { font-size: var(--fs-cap); opacity: .8; font-weight: 700; }
+  .go .g-m { font-size: var(--fs-sub); font-weight: 700; }
+  .go .g-r { font-size: 22px; }
+  .gear-btn { width: 34px; height: 34px; border-radius: 50%; border: none; margin-left: 2px;
+    background: rgba(43,51,58,.07); color: var(--ink2); font-size: 18px; cursor: pointer;
+    display: grid; place-items: center; box-shadow: inset 0 1px 0 rgba(255,255,255,.5), 0 1px 3px rgba(43,51,58,.18); }
+  .gear-btn:active { transform: translateY(1px); box-shadow: 0 1px 2px rgba(43,51,58,.2); }
 </style>
 </head>
 <body>
@@ -32,37 +55,42 @@
       <div class="lvline">
         <span class="lvtag">Lv.32</span>
         <span class="exp"><i style="width:64%"></i></span>
-        <span class="coin" style="color:var(--okTx)">⚡112/112</span>
+        <span class="coin" style="color:var(--okTx)"><img class="cur-ic" src="../assets/ui/cur_energy.png" alt="體力">112/112</span>
       </div>
     </div>
     <div style="display:flex;flex-direction:column;align-items:flex-end;gap:3px">
-      <span class="coin gem">💎 16</span>
-      <span class="coin gold">🪙 225,970</span>
+      <span class="coin gem"><img class="cur-ic" src="../assets/ui/cur_gem.png" alt="鑽石"> 16</span>
+      <span class="coin gold"><img class="cur-ic" src="../assets/ui/cur_coin.png" alt="金幣"> 225,970</span>
     </div>
-    <div style="font-size:20px;margin-left:2px">⚙️</div>
+    <button class="gear-btn" title="設定與帳號">⚙️</button>
   </div>
 
   <!-- 世界地圖 -->
   <div class="screen-body" style="padding:0">
     <div class="map">
-      <div class="isle wind"><img src="../assets/map/island_wind.webp" style="width:100%"><span>風之峽谷</span></div>
-      <div class="isle fire"><img src="../assets/map/island_fire.webp" style="width:100%"><span>火之火山</span></div>
-      <div class="isle tower"><img src="../assets/map/island_tower.webp" style="width:100%"><span>結印之塔</span></div>
-      <div class="isle thunder"><img src="../assets/map/island_thunder.webp" style="width:100%"><span>雷之高原</span></div>
-      <div class="isle earth"><img src="../assets/map/island_earth.webp" style="width:100%"><span>土之山岳</span></div>
-      <div class="isle water"><img src="../assets/map/island_water.webp" style="width:100%"><span>水之深淵</span></div>
-      <div class="isle home"><img src="../assets/map/island_home.webp" style="width:100%"></div>
+      <div class="isle wind"><span class="stars">★★★</span><img src="../assets/map/island_wind.webp"><span class="nm">風之峽谷</span></div>
+      <div class="isle fire"><span class="stars">★★★</span><img src="../assets/map/island_fire.webp"><span class="nm">火之火山</span></div>
+      <div class="isle thunder"><span class="stars">★☆☆</span><img src="../assets/map/island_thunder.webp"><span class="nm">雷之高原</span></div>
+      <div class="isle earth cur"><img src="../assets/map/island_earth.webp"><span class="nm">土之山岳</span></div>
+      <div class="isle water locked"><img src="../assets/map/island_water.webp"><span class="lock">🔒</span><span class="nm">水之深淵</span></div>
+      <div class="isle tower locked"><img src="../assets/map/island_tower.webp"><span class="lock">🔒</span><span class="nm">結印之塔</span></div>
+      <div class="isle home"><img src="../assets/map/island_home.webp"></div>
+
+      <!-- 繼續冒險 CTA -->
+      <button class="go">
+        <span class="g-l"><span class="g-t">繼續冒險</span><span class="g-m">⛰️ 土之山岳</span></span>
+        <span class="g-r">▶</span>
+      </button>
     </div>
   </div>
 
   <!-- 底部導覽 -->
   <div class="navbar">
-    <div class="tab on"><span class="ic">⛩️</span>關卡</div>
-    <div class="tab"><span class="ic">🐾</span>卡片</div>
-    <div class="tab"><span class="ic">🛒</span>商店</div>
-    <div class="tab"><span class="ic">🥚</span>抽卡</div>
-    <div class="tab"><span class="ic">🏆</span>排行</div>
-    <div class="tab"><span class="ic">⚙️</span>其他</div>
+    <div class="tab on"><span class="ic"><img src="../assets/ui/nav_lobby.svg" alt="關卡"></span>關卡</div>
+    <div class="tab"><span class="ic"><img src="../assets/ui/nav_cards.svg" alt="卡片"></span>卡片</div>
+    <div class="tab"><span class="ic"><img src="../assets/ui/nav_shop.svg" alt="商店"></span>商店</div>
+    <div class="tab"><span class="ic"><img src="../assets/ui/nav_gacha.svg" alt="抽卡"></span>抽卡</div>
+    <div class="tab"><span class="ic"><img src="../assets/ui/nav_village.svg" alt="村落"></span>村落</div>
   </div>
 
 </div>

@@ -8,19 +8,33 @@
 <style>
   body { background: transparent; }
 
-  /* 標題(BOX 格數併進標題) */
-  .cb-head { background: var(--surf); border-bottom: 1px solid var(--divider); padding: 12px 14px 10px; text-align: center; }
+  /* 標題:卡冊 + 容量(併回標題後方) */
+  .cb-head { position: relative; background: var(--surf); border-bottom: 1px solid var(--divider); padding: 12px 14px 10px; text-align: center; }
   .cb-title { font-size: var(--fs-title); font-weight: 700; }
-  .cb-sub { font-size: var(--fs-micro); color: var(--ink2); margin-top: 3px; }
+  .cb-cap { font-size: var(--fs-sub); font-weight: 700; color: var(--ink2); margin-left: 6px; }
 
-  /* 排序 + 篩選(同一排,可橫捲);屬性數字放進篩選鈕 */
-  .cb-bar { display: flex; align-items: center; gap: 7px; padding: 10px 12px 6px; overflow-x: auto; white-space: nowrap; }
-  .cb-bar::-webkit-scrollbar { height: 0; }
+  /* 排序 + 篩選(瘦身:數量移到統計列,頁籤只留圖示、等寬填滿,不溢出) */
+  .cb-bar { display: flex; align-items: center; gap: 6px; padding: 10px 10px 6px; }
   .cb-sort { flex: none; height: 34px; border-radius: 17px; border: 1.5px solid var(--divider); background: var(--surf2);
-    color: var(--ink); font-family: inherit; font-size: var(--fs-cap); font-weight: 700; padding: 0 10px; cursor: pointer;
+    color: var(--ink); font-family: inherit; font-size: var(--fs-cap); font-weight: 700; padding: 0 8px; cursor: pointer;
     box-shadow: inset 0 1px 0 rgba(255,255,255,.5), 0 2px 0 #ddd7cd; }
-  .cb-bar .pill.sm { flex: none; }
-  .cb-bar .pill.sm .cnt { color: var(--ink2); margin-left: 2px; }
+  .cb-bar .pill.sm { flex: 1; padding: 0; min-width: 0; display: inline-flex; align-items: center; justify-content: center; }
+  .cb-bar .pill.sm .ei { width: 1.5em; height: 1.5em; }
+  /* 擴充背包 icon 鈕:方塊+號,放篩選列最右;點了跳確認彈窗 */
+  .cb-expbtn { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); width: 34px; height: 34px; border-radius: 10px; cursor: pointer;
+    border: 1.5px solid var(--divider); background: var(--surf2); color: var(--ink);
+    display: inline-flex; align-items: center; justify-content: center;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.5), 0 2px 0 #ddd7cd; }
+  .cb-expbtn:active { transform: translateY(calc(-50% + 1px)); box-shadow: inset 0 1px 0 rgba(255,255,255,.4), 0 1px 0 #ddd7cd; }
+
+  /* 擴充背包確認彈窗 */
+  .modal-mask { position: fixed; inset: 0; background: rgba(20,16,14,.5); display: none; align-items: center; justify-content: center; z-index: 50; }
+  .modal-mask.show { display: flex; }
+  .modal-card { width: 78%; max-width: 300px; background: var(--surf); border-radius: 18px; padding: 18px 18px 16px; text-align: center; box-shadow: 0 12px 34px rgba(0,0,0,.35); }
+  .modal-title { font-size: var(--fs-sub); font-weight: 700; margin-bottom: 8px; }
+  .modal-msg { font-size: var(--fs-cap); color: var(--ink2); line-height: 1.5; margin-bottom: 16px; }
+  .modal-btns { display: flex; gap: 10px; }
+  .modal-btns .pill { flex: 1; max-width: none; }
 
   /* 卡片格 */
   .cb-grid { flex: 1; overflow-y: auto; padding: 4px 12px 6px; }
@@ -30,7 +44,7 @@
   .cb-pager { display: flex; align-items: center; justify-content: center; gap: 16px; padding: 6px 0 10px; }
   .cb-pager .pg-btn { width: 40px; height: 30px; border-radius: 15px; border: 1.5px solid var(--divider); background: var(--surf);
     color: var(--ink2); font-size: 13px; cursor: pointer; box-shadow: inset 0 1px 0 rgba(255,255,255,.5), 0 2px 0 #ddd7cd; }
-  .cb-pager .pg-num { font-size: var(--fs-cap); font-weight: 700; color: var(--ink2); }
+  .cb-pager .pg-num { font-size: var(--fs-cap); font-weight: 700; color: #cfd3d8; }   /* 深底→亮色分頁字 */
 
   .mini .battle { position: absolute; right: 4px; top: 4px; z-index: 2; padding: 1px 7px; border-radius: 8px;
     background: var(--gold); color: var(--onAccent); font-size: 11px; font-weight: 700; box-shadow: 0 1px 4px rgba(0,0,0,.3); }
@@ -39,18 +53,22 @@
   .footbar { padding: 10px 14px 14px; background: var(--surf); border-top: 1px solid var(--divider);
     justify-content: space-between !important; }
   .footbar .pill { max-width: none !important; width: 46% !important; flex: 0 0 46% !important; }
+  /* 售卡=危險但降權:琥珀謹慎色(不是大紅),真正的破壞放在後續「多選→確認」步驟 */
+  .pill.sell { background-color: #fff6ea; border-color: #e6a54e; color: #b46a1c; --lip: #e8c78e; }
 </style>
 </head>
 <body>
 <div class="phone">
 
-  <!-- 標題(格數併入) -->
+  <!-- 標題:卡冊 + 容量(併回標題後) -->
   <div class="cb-head">
-    <div class="cb-title">🎒 卡冊（140 / 300）</div>
-    <div class="cb-sub">收集 35 / 35 種</div>
+    <div class="cb-title">🎒 卡冊<span class="cb-cap">140 / 300</span></div>
+    <button class="cb-expbtn" onclick="showExp()" aria-label="擴充背包" title="擴充背包">
+      <svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="3.5" width="17" height="17" rx="4.5"/><line x1="12" y1="8.3" x2="12" y2="15.7"/><line x1="8.3" y1="12" x2="15.7" y2="12"/></svg>
+    </button>
   </div>
 
-  <!-- 排序 + 篩選(同排);屬性數字在鈕裡 -->
+  <!-- 排序 + 篩選(瘦身:數量已移到上方統計列,頁籤只留圖示、等寬填滿,不再溢出捲軸) -->
   <div class="cb-bar">
     <select class="cb-sort">
       <option>編號</option>
@@ -61,11 +79,11 @@
       <option>RCV</option>
     </select>
     <button class="pill sm primary">全</button>
-    <button class="pill sm"><i class="ei ei-fire"></i><span class="cnt">79</span></button>
-    <button class="pill sm"><i class="ei ei-water"></i><span class="cnt">33</span></button>
-    <button class="pill sm"><i class="ei ei-earth"></i><span class="cnt">18</span></button>
-    <button class="pill sm"><i class="ei ei-thunder"></i><span class="cnt">45</span></button>
-    <button class="pill sm"><i class="ei ei-wind"></i><span class="cnt">56</span></button>
+    <button class="pill sm"><i class="ei ei-fire"></i></button>
+    <button class="pill sm"><i class="ei ei-water"></i></button>
+    <button class="pill sm"><i class="ei ei-earth"></i></button>
+    <button class="pill sm"><i class="ei ei-thunder"></i></button>
+    <button class="pill sm"><i class="ei ei-wind"></i></button>
   </div>
 
   <!-- 卡片格(第 1 頁) -->
@@ -111,12 +129,29 @@
     <button class="pg-btn">▶</button>
   </div>
 
-  <!-- 底部:整理(左) / 上一頁(右) -->
+  <!-- 底部:售卡(左,琥珀謹慎色·點了進多選模式) / 返回(右) -->
   <div class="footbar">
-    <button class="pill bad">🗑 整理</button>
-    <button class="pill ghost">‹ 上一頁</button>
+    <button class="pill sell">💰 售卡</button>
+    <button class="pill ghost">‹ 返回</button>
   </div>
 
 </div>
+
+<!-- 擴充背包 確認彈窗 -->
+<div class="modal-mask" id="expModal">
+  <div class="modal-card">
+    <div class="modal-title">🎒 擴充背包</div>
+    <div class="modal-msg">擴充背包需要 <b>1 個鑽石 💎</b><br>（＋5 格），確定要擴充嗎？</div>
+    <div class="modal-btns">
+      <button class="pill ghost" onclick="hideExp()">不同意</button>
+      <button class="pill primary" onclick="hideExp()">同意</button>
+    </div>
+  </div>
+</div>
+<script>
+  function showExp(){ document.getElementById('expModal').classList.add('show'); }
+  function hideExp(){ document.getElementById('expModal').classList.remove('show'); }
+  document.getElementById('expModal').addEventListener('click', function(e){ if(e.target===this) hideExp(); });
+</script>
 </body>
 </html>

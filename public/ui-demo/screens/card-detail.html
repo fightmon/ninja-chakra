@@ -21,9 +21,10 @@
   .hero { position: absolute; top: 70px; left: 50%; transform: translateX(-50%); z-index: 3;
     width: 260px; height: 260px; object-fit: contain; filter: drop-shadow(0 10px 18px rgba(0,0,0,.35)); }
   /* 白色資訊卡 */
-  .info { position: absolute; left: 0; right: 0; bottom: 0; height: 460px; z-index: 4;
-    background: var(--surf); border-radius: 24px 24px 0 0; box-shadow: 0 -8px 30px rgba(0,0,0,.25);
-    padding: 20px 22px 96px; overflow-y: auto; }
+  /* 白色資訊卡:不滿版,左右下留間隔、四角圓 */
+  .info { position: absolute; left: 12px; right: 12px; bottom: 12px; height: 452px; z-index: 4;
+    background: var(--surf); border-radius: 22px; box-shadow: 0 8px 30px rgba(0,0,0,.28);
+    padding: 20px 22px 90px; overflow-y: auto; }
   .info h1 { font-size: var(--fs-title); font-weight: 700; text-align: center; }
   .tags { display: flex; gap: 8px; justify-content: center; margin: 10px 0 16px; }
   .stat-row { display: flex; text-align: center; }
@@ -36,15 +37,14 @@
   .skill .head { display: flex; align-items: center; gap: 8px; font-weight: 700; font-size: var(--fs-cap); }
   .skill .cd { margin-left: auto; font-size: var(--fs-micro); background: var(--t-fire); color: var(--fire); padding: 1px 8px; border-radius: 8px; font-weight: 700; }
   .skill .desc { font-size: var(--fs-micro); color: var(--ink2); margin-top: 6px; }
-  .footer { position: absolute; left: 0; right: 0; bottom: 0; z-index: 6; display: flex; gap: 10px;
-    padding: 12px 18px 16px; background: linear-gradient(transparent, var(--surf) 30%); }
+  .footer { position: absolute; left: 12px; right: 12px; bottom: 12px; z-index: 6; display: flex; gap: 10px;
+    padding: 14px 16px 16px; background: linear-gradient(transparent, var(--surf) 35%); border-radius: 0 0 22px 22px; }
 </style>
 </head>
 <body>
 <div class="phone">
   <div class="detail">
-    <div class="topbtn" style="left:16px">‹</div>
-    <div class="topbtn" style="right:16px">♻️</div>
+    <div class="topbtn" style="right:16px">🏷️</div>
     <div class="stars">★★★</div>
     <div class="genblock"><i class="ei ei-fire" style="color:var(--fire)"></i><small>產生方塊</small></div>
     <img class="hero" src="../assets/cards/c03_full.webp" alt="炎助">
@@ -79,7 +79,8 @@
     </div>
 
     <div class="footer">
-      <button class="pill ok block" style="flex:2">⬆️ 強化合成</button>
+      <button class="pill ok block" style="flex:1.35">⬆️ 強化合成</button>
+      <button class="pill primary block" style="flex:1">✨ 進化</button>
       <button class="pill ghost" style="flex:1">✕ 關閉</button>
     </div>
   </div>

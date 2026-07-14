@@ -1,5 +1,5 @@
 /* ============================================================
-   塊頭勇者 · UI Demo 設計系統
+   忍塊查克拉 · UI Demo 設計系統
    對應遊戲 index.html 的 UI_THEMES(light) + FS 字級 + roundRectG 圓角
    純靜態 demo,供 UI/UX 審查用。所有頁面共用此檔。
    ============================================================ */
@@ -135,6 +135,9 @@ body {
 }
 .navbar .tab .ic { font-size: 20px; }
 .navbar .tab.on { color: var(--fire); background: var(--t-fire); font-weight: 700; }
+/* 自製 UI icon 取代 emoji:nav 分頁圖 + 狀態列貨幣 */
+.navbar .tab .ic img { width: 26px; height: 26px; display: block; object-fit: contain; }
+.cur-ic { width: 16px; height: 16px; vertical-align: -3px; margin-right: 1px; object-fit: contain; }
 
 /* ============================================================
    通用元件

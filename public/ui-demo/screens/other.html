@@ -32,6 +32,10 @@
   .switch.on > i { left: 25px; }
 
   .set-gap { height: 4px; }
+
+  /* 深底頁面→區段標籤與說明文字改亮色 */
+  .settings .section-label { color: #eef2f6; }
+  .settings .muted { color: #b3bcc5; }
 </style>
 </head>
 <body>
@@ -39,8 +43,8 @@
 
   <!-- 標題列 -->
   <div class="topbar">
-    <h1>⚙️ 其他</h1>
-    <span class="sub">設定與帳號</span>
+    <h1>⚙️ 設定與帳號</h1>
+    <span class="sub">從大廳右上齒輪進入</span>
   </div>
 
   <!-- 設定清單 -->
@@ -52,7 +56,6 @@
 
       <div class="set-gap"></div>
       <div class="section-label">遊戲</div>
-      <button class="pill block set-pill">📖 卡片圖鑑<span class="arrow">›</span></button>
       <button class="pill block set-pill">🎓 新手教學<span class="arrow">›</span></button>
 
       <div class="set-gap"></div>
@@ -80,12 +83,11 @@
 
   <!-- 底部導覽 -->
   <div class="navbar">
-    <div class="tab"><span class="ic">⛩️</span>關卡</div>
-    <div class="tab"><span class="ic">🐾</span>卡片</div>
-    <div class="tab"><span class="ic">🛒</span>商店</div>
-    <div class="tab"><span class="ic">🥚</span>抽卡</div>
-    <div class="tab"><span class="ic">🏆</span>排行</div>
-    <div class="tab on"><span class="ic">⚙️</span>其他</div>
+    <div class="tab"><span class="ic"><img src="../assets/ui/nav_lobby.svg" alt="關卡"></span>關卡</div>
+    <div class="tab"><span class="ic"><img src="../assets/ui/nav_cards.svg" alt="卡片"></span>卡片</div>
+    <div class="tab"><span class="ic"><img src="../assets/ui/nav_shop.svg" alt="商店"></span>商店</div>
+    <div class="tab"><span class="ic"><img src="../assets/ui/nav_gacha.svg" alt="抽卡"></span>抽卡</div>
+    <div class="tab"><span class="ic"><img src="../assets/ui/nav_village.svg" alt="村落"></span>村落</div>
   </div>
 
 </div>

@@ -9,7 +9,7 @@
   body { background: transparent; }
   .sbody { flex: 1; overflow-y: auto; padding: 14px 14px 8px; }
   .sbody::-webkit-scrollbar { width: 0; }
-  .page-title { text-align: center; font-size: var(--fs-title); font-weight: 700; margin: 4px 0 14px; }
+  .page-title { text-align: center; font-size: var(--fs-title); font-weight: 700; margin: 4px 0 14px; color: #f0f2f5; }   /* 深底→亮色標題 */
 
   /* 轉蛋機台卡 */
   .summon-card { border-radius: 18px; padding: 14px 14px 16px; margin-bottom: 16px; border: 2px solid; background: var(--surf);
@@ -39,12 +39,12 @@
       <div class="lvline">
         <span class="lvtag">Lv.33</span>
         <span class="exp"><i style="width:42%"></i></span>
-        <span class="coin" style="color:var(--okTx)">⚡114/114</span>
+        <span class="coin" style="color:var(--okTx)"><img class="cur-ic" src="../assets/ui/cur_energy.png" alt="體力">114/114</span>
       </div>
     </div>
     <div style="display:flex;flex-direction:column;align-items:flex-end;gap:3px">
-      <span class="coin gem">💎 67</span>
-      <span class="coin gold">🪙 317,100</span>
+      <span class="coin gem"><img class="cur-ic" src="../assets/ui/cur_gem.png" alt="鑽石"> 67</span>
+      <span class="coin gold"><img class="cur-ic" src="../assets/ui/cur_coin.png" alt="金幣"> 317,100</span>
     </div>
   </div>
 
@@ -77,12 +77,11 @@
 
   <!-- 底部導覽(抽卡 亮) -->
   <div class="navbar">
-    <div class="tab"><span class="ic">⛩️</span>關卡</div>
-    <div class="tab"><span class="ic">🐾</span>卡片</div>
-    <div class="tab"><span class="ic">🛒</span>商店</div>
-    <div class="tab on"><span class="ic">🥚</span>抽卡</div>
-    <div class="tab"><span class="ic">🏆</span>排行</div>
-    <div class="tab"><span class="ic">⚙️</span>其他</div>
+    <div class="tab"><span class="ic"><img src="../assets/ui/nav_lobby.svg" alt="關卡"></span>關卡</div>
+    <div class="tab"><span class="ic"><img src="../assets/ui/nav_cards.svg" alt="卡片"></span>卡片</div>
+    <div class="tab"><span class="ic"><img src="../assets/ui/nav_shop.svg" alt="商店"></span>商店</div>
+    <div class="tab on"><span class="ic"><img src="../assets/ui/nav_gacha.svg" alt="抽卡"></span>抽卡</div>
+    <div class="tab"><span class="ic"><img src="../assets/ui/nav_village.svg" alt="村落"></span>村落</div>
   </div>
 
 </div>

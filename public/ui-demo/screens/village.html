@@ -3,22 +3,22 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=400">
-<title>卡片管理</title>
+<title>村落</title>
 <link rel="stylesheet" href="../style.css">
 <style>
   body { background: transparent; }
   .cm-body { flex: 1; overflow-y: auto; padding: 20px 20px 12px; }
   .cm-body::-webkit-scrollbar { width: 0; }
-  .cm-title { text-align: center; font-size: var(--fs-title); font-weight: 700; margin: 6px 0 20px; color: #f0f2f5; }   /* 深底頁面→亮色標題 */
+  .cm-title { text-align: center; font-size: var(--fs-title); font-weight: 700; margin: 6px 0 18px; color: #f0f2f5; }   /* 深底頁面→亮色標題 */
 
-  /* 選單大按鈕(白底紅框 3D) */
+  /* 選單大按鈕(白底綠框 3D,村落調性=大地綠) */
   .menu-btn { display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; height: 58px;
-    margin-bottom: 15px; border-radius: 29px; background: var(--surf); border: 2px solid #ee9c8a; color: var(--ink);
+    margin-bottom: 15px; border-radius: 29px; background: var(--surf); border: 2px solid #7fc99a; color: var(--ink);
     font-family: inherit; font-size: var(--fs-sub); font-weight: 700; cursor: pointer;
-    box-shadow: inset 0 1px 0 rgba(255,255,255,.6), 0 3px 0 #dc7c66, 0 6px 10px rgba(43,51,58,.12);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.6), 0 3px 0 #57a877, 0 6px 10px rgba(43,51,58,.12);
     transition: transform .06s ease, box-shadow .06s ease; }
-  .menu-btn:active { transform: translateY(2px); box-shadow: inset 0 1px 0 rgba(255,255,255,.5), 0 1px 0 #dc7c66, 0 3px 6px rgba(43,51,58,.12); }
-  /* 待做(停用感) */
+  .menu-btn:active { transform: translateY(2px); box-shadow: inset 0 1px 0 rgba(255,255,255,.5), 0 1px 0 #57a877, 0 3px 6px rgba(43,51,58,.12); }
+  /* 未開放(占地待開) */
   .menu-btn.todo { background: var(--surf2); border-color: var(--divider); color: var(--ink3);
     box-shadow: inset 0 1px 0 rgba(255,255,255,.4), 0 3px 0 #ddd7cd, 0 4px 7px rgba(43,51,58,.07); }
 </style>
@@ -43,22 +43,23 @@
     </div>
   </div>
 
-  <!-- 卡片管理選單 -->
+  <!-- 村落選單 -->
   <div class="cm-body">
-    <div class="cm-title">🎴 卡片管理</div>
-    <button class="menu-btn">🎴 卡片 BOX（104 / 300 格）</button>
-    <button class="menu-btn">🛡️ 隊伍編成</button>
-    <button class="menu-btn">📖 卡片圖鑑</button>
-    <button class="menu-btn todo">💰 卡片售出 — 待做</button>
+    <div class="cm-title">🏘️ 村落</div>
+    <button class="menu-btn">🛏️ 宿屋（恢復體力）</button>
+    <button class="menu-btn">📬 信箱（通知・獎勵）</button>
+    <button class="menu-btn">🏆 殿堂（排行・成就・紀錄）</button>
+    <button class="menu-btn">📖 圖鑑（卡片收集）</button>
+    <button class="menu-btn">⛩️ 神社（每日參拜）</button>
   </div>
 
-  <!-- 底部導覽(卡片 亮) -->
+  <!-- 底部導覽(5 格:排行已移入村落;關卡 亮=從地圖進來) -->
   <div class="navbar">
     <div class="tab"><span class="ic"><img src="../assets/ui/nav_lobby.svg" alt="關卡"></span>關卡</div>
-    <div class="tab on"><span class="ic"><img src="../assets/ui/nav_cards.svg" alt="卡片"></span>卡片</div>
+    <div class="tab"><span class="ic"><img src="../assets/ui/nav_cards.svg" alt="卡片"></span>卡片</div>
     <div class="tab"><span class="ic"><img src="../assets/ui/nav_shop.svg" alt="商店"></span>商店</div>
     <div class="tab"><span class="ic"><img src="../assets/ui/nav_gacha.svg" alt="抽卡"></span>抽卡</div>
-    <div class="tab"><span class="ic"><img src="../assets/ui/nav_village.svg" alt="村落"></span>村落</div>
+    <div class="tab on"><span class="ic"><img src="../assets/ui/nav_village.svg" alt="村落"></span>村落</div>
   </div>
 
 </div>
