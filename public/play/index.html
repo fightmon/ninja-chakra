@@ -1898,6 +1898,7 @@
       async doRename() { const i = getTeamIdx(), v = await uiPrompt({ title: '隊伍名稱', message: '最多 6 字,留空=隊' + (i + 1), value: teamCustomName(i), maxLen: 6 }); if (v != null) { renameTeam(i, v); this.updateSwitcher(); } }
       confirm() { saveTeamAt(getTeamIdx(), this.slots.map(s => s.cardId).filter(Boolean)); this.scene.manager.start('home'); this.scene.manager.stop('team'); }   // 存當前隊 + 回大廳(未滿也可離開,出戰時再擋)
       tutTeamCoach() {   // 編隊教學:綠框說明(統一教學風格)
+        this._setDomUI(false);   // 教學也是 canvas modal→同樣蓋不住 DOM UI,先藏
         const g = this.add.container(0, 0).setDepth(200);
         const dim = this.add.rectangle(CX, H / 2, W, H, 0x000000, 0.55).setInteractive(); g.add(dim);
         const cy = Math.round(H * 0.52);
@@ -1906,7 +1907,7 @@
         g.add(this.add.text(CX, cy - 18, '① 點下方卡片 → 放進上方 5 個宮位\n② 👑 中央 = 隊長\n③ 放滿 5 隻 → 按右下「✅ 確定」完成!', { fontFamily: EMOJIFONT, fontSize: '15px', color: '#eafce0', align: 'left', lineSpacing: 9, wordWrap: { width: W - 72 } }).setOrigin(0.5));
         const ok = this.add.rectangle(CX, cy + 78, 230, 46, 0x2e5a2c, 0.97).setStrokeStyle(3, 0x6aaa4c).setInteractive(); g.add(ok);
         g.add(this.add.text(CX, cy + 78, '我知道了,開始編隊', { fontFamily: EMOJIFONT, fontSize: '16px', color: '#eafce0', fontStyle: 'bold' }).setOrigin(0.5));
-        const close = () => { g.destroy(); this.tutTeamArmed = true; this.refreshStart(); };
+        const close = () => { g.destroy(); this._setDomUI(true); this.tutTeamArmed = true; this.refreshStart(); };
         ok.on('pointerup', close); dim.on('pointerup', close);
       }
       cardAt(x, y) { if (y < this.vpTop || y > this.vpBot) return null; for (const c of this.cards) { if (!c.visible) continue; if (Math.abs(x - c.x) <= 36 && Math.abs(y - (c.y - this.scroll)) <= 36) return c; } return null; }   // 場景層命中:卡世界位置=(c.x, c.y-scroll),半徑 36
@@ -1992,9 +1993,11 @@
         const lTxt = this.add.text(lx, ly, 'Lv.' + getCardLv(cd.id), { fontFamily: EMOJIFONT, fontSize: '13px', color: '#ffffff', fontStyle: 'bold' }).setOrigin(0.5).setResolution(3);   // resolution 3=高倍率算文字貼圖→畫布放大也不糊
         slot.cont.add(lBg); slot.cont.add(lTxt); slot._ov.push(lBg, lTxt);
       }
+      _setDomUI(on) { [this.sortDom, this.confirmDom].forEach(d => { if (d && d.node) d.setVisible(on); }); }   // 排序列/確定鈕是 DOM overlay,永遠浮在 canvas 上→canvas 內 modal(詳情/教學)蓋不住,開 modal 時整組隱藏
       showCardDetail(cd) {   // 久按卡片→就地詳細(共用 cardDetailPanel,版面與卡冊完全一致,只少管理鈕)
         if (this._detailG) this._detailG.destroy();
-        const g = this._detailG = this.add.container(0, 0).setDepth(100), close = () => { if (this._detailG) { this._detailG.destroy(); this._detailG = null; } };
+        this._setDomUI(false);   // 藏 DOM UI(排序列+確定鈕),關閉時恢復
+        const g = this._detailG = this.add.container(0, 0).setDepth(100), close = () => { if (this._detailG) { this._detailG.destroy(); this._detailG = null; } this._setDomUI(true); };
         _ensureFullArt(this, cd.id, () => { if (this._detailG) this.showCardDetail(cd); });   // bench 卡只載縮圖→開詳情才補大圖,載好重開
         cardDetailPanel(this, o => { g.add(o); return o; }, cd, { manage: false, onClose: close });
       }
