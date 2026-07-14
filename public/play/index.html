@@ -58,7 +58,7 @@
     /* ===== 純邏輯(N/EL/SHAPES/CONFIG/computeClears/種子亂數 等戰鬥核心已抽到 battle-core.js,瀏覽器當共用全域)===== */
     const KEYS = ['fire', 'wind', 'thunder', 'earth', 'water'];
     const MONSTER_IMG = { water: 'art/monsters/slime_water.png', fire: 'art/monsters/slime_fire.png', thunder: 'art/monsters/slime_thunder.png', earth: 'art/monsters/slime_earth.png', wind: 'art/monsters/slime_wind.png' };   // 舊五屬史萊姆(fallback);無對應則用 emoji 臉。圖檔放 001_website/art/monsters/
-    const CARD_ART = { c03: 1, c06: 1, c19: 1, c10: 1, c12: 1, c02: 1, c05: 1, c08: 1, c09: 1, c11: 1, c13: 1, c16: 1, c20: 1, c23: 1, c27: 1, c15: 1, c18: 1, c22: 1, c26: 1, c30: 1, c31: 1, c32: 1, c33: 1, c34: 1, c35: 1, c14: 1, c17: 1, c21: 1, c24: 1, c28: 1, c01: 1, c04: 1, c07: 1, c25: 1, c29: 1, c36: 1, c37: 1, c38: 1, c39: 1, c40: 1, c41: 1, c42: 1, c43: 1, c44: 1, c45: 1, c46: 1, c47: 1, c48: 1, c49: 1, c50: 1, c51: 1, c52: 1, c53: 1, c54: 1, c55: 1, c56: 1, c57: 1, c58: 1, c59: 1, c60: 1 };   // 有角色圖的卡:犬/貓/鼠/台灣/兔/魚(c14,17,21,24,28)/鳥(c01,04,07,25,29)/妖·蜘蛛(c36-c40,1→2星換_e圖)/妖·鬼(c41-c45,1→2星換_e圖),各火水雷土風 → art/cards/<id>_thumb.webp+_full.webp
+    const CARD_ART = { c03: 1, c06: 1, c19: 1, c10: 1, c12: 1, c02: 1, c05: 1, c08: 1, c09: 1, c11: 1, c13: 1, c16: 1, c20: 1, c23: 1, c27: 1, c15: 1, c18: 1, c22: 1, c26: 1, c30: 1, c31: 1, c32: 1, c33: 1, c34: 1, c35: 1, c14: 1, c17: 1, c21: 1, c24: 1, c28: 1, c01: 1, c04: 1, c07: 1, c25: 1, c29: 1, c36: 1, c37: 1, c38: 1, c39: 1, c40: 1, c41: 1, c42: 1, c43: 1, c44: 1, c45: 1, c46: 1, c47: 1, c48: 1, c49: 1, c50: 1, c51: 1, c52: 1, c53: 1, c54: 1, c55: 1, c56: 1, c57: 1, c58: 1, c59: 1, c60: 1, c61: 1, c62: 1, c63: 1, c64: 1, c65: 1 };   // 有角色圖的卡:犬/貓/鼠/台灣/兔/魚(c14,17,21,24,28)/鳥(c01,04,07,25,29)/妖·蜘蛛(c36-c40,1→2星換_e圖)/妖·鬼(c41-c45,1→2星換_e圖),各火水雷土風 → art/cards/<id>_thumb.webp+_full.webp
     function cardArtKey(id, size) { if (id && EVO_CARDS[id] && getCardEvo(id) >= 1) return 'card_' + id + '_e_' + size; return (id && CARD_ART[id]) ? ('card_' + id + '_' + size) : null; }   // 回傳 texture key(thumb/full),無圖回 null→退回 emoji;進化雜牌卡(evo≥1)→改回 <id>_e_<size>
     function _loadCardArt(scene, ids) { (ids || []).forEach(id => { if (!id || !CARD_ART[id]) return;['thumb', 'full'].forEach(s => { const k = 'card_' + id + '_' + s; if (!scene.textures.exists(k)) scene.load.image(k, 'art/cards/' + id + '_' + s + '.webp'); }); if (EVO_CARDS[id]) { ['thumb', 'full'].forEach(s => { const k = 'card_' + id + '_e_' + s; if (!scene.textures.exists(k)) scene.load.image(k, 'art/cards/' + id + '_e_' + s + '.webp'); }); } }); }   // 按需載卡圖(戰鬥/大廳只載出戰隊);繪製端皆有 textures.exists 保護→沒載到退回 emoji;進化雜牌卡額外多載 _e 進化圖(兩形都要有)
     function _loadAllCardArt(scene) { _loadCardArt(scene, Object.keys(CARD_ART)); }   // 卡冊/編隊/合成/圖鑑=看全部卡→進場才載全部
@@ -92,9 +92,10 @@
       { emoji: '🧱', name: '妖·牆', color: '#c9a86a', cards: { fire: 'c46', water: 'c47', thunder: 'c48', earth: 'c49', wind: 'c50' } },   // 雜牌卡(未標家族,保留 genin 1星,進化2星換城牆怪圖);土城盾兵/盾王借此圖
       { emoji: '🔮', name: '妖·魔女', color: '#b06ad0', cards: { fire: 'c51', water: 'c52', thunder: 'c53', earth: 'c54', wind: 'c55' } },   // 雜牌卡(未標家族,保留 genin 1星,進化2星換大魔女圖);風城消卡片塊敵人/魔王借此圖
       { emoji: '💊', name: '妖·藥師', color: '#4fbf8f', cards: { fire: 'c56', water: 'c57', thunder: 'c58', earth: 'c59', wind: 'c60' } },   // 雜牌卡(未標家族,保留 genin 1星,進化2星換大藥師圖,完全鏡射魔女);補血系高rcv中攻;水城補師怪/魔王借此圖
+      { emoji: '💎', name: '寶玉', color: '#8fd0e0', cards: { fire: 'c61', water: 'c62', thunder: 'c63', earth: 'c64', wind: 'c65' } },   // 進化素材(chunin 2★晶精);屬性城掉落、進化消耗;不進 EVO_CARDS
     ];
     const DEX_EL5 = ['fire', 'water', 'thunder', 'earth', 'wind'];
-    const DEX_ASSIGNED = new Set(['c03', 'c06', 'c19', 'c10', 'c12', 'c02', 'c05', 'c08', 'c09', 'c11', 'c13', 'c16', 'c20', 'c23', 'c27', 'c15', 'c18', 'c22', 'c26', 'c30', 'c14', 'c17', 'c21', 'c24', 'c28', 'c31', 'c32', 'c33', 'c34', 'c35', 'c01', 'c04', 'c07', 'c25', 'c29', 'c36', 'c37', 'c38', 'c39', 'c40', 'c41', 'c42', 'c43', 'c44', 'c45', 'c46', 'c47', 'c48', 'c49', 'c50', 'c51', 'c52', 'c53', 'c54', 'c55', 'c56', 'c57', 'c58', 'c59', 'c60']);   // 已歸物種隊(犬/貓/鳥/鼠/魚/兔/台灣/妖蜘蛛/妖鬼/妖牆/妖魔女/妖藥師)的卡 → 不重複進「未歸隊」
+    const DEX_ASSIGNED = new Set(['c03', 'c06', 'c19', 'c10', 'c12', 'c02', 'c05', 'c08', 'c09', 'c11', 'c13', 'c16', 'c20', 'c23', 'c27', 'c15', 'c18', 'c22', 'c26', 'c30', 'c14', 'c17', 'c21', 'c24', 'c28', 'c31', 'c32', 'c33', 'c34', 'c35', 'c01', 'c04', 'c07', 'c25', 'c29', 'c36', 'c37', 'c38', 'c39', 'c40', 'c41', 'c42', 'c43', 'c44', 'c45', 'c46', 'c47', 'c48', 'c49', 'c50', 'c51', 'c52', 'c53', 'c54', 'c55', 'c56', 'c57', 'c58', 'c59', 'c60', 'c61', 'c62', 'c63', 'c64', 'c65']);   // 已歸物種隊(犬/貓/鳥/鼠/魚/兔/台灣/妖蜘蛛/妖鬼/妖牆/妖魔女/妖藥師)的卡 → 不重複進「未歸隊」
     // 物種「種族」顯示(覆蓋詳細頁的人類/妖怪/靈獸;只改顯示,不動底層 race)→ 已歸隊的卡顯示其物種
     const CARD_SPECIES = {};
     [['🐱', '貓', '#8fd16a', 0x1d3a1f, ['c02', 'c05', 'c08', 'c09', 'c11']],
@@ -108,7 +109,8 @@
     ['👹', '妖', '#ff6a4a', 0x2e1a1a, ['c41', 'c42', 'c43', 'c44', 'c45']],
     ['🧱', '妖', '#c9a86a', 0x2a2418, ['c46', 'c47', 'c48', 'c49', 'c50']],
     ['🔮', '妖', '#b06ad0', 0x241a2e, ['c51', 'c52', 'c53', 'c54', 'c55']],
-    ['💊', '妖', '#4fbf8f', 0x18332a, ['c56', 'c57', 'c58', 'c59', 'c60']]
+    ['💊', '妖', '#4fbf8f', 0x18332a, ['c56', 'c57', 'c58', 'c59', 'c60']],
+    ['💎', '寶玉', '#8fd0e0', 0x16313a, ['c61', 'c62', 'c63', 'c64', 'c65']]
     ].forEach(([e, n, c, bg, ids]) => ids.forEach(id => CARD_SPECIES[id] = { e, n, c, bg }));
     // ===== 程序化音效(WebAudio 即時合成,零檔案/零版權/離線)=====
     const SFX = (() => {
@@ -488,6 +490,12 @@
       { id: 'c58', name: '雷藥師', el: 'thunder', race: 'yokai', rank: 'genin', atk: 100, hp: 100, rcv: 24, attrs: ['thunder'] },
       { id: 'c59', name: '土藥師', el: 'earth', race: 'yokai', rank: 'genin', atk: 70, hp: 165, rcv: 26, attrs: ['earth'] },
       { id: 'c60', name: '風藥師', el: 'wind', race: 'yokai', rank: 'genin', atk: 90, hp: 115, rcv: 26, attrs: ['wind'] },
+      /* ── 💎 寶玉卡系(進化素材,chunin 2★晶精):進化時消耗 1 張對應屬性寶玉卡(取代舊寶玉貨幣);屬性城掉落。肉盾型高HP低攻,五屬同數值=素材套組。不進 EVO_CARDS(不換名換圖) ── */
+      { id: 'c61', name: '火晶精', el: 'fire', race: 'spirit', rank: 'chunin', atk: 80, hp: 260, rcv: 45, attrs: ['fire'] },
+      { id: 'c62', name: '水晶精', el: 'water', race: 'spirit', rank: 'chunin', atk: 80, hp: 260, rcv: 45, attrs: ['water'] },
+      { id: 'c63', name: '雷晶精', el: 'thunder', race: 'spirit', rank: 'chunin', atk: 80, hp: 260, rcv: 45, attrs: ['thunder'] },
+      { id: 'c64', name: '土晶精', el: 'earth', race: 'spirit', rank: 'chunin', atk: 80, hp: 260, rcv: 45, attrs: ['earth'] },
+      { id: 'c65', name: '風晶精', el: 'wind', race: 'spirit', rank: 'chunin', atk: 80, hp: 260, rcv: 45, attrs: ['wind'] },
     ];
     // 蜘蛛系 1★→2★進化換名換圖表:進化階(getCardEvo)≥1 → 顯示「岩甲◯蜘蛛」+ <id>_e_ 圖(canEvolve 已擋≥1 不可再進到 evo2,只有兩形)
     const SPIDER_EVO = { c36: '岩甲火蜘蛛', c37: '岩甲水蜘蛛', c38: '岩甲雷蜘蛛', c39: '岩甲土蜘蛛', c40: '岩甲風蜘蛛' };
@@ -646,7 +654,7 @@
       const V = ({
         ok: ['#35a866', '#35a866', '#fff', '#26824e'], ghost: ['#f6f4f1', '#e4ded4', '#8a939b', '#ddd7cd'],
         sell: ['#fff6ea', '#e6a54e', '#b46a1c', '#e8c78e'], bad: ['#e0663a', '#e0663a', '#fff', '#a53f34'],
-        ok2: ['#4a9a3c', '#4a9a3c', '#fff', '#367029']
+        ok2: ['#4a9a3c', '#4a9a3c', '#fff', '#367029'], purple: ['#7c5cd6', '#7c5cd6', '#fff', '#5c3fae']   // purple=轉蛋結印池(demo .pill.purple)
       })[variant] || ['#f6f4f1', '#e4ded4', '#8a939b', '#ddd7cd'];
       el.style.backgroundColor = V[0]; el.style.borderColor = V[1]; el.style.color = V[2];
       el.style.boxShadow = 'inset 0 1px 0 rgba(255,255,255,.45), 0 3px 0 ' + V[3] + ', 0 5px 9px rgba(43,51,58,.16)';
@@ -1492,7 +1500,10 @@
     function setLeader(id) { mutSave(s => { const t = [id].concat((s.team || []).filter(x => x !== id)).slice(0, 5); s.team = t; if (s.teams && s.teams[s.teamIdx || 0]) s.teams[s.teamIdx || 0].ids = t.slice(); }); }   // 設為隊長(放隊首)
     /* 進化(PAD/神魔共通:滿級+寶玉素材→升階):gems 寶玉 + cardEvo 進化階 */
     const EVO_MAX = 2, EVO_MULT = [1, 1.6, 2.4];
-    function evoReq(tier) { return { gems: 3 + tier * 3, coins: 1000 + tier * 2000 }; }
+    function evoReq(tier) { return { gems: 3 + tier * 3, coins: 1000 + tier * 2000 }; }   // gems 欄位進化已不用(改吃寶玉卡),coins 仍用
+    const JEWEL_OF = { fire: 'c61', water: 'c62', thunder: 'c63', earth: 'c64', wind: 'c65' };   // 進化素材:各屬「寶玉卡」(取代舊寶玉貨幣;伺服器 evolve 會消耗 1 張對應屬性寶玉卡)
+    function jewelName(el) { const c = ROSTER.find(x => x.id === JEWEL_OF[el]); return c ? c.name : (EL[el] ? EL[el].name : el) + '晶精'; }
+    function ownedCardCount(id) { return loadSave().cards.filter(c => c.id === id).length; }   // 背包中某卡種的個體張數
     function getCardEvo(id) { return loadSave().cardEvo[id] || 0; }
     function cardStars(id) { const c = ROSTER.find(x => x.id === id) || {}; return Math.min(6, ({ genin: 1, chunin: 2, jonin: 3, kage: 4 }[c.rank] || 1) + getCardEvo(id)); }
     function starStr(id) { return '★'.repeat(cardStars(id)); }
@@ -1505,7 +1516,8 @@
       if (t >= EVO_MAX) return { ok: false, msg: '已達進化上限' };
       if (getCardLv(id) < MAXLV) return { ok: false, msg: '需先練滿 Lv.' + MAXLV };
       const req = evoReq(t);
-      if (getGems(c.el) < req.gems) return { ok: false, msg: '需 ' + req.gems + ' 顆' + EL[c.el].name + '寶玉(有' + getGems(c.el) + ')' };
+      const jid = JEWEL_OF[c.el];
+      if (!jid || ownedCardCount(jid) < 1) return { ok: false, msg: '需 1 張「' + jewelName(c.el) + '」進化素材' };   // 伺服器仍會再驗一次(真相在後端)
       if ((getMeta().coins || 0) < req.coins) return { ok: false, msg: '需 ' + req.coins + ' 金' };
       return { ok: true, req: req };
     }
@@ -3059,7 +3071,7 @@
         this._stuckWD = (this._stuckWD || 0) + 1;
         if (this._stuckWD >= 30) {
           this._stuckWD = 0;
-          const idle = !this.locked && !this.resultOpen && !this._rescueBusy && !this._stuckBanner && !this.drag && !this.earthSel && !this.earthDrag && !this.windPick && this.tut == null;
+          const idle = !this.locked && !this.resultOpen && !this._rescueBusy && !this._stuckHinting && !this.drag && !this.earthSel && !this.earthDrag && !this.windPick && this.tut == null;
           if (idle && this.board && this.tray && this.tray.some(t => t && !t.used && !t.locked) && !this.anyPlaceable()) { this._stuckConfirm = (this._stuckConfirm || 0) + 1; if (this._stuckConfirm >= 2) { this._stuckConfirm = 0; this.handleStuck(); } }
           else this._stuckConfirm = 0;
         }
@@ -4407,14 +4419,9 @@
           return false;
         });
       }
-      // 存塊能解圍→跳+脹動畫(flashStored) + 一條「不消失」的常駐提示條(玩家一動 stopStuckFX 才清)
+      // 存塊能解圍→只留存塊跳+脹+卡身光環(flashStored=透畫發光),讓玩家看出哪顆可拖;不跳字幕(舊版字幕橫在卡片列上會擋住卡片與存塊,2026-07-14 移除)
       showStoredEscapeHint() {
-        this.flashStored();
-        if (this._stuckBanner) this._stuckBanner.destroy();
-        const b = this._stuckBanner = this.add.container(0, 0).setDepth(2490);
-        b.add(roundRectG(this, CX, BY0 - 42, 320, 36, 18, 0x1a1206, 0.92, 0xffe066, 2));
-        b.add(this.add.text(CX, BY0 - 42, '💡 卡片上的屬塊可解圍 → 拖它上盤面!', { fontFamily: EMOJIFONT, fontSize: '15px', color: '#ffe066', fontStyle: 'bold' }).setOrigin(0.5));
-        this.tweens.add({ targets: b, alpha: { from: 0.55, to: 1 }, duration: 640, yoyo: true, repeat: -1 });
+        this.flashStored(); this._stuckHinting = true;   // 旗標:提示中→watchdog 別重觸發(取代舊 _stuckBanner 訊號),避免每秒重跑 flashStored 閃爍
       }
       // 花血/💎 重洗視窗(真卡死):血夠→花當前血 50%;血 ≤ 20% 滿血=太低不放血→改花💎1(無石頭則免費送一次);另有放棄
       showStuckModal() {
@@ -4495,6 +4502,7 @@
         if (this.stuckObj) { this.stuckObj.forEach(o => { if (o && o.destroy) o.destroy(); }); this.stuckObj = null; }
         if (this.stuckBlk) { this.stuckBlk.forEach(so => { if (so && so.active) so.setScale(1).setY(so._baseY != null ? so._baseY : so.y); }); this.stuckBlk = null; }
         if (this._stuckBanner) { this.tweens.killTweensOf(this._stuckBanner); this._stuckBanner.destroy(); this._stuckBanner = null; }   // 常駐解圍提示條也一併清
+        this._stuckHinting = false;   // 存塊解圍提示已收→watchdog 可重新檢查(玩家一動就清)
       }
       /* 土屬塊:兩段式搬移能量 — ①拖塊蓋住要抓的能量 ②再拖把它們整組搬到空位 */
       earthSelect(i, r, c) {
@@ -5490,24 +5498,40 @@
       }
       _briefSeen(dun) { return !!((loadSave().settings || {}).briefSeen || {})[dun]; }   // 🎓本關敵情簡報已勾「不再顯示」?
       _setBriefSeen(dun) { mutSave(s => { if (!s.settings) s.settings = {}; if (!s.settings.briefSeen) s.settings.briefSeen = {}; s.settings.briefSeen[dun] = true; }); }
-      showEnemyBrief(dun) {
-        const b = ENEMY_BRIEF[dun]; if (!b) return; this.resultOpen = true; const g = this.overlay(), cy = Math.round(H * 0.42), BW = Math.min(W - 24, 400);   // 中級敵情簡報:大字、分區、每城放「該招實際演示動畫」
-        const box = this.add.rectangle(CX, cy, BW, 456, 0x0e1710, 0.98).setStrokeStyle(3, 0x6aaa4c); g.add(box);
-        g.add(this.add.text(CX, cy - 198, '⚠ 敵情簡報', { fontFamily: EMOJIFONT, fontSize: '16px', color: '#ff9a8a', fontStyle: 'bold' }).setOrigin(0.5));
-        g.add(this.add.text(CX, cy - 167, b.name, { fontFamily: EMOJIFONT, fontSize: '28px', color: '#ffd56a', fontStyle: 'bold' }).setOrigin(0.5));
-        const timers = this._briefAnim(dun, CX, cy - 92, g);   // ★該招實際演示動畫(火蓄力/水十字愛心/雷落雷/土六角盾/風黑洞)
-        g.add(this.add.text(CX, cy - 14, b.icon + '  ' + b.skill, { fontFamily: EMOJIFONT, fontSize: '24px', color: '#ffe08a', fontStyle: 'bold' }).setOrigin(0.5));
-        g.add(this.add.rectangle(CX, cy + 16, BW - 64, 1, 0x3a5a34));
-        g.add(this.add.text(CX, cy + 40, '⚠ 威脅', { fontFamily: EMOJIFONT, fontSize: '15px', color: '#ff9a8a', fontStyle: 'bold' }).setOrigin(0.5));
-        g.add(this.add.text(CX, cy + 68, b.threat, { fontFamily: EMOJIFONT, fontSize: '16.5px', color: '#f3e2d0', align: 'center', wordWrap: { width: BW - 52 }, lineSpacing: 6 }).setOrigin(0.5));
-        g.add(this.add.text(CX, cy + 114, '💡 破法', { fontFamily: EMOJIFONT, fontSize: '15px', color: '#8fe89a', fontStyle: 'bold' }).setOrigin(0.5));
-        g.add(this.add.text(CX, cy + 142, b.counter, { fontFamily: EMOJIFONT, fontSize: '16.5px', color: '#c8f0c0', align: 'center', wordWrap: { width: BW - 52 }, lineSpacing: 6 }).setOrigin(0.5));
-        let dismiss = false; const cbY = cy + 182;
-        const cb = this.add.rectangle(CX - 104, cbY, 22, 22, 0x1c2a18).setStrokeStyle(2, 0x6aaa4c).setInteractive(); g.add(cb);
-        const mk = this.add.text(CX - 104, cbY, '✓', { fontFamily: EMOJIFONT, fontSize: '17px', color: '#bff09a', fontStyle: 'bold' }).setOrigin(0.5).setVisible(false); g.add(mk);
-        const lb = this.add.text(CX - 87, cbY, '以後不要再顯示(本關)', { fontFamily: EMOJIFONT, fontSize: '14px', color: '#cfe0b0' }).setOrigin(0, 0.5).setInteractive(); g.add(lb);
+      showEnemyBrief(dun) {   // 中級敵情簡報(2026-07-14 對齊 007_UI_demo result.html/showResult:白 .panel + 金標 + ink 內文 + tutBtn);量測後流式排版:一致間距、內文 18px 齊左、招式動畫放深色圓 viewport(ADD 混色需深底)
+        const b = ENEMY_BRIEF[dun]; if (!b) return; this.resultOpen = true;
+        const g = this.overlay(), BW = Math.min(W - 20, 366), innerW = BW - 48, leftX = CX - innerW / 2;
+        const diffName = (this.diff && this.diff.name) || '';
+        // 先建左對齊大字內文(18px)量測高度→流式排版才不會擠壓/溢出
+        const bodyStyle = { fontFamily: EMOJIFONT, fontSize: FS.sub, color: '#2b333a', align: 'left', wordWrap: { width: innerW, useAdvancedWrap: true }, lineSpacing: 6 };   // useAdvancedWrap:中文無空格才逐字折
+        const threatT = this.add.text(0, 0, b.threat, bodyStyle).setOrigin(0, 0).setResolution(2);
+        const counterT = this.add.text(0, 0, b.counter, bodyStyle).setOrigin(0, 0).setResolution(2);
+        const th = Math.ceil(threatT.height), ch = Math.ceil(counterT.height);
+        const G = 13, GS = 6, GB = 28, PAD = 22, vR = 44;   // G=區塊間距(一致)、GS=標籤→內文(貼近成組)、GB=勾選→按鈕(拉開)、PAD=卡內上下留白
+        const Heye = 20, Htitle = 34, Hview = vR * 2, Hskill = 26, Hlbl = 24, Hcb = 24, Hbtn = 52;
+        const contentH = Heye + G + Htitle + G + Hview + G + Hskill + G + 1 + G + Hlbl + GS + th + G + Hlbl + GS + ch + G + Hcb + GB + Hbtn;
+        let PH = contentH + PAD * 2, cy = Math.round(H / 2), top = cy - PH / 2;
+        if (top < 8) { top = 8; cy = top + PH / 2; }   // 太高→貼上邊防切
+        g.add(this.add.image(CX, cy, _softPanelTex(this, BW, PH, 18)).setDisplaySize(BW + 80, PH + 80));   // demo .panel 白面板(柔影,任意 dpi 平滑)
+        const T2 = (yc, s, fs, col, bold, ox, x) => g.add(this.add.text(x == null ? CX : x, yc, s, { fontFamily: EMOJIFONT, fontSize: fs, color: col, fontStyle: bold ? 'bold' : 'normal' }).setOrigin(ox == null ? 0.5 : ox, 0.5).setResolution(2));
+        let y = top + PAD;
+        T2(y + Heye / 2, '⚠ 敵情簡報', FS.cap, '#e0663a', true); y += Heye + G;   // eyebrow(警示橘,置中)
+        T2(y + Htitle / 2, b.name + (diffName ? ' - ' + diffName : ''), FS.title, '#c8912a', true); y += Htitle + G;   // 金標題 + 難度(如「風之峽谷 - 中級」)
+        { const vy = y + vR; g.add(this.add.circle(CX, vy, vR, 0x161d16, 1).setStrokeStyle(1.5, 0xd8e0cf)); this._briefT = this._briefAnim(dun, CX, vy, g); } y += Hview + G;   // 深色圓 viewport + 該招演示動畫
+        T2(y + Hskill / 2, b.icon + ' ' + b.skill, FS.sub, '#2b333a', true); y += Hskill + G;
+        g.add(this.add.rectangle(CX, y + 0.5, innerW, 1, 0xe4ded4)); y += 1 + G;   // divider
+        T2(y + Hlbl / 2, '⚠ 威脅', FS.sub, '#e0663a', true, 0, leftX); y += Hlbl + GS;   // 威脅標籤(齊左)
+        threatT.setPosition(leftX, y); g.add(threatT); y += th + G;                    // 威脅內文(齊左,18px)
+        T2(y + Hlbl / 2, '💡 破法', FS.sub, '#2f8a5b', true, 0, leftX); y += Hlbl + GS;   // 破法標籤(齊左)
+        counterT.setPosition(leftX, y); g.add(counterT); y += ch + G;                   // 破法內文(齊左,18px)
+        const cbcy = y + Hcb / 2; let dismiss = false;   // 勾選框(白底灰框、✓ 綠)
+        const cb = this.add.rectangle(leftX + 10, cbcy, 20, 20, 0xffffff, 1).setStrokeStyle(2, 0xc9c0b2).setInteractive(); g.add(cb);
+        const mk = this.add.text(leftX + 10, cbcy, '✓', { fontFamily: EMOJIFONT, fontSize: '15px', color: '#2f8a5b', fontStyle: 'bold' }).setOrigin(0.5).setResolution(2).setVisible(false); g.add(mk);
+        const lb = this.add.text(leftX + 28, cbcy, '以後不要再顯示(本關)', { fontFamily: EMOJIFONT, fontSize: FS.cap, color: '#6b7178' }).setOrigin(0, 0.5).setResolution(2).setInteractive(); g.add(lb);
         const tog = () => { dismiss = !dismiss; mk.setVisible(dismiss); }; cb.on('pointerup', tog); lb.on('pointerup', tog);
-        this.tutBtn(g, cy + 216, '了解,開打!', () => { timers.forEach(t => t && t.remove()); if (dismiss) this._setBriefSeen(dun); g.destroy(); this.resultOpen = false; });
+        y += Hcb + GB;
+        const timers = this._briefT;
+        this.tutBtn(g, y + Hbtn / 2, '了解,開打!', () => { timers.forEach(t => t && t.remove()); if (dismiss) this._setBriefSeen(dun); g.destroy(); this.resultOpen = false; });   // 與戰鬥結算同款精緻鈕(離卡底留 PAD)
         g.alpha = 0; this.tweens.add({ targets: g, alpha: 1, duration: 300 });
       }
       _briefAnim(dun, x, y, g) {
@@ -5864,7 +5888,7 @@
         this.rect(CX, py, 330, 220, 0x241a10).setStrokeStyle(2, 0x8a6a3a);
         this.txt(CX, py - 84, '✨ 確認進化?', '16px', '#ffd9a0', 0.5, true);
         this.txt(CX, py - 52, cardName(cd.id) + ' → ' + nextName, '13px', '#cfc0a8', 0.5);
-        this.txt(CX, py - 20, '需 ' + req.gems + ' 顆' + EL[cd.el].name + '寶玉 + ' + req.coins + ' 金幣', '14px', '#ffe08a', 0.5, true);
+        this.txt(CX, py - 20, '需 1 張「' + jewelName(cd.el) + '」+ ' + req.coins + ' 金幣', '14px', '#ffe08a', 0.5, true);
         this.txt(CX, py + 6, '(等級會歸 1 重練)', '12px', '#cfc0a8', 0.5);
         this.btn(CX - 80, py + 62, 144, 40, '✖ 取消', () => { this.askEvo = false; this.rebuild(); }, { col: 0x2a2218, stroke: 0x5a4a32, color: '#cfc0a8', bold: true, fs: '14px' });
         this.btn(CX + 80, py + 62, 144, 40, '✔ 確定進化', () => {   // 🔐 進化改打伺服器,async 期間防連點(_busyEvo)
@@ -5921,7 +5945,7 @@
         this.tab = 'gacha'; this.gachaResult = out; this.gachaRevealed = false; this._afterPull = 'team';
         this.rebuild();
       }
-      rebuild() { this.tweens.killAll(); if (this.layer) this.layer.destroy(); this.layer = this.add.container(0, 0); this.topBar(); this.body(); this.nav(); }
+      rebuild() { this.tweens.killAll(); if (this._tabDom) { this._tabDom.forEach(d => { if (d) d.destroy(); }); this._tabDom = null; } if (this.layer) this.layer.destroy(); this.layer = this.add.container(0, 0); this.topBar(); this.body(); this.nav(); }   // _tabDom=分頁 DOM 精緻鈕(轉蛋抽卡/設定 set-pill;scene 級不在 layer)→手動銷毀,免切分頁殘留
       L(o) { this.layer.add(o); return o; }
       txt(x, y, s, size, col, ox, bold) { return this.L(this.add.text(x, y, s, { fontFamily: EMOJIFONT, fontSize: Math.max(15, parseInt(size || '16', 10) || 16) + 'px', color: col || '#f3e9d8', fontStyle: bold ? 'bold' : 'normal' }).setOrigin(ox == null ? 0.5 : ox, 0.5)); }   // 全選單字級最小 15px(手機可讀)
       rect(x, y, w, h, col, a) { return this.L(this.add.rectangle(x, y, w, h, col, a == null ? 1 : a)); }
@@ -5937,32 +5961,50 @@
         this.tweens.add({ targets: t, alpha: 0, delay: 4600, duration: 600, onComplete: () => t.destroy() });   // 停 ~4.6 秒再淡出(出現後約 5 秒消失)
         this.time.delayedCall(5400, () => { if (t && t.active) t.destroy(); });
       }   // ★保險:rebuild() 的 tweens.killAll() 會殺掉上面淡出 tween → 用 delayedCall(killAll 殺不到 time 事件)確保一定消失
-      showDaily() {
+      showDaily() {   // 🎁 每日登入(2026-07-14 鏡射 007_UI_demo daily.html:白色 .panel 彈窗 + 3×3 日卡 grid + DOM 精緻領取鈕)
         if (this._dailyG) this._dailyG.destroy();
+        if (this._dailyBtnDom) { this._dailyBtnDom.destroy(); this._dailyBtnDom = null; }   // 領取鈕=DOM(scene 級)→手動清
+        this._busyDaily = false;
         const T = UI(), g = this.add.container(0, 0).setDepth(1600); this._dailyG = g; const cur = dailyIndex();
-        g.add(this.add.rectangle(CX, H / 2, W, H, 0x0e0a16, 0.72).setInteractive());   // 半暗底(亮色卡在上更跳)
-        g.add(this.add.text(CX, H * 0.19, '🎁 每日登入獎勵', { fontFamily: EMOJIFONT, fontSize: FS.title, color: '#ffffff', fontStyle: 'bold' }).setOrigin(0.5).setStroke('#000000', 4));
-        g.add(this.add.text(CX, H * 0.19 + 30, '每天登入可領一次', { fontFamily: EMOJIFONT, fontSize: FS.cap, color: '#e2ddd4' }).setOrigin(0.5).setStroke('#000000', 3));
-        const step = Math.round((W - 36) / 7), cw = step - 8, ch = 68, x0 = CX - 3 * step, y = Math.round(H * 0.40);
-        DAILY.forEach((rw, i) => {
-          const x = x0 + i * step, on = i === cur, done = i < cur;
-          g.add(roundRectG(this, x, y, cw, ch, 12, on ? T.elTint.thunder : (done ? T.surf2 : T.surf), 1, on ? T.gold : T.divider, on ? 3 : 1.5));   // 白圓角日卡;當日=金框金底、已領=淡
-          g.add(this.add.text(x, y - ch / 2 + 13, 'D' + (i + 1), { fontFamily: EMOJIFONT, fontSize: '11px', color: on ? T.goldTx : T.ink3, fontStyle: on ? 'bold' : 'normal' }).setOrigin(0.5));
-          g.add(this.add.text(x, y + 2, rw.ic, { fontFamily: EMOJIFONT, fontSize: '22px' }).setOrigin(0.5).setAlpha(done ? 0.35 : 1));
-          if (done) g.add(this.add.text(x, y + ch / 2 - 12, '✓', { fontFamily: EMOJIFONT, fontSize: '13px', color: '#2f8a5b', fontStyle: 'bold' }).setOrigin(0.5));
+        g.add(this.add.rectangle(CX, H / 2, W, H, 0x000000, 0.5).setInteractive());   // 半透明黑背幕(demo .backdrop)
+        const PW = Math.min(340, W - 24), PH = 372, panelY = Math.round(H / 2), top = panelY - PH / 2;
+        g.add(this.add.image(CX, panelY, _softPanelTex(this, PW, PH, 20)));   // 白色 .panel 彈窗(柔影,任意 dpi 平滑)
+        g.add(this.add.text(CX, top + 30, '🎁 每日登入獎勵', { fontFamily: EMOJIFONT, fontSize: FS.title, color: T.ink, fontStyle: 'bold' }).setOrigin(0.5));
+        g.add(this.add.text(CX, top + 56, '連續登入第 ' + (cur + 1) + ' 天 · 每天可領一次', { fontFamily: EMOJIFONT, fontSize: FS.micro, color: T.ink2 }).setOrigin(0.5));
+        // 日卡:3 欄 grid,D1~D6 兩排、D7 週滿獎跨滿寬
+        const gap = 8, innerW = PW - 32, colW = Math.floor((innerW - 2 * gap) / 3), cardH = 62, col = [CX - (colW + gap), CX, CX + (colW + gap)];
+        const drawDay = (cx, cy, cw2, i, wide) => {
+          const rw = DAILY[i], on = i === cur, done = i < cur, dim = done ? 0.5 : 1;
+          g.add(roundRectG(this, cx, cy, cw2, cardH, 12, on ? 0xfff6e0 : (done ? T.surf2 : T.surf), 1, on ? T.gold : T.divider, on ? 2.5 : 1.5));   // 白日卡;今日=金框金淡底、已領=淡灰
+          g.add(this.add.text(cx, cy - cardH / 2 + 12, wide ? 'D7 · 週滿獎' : ('D' + (i + 1)), { fontFamily: EMOJIFONT, fontSize: '11px', color: on ? T.goldTx : T.ink3, fontStyle: (on || wide) ? 'bold' : 'normal' }).setOrigin(0.5).setAlpha(done ? 0.6 : 1));
+          if (wide) {
+            g.add(this.add.text(cx - 34, cy + 6, rw.ic, { fontFamily: EMOJIFONT, fontSize: '28px' }).setOrigin(0.5).setAlpha(dim));
+            g.add(this.add.text(cx + 2, cy + 6, '魔法石 ×' + rw.v, { fontFamily: EMOJIFONT, fontSize: FS.cap, color: T.ink, fontStyle: 'bold' }).setOrigin(0, 0.5).setAlpha(dim));
+          } else {
+            g.add(this.add.text(cx, cy + 3, rw.ic, { fontFamily: EMOJIFONT, fontSize: '24px' }).setOrigin(0.5).setAlpha(dim));
+            g.add(this.add.text(cx, cy + cardH / 2 - 11, '×' + rw.v, { fontFamily: EMOJIFONT, fontSize: '12px', color: T.ink, fontStyle: 'bold' }).setOrigin(0.5).setAlpha(dim));
+          }
+          if (done) g.add(this.add.text(cx + cw2 / 2 - 11, cy - cardH / 2 + 11, '✓', { fontFamily: EMOJIFONT, fontSize: '13px', color: '#2f8a5b', fontStyle: 'bold' }).setOrigin(0.5));
+          if (on) { g.add(roundRectG(this, cx, cy - cardH / 2 - 3, 42, 16, 8, T.gold, 1, null, 0)); g.add(this.add.text(cx, cy - cardH / 2 - 3, '今日', { fontFamily: EMOJIFONT, fontSize: '10px', color: '#4a3510', fontStyle: 'bold' }).setOrigin(0.5)); }
+        };
+        [0, 1, 2].forEach(i => drawDay(col[i], top + 120, colW, i, false));
+        [3, 4, 5].forEach((i, k) => drawDay(col[k], top + 190, colW, i, false));
+        drawDay(CX, top + 260, innerW, 6, true);   // D7 滿寬
+        // 領取鈕=編成確定鈕精緻款(DOM overlay + stylePillBtn)
+        const close = () => { if (this._dailyBtnDom) { this._dailyBtnDom.destroy(); this._dailyBtnDom = null; } if (this._dailyG) { this._dailyG.destroy(); this._dailyG = null; } };
+        const btnEl = document.createElement('button');
+        stylePillBtn(btnEl, (PW - 44) + 'px', 'ok'); btnEl.textContent = '🎁 領取 D' + (cur + 1) + ' 獎勵';
+        btnEl.addEventListener('click', async () => {
+          if (this._busyDaily) return; this._busyDaily = true;
+          const r = await claimDailyServer(); close(); this.rebuild();   // ★先 rebuild(會 killAll)再 toast → toast 淡出 tween 不被殺
+          if (r) this.toast('🎁 領到 ' + r.ic + ' ' + r.label + (r.gemEl ? '(' + EL[r.gemEl].name + '屬)' : ''));   // undefined(離線)/null(已領過)→靜默關閉
         });
-        g.add(this.add.text(CX, y + 62, '今天:' + DAILY[cur].ic + ' ' + DAILY[cur].label, { fontFamily: EMOJIFONT, fontSize: FS.sub, color: '#ffffff', fontStyle: 'bold' }).setOrigin(0.5).setStroke('#000000', 3));
-        const by = y + 106, bw = 250, bh = 52;
-        g.add(roundRectG(this, CX, by, bw, bh, bh / 2, 0x35a866, 1, null, 0));   // 綠色領取藥丸
-        g.add(this.add.text(CX, by, '領取', { fontFamily: EMOJIFONT, fontSize: FS.sub, color: '#ffffff', fontStyle: 'bold' }).setOrigin(0.5));
-        const bhit = this.add.rectangle(CX, by, bw, bh, 0x000000, 0.001).setInteractive(); g.add(bhit);
-        bhit.on('pointerup', async () => {
-          const r = await claimDailyServer(); g.destroy(); this._dailyG = null;
-          this.rebuild(); if (r) this.toast('🎁 領到 ' + r.ic + ' ' + r.label + (r.gemEl ? '(' + EL[r.gemEl].name + '屬)' : ''));   // undefined(離線)/null(已領過)→靜默關閉不彈獎勵
-        });   // ★先 rebuild(會 killAll)再 toast → toast 的淡出 tween 不被殺,正常 5 秒淡出
-        const clc = this.add.circle(W - 28, H * 0.12, 17, T.surf, 0.95).setStrokeStyle(1.5, T.divider).setInteractive(); g.add(clc);   // ✕ 白圓關閉鈕
-        g.add(this.add.text(W - 28, H * 0.12, '✕', { fontFamily: EMOJIFONT, fontSize: '16px', color: T.ink2, fontStyle: 'bold' }).setOrigin(0.5));
-        clc.on('pointerup', () => { g.destroy(); this._dailyG = null; });
+        this._dailyBtnDom = this.add.dom(CX, top + 328, btnEl).setDepth(1601);
+        // ✕ 角落白圓關閉鈕(demo .closebtn,貼彈窗右上角)
+        const clcX = CX + PW / 2 - 8, clcY = top + 6;
+        const clc = this.add.circle(clcX, clcY, 16, T.surf, 1).setStrokeStyle(1.5, T.divider).setInteractive(); g.add(clc);
+        g.add(this.add.text(clcX, clcY, '✕', { fontFamily: EMOJIFONT, fontSize: '15px', color: T.ink2, fontStyle: 'bold' }).setOrigin(0.5));
+        clc.on('pointerup', close);
       }
       go(key) { this.scene.manager.start(key); this.scene.manager.stop('home'); }
       switchTab(t) { this.tab = t; this.gachaResult = null; this.rebuild(); }
@@ -6262,14 +6304,25 @@
           y += 78;
         });
       }
-      bShop() {
-        const m = getMeta(), T = UI(), cTop = 84, cBot = H - 60, GREEN = T.ok;   // 綠=語意「可動作」token
-        this.rect(CX, (cTop + cBot) / 2, W, cBot - cTop, T.page);   // 亮色 body 底
-        this.txt(CX, cTop + 34, '🛒 商店', FS.title, T.ink, 0.5, true);
-        // 可用動作=綠色填色藥丸;待做=淡色(與卡片頁一致:填色=可動作、淡框=停用)。體力數值頂欄已有,此處不重複
+      bShop() {   // 🛒 商店(2026-07-14 鏡射 007_UI_demo shop.html/village.html:深色徑向底 + 白面綠框 3D 藥丸,調性同村落)
+        const m = getMeta(), T = UI(), cTop = 84, cBot = H - 60;
+        this._demoBodyBg(cTop, cBot);   // demo 深色徑向底(同村落,取代亮色 T.page)
+        // 標題:商店美術圖示(ui_shop) + 「商店」(深底→亮色;icon+文字置中成一組,完全鏡射村落標題)
+        { const t = this.add.text(0, 0, '商店', { fontFamily: EMOJIFONT, fontSize: FS.title, color: '#f0f2f5', fontStyle: 'bold' });
+          const tw = Math.ceil(t.width), iw = 30, gw = iw + 8 + tw, left = CX - gw / 2;
+          this.L(this.add.image(left + iw / 2, cTop + 34, 'ui_shop').setDisplaySize(iw, iw));
+          t.setPosition(left + iw + 8 + tw / 2, cTop + 34).setOrigin(0.5); this.L(t); }
+        // 按鈕全用村落式白面綠框 3D 藥丸(.menu-btn;含待做也是白綠,樣子與村落一致);幾何/唇邊全抄 bVillage
+        const menuBtn = (y, label, cb) => {
+          this.L(roundRectG(this, CX, y + 3, W - 44, 56, 28, 0x57a877, 1, null, 0));   // 綠唇邊(3D)
+          this.L(roundRectG(this, CX, y, W - 44, 56, 28, T.surf, 1, 0x7fc99a, 2));       // 白面 + 綠框
+          this.txt(CX, y, label, FS.sub, T.ink, 0.5, true);
+          const hit = this.rect(CX, y, W - 44, 60, 0x000000, 0.001).setInteractive();
+          tapBind(this, hit, cb);
+        };
         const full = m.stamina >= m.staminaMax;
-        const y0 = cTop + 84, gap = 62;
-        this.btn(CX, y0, 360, 56, full ? '⚡ 體力已滿' : '⚡ 體力全回復　💎1', async () => {   // 🔐 花石頭改打伺服器(POST /api/wallet/spend {action:'stamina_refill'});_busyStamina 防連點
+        let y = cTop + 96;
+        menuBtn(y, full ? '⚡ 體力已滿' : '⚡ 體力全回復　💎1', async () => {   // 🔐 花石頭改打伺服器(POST /api/wallet/spend {action:'stamina_refill'});_busyStamina 防連點
           if (full) { this.toast('體力已滿'); return; }
           if (this._busyStamina) return; this._busyStamina = true;
           let r;
@@ -6278,36 +6331,52 @@
           if (r.status === 402) { this._busyStamina = false; this.toast('魔法石不足'); return; }
           if (!r.ok) { this._busyStamina = false; this.toast('需要連線,請稍後再試'); return; }
           const d = await r.json(); syncWallet(d); refillStamina(); this._busyStamina = false; this.toast('體力回滿!'); this.rebuild();
-        },
-          full ? { col: T.surf2, stroke: T.divider, color: T.ink3, fs: FS.sub } : { col: GREEN, stroke: GREEN, color: T.onAccent, fs: FS.sub, bold: true });
-        [['💎 魔法石商店', '魔法石商店'], ['📦 BOX 擴張', 'BOX 擴張'], ['👥 好友上限', '好友上限']].forEach((it, i) => {
-          this.btn(CX, y0 + (i + 1) * gap, 360, 52, it[0] + ' — 待做', () => this.toast(it[1] + ' — 待做'), { col: T.surf2, stroke: T.divider, color: T.ink3, fs: FS.body });
+        });
+        y += 78;
+        [['💎 魔法石商店', '魔法石商店'], ['📦 BOX 擴張', 'BOX 擴張'], ['👥 好友上限', '好友上限']].forEach((it) => {
+          menuBtn(y, it[0] + ' — 待做', () => this.toast(it[1] + ' — 待做'));
+          y += 78;
         });
       }
       bTodo(t) { this.txt(CX, Math.round(H * 0.42), t + ' — 待做', FS.sub, UI().ink3, 0.5); }
-      bGacha() {
-        const T = UI(), cTop = 84;
-        this.rect(CX, (cTop + H - 60) / 2, W, (H - 60) - cTop, T.page);   // 亮色 body 底
-        this.txt(CX, cTop + 34, '🥚 轉蛋', FS.title, T.ink, 0.5, true);
-        this.gachaBanner(cTop + 132, 'premium', '✨ 六星 限定 · 機率 3%', 0x7c5cd0);   // 卡頂=cTop+57,與卡片管理/商店的第一個內容頂緣一致
-        this.gachaBanner(cTop + 296, 'normal', '金錢轉蛋（無六星）', 0x35a866);
-        this.txt(CX, H - 74, '※ 機率已公示;六星僅「召喚勇者」可得', FS.micro, T.ink3, 0.5);
+      bGacha() {   // 🥚 轉蛋(2026-07-14 鏡射 007_UI_demo summon.html:深色徑向底 + 淡色機台卡 + 精緻色底 3D 藥丸,調性同村落/商店)
+        const T = UI(), cTop = 84, cBot = H - 60;
+        this._demoBodyBg(cTop, cBot);   // demo 深色徑向底(同村落/商店,取代亮色 T.page)
+        // 標題:轉蛋美術圖示(ui_gacha) + 「轉蛋」(深底→亮色;icon+文字置中成一組,同村落/商店)
+        { const t = this.add.text(0, 0, '轉蛋', { fontFamily: EMOJIFONT, fontSize: FS.title, color: '#f0f2f5', fontStyle: 'bold' });
+          const tw = Math.ceil(t.width), iw = 30, gw = iw + 8 + tw, left = CX - gw / 2;
+          this.L(this.add.image(left + iw / 2, cTop + 34, 'ui_gacha').setDisplaySize(iw, iw));
+          t.setPosition(left + iw + 8 + tw / 2, cTop + 34).setOrigin(0.5); this.L(t); }
+        this._tabDom = [];   // 本次重繪的 DOM 抽卡鈕(精緻款);rebuild 會先清舊的
+        this.gachaBanner(cTop + 134, 'premium', '✨ 六星 限定 · 機率 3%', 0x7c5cd0, 0xf3eefc, 'purple');   // 結印:紫框 + 淡紫卡 + 紫鈕
+        this.gachaBanner(cTop + 322, 'normal', '金錢轉蛋（無六星）', 0x35a866, 0xecf8ee, 'ok');   // 一般:綠框 + 淡綠卡 + 綠鈕(加高後拉開 188 避免重疊)
+        this.txt(CX, H - 74, '※ 機率已公示;六星僅「召喚勇者」可得', FS.micro, '#c9c3ba', 0.5);   // 深底→淺灰註解
         if (this.gachaResult) this.drawGachaResult();
       }
-      gachaBanner(y, bankey, tagline, accent) {
+      gachaBanner(y, bankey, tagline, accent, cardBg, btnVariant) {
         const T = UI(), b = GACHA[bankey], aTx = '#' + accent.toString(16).padStart(6, '0');
         const srv = window._nbGachaRates && Array.isArray(window._nbGachaRates.pools) && window._nbGachaRates.pools.find(p => p.id === bankey);   // 機率公示優先讀伺服器(/api/gacha/rates 回的 pools 是陣列,用 id 找),查無才 fallback 前端常數
         const rates = (srv && srv.rates) || b.rates.map(r => ({ rank: r[0], rate: r[1] }));
         const cost1 = (srv && srv.cost1 != null) ? srv.cost1 : b.cost1;
         const cost10 = (srv && srv.cost10 != null) ? srv.cost10 : b.cost10;
-        this.L(roundRectG(this, CX, y, 380, 150, 20, T.surf, 1, accent, 2));   // 白卡 + accent 邊
-        this.txt(CX, y - 54, b.icon + ' ' + b.name, FS.sub, T.ink, 0.5, true);
-        this.txt(CX, y - 31, tagline, FS.cap, aTx, 0.5, true);
-        this.txt(CX, y - 8, rates.map(r => RANKSTAR[r.rank] + ' ' + Math.round(r.rate * 100) + '%').join('  ·  '), '13px', T.ink2, 0.5);
-        const unit = b.cur === 'stones' ? '💎' : '💰', busy = !!this._busyPull;   // 🔐 抽卡防連點(_busyPull)期間按鈕變灰+回呼直接擋
-        const busyO = { col: T.surf2, stroke: T.divider, color: T.ink3, bold: true, fs: FS.body };
-        this.btn(CX - 94, y + 44, 168, 46, '單抽 ' + unit + cost1, () => { if (!busy) this.pull(bankey, 1); }, busy ? busyO : { col: accent, stroke: accent, color: '#ffffff', bold: true, fs: FS.body });
-        this.btn(CX + 94, y + 44, 168, 46, '十連 ' + unit + cost10, () => { if (!busy) this.pull(bankey, 10); }, busy ? busyO : { col: accent, stroke: accent, color: '#ffffff', bold: true, fs: FS.body });
+        this.L(roundRectG(this, CX, y, 380, 168, 22, cardBg, 1, accent, 2));   // 淡色機台卡 + accent 框(demo .summon-card;加高讓內容/按鈕不擠邊)
+        this.txt(CX, y - 61, b.icon + ' ' + b.name, FS.sub, T.ink, 0.5, true);
+        this.txt(CX, y - 37, tagline, FS.cap, aTx, 0.5, true);
+        this.txt(CX, y - 13, rates.map(r => RANKSTAR[r.rank] + ' ' + Math.round(r.rate * 100) + '%').join('  ·  '), '13px', T.ink2, 0.5);
+        const unit = b.cur === 'stones' ? '💎' : '💰', busy = !!this._busyPull;   // 🔐 抽卡防連點(_busyPull)期間按鈕變灰+停用
+        // 抽卡鈕=編成確定鈕精緻款(DOM overlay + stylePillBtn,任意 dpi 銳利;canvas 畫的會被 420 framebuffer 鋸齒)。
+        // DOM 永遠浮在 canvas 上→結果彈窗(canvas)蓋不住它:顯示結果時不建鈕(關閉會 rebuild 重建)。DOM 掛 scene 級,存 _tabDom 供 rebuild 清。
+        if (!this.gachaResult) {
+          const mk = (bx, label, count) => {
+            const el = document.createElement('button');
+            stylePillBtn(el, '162px', busy ? 'ghost' : btnVariant);
+            el.textContent = label;
+            if (!busy) el.addEventListener('click', () => this.pull(bankey, count));
+            this._tabDom.push(this.add.dom(bx, y + 40, el).setDepth(6));   // add.dom 以中心定位;離卡底 18px、左右內縮 19px(不貼邊)
+          };
+          mk(CX - 90, '單抽 ' + unit + cost1, 1);
+          mk(CX + 90, '十連 ' + unit + cost10, 10);
+        }
       }
       async pull(bankey, count) {   // 🔐 抽卡改打伺服器(/api/gacha/pull);doGacha/gachaPull/rollRarity 本體保留(devGate 測試用),此處不再呼叫;_busyPull 防連點(慢網雙擊=雙抽雙扣石頭),所有出口都要重置
         if (this._busyPull) return; this._busyPull = true;
@@ -6499,39 +6568,70 @@
         const cd = ROSTER.find(c => c.id === this.gachaDetail); if (!cd) { this.gachaDetail = null; return this.drawGachaResult(); }
         cardDetailPanel(this, o => this.L(o), cd, { manage: false, onClose: () => { this.gachaDetail = null; this.rebuild(); } });
       }
-      bOther() {
+      bOther() {   // ⚙️ 設定與帳號(2026-07-14 鏡射 007_UI_demo other.html:深色徑向底 + 分區標籤 + DOM 精緻 set-pill + 白 panel 音量列);測試工具限本機、在使用者區之後
         const T = UI(), cTop = 84, cBot = H - 60, pr = getProgress();
-        this.rect(CX, (cTop + cBot) / 2, W, cBot - cTop, T.page);   // 亮色 body 底(同卡片/商店/排行)
-        this.txt(CX, cTop + 30, '⚙️ 其他', FS.title, T.ink, 0.5, true);
-        this.txt(CX, cTop + 56, '🏆 序章通關 ×' + pr.clears + '    📖 收集 ' + ownedCount() + '/' + ROSTER.length, FS.cap, T.ink2, 0.5);
-        this.btn(CX, cTop + 88, 360, 44, '✏️ 改名(目前:' + (getMeta().name || '塊頭勇者') + ')', async () => { const cur = getMeta().name || '塊頭勇者'; const n = await uiPrompt({ title: '改名', message: '輸入用戶名稱(最多 8 字)', value: cur, maxLen: 8 }); if (n != null) { const nm = (n.trim().slice(0, 8)) || '塊頭勇者'; mutSave(s => { s.meta.name = nm; }); this.toast('已改名:' + nm); this.rebuild(); } }, { col: T.surf, stroke: 0x5aa9e6, color: T.ink, fs: FS.body });
-        this.btn(CX - 92, cTop + 138, 172, 48, '📖 卡片圖鑑', () => this.go('dex'), { col: T.surf, stroke: 0x5aa9e6, color: T.ink, fs: FS.body, bold: true });
-        this.btn(CX + 92, cTop + 138, 172, 48, '🎓 新手教學', () => { const team = ['c03', 'c06', 'c19', 'c10', 'c12'].map(id => ROSTER.find(c => c.id === id)).filter(Boolean); if (team.length < 5) { this.toast('教學需要狗狗隊(先到其他→給狗狗隊)'); return; } this.scene.manager.start('game', { team: team, dungeonId: 'prologue', tutorial: true }); this.scene.manager.stop('home'); }, { col: T.surf, stroke: 0x35a866, color: T.ink, fs: FS.body, bold: true });
+        this._demoBodyBg(cTop, cBot);   // demo 深色徑向底(同其他分頁)
+        this._tabDom = [];   // 設定 DOM 精緻鈕(set-pill,scene 級)→rebuild 清
+        this.txt(CX, cTop + 28, '⚙️ 設定與帳號', FS.title, '#f0f2f5', 0.5, true);
+        this.txt(CX, cTop + 52, '序章 ×' + pr.clears + '　·　收集 ' + ownedCount() + '/' + ROSTER.length, FS.micro, '#b3bcc5', 0.5);
+        const SIDE = 18, PW = W - SIDE * 2, hw = (PW - 8) / 2, leftX = SIDE, FONT = "'Segoe UI Emoji','GenSen','Microsoft JhengHei',sans-serif";
+        let y = cTop + 74;
+        const section = (txt) => { this.txt(leftX + 2, y + 9, txt, FS.cap, '#eef2f6', 0, true); y += 20; };   // 深底→亮色區段標籤
+        // DOM set-pill:wrapper div(block 根,避開 add.dom 強制 root display:block)包 flex button;arrow=左對齊+›、否則置中
+        const mkPill = (x, w, rowCy, label, arrow, variant, cb) => {
+          const isBad = variant === 'bad';
+          const root = document.createElement('div'); root.style.cssText = 'width:' + w + 'px;';
+          const el = document.createElement('button');
+          el.style.cssText = 'box-sizing:border-box;width:100%;height:' + (arrow ? 46 : 44) + 'px;border-radius:14px;border:1.5px solid '
+            + (isBad ? '#e0663a' : '#e4ded4') + ';font-family:' + FONT + ';font-size:16px;font-weight:700;cursor:pointer;display:flex;align-items:center;'
+            + (arrow ? 'justify-content:flex-start;' : 'justify-content:center;') + 'gap:6px;padding:0 15px;background-color:' + (isBad ? '#e0663a' : '#ffffff')
+            + ';color:' + (isBad ? '#fff' : '#2b333a') + ';box-shadow:inset 0 1px 0 rgba(255,255,255,.5), 0 3px 0 ' + (isBad ? '#a53f34' : '#e6e0d6') + ', 0 4px 8px rgba(43,51,58,.16);-webkit-tap-highlight-color:transparent;';
+          el.innerHTML = arrow ? ('<span style="flex:1;text-align:left;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + label + '</span><span style="color:#b8b0a4;font-size:19px;font-weight:400">›</span>') : label;
+          el.addEventListener('click', cb); root.appendChild(el);
+          this._tabDom.push(this.add.dom(x, rowCy, root).setDepth(6));
+        };
+        // ── 帳號 ──
+        section('帳號');
+        mkPill(CX, PW, y + 23, '✏️ 改名（目前：' + (getMeta().name || '塊頭勇者') + '）', true, '', async () => { const cur = getMeta().name || '塊頭勇者'; const n = await uiPrompt({ title: '改名', message: '輸入用戶名稱(最多 8 字)', value: cur, maxLen: 8 }); if (n != null) { const nm = (n.trim().slice(0, 8)) || '塊頭勇者'; mutSave(s => { s.meta.name = nm; }); this.toast('已改名:' + nm); this.rebuild(); } }); y += 46 + 6;
+        { const em = cloudState().googleEmail;
+          mkPill(CX - hw / 2 - 4, hw, y + 22, '🎴 勇者卡', false, '', () => this.showHeroCard());
+          mkPill(CX + hw / 2 + 4, hw, y + 22, em ? '✅ Google' : '🔗 綁定Google', false, '', () => { const e2 = cloudState().googleEmail; if (e2) showGoogleBindOverlay({ title: '✅ 已綁定 Google', sub: e2 + '\n換手機用同個 Google 就能接著玩。', cancelLabel: '關閉', bound: true }); else showGoogleBindOverlay({ title: '☁️ 綁定 Google 帳號', sub: '換手機、換裝置都能接著玩,\n進度不怕丟。', cancelLabel: '關閉', onDone: () => this.rebuild() }); }); }
+        y += 44 + 9;
+        // ── 遊戲 ──
+        section('遊戲');
+        mkPill(CX - hw / 2 - 4, hw, y + 22, '📖 卡片圖鑑', false, '', () => this.go('dex'));
+        mkPill(CX + hw / 2 + 4, hw, y + 22, '🎓 新手教學', false, '', () => { const team = ['c03', 'c06', 'c19', 'c10', 'c12'].map(id => ROSTER.find(c => c.id === id)).filter(Boolean); if (team.length < 5) { this.toast('教學需要狗狗隊'); return; } this.scene.manager.start('game', { team: team, dungeonId: 'prologue', tutorial: true }); this.scene.manager.stop('home'); });
+        y += 44 + 9;
+        // ── 聲音與顯示(白 panel 音量列;demo toggle-row 版型,遊戲為連續音量條) ──
+        section('聲音與顯示');
         const addL = o => this.L(o);
-        this.txt(CX - 150, cTop + 182, '🔊 音效', FS.cap, T.ink2, 0); volBar(this, addL, CX + 38, cTop + 182, 232, '', () => SFX.sfxVol(), (v) => { SFX.setSfxVol(v); SFX.button(); });   // 音效音量(可點可拖,最左=靜音)
-        this.txt(CX - 150, cTop + 214, '🎵 背景', FS.cap, T.ink2, 0); volBar(this, addL, CX + 38, cTop + 214, 232, '', () => SFX.bgmVol(), (v) => { SFX.setBgmVol(v); if (this.bgmMp3) this.bgmMp3.setVolume((this._bgmBase || 0.45) * v); });   // 背景音量(即時調大廳音樂)
-        this.btn(CX - 92, cTop + 248, 172, 44, '🎴 勇者卡', () => this.showHeroCard(), { col: T.surf, stroke: 0xf4b73c, color: T.ink, fs: FS.body, bold: true });   // ☁️ 勇者卡=跨裝置找回進度的 12 碼
-        const _gEmail = cloudState().googleEmail;   // 🔑 綁定狀態(前端記於 nb_cloud.googleEmail;僅顯示用)
-        this.btn(CX + 92, cTop + 248, 172, 44, _gEmail ? '✅ Google已綁' : '🔗 綁定Google', () => {
-          const em = cloudState().googleEmail;
-          if (em) showGoogleBindOverlay({ title: '✅ 已綁定 Google', sub: em + '\n換手機用同個 Google 就能接著玩。', cancelLabel: '關閉', bound: true });
-          else showGoogleBindOverlay({ title: '☁️ 綁定 Google 帳號', sub: '換手機、換裝置都能接著玩,\n進度不怕丟。', cancelLabel: '關閉', onDone: () => this.rebuild() });
-        }, { col: T.surf, stroke: _gEmail ? 0x35a866 : 0x5aa9e6, color: T.ink, fs: FS.body, bold: true });   // 🔑 Google 帳號綁定/狀態
-        this.btn(CX, cTop + 296, 360, 40, '🔄 重置存檔', async () => { if (!(await uiConfirm({ title: '重置存檔', message: '將清空全部進度(含雲端備份),無法復原', okLabel: '重置', danger: true }))) return; backupLocalSave('reset'); localStorage.removeItem('ninja_save'); localStorage.removeItem('ninja_owned'); loadSave(); flushCloudPush(); this.toast('已重置'); this.switchTab('dungeon'); }, { col: T.surf, stroke: 0xe0603a, color: '#c0492c', fs: FS.cap });   // ☁️ 重置=備份→清→重建 default→立即推雲(雲端 rev 前進到新空檔,舊資料才不會下次開場復活)
-        // ── 🧪 測試工具(只在本機開發顯示;正式站 blockyusha.com 玩家看不到,防經濟作弊。本區塊是本方法尾段,用早退 gate 全擋)──
+        const audioRow = (icon, label, getV, setV) => {
+          this.L(roundRectG(this, CX, y + 22, PW, 44, 14, T.surf, 1, T.divider, 1.5));   // 白列
+          this.txt(leftX + 15, y + 22, icon + ' ' + label, FS.body, T.ink, 0, true);
+          volBar(this, addL, CX + 74, y + 22, 150, '', getV, setV);   // 音量條(白底上清楚)
+          y += 44 + 6;
+        };
+        audioRow('🔊', '音效', () => SFX.sfxVol(), (v) => { SFX.setSfxVol(v); SFX.button(); });
+        audioRow('🎵', '背景音樂', () => SFX.bgmVol(), (v) => { SFX.setBgmVol(v); if (this.bgmMp3) this.bgmMp3.setVolume((this._bgmBase || 0.45) * v); });
+        y += 3;
+        // ── 危險操作 ──
+        section('危險操作');
+        mkPill(CX, PW, y + 23, '🔄 重置存檔', false, 'bad', async () => { if (!(await uiConfirm({ title: '重置存檔', message: '將清空全部進度(含雲端備份),無法復原', okLabel: '重置', danger: true }))) return; backupLocalSave('reset'); localStorage.removeItem('ninja_save'); localStorage.removeItem('ninja_owned'); loadSave(); flushCloudPush(); this.toast('已重置'); this.switchTab('dungeon'); }); y += 46 + 4;
+        this.txt(leftX + 2, y + 8, '重置後所有卡片與進度將永久刪除，無法復原。', FS.micro, '#b3bcc5', 0); y += 20;
+        // ── 🧪 測試工具(只在本機開發顯示;正式站玩家看不到,防作弊。早退 gate 全擋;在使用者區之後,不影響正式版版面) ──
         if (location.hostname !== 'localhost' && location.hostname !== '127.0.0.1') return;
-        this.txt(CX, cTop + 328, '🧪 測試工具(限本機顯示)', FS.micro, T.ink3, 0.5);
+        this.txt(CX, y + 8, '🧪 測試工具(限本機顯示)', FS.micro, '#9aa4ad', 0.5); const dy = y + 24;
         const devMini = { col: T.surf2, stroke: T.divider, color: T.ink2, fs: FS.micro };
         const dev = (lv) => { devSetAllLv(lv); this.toast('全卡 → LV' + lv); this.rebuild(); };
-        this.btn(CX - 120, cTop + 350, 112, 36, '全卡 LV1', () => dev(1), devMini);
-        this.btn(CX, cTop + 350, 112, 36, '全卡 LV10', () => dev(10), devMini);
-        this.btn(CX + 120, cTop + 350, 112, 36, '全卡 LV20', () => dev(20), devMini);
-        this.btn(CX - 120, cTop + 390, 112, 38, '⚡ 體力補滿', () => { refillStamina(); this.toast('體力補滿!'); this.rebuild(); }, { col: T.surf, stroke: 0x35a866, color: T.ink, bold: true, fs: FS.micro });
-        this.btn(CX, cTop + 390, 112, 38, '💎 +100 鑽石', () => { mutSave(s => { s.meta.stones = (s.meta.stones || 0) + 100; }); this.toast('💎 +100 鑽石!'); this.rebuild(); }, { col: T.surf, stroke: 0x8c6aff, color: T.ink, bold: true, fs: FS.micro });
-        this.btn(CX + 120, cTop + 390, 112, 38, '🔓 解鎖全關', () => { devUnlockAll(); this.toast('已解鎖全關(含塔魔王)'); this.rebuild(); }, { col: T.surf, stroke: 0x8c6aff, color: T.ink, bold: true, fs: FS.micro });
+        this.btn(CX - 120, dy, 112, 34, '全卡 LV1', () => dev(1), devMini);
+        this.btn(CX, dy, 112, 34, '全卡 LV10', () => dev(10), devMini);
+        this.btn(CX + 120, dy, 112, 34, '全卡 LV20', () => dev(20), devMini);
+        this.btn(CX - 120, dy + 38, 112, 36, '⚡ 體力補滿', () => { refillStamina(); this.toast('體力補滿!'); this.rebuild(); }, { col: T.surf, stroke: 0x35a866, color: T.ink, bold: true, fs: FS.micro });
+        this.btn(CX, dy + 38, 112, 36, '💎 +100 鑽石', () => { mutSave(s => { s.meta.stones = (s.meta.stones || 0) + 100; }); this.toast('💎 +100 鑽石!'); this.rebuild(); }, { col: T.surf, stroke: 0x8c6aff, color: T.ink, bold: true, fs: FS.micro });
+        this.btn(CX + 120, dy + 38, 112, 36, '🔓 解鎖全關', () => { devUnlockAll(); this.toast('已解鎖全關(含塔魔王)'); this.rebuild(); }, { col: T.surf, stroke: 0x8c6aff, color: T.ink, bold: true, fs: FS.micro });
         const giveTeam = (name, ids) => { ids.forEach(id => addCard(id)); this.toast(name + ' ×5 已放進包包!'); this.rebuild(); };   // 測試:一鍵入手該隊 5 張(火水雷土風)
         const teams = [['🐕 狗狗隊', ['c03', 'c06', 'c19', 'c10', 'c12'], 0xc8803a], ['🐱 貓隊', ['c02', 'c05', 'c08', 'c09', 'c11'], 0x35a866], ['🐹 鼠隊', ['c13', 'c16', 'c20', 'c23', 'c27'], 0xb08040], ['🇹🇼 台灣隊', ['c15', 'c18', 'c22', 'c26', 'c30'], 0x2f8a5b], ['🐟 魚隊', ['c14', 'c17', 'c21', 'c24', 'c28'], 0x2e9be0], ['🐰 兔隊', ['c31', 'c32', 'c33', 'c34', 'c35'], 0xe07ba0], ['🐦 鳥隊', ['c01', 'c04', 'c07', 'c25', 'c29'], 0x8c6aff], ['🕷️ 蜘蛛隊', ['c36', 'c37', 'c38', 'c39', 'c40'], 0xb79bff], ['👹 小鬼隊', ['c41', 'c42', 'c43', 'c44', 'c45'], 0xff6a4a], ['🧱 牆怪隊', ['c46', 'c47', 'c48', 'c49', 'c50'], 0xc9a86a], ['🔮 魔女隊', ['c51', 'c52', 'c53', 'c54', 'c55'], 0xb06ad0], ['💊 藥師隊', ['c56', 'c57', 'c58', 'c59', 'c60'], 0x4fbf8f]];
-        teams.forEach((t, i) => { const col = (i % 2 === 0) ? CX - 92 : CX + 92, row = Math.floor(i / 2); this.btn(col, cTop + 430 + row * 38, 172, 34, t[0], () => giveTeam(t[0], t[1]), { col: T.surf, stroke: t[2], color: T.ink, bold: true, fs: FS.micro }); });
+        teams.forEach((t, i) => { const col = (i % 2 === 0) ? CX - 92 : CX + 92, row = Math.floor(i / 2); this.btn(col, dy + 80 + row * 38, 172, 34, t[0], () => giveTeam(t[0], t[1]), { col: T.surf, stroke: t[2], color: T.ink, bold: true, fs: FS.micro }); });
       }
       bVillage() {   // 🏘️ 村落聚合頁(2026-07-13,鏡射 007_UI_demo village.html):5 顆白底綠框 3D 大按鈕→接既有功能,不重造
         const T = UI(), cTop = 84, cBot = H - 60, m = getMeta();
