@@ -1,0 +1,98 @@
+---
+import Base from '../../layouts/Base.astro';
+---
+<Base title="遊戲 UI 一動就大改？我先用 HTML 排好版，最後才讓程式照著做 — 塊頭勇者 開發日誌" path="/devlog/2026-07-13-ui-html-first/" navActive="devlog"
+  description="改遊戲 UI 常常牽一髮動全身、還容易噴 bug。我的做法反過來：先用純 HTML 把每個畫面排好版、逐頁調 UI/UX，最後才讓程式對照 UI Demo 實作。省 token、省大改，附上實際的 UI Demo 頁。">
+
+<article class="dp">
+  <div class="dp-wrap">
+    <a class="back" href="/devlog/">← 開發日誌</a>
+    <h1 class="title">遊戲 UI 一動就大改？我先用 HTML 排好版，最後才讓程式照著做</h1>
+    <div class="meta">
+      <span>2026-07-13</span>
+      <span class="tag">#塊頭勇者</span><span class="tag">#開發流程</span>
+      <span class="tag">#UI/UX</span><span class="tag">#心得</span>
+    </div>
+
+    <div class="body">
+      <p class="lead">直接在遊戲程式裡調 UI，最痛的不是調不出來，是——<strong>一動就是大改，隨便亂動還很容易噴 bug</strong>。所以我把順序反過來：先用 HTML 把畫面「排好」，程式最後才照著做。這篇分享我的流程，還有為什麼我覺得它比「在遊戲裡硬調」好。</p>
+
+      <h2>一、我的做法：HTML 先行、程式殿後</h2>
+      <p>三步，其實很簡單：</p>
+      <div class="demo">
+        <div class="steps">
+          <div class="step"><div class="e">🧱</div><b>① HTML 架版</b><div class="d">先用純 HTML 把每個畫面的版面、區塊、按鈕都排好</div></div>
+          <div class="arrow">→</div>
+          <div class="step"><div class="e">🎨</div><b>② 逐頁調 UI/UX</b><div class="d">一頁一頁慢慢磨：間距、字級、色彩、動線</div></div>
+          <div class="arrow">→</div>
+          <div class="step"><div class="e">⚙️</div><b>③ 程式對照實作</b><div class="d">最後請程式對照 UI Demo 頁，把它做進遊戲</div></div>
+        </div>
+        <div class="demo-cap">改 UI 的順序：先便宜地把「長相」定下來，再讓程式一次做對</div>
+      </div>
+
+      <h2>二、為什麼這樣比較好</h2>
+      <p>在遊戲程式裡調 UI，是<strong>牽一髮動全身</strong>：改個間距，可能連帶動到布局、狀態、事件，一動就是大改；不熟的地方隨手動一下，<strong>更容易生 bug</strong>。</p>
+      <p>但 HTML 稿不一樣——<strong>快、便宜、看得到、改壞也不影響遊戲本體</strong>。我可以放心把版面翻來覆去試到滿意，完全沒有「會不會把遊戲弄壞」的心理負擔。而且用 AI 一起做時，<strong>改一份乾淨的 HTML，比在龐大的遊戲程式碼裡改，省超多 token</strong>。等長相定案了，程式才進場，一次把它實作對。</p>
+
+      <h2>三、老實說，這方法也有代價</h2>
+      <p>畢竟一邊是 <strong>HTML</strong>、一邊是 <strong>遊戲程式碼</strong>，兩邊終究會有不一樣的地方，<strong>精緻度也會不同</strong>——HTML 裡三行就排出來的效果，遊戲引擎裡不一定同樣做得到；反過來也是。</p>
+      <p>所以「最後對照實作」那一步，還是得花時間磨細節。<strong>如果你也想用一樣的做法，這段心理準備要先有</strong>：它不是「畫好就自動變成遊戲」，而是「先有一個清楚的目標，程式再照著逼近」。</p>
+      <blockquote>我承認這無法驗證哪個一定比較好——但直覺上，<strong>比只在遊戲裡瞎調穩得多</strong>。至少我永遠有一份「它應該長這樣」的參考，不是邊改邊迷路。</blockquote>
+
+      <h2>UI Demo 長這樣</h2>
+      <p>我把排好的 UI 稿全部放成一頁，程式就照這個做。你也可以點進去看看實際的樣子：</p>
+      <p style="text-align:center;margin:22px 0"><a class="demo-btn" href="/ui-demo/">▶ 看 UI Demo 頁</a></p>
+
+      <hr>
+      <p>大家參考看看～這只是我個人的做法，不一定適合每個專案；但如果你也常被「遊戲一改 UI 就大工程」搞到頭痛，也許值得試試。更多開發碎念都在 <a href="/devlog/">開發日誌</a>。下次見。</p>
+    </div>
+
+    <div class="foot">— 開發日誌 · 塊頭勇者</div>
+  </div>
+</article>
+
+<style is:global>
+.dp-wrap{max-width:720px;margin:0 auto;padding:clamp(28px,5vw,56px) 18px clamp(56px,8vw,90px)}
+.dp .back{display:inline-block;color:var(--ink2);text-decoration:none;font-size:14px;margin-bottom:20px}
+.dp .back:hover{color:var(--fire)}
+.dp .title{font-size:clamp(24px,4.6vw,35px);font-weight:900;line-height:1.34;margin:0 0 14px;letter-spacing:-.5px;color:var(--ink)}
+.dp .meta{display:flex;flex-wrap:wrap;align-items:center;gap:8px;font-size:13px;color:var(--ink2);margin-bottom:30px}
+.dp .tag{background:rgba(255,178,32,.12);border:1px solid rgba(200,140,40,.25);border-radius:999px;padding:2px 10px;color:var(--ink2)}
+.dp .body{font-size:16px;line-height:1.85;color:var(--ink)}
+.dp .body h2{font-size:clamp(19px,3.2vw,24px);font-weight:900;margin:40px 0 14px;letter-spacing:-.3px;color:var(--ink)}
+.dp .body p{margin:0 0 16px}
+.dp .body strong{color:var(--sun2)}
+.dp .body blockquote{margin:20px 0;padding:12px 18px;border-left:3px solid var(--sun2);background:rgba(255,178,32,.08);border-radius:0 10px 10px 0;color:var(--ink)}
+.dp .body hr{border:none;border-top:1px solid rgba(200,140,40,.2);margin:34px 0}
+.dp .body a{color:var(--fire);text-decoration:underline;text-underline-offset:2px}
+.dp .lead{font-size:17px;color:var(--ink2)}
+
+/* demo 框 */
+.dp .demo{margin:26px auto;background:#fff;border:1px solid rgba(200,140,40,.2);border-radius:18px;padding:20px 16px 14px;box-shadow:var(--shadow)}
+.dp .demo-cap{text-align:center;font-size:12px;color:var(--ink2);margin-top:14px;letter-spacing:.3px}
+
+/* 三步流程 */
+.dp .steps{display:flex;gap:8px;align-items:stretch;justify-content:center;flex-wrap:wrap}
+.dp .step{flex:1;min-width:150px;background:rgba(255,178,32,.06);border:1px solid rgba(200,140,40,.2);border-radius:12px;padding:14px 12px;text-align:center}
+.dp .step .e{font-size:26px;line-height:1}
+.dp .step b{display:block;margin-top:6px;font-size:15px;color:var(--ink)}
+.dp .step .d{font-size:12.5px;color:var(--ink2);line-height:1.6;margin-top:4px}
+.dp .arrow{align-self:center;color:var(--sun2);font-size:20px;font-weight:900}
+
+/* UI Demo 按鈕 */
+.dp .demo-btn{display:inline-block;font-weight:900;color:#3a1f00;font-size:17px;
+  background:linear-gradient(120deg,var(--cta1,#ffdf6b),var(--cta2,#ff8a2a));padding:14px 32px;border-radius:999px;
+  box-shadow:0 8px 20px rgba(255,140,40,.3);text-decoration:none;transition:transform .12s}
+.dp .demo-btn:active{transform:translateY(2px)}
+
+.dp .foot{margin-top:46px;padding-top:22px;border-top:1px solid rgba(200,140,40,.2);font-size:14px;color:var(--ink2)}
+
+/* dark */
+[data-theme="dark"] .dp .tag{background:rgba(255,255,255,.08);border-color:rgba(255,178,32,.2);color:#e8d4a8}
+[data-theme="dark"] .dp .body blockquote{background:rgba(255,178,32,.1)}
+[data-theme="dark"] .dp .body hr{border-top-color:rgba(255,178,32,.16)}
+[data-theme="dark"] .dp .demo{background:#231d14;border-color:rgba(255,178,32,.16)}
+[data-theme="dark"] .dp .step{background:rgba(255,255,255,.05);border-color:rgba(255,178,32,.16)}
+[data-theme="dark"] .dp .foot{border-top-color:rgba(255,178,32,.16)}
+</style>
+</Base>
