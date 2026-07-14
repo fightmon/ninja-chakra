@@ -424,34 +424,34 @@
     // 角色:個人名 + 種族(human/yokai/beast) + 三圍(攻/血/回,同星總量公平、分配不同) + rank(沿用:gacha/掉落/★用,genin=★1…kage=★4)
     const ROSTER = [
       { id: 'c01', name: '曦曦', el: 'fire', race: 'yokai', rank: 'jonin', atk: 300, hp: 375, rcv: 38, attrs: ['fire'] },
-      { id: 'c02', name: '暖暖', el: 'fire', race: 'human', rank: 'chunin', atk: 192, hp: 240, rcv: 24, attrs: ['fire'] },
-      { id: 'c03', name: '焰焰', el: 'fire', race: 'human', rank: 'genin', atk: 120, hp: 150, rcv: 15, attrs: ['fire'] },
+      { id: 'c02', name: '暖暖', el: 'fire', race: 'human', rank: 'jonin', atk: 192, hp: 240, rcv: 24, attrs: ['fire'] },
+      { id: 'c03', name: '焰焰', el: 'fire', race: 'human', rank: 'jonin', atk: 120, hp: 150, rcv: 15, attrs: ['fire'] },
       { id: 'c04', name: '漣漣', el: 'water', race: 'yokai', rank: 'jonin', atk: 125, hp: 525, rcv: 100, attrs: ['water'] },
-      { id: 'c05', name: '露露', el: 'water', race: 'human', rank: 'chunin', atk: 80, hp: 336, rcv: 64, attrs: ['water'] },
-      { id: 'c06', name: '潑潑', el: 'water', race: 'human', rank: 'genin', atk: 50, hp: 210, rcv: 40, attrs: ['water'] },
+      { id: 'c05', name: '露露', el: 'water', race: 'human', rank: 'jonin', atk: 80, hp: 336, rcv: 64, attrs: ['water'] },
+      { id: 'c06', name: '潑潑', el: 'water', race: 'human', rank: 'jonin', atk: 50, hp: 210, rcv: 40, attrs: ['water'] },
       { id: 'c07', name: '嗶嗶', el: 'thunder', race: 'yokai', rank: 'jonin', atk: 275, hp: 300, rcv: 63, attrs: ['thunder'] },
-      { id: 'c08', name: '霹霹', el: 'thunder', race: 'human', rank: 'chunin', atk: 176, hp: 192, rcv: 40, attrs: ['thunder'] },
-      { id: 'c09', name: '礫礫', el: 'earth', race: 'human', rank: 'chunin', atk: 64, hp: 576, rcv: 32, attrs: ['earth'] },
-      { id: 'c10', name: '岩岩', el: 'earth', race: 'human', rank: 'genin', atk: 40, hp: 360, rcv: 20, attrs: ['earth'] },
-      { id: 'c11', name: '飄飄', el: 'wind', race: 'human', rank: 'chunin', atk: 122, hp: 355, rcv: 40, attrs: ['wind'] },
-      { id: 'c12', name: '颯颯', el: 'wind', race: 'human', rank: 'genin', atk: 76, hp: 222, rcv: 25, attrs: ['wind'] },
+      { id: 'c08', name: '霹霹', el: 'thunder', race: 'human', rank: 'jonin', atk: 176, hp: 192, rcv: 40, attrs: ['thunder'] },
+      { id: 'c09', name: '礫礫', el: 'earth', race: 'human', rank: 'jonin', atk: 64, hp: 576, rcv: 32, attrs: ['earth'] },
+      { id: 'c10', name: '岩岩', el: 'earth', race: 'human', rank: 'jonin', atk: 40, hp: 360, rcv: 20, attrs: ['earth'] },
+      { id: 'c11', name: '飄飄', el: 'wind', race: 'human', rank: 'jonin', atk: 122, hp: 355, rcv: 40, attrs: ['wind'] },
+      { id: 'c12', name: '颯颯', el: 'wind', race: 'human', rank: 'jonin', atk: 76, hp: 222, rcv: 25, attrs: ['wind'] },
       /* ── 擴充:補滿五屬階梯 + 四星(kage ★4)SSR 層,共 30 張;★4 靈獸=五屬神主角 ── */
-      { id: 'c13', name: '烘烘', el: 'fire', race: 'yokai', rank: 'genin', atk: 120, hp: 150, rcv: 15, attrs: ['fire'] },
-      { id: 'c14', name: '燦燦', el: 'fire', race: 'beast', rank: 'chunin', atk: 192, hp: 240, rcv: 24, attrs: ['fire'] },
+      { id: 'c13', name: '烘烘', el: 'fire', race: 'yokai', rank: 'jonin', atk: 120, hp: 150, rcv: 15, attrs: ['fire'] },
+      { id: 'c14', name: '燦燦', el: 'fire', race: 'beast', rank: 'jonin', atk: 192, hp: 240, rcv: 24, attrs: ['fire'] },
       { id: 'c15', name: '大武', el: 'fire', race: 'beast', rank: 'kage', atk: 360, hp: 445, rcv: 45, attrs: ['fire'], hero: true },
-      { id: 'c16', name: '沁沁', el: 'water', race: 'yokai', rank: 'genin', atk: 50, hp: 210, rcv: 40, attrs: ['water'] },
-      { id: 'c17', name: '澄澄', el: 'water', race: 'beast', rank: 'chunin', atk: 80, hp: 336, rcv: 64, attrs: ['water'] },
+      { id: 'c16', name: '沁沁', el: 'water', race: 'yokai', rank: 'jonin', atk: 50, hp: 210, rcv: 40, attrs: ['water'] },
+      { id: 'c17', name: '澄澄', el: 'water', race: 'beast', rank: 'jonin', atk: 80, hp: 336, rcv: 64, attrs: ['water'] },
       { id: 'c18', name: '武陵', el: 'water', race: 'beast', rank: 'kage', atk: 150, hp: 625, rcv: 120, attrs: ['water'], hero: true },
-      { id: 'c19', name: '轟轟', el: 'thunder', race: 'human', rank: 'genin', atk: 110, hp: 120, rcv: 25, attrs: ['thunder'] },
-      { id: 'c20', name: '滋滋', el: 'thunder', race: 'yokai', rank: 'genin', atk: 110, hp: 120, rcv: 25, attrs: ['thunder'] },
-      { id: 'c21', name: '嘶嘶', el: 'thunder', race: 'beast', rank: 'chunin', atk: 176, hp: 192, rcv: 40, attrs: ['thunder'] },
+      { id: 'c19', name: '轟轟', el: 'thunder', race: 'human', rank: 'jonin', atk: 110, hp: 120, rcv: 25, attrs: ['thunder'] },
+      { id: 'c20', name: '滋滋', el: 'thunder', race: 'yokai', rank: 'jonin', atk: 110, hp: 120, rcv: 25, attrs: ['thunder'] },
+      { id: 'c21', name: '嘶嘶', el: 'thunder', race: 'beast', rank: 'jonin', atk: 176, hp: 192, rcv: 40, attrs: ['thunder'] },
       { id: 'c22', name: '太魯閣', el: 'thunder', race: 'beast', rank: 'kage', atk: 330, hp: 355, rcv: 75, attrs: ['thunder'], hero: true },
-      { id: 'c23', name: '栗栗', el: 'earth', race: 'yokai', rank: 'genin', atk: 40, hp: 360, rcv: 20, attrs: ['earth'] },
-      { id: 'c24', name: '磊磊', el: 'earth', race: 'beast', rank: 'chunin', atk: 64, hp: 576, rcv: 32, attrs: ['earth'] },
+      { id: 'c23', name: '栗栗', el: 'earth', race: 'yokai', rank: 'jonin', atk: 40, hp: 360, rcv: 20, attrs: ['earth'] },
+      { id: 'c24', name: '磊磊', el: 'earth', race: 'beast', rank: 'jonin', atk: 64, hp: 576, rcv: 32, attrs: ['earth'] },
       { id: 'c25', name: '苔苔', el: 'earth', race: 'yokai', rank: 'jonin', atk: 100, hp: 900, rcv: 50, attrs: ['earth'] },
       { id: 'c26', name: '玉山', el: 'earth', race: 'beast', rank: 'kage', atk: 120, hp: 1070, rcv: 60, attrs: ['earth'], hero: true },
-      { id: 'c27', name: '旋旋', el: 'wind', race: 'yokai', rank: 'genin', atk: 76, hp: 222, rcv: 25, attrs: ['wind'] },
-      { id: 'c28', name: '咻咻', el: 'wind', race: 'beast', rank: 'chunin', atk: 122, hp: 355, rcv: 40, attrs: ['wind'] },
+      { id: 'c27', name: '旋旋', el: 'wind', race: 'yokai', rank: 'jonin', atk: 76, hp: 222, rcv: 25, attrs: ['wind'] },
+      { id: 'c28', name: '咻咻', el: 'wind', race: 'beast', rank: 'jonin', atk: 122, hp: 355, rcv: 40, attrs: ['wind'] },
       { id: 'c29', name: '翔翔', el: 'wind', race: 'yokai', rank: 'jonin', atk: 190, hp: 555, rcv: 63, attrs: ['wind'] },
       { id: 'c30', name: '阿里', el: 'wind', race: 'beast', rank: 'kage', atk: 226, hp: 660, rcv: 75, attrs: ['wind'], hero: true },
       /* ── 🐰 兔家族(占位:名/圖/三圍待補,★3 暫用現值;技能=家族扛「化境/繁殖增幅」)── */
@@ -757,7 +757,7 @@
       const f = STAT_FAM[fam], e = STAT_EL[el]; if (!f || !e) return null; const s = [0, 1, 2].map(i => (f[i] + e[i]) / 2), sum = s[0] + s[1] + s[2], sh = s.map(x => x / sum);
       return { atk: Math.round(sh[0] * STAT_BUD), hp: Math.round(sh[1] * STAT_BUD / STAT_WT.hp / 10) * 10, rcv: Math.round(sh[2] * STAT_BUD / STAT_WT.rcv) };
     }
-    ROSTER.forEach(c => { const fam = TW_IDS.has(c.id) ? 'taiwan' : CARD_FAMILY[c.id]; if (!fam) return; const s = famStat(fam, c.el); if (!s) return; c.atk = s.atk; c.hp = s.hp; c.rcv = s.rcv; c.rank = 'jonin'; });   // 全 ★3(jonin)+ 重算三圍(攻血回);台灣一起降到 450
+    ROSTER.forEach(c => { const fam = TW_IDS.has(c.id) ? 'taiwan' : CARD_FAMILY[c.id]; if (!fam) return; const s = famStat(fam, c.el); if (!s) return; c.atk = s.atk; c.hp = s.hp; c.rcv = s.rcv; if (!TW_IDS.has(c.id)) c.rank = 'jonin'; });   // 家族全 ★3(jonin)+ 重算三圍;台灣三圍仍走統一上限但維持 kage(★4)不降階(2026-07-15)
     const FAMILY_ACTIVE = {   // 家族主動技(套用到該卡屬性);效果見 _familyActive
       cat: { name: '疾風連擊', cd: 4, icon: '🐱', desc: '對單敵 攻×1 連打 3 下(吃相剋)' },
       dog: { name: '群擊', cd: 5, icon: '🐶', desc: '對全體敵 攻×2(吃相剋)' },
