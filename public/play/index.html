@@ -571,6 +571,86 @@
       if (stroke != null && sw) { g.lineStyle(sw, stroke, 1); g.strokeRoundedRect(cx - w / 2, cy - h / 2, w, h, r); }
       return g;
     }
+    function _elBadgeParts(scene, cx, cy, el) {   // demo .elbadge(UI kit 共用:編成宮位/bench/卡冊):22×18 圓角6+元素色底+白1.5框+14×14 白色元素 SVG icon(非文字);回 [底,icon] 由呼叫端掛容器
+      const bg = roundRectG(scene, cx, cy, 22, 18, 6, EL[el].color, 1, 0xffffff, 1.5);
+      const icon = scene.textures.exists('el_' + el)
+        ? scene.add.image(cx, cy, 'el_' + el).setDisplaySize(14, 14).setTintFill(0xffffff)   // 單色元素貼圖 tint 白=demo 白版 icon
+        : scene.add.text(cx, cy, EL[el].name, { fontFamily: EMOJIFONT, fontSize: '11px', color: '#ffffff', fontStyle: 'bold' }).setOrigin(0.5);   // el_ 沒載→退回文字
+      return [bg, icon];
+    }
+    function _loadElSvgs(scene) { ['fire', 'water', 'thunder', 'earth', 'wind'].forEach(el => { if (!scene.textures.exists('el_' + el)) scene.load.svg('el_' + el, 'art/elements/element_' + el + '.svg', { width: 96, height: 96 }); }); }   // 元素剪影 SVG(徽章/篩選用),preload 呼叫
+    const _CARD_GRAD = { fire: [0xe8663e, 0x9c3620, 0xffb59c], water: [0x45a0e2, 0x235f8c, 0xa9d6f6], thunder: [0xe6c33d, 0xa5821c, 0xf4de8c], earth: [0xcc9350, 0x875629, 0xe0b98c], wind: [0x5bbd76, 0x2e7846, 0x9fe0b8] };   // demo .fcard.b-*:[亮,暗,邊框]
+    function _elGradCardTex(scene, el, size, rad) {   // 方形元素漸層卡底(135deg 平滑無接縫+元素邊框,圓角):卡冊格子底,透明去背角色疊上→每張都有漸層背景。按 el+size 快取
+      const G = _CARD_GRAD[el]; if (!G) return null;
+      const key = 'cg_' + el + '_' + size;
+      if (scene.textures.exists(key)) return key;
+      const [top, bot, brd] = G, S = 3, PAD = 2, cw = size + PAD * 2, bx = PAD, by = PAD, hex = n => '#' + n.toString(16).padStart(6, '0');
+      const cv = document.createElement('canvas'); cv.width = cw * S; cv.height = cw * S;
+      const c = cv.getContext('2d'); c.scale(S, S);
+      const rr = (x, y, w, h, r) => { c.beginPath(); c.moveTo(x + r, y); c.arcTo(x + w, y, x + w, y + h, r); c.arcTo(x + w, y + h, x, y + h, r); c.arcTo(x, y + h, x, y, r); c.arcTo(x, y, x + w, y, r); c.closePath(); };
+      const grad = c.createLinearGradient(bx, by, bx + size, by + size); grad.addColorStop(0, hex(top)); grad.addColorStop(1, hex(bot));
+      c.fillStyle = grad; rr(bx, by, size, size, rad); c.fill();
+      c.lineWidth = 1.5; c.strokeStyle = hex(brd); rr(bx, by, size, size, rad); c.stroke();
+      scene.textures.addCanvas(key, cv); return key;
+    }
+    function _softPanelTex(scene, w, h, r) {   // demo .panel + --shadow-pop:白底圓角 + 1.5px divider 邊 + 柔影(0 12px 40px rgba(43,51,58,.28));2D canvas 平滑無鋸齒
+      const key = 'spanel_' + Math.round(w) + 'x' + Math.round(h) + '_' + r;
+      if (scene.textures.exists(key)) return key;
+      const S = 2, PAD = 40, cw = w + PAD * 2, ch = h + PAD * 2, bx = PAD, by = PAD;
+      const cv = document.createElement('canvas'); cv.width = cw * S; cv.height = ch * S;
+      const c = cv.getContext('2d'); c.scale(S, S);
+      const rr = (x, y, ww, hh, rad) => { c.beginPath(); c.moveTo(x + rad, y); c.arcTo(x + ww, y, x + ww, y + hh, rad); c.arcTo(x + ww, y + hh, x, y + hh, rad); c.arcTo(x, y + hh, x, y, rad); c.arcTo(x, y, x + ww, y, rad); c.closePath(); };
+      c.save(); c.shadowColor = 'rgba(43,51,58,0.28)'; c.shadowBlur = 34; c.shadowOffsetY = 11; c.fillStyle = '#ffffff'; rr(bx, by, w, h, r); c.fill(); c.restore();   // 柔影
+      c.fillStyle = '#ffffff'; rr(bx, by, w, h, r); c.fill();   // 白面板
+      c.lineWidth = 1.5; c.strokeStyle = '#e4ded4'; rr(bx, by, w, h, r); c.stroke();   // divider 邊
+      scene.textures.addCanvas(key, cv); return key;
+    }
+    function _pillBtnTex(scene, w, h, variant) {   // demo .pill 平滑貼圖(canvas 場景用):純色底+底唇+落影+頂高光,圓角抗鋸齒。ok=綠/ghost=灰
+      const V = ({ ok: ['#35a866', '#26824e'], ghost: ['#f6f4f1', '#ddd7cd'] })[variant] || ['#35a866', '#26824e'];
+      const base = V[0], lip = V[1], key = 'pillt_' + variant + '_' + Math.round(w) + 'x' + Math.round(h);
+      if (scene.textures.exists(key)) return key;
+      const S = 3, PAD = 8, cw = w + PAD * 2, ch = h + PAD * 2, r = h / 2, bx = PAD, by = PAD;
+      const cv = document.createElement('canvas'); cv.width = cw * S; cv.height = ch * S;
+      const c = cv.getContext('2d'); c.scale(S, S);
+      const rr = (x, y, ww, hh, rad) => { c.beginPath(); c.moveTo(x + rad, y); c.arcTo(x + ww, y, x + ww, y + hh, rad); c.arcTo(x + ww, y + hh, x, y + hh, rad); c.arcTo(x, y + hh, x, y, rad); c.arcTo(x, y, x + ww, y, rad); c.closePath(); };
+      c.save(); c.shadowColor = 'rgba(43,51,58,0.16)'; c.shadowBlur = 9; c.shadowOffsetY = 5; c.fillStyle = lip; rr(bx, by + 3, w, h, r); c.fill(); c.restore();   // 底唇(下沉3px)+落影
+      c.fillStyle = base; rr(bx, by, w, h, r); c.fill();
+      const grad = c.createLinearGradient(0, by, 0, by + h); grad.addColorStop(0, 'rgba(255,255,255,.16)'); grad.addColorStop(1, 'rgba(0,0,0,.05)'); c.fillStyle = grad; rr(bx, by, w, h, r); c.fill();   // 光澤
+      c.save(); rr(bx, by, w, h, r); c.clip(); c.fillStyle = 'rgba(255,255,255,.45)'; c.fillRect(bx, by, w, 1.4); c.restore();   // 頂高光
+      scene.textures.addCanvas(key, cv); return key;
+    }
+    function _pageGradBg(scene) {   // demo --page:深灰放射漸層(ellipse 100% 70% at 50% 40%,#5e5954→#383030 52%→#261e1a),整頁底
+      const key = 'pagebg_' + W + 'x' + H;
+      if (!scene.textures.exists(key)) {
+        const cv = document.createElement('canvas'); cv.width = W; cv.height = H; const c = cv.getContext('2d');
+        c.fillStyle = '#261e1a'; c.fillRect(0, 0, W, H);   // 邊緣色打底(橢圓外)
+        c.save(); c.translate(W * 0.5, H * 0.4); const rx = W * 0.62, ry = H * 0.52; c.scale(1, ry / rx);   // 圓→橢圓(y 縮放)
+        const grad = c.createRadialGradient(0, 0, 0, 0, 0, rx); grad.addColorStop(0, '#5e5954'); grad.addColorStop(0.52, '#383030'); grad.addColorStop(1, '#261e1a');
+        c.fillStyle = grad; c.beginPath(); c.arc(0, 0, rx, 0, 7); c.fill(); c.restore();
+        scene.textures.addCanvas(key, cv);
+      }
+      return scene.add.image(CX, H / 2, key);
+    }
+    function navArrowBtn(scene, x, y, dir, cb, opts) {   // 統一導覽鈕(編成切隊 / 卡冊換頁共用同一顆):28px 圓 + surf2 底 + divider 框 + ‹/›,全站左右鈕一致
+      opts = opts || {}; const T = UI(), add = opts.add || (o => o), d = opts.depth;
+      const bg = add(roundRectG(scene, x, y, 28, 28, 14, T.surf2, 1, T.divider, 1)); if (d != null) bg.setDepth(d);
+      const tx = add(scene.add.text(x, y, dir < 0 ? '‹' : '›', { fontFamily: EMOJIFONT, fontSize: '16px', color: T.ink2, fontStyle: 'bold' }).setOrigin(0.5).setResolution(3)); if (d != null) tx.setDepth(d + 1);
+      const hit = add(scene.add.rectangle(x, y, 32, 32, 0x000000, 0.001).setInteractive()); if (d != null) hit.setDepth(d + 1);
+      tapBind(scene, hit, cb); return hit;
+    }
+    function stylePillBtn(el, w, variant) {   // demo .pill.lg(=編成確定鈕精緻款):height52 圓角26 font18 + inset白高光 + 3px深唇 + 5×9柔影;variant 決定配色。全站底部按鈕共用
+      el.style.cssText = 'box-sizing:border-box;' + (w ? 'width:' + w + ';' : '') + 'height:52px;border-radius:26px;'
+        + "border:1.5px solid transparent;font-family:'Segoe UI Emoji','GenSen','Microsoft JhengHei',sans-serif;font-size:18px;font-weight:700;"
+        + 'cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:5px;padding:3px 0 0;'   // flex 置中(非根元素才有效;emoji 也不跑位);padding-top 3px 補償底部立體唇邊→對齊視覺中心
+        + 'background-image:linear-gradient(rgba(255,255,255,.16),rgba(0,0,0,.05));-webkit-tap-highlight-color:transparent;';
+      const V = ({
+        ok: ['#35a866', '#35a866', '#fff', '#26824e'], ghost: ['#f6f4f1', '#e4ded4', '#8a939b', '#ddd7cd'],
+        sell: ['#fff6ea', '#e6a54e', '#b46a1c', '#e8c78e'], bad: ['#e0663a', '#e0663a', '#fff', '#a53f34'],
+        ok2: ['#4a9a3c', '#4a9a3c', '#fff', '#367029']
+      })[variant] || ['#f6f4f1', '#e4ded4', '#8a939b', '#ddd7cd'];
+      el.style.backgroundColor = V[0]; el.style.borderColor = V[1]; el.style.color = V[2];
+      el.style.boxShadow = 'inset 0 1px 0 rgba(255,255,255,.45), 0 3px 0 ' + V[3] + ', 0 5px 9px rgba(43,51,58,.16)';
+    }
 
     /* ===== F5 收集系統(localStorage 持有卡 + 關卡掉落) ===== */
     const STARTER = [];   // 新手起始「不送卡」(2026-07):狗狗隊只在新手教學「借用」(教學團隊直接從 ROSTER 查表、不需擁有),真正第一批卡=教學後的免費十連。教學觸發看 !tutSeen()(=尚未真正畢業就一律進/重進教學,見 HomeScene.create);freePull 改到教學真正完成/明確跳過才發(showTutComplete 兩鈕 / _doTutSkip),不再在進教學當下搶先發,避免「教學看一半重整→自動畢業還照領十連」(2026-07-12 修,同時仍避免 0 卡死鎖:tutSeen 沒過就會一直被導回教學)
@@ -582,13 +662,13 @@
     const EL_ORDER = { fire: 0, water: 1, thunder: 2, earth: 3, wind: 4 };
     const SPECIES_ORDER = { '貓': 0, '犬': 1, '鳥': 2, '鼠': 3, '兔': 4, '魚': 5, '台灣特有': 6 };   // 種族排序:同種族排一起,種族內再按屬性
     const _spOrd = id => { const s = CARD_SPECIES[id]; return s && SPECIES_ORDER[s.n] != null ? SPECIES_ORDER[s.n] : 99; };
-    const SORT_MODES = [
+    const SORT_MODES = [   // 卡冊排序鍵(demo collection.html cb-sort:編號/種族/LV/PWR/HP/RCV;屬性交給篩選列不重複)
       { name: '編號', fn: (a, b) => a._i - b._i },
-      { name: '屬性', fn: (a, b) => (EL_ORDER[a.el] - EL_ORDER[b.el]) || (a._i - b._i) },
       { name: '種族', fn: (a, b) => (_spOrd(a.id) - _spOrd(b.id)) || (EL_ORDER[a.el] - EL_ORDER[b.el]) || (a._i - b._i) },
-      { name: '等級', fn: (a, b) => (getCardLv(b.id) - getCardLv(a.id)) || (a._i - b._i) },
-      { name: '星數', fn: (a, b) => (cardStars(b.id) - cardStars(a.id)) || (a._i - b._i) },
-      { name: '攻擊', fn: (a, b) => (cardAtk(b.id) - cardAtk(a.id)) || (a._i - b._i) },
+      { name: 'LV', fn: (a, b) => (getCardLv(b.id) - getCardLv(a.id)) || (a._i - b._i) },
+      { name: 'PWR', fn: (a, b) => (cardAtk(b.id) - cardAtk(a.id)) || (a._i - b._i) },
+      { name: 'HP', fn: (a, b) => (cardHp(b.id) - cardHp(a.id)) || (a._i - b._i) },
+      { name: 'RCV', fn: (a, b) => (cardRcv(b.id) - cardRcv(a.id)) || (a._i - b._i) },
     ];
     /* 隊長技:隊伍首位(隊長)的常駐被動,塑造流派 */
     const LEADER_SKILLS = {
@@ -1544,7 +1624,7 @@
     /* ===== 出戰編隊 ===== */
     class TeamScene extends Phaser.Scene {
       constructor() { super('team'); }
-      preload() { _loadAllCardThumbs(this); _loadCardArt(this, loadTeam()); ['fire', 'water', 'thunder', 'earth', 'wind'].forEach(el => { if (!this.textures.exists('el_' + el)) this.load.svg('el_' + el, 'art/elements/element_' + el + '.svg', { width: 96, height: 96 }); }); showLoadBar(this); }   // 編隊:全部縮圖(bench)+當前隊大圖(宮格)+屬性篩選用元素SVG(同戰鬥宮上那套);切隊時 loadTeamSlots 再補
+      preload() { _loadAllCardThumbs(this); _loadCardArt(this, loadTeam()); _loadElSvgs(this); showLoadBar(this); }   // 編隊:全部縮圖(bench)+當前隊大圖(宮格)+元素SVG(徽章/篩選);切隊時 loadTeamSlots 再補
       create(data) {
         this.tutTeam = !!(data && data.tutorial);   // 從教學完成進來 → 顯示編隊教學
         this.tutTeamArmed = false;   // 重置脈動狀態(避免上次殘留)
@@ -1600,12 +1680,7 @@
 
         // ── tc-head:‹ 隊名 › ✎(換隊+改名,取代舊「出戰編隊」標題列)──
         this.swName = this.add.text(CX, HEAD_Y, '', { fontFamily: EMOJIFONT, fontSize: FS.body, color: T.ink, fontStyle: 'bold' }).setOrigin(0.5).setDepth(6);
-        const mkArrow = (x, dir) => {
-          roundRectG(this, x, HEAD_Y, 28, 28, 14, T.surf2, 1, T.divider, 1).setDepth(6);
-          this.add.text(x, HEAD_Y, dir < 0 ? '‹' : '›', { fontFamily: EMOJIFONT, fontSize: '16px', color: T.ink2, fontStyle: 'bold' }).setOrigin(0.5).setDepth(7);
-          const hit = this.add.rectangle(x, HEAD_Y, 30, 30, 0x000000, 0.001).setInteractive().setDepth(7);
-          tapBind(this, hit, () => this.switchTeamBy(dir));
-        };
+        const mkArrow = (x, dir) => navArrowBtn(this, x, HEAD_Y, dir, () => this.switchTeamBy(dir), { depth: 6 });   // 共用導覽鈕(與卡冊換頁同一顆)
         mkArrow(CX - 104, -1); mkArrow(CX + 104, 1);
         this._pen = this.add.text(CX + 134, HEAD_Y, '✎', { fontFamily: EMOJIFONT, fontSize: '18px', color: '#2e9be0' }).setOrigin(0.5).setDepth(7).setInteractive();
         tapBind(this, this._pen, () => this.doRename());
@@ -1970,13 +2045,7 @@
         this.rebuildSlotOverlay(slot, null);
         this.updateStats(); this.refreshStart();
       }
-      _elBadge(cx, cy, el) {   // demo .elbadge:22×18 圓角6 + 元素色底 + 白1.5px框 + 14×14 白色元素 SVG icon(非文字);回傳 [底, icon] 由呼叫端加進對應容器
-        const bg = roundRectG(this, cx, cy, 22, 18, 6, EL[el].color, 1, 0xffffff, 1.5);
-        const icon = this.textures.exists('el_' + el)
-          ? this.add.image(cx, cy, 'el_' + el).setDisplaySize(14, 14).setTintFill(0xffffff)   // 單色元素貼圖 tint 白=demo 白版 icon
-          : this.add.text(cx, cy, EL[el].name, { fontFamily: EMOJIFONT, fontSize: '11px', color: '#ffffff', fontStyle: 'bold' }).setOrigin(0.5);   // el_ 沒載→退回文字
-        return [bg, icon];
-      }
+      _elBadge(cx, cy, el) { return _elBadgeParts(this, cx, cy, el); }   // → 全域 UI kit _elBadgeParts(卡冊共用)
       rebuildSlotOverlay(slot, cd) {   // 右上元素徽章 + 左下 Lv 膠囊(隨指派卡片重繪,先銷毀舊的避免殘留)
         if (slot._ov && slot._ov.length) slot._ov.forEach(o => o.destroy());
         slot._ov = [];
@@ -2564,17 +2633,18 @@
         if (isTap) { if (this.tutBg) this.tutBg.setVisible(false); const blk = this.add.rectangle(CX, H / 2, W, H, 0x000000, 0.5).setInteractive(); panel.add(blk); blk.on('pointerup', () => this.tutEvent('tap')); }   // 歡迎:全螢幕半透明,點任意處繼續
         else if (pos === 'mid') { if (this.tutBg) this.tutBg.setVisible(false); }   // 中間:不鋪黑底(訊息盒本身夠暗)→ 上方敵人/沙漏看得到
         else { this.tutMakeBg(pos); this.tutBg.setVisible(true); }   // 持久黑底(獨立於訊息):訊息變換不消失,演示時才一起暫時隱藏
-        const box = this.add.rectangle(CX, y, W - 12, 180, 0x0d1a12, 0.96).setStrokeStyle(3, 0x6aaa4c).setInteractive(); panel.add(box);
-        panel.add(this.add.text(CX, y - 18, def.msg, { fontFamily: EMOJIFONT, fontSize: '18px', color: '#eafce0', fontStyle: 'bold', align: 'center', lineSpacing: 9, wordWrap: { width: W - 40 } }).setOrigin(0.5));
-        const tab = this.add.text(W - 12, 46, '💬 看提示', { fontFamily: EMOJIFONT, fontSize: '14px', color: '#dffbcf', backgroundColor: '#1c3a18ee', padding: { x: 10, y: 6 }, fontStyle: 'bold' }).setOrigin(1, 0.5).setInteractive().setVisible(false); g.add(tab);
+        const _pw = W - 24, _ph = 172;   // demo .panel:白底圓角16+divider邊+shadow-pop 柔影(取代舊深綠科技框)
+        const box = this.add.image(CX, y, _softPanelTex(this, _pw, _ph, 16)).setDisplaySize(_pw + 80, _ph + 80).setInteractive(); panel.add(box);
+        panel.add(this.add.text(CX, y - 14, def.msg, { fontFamily: EMOJIFONT, fontSize: '18px', color: '#2b333a', fontStyle: 'bold', align: 'center', lineSpacing: 10, wordWrap: { width: W - 56 } }).setOrigin(0.5));   // demo ink 深墨字
+        const tab = this.add.text(W - 12, 46, '💬 看提示', { fontFamily: EMOJIFONT, fontSize: FS.cap, color: '#c8912a', backgroundColor: '#fff8ecf2', padding: { x: 11, y: 7 }, fontStyle: 'bold' }).setOrigin(1, 0.5).setInteractive().setVisible(false); g.add(tab);   // demo 金字淺底 chip
         this.tutPanel = panel; this.tutTab = tab; this.tutBgShow = (!isTap && pos !== 'mid');   // 給 tutCollapse / 拖塊時自動收起用
         tab.on('pointerup', () => { panel.setVisible(true); if (this.tutBg && this.tutBgShow) this.tutBg.setVisible(true); tab.setVisible(false); });   // 叫回說明
-        if (isTap) { panel.add(this.add.text(CX, y + 66, '▶ 點任意處繼續', { fontFamily: EMOJIFONT, fontSize: '14px', color: '#9ad88f', fontStyle: 'bold' }).setOrigin(0.5)); }
+        if (isTap) { panel.add(this.add.text(CX, y + 64, '▶ 點任意處繼續', { fontFamily: EMOJIFONT, fontSize: FS.cap, color: '#c8912a', fontStyle: 'bold' }).setOrigin(0.5)); }   // demo goldTx 金色 CTA
         else {
-          panel.add(this.add.text(CX, y + 66, '↓ 移動方塊 / 點一下說明 → 自動收起', { fontFamily: EMOJIFONT, fontSize: '13px', color: '#9ad88f', fontStyle: 'bold' }).setOrigin(0.5));
+          panel.add(this.add.text(CX, y + 64, '↓ 移動方塊 / 點一下說明 → 自動收起', { fontFamily: EMOJIFONT, fontSize: FS.micro, color: '#6c7780', fontStyle: 'bold' }).setOrigin(0.5));   // demo ink2 次要色
           box.on('pointerup', () => this.tutCollapse());
         }   // 點訊息→收起;拖塊時也會自動收起(grabFX);要重看點「💬 看提示」
-        const sk = this.add.text(W - 12, 16, '跳過教學 ✕', { fontFamily: EMOJIFONT, fontSize: '14px', color: '#cfe0b0', backgroundColor: '#000000aa', padding: { x: 9, y: 5 } }).setOrigin(1, 0.5).setInteractive(); g.add(sk); sk.on('pointerup', () => this.tutSkip());
+        const sk = this.add.text(W - 12, 16, '跳過教學 ✕', { fontFamily: EMOJIFONT, fontSize: FS.cap, color: '#6c7780', backgroundColor: '#ffffffe6', padding: { x: 10, y: 6 }, fontStyle: 'bold' }).setOrigin(1, 0.5).setInteractive(); g.add(sk); sk.on('pointerup', () => this.tutSkip());   // demo 次要色淺底 chip
         g.alpha = 0; this.tweens.add({ targets: g, alpha: 1, duration: 240 });
       }
       tutCollapse() { if (this.tutPanel && this.tutPanel.active && this.tutPanel.visible) { this.tutPanel.setVisible(false); if (this.tutBg) this.tutBg.setVisible(false); if (this.tutTab && this.tutTab.active) this.tutTab.setVisible(true); } }   // 收起說明+黑底→盤面淨空;拖塊(grabFX)或點訊息時觸發
@@ -5398,21 +5468,22 @@
         r.on('pointerup', cb); g.add(r); g.add(t); return r;
       }
       tutBtn(g, y, label, cb, dim) {
-        const r = this.add.rectangle(CX, y, 300, 52, dim ? 0x1c2a18 : 0x2e5a2c, 0.97).setStrokeStyle(3, 0x6aaa4c).setInteractive();   // 教學風格綠框鈕
-        const t = this.add.text(CX, y, label, { fontFamily: EMOJIFONT, fontSize: '19px', color: '#eafce0', fontStyle: 'bold' }).setOrigin(0.5);
-        r.on('pointerup', cb); g.add(r); g.add(t); return r;
+        const bw = 300, bh = 52;   // demo .pill.ok.lg(平滑貼圖):主鈕綠、dim=灰 ghost
+        g.add(this.add.image(CX, y, _pillBtnTex(this, bw, bh, dim ? 'ghost' : 'ok')).setDisplaySize(bw + 16, bh + 16));
+        const t = this.add.text(CX, y - 1, label, { fontFamily: EMOJIFONT, fontSize: FS.sub, color: dim ? '#8a939b' : '#ffffff', fontStyle: 'bold' }).setOrigin(0.5).setResolution(2); g.add(t);
+        const hit = this.add.rectangle(CX, y, bw, bh, 0x000000, 0.001).setInteractive(); hit.on('pointerup', cb); g.add(hit); return hit;
       }
       showTutComplete(g) {
         const cy = Math.round(H * 0.42);   // 教學完成:統一教學綠框風格
-        const box = this.add.rectangle(CX, cy, W - 16, 278, 0x0d1a12, 0.97).setStrokeStyle(3, 0x6aaa4c); g.add(box);
-        g.add(this.add.text(CX, cy - 112, '🎓 教學完成!', { fontFamily: EMOJIFONT, fontSize: '27px', color: '#bff09a', fontStyle: 'bold' }).setOrigin(0.5));
-        g.add(this.add.text(CX, cy - 58, '你已學會核心:\n放塊 → 清屬性宮 → 相剋打弱點 → 屬塊覆蓋', { fontFamily: EMOJIFONT, fontSize: '15px', color: '#eafce0', align: 'center', lineSpacing: 7, wordWrap: { width: W - 56 } }).setOrigin(0.5));
+        g.add(this.add.image(CX, cy, _softPanelTex(this, W - 24, 278, 16)).setDisplaySize(W - 24 + 80, 278 + 80));   // demo .panel 白面板
+        g.add(this.add.text(CX, cy - 112, '🎓 教學完成!', { fontFamily: EMOJIFONT, fontSize: FS.title, color: '#c8912a', fontStyle: 'bold' }).setOrigin(0.5).setResolution(2));   // demo h1 金標題
+        g.add(this.add.text(CX, cy - 58, '你已學會核心:\n放塊 → 清屬性宮 → 相剋打弱點 → 屬塊覆蓋', { fontFamily: EMOJIFONT, fontSize: FS.cap, color: '#2b333a', fontStyle: 'bold', align: 'center', lineSpacing: 8, wordWrap: { width: W - 56 } }).setOrigin(0.5).setResolution(2));   // demo 深墨字
         if (!freePullDone()) {   // 🎁 首次完成教學→提供新手十連(兩鈕都設 freePull 旗標,回大廳自動 reveal)
-          g.add(this.add.text(CX, cy - 4, '🎁 送你「新手十連」→ 試試抽卡、拿新夥伴!', { fontFamily: EMOJIFONT, fontSize: '15px', color: '#ffe08a', fontStyle: 'bold' }).setOrigin(0.5));
+          g.add(this.add.text(CX, cy - 4, '🎁 送你「新手十連」→ 試試抽卡、拿新夥伴!', { fontFamily: EMOJIFONT, fontSize: FS.cap, color: '#c8912a', fontStyle: 'bold' }).setOrigin(0.5).setResolution(2));
           this.tutBtn(g, cy + 46, '🎁 領取新手十連!', () => { mutSave(s => { if (!s.settings) s.settings = {}; s.settings.freePull = true; }); this.scene.manager.start('home'); this.scene.manager.stop('game'); });   // 回大廳→自動抽十連 reveal→看完導向編隊教學
           this.tutBtn(g, cy + 106, '🏠 之後再領', () => { mutSave(s => { if (!s.settings) s.settings = {}; s.settings.freePull = true; }); this.scene.manager.start('home'); this.scene.manager.stop('game'); }, true);   // 🔐[8] 這裡能顯示=已經真正過完教學(showResult 進來前已呼叫過 tutDone());freePull 不再靠 HomeScene 進教學時搶先發,改由這兩顆鈕在真完成的當下才發,兩鈕都算「完成」只差有沒有立刻看 reveal,同樣要給十連
         } else {   // 🔁 已領過十連(重玩教學複習)→ 不再提供十連,純回大廳(伺服器 free_pull_used 亦會擋,此為 UI 層不再誤導)
-          g.add(this.add.text(CX, cy - 4, '複習完成!核心玩法已經熟囉 👍', { fontFamily: EMOJIFONT, fontSize: '15px', color: '#eafce0' }).setOrigin(0.5));
+          g.add(this.add.text(CX, cy - 4, '複習完成!核心玩法已經熟囉 👍', { fontFamily: EMOJIFONT, fontSize: FS.cap, color: '#2b333a', fontStyle: 'bold' }).setOrigin(0.5).setResolution(2));
           this.tutBtn(g, cy + 66, '🏠 回大廳', () => { this.scene.manager.start('home'); this.scene.manager.stop('game'); });
         }
         g.alpha = 0; this.tweens.add({ targets: g, alpha: 1, duration: 300 });
@@ -5548,7 +5619,7 @@
     /* ===== 卡冊 → 背包(怪物箱):網格 → 點卡進詳細頁 + 操作 ===== */
     class CollectionScene extends Phaser.Scene {
       constructor() { super('collection'); }
-      preload() { _loadAllCardThumbs(this); showLoadBar(this); }   // 卡冊格子=縮圖;大圖等點開詳情才補(_ensureFullArt)
+      preload() { _loadAllCardThumbs(this); _loadElSvgs(this); showLoadBar(this); }   // 卡冊格子=縮圖+元素SVG(徽章/篩選);大圖等點開詳情才補(_ensureFullArt)
       init(d) {
         this.sel = (d && d.sel) || null;
         if (this.sortMode == null) this.sortMode = 0;
@@ -5556,9 +5627,80 @@
         if (this.boxPage == null) this.boxPage = 0;
       }
       create() {
-        this.add.rectangle(CX, H / 2, W, H, UI().page); this.rebuild();
-        bindGridSwipe(this, 170, H - 92, 'boxPage');   // 格子區拖曳換頁(慣性滑動)
-        bindSceneResize(this, () => { const o = H; recomputeLayout(); if (Math.abs(H - o) > 3) { this.scale.setGameSize(W, H); this.rebuild(); } });
+        _pageGradBg(this);   // demo --page:深色放射漸層整頁底(像「卡片管理」選單頁)
+        this.add.rectangle(CX, H - 34, W, 68, UI().surf).setStrokeStyle(1, UI().divider, 1);   // 白 footer 底(高度=編成頁 68@H-34,DOM 售卡/返回鈕疊其上)
+        this.buildDomBar();   // DOM overlay(排序/篩選+底部售卡/返回)建一次;rebuild 只重畫 canvas
+        this.rebuild();
+        bindGridSwipe(this, 126, H - 92, 'boxPage');   // 格子區拖曳換頁(慣性滑動;起點=卡格區頂)
+        bindSceneResize(this, () => { const o = H; recomputeLayout(); if (Math.abs(H - o) > 3) { this.scale.setGameSize(W, H); this.scene.restart(); } });
+      }
+      _setDomUI(on) { [this.sortDom, this.footDom].forEach(d => { if (d && d.node) d.setVisible(on); }); }   // canvas modal(詳情/確認彈窗)蓋不住 DOM→開 modal 時整組藏
+      buildDomBar() {   // 100% 照 demo collection.html:cb-bar(排序循環鈕+元素 icon 篩選,同編成頁做法)+footbar(售卡/返回;多選時換 取消/售出)
+        const FONT = "'Segoe UI Emoji','GenSen','Microsoft JhengHei',sans-serif", CAP = '15px';
+        const root = document.createElement('div'); root.style.cssText = 'width:' + (W - 20) + 'px;';
+        const bar = document.createElement('div'); bar.style.cssText = 'display:flex;align-items:center;gap:6px;width:100%;font-family:' + FONT + ';'; root.appendChild(bar);
+        const sel = document.createElement('div');   // 排序鈕(demo cb-sort 樣式;點一下循環,同編成頁)
+        sel.style.cssText = 'flex:none;height:34px;min-width:66px;border-radius:17px;border:1.5px solid #e4ded4;background:#f6f4f1;'
+          + 'color:#2b333a;font-family:inherit;font-size:' + CAP + ';font-weight:700;padding:0 11px;cursor:pointer;'
+          + 'display:inline-flex;align-items:center;justify-content:center;gap:3px;-webkit-tap-highlight-color:transparent;'
+          + 'box-shadow:inset 0 1px 0 rgba(255,255,255,.5), 0 2px 0 #ddd7cd;';
+        const sLabel = () => SORT_MODES[this.sortMode].name + ' ⇄';
+        sel.textContent = sLabel();
+        sel.addEventListener('click', () => { this.sortMode = (this.sortMode + 1) % SORT_MODES.length; sel.textContent = sLabel(); this.boxPage = 0; this.rebuild(); });
+        bar.appendChild(sel);
+        const els = [{ k: null, t: '全' }, { k: 'fire' }, { k: 'water' }, { k: 'thunder' }, { k: 'earth' }, { k: 'wind' }];
+        this._filterPills = [];
+        const paint = (p, on, el) => {   // demo .pill.sm ↔ .pill.sm.primary(金底)
+          if (on) { p.style.backgroundColor = '#f4b73c'; p.style.borderColor = '#f4b73c'; p.style.color = '#fff'; p.style.boxShadow = 'inset 0 1px 0 rgba(255,255,255,.45), 0 2px 0 #cf9a1f, 0 3px 6px rgba(43,51,58,.14)'; }
+          else { p.style.backgroundColor = '#fff'; p.style.borderColor = '#e4ded4'; p.style.color = '#2b333a'; p.style.boxShadow = 'inset 0 1px 0 rgba(255,255,255,.4), 0 2px 0 #d9d3c9, 0 3px 6px rgba(43,51,58,.14)'; }
+          if (el) { const ic = p.firstChild; ic.style.backgroundImage = "url('" + EL_ICON[el] + "')"; ic.style.filter = on ? 'brightness(0) invert(1)' : 'none'; }   // 內嵌 data URI;選中金底→白 icon
+        };
+        els.forEach(e => {
+          const p = document.createElement('span');
+          p.style.cssText = 'box-sizing:border-box;flex:1;min-width:0;height:34px;border-radius:17px;display:inline-flex;align-items:center;justify-content:center;padding:0;cursor:pointer;'
+            + 'background-image:linear-gradient(rgba(255,255,255,.16),rgba(0,0,0,.05));border:1.5px solid #e4ded4;font-family:inherit;font-size:' + CAP + ';font-weight:700;-webkit-tap-highlight-color:transparent;';
+          if (e.k) { const ic = document.createElement('i'); ic.style.cssText = 'display:inline-block;width:22px;height:22px;background:center/contain no-repeat;'; p.appendChild(ic); }
+          else p.textContent = e.t;
+          paint(p, this.filterEl === e.k, e.k);
+          p.addEventListener('click', () => { this.filterEl = e.k; this.boxPage = 0; this.rebuild(); this._filterPills.forEach(fp => paint(fp.p, this.filterEl === fp.k, fp.k)); });
+          bar.appendChild(p); this._filterPills.push({ p, k: e.k });
+        });
+        this.sortDom = this.add.dom(CX, 84, root).setDepth(6);   // 上移貼近標題列(與第一排卡等距)
+        // ── footbar(demo:售卡 琥珀 sell 左 / ‹返回 ghost 右,各 46%;多選時換 取消/售出 n 張)──
+        const froot = document.createElement('div'); froot.style.cssText = 'width:' + (W - 28) + 'px;height:52px;';   // 明確高度→Phaser add.dom 定位時就有正確高度可置中(按鈕在 updateFootbar 才套高,否則 froot 高=0→頂端貼 y、按鈕往下長掉出畫布)
+        const fbar = document.createElement('div'); fbar.style.cssText = 'display:flex;align-items:center;justify-content:space-between;width:100%;font-family:' + FONT + ';'; froot.appendChild(fbar);
+        this._footL = document.createElement('button'); this._footR = document.createElement('button');
+        fbar.appendChild(this._footL); fbar.appendChild(this._footR);   // 樣式由 updateFootbar 用 stylePillBtn 套(=編成確定鈕精緻款)
+        this._footL.addEventListener('click', () => { if (this._footLCb) this._footLCb(); });
+        this._footR.addEventListener('click', () => { if (this._footRCb) this._footRCb(); });
+        this.footDom = this.add.dom(CX, H - 34, froot).setDepth(6);
+        this.updateFootbar();
+      }
+      updateFootbar() {   // 依 selMode 同步底列(draw 每次呼叫);按鈕=編成確定鈕精緻款(stylePillBtn)
+        const L = this._footL, R = this._footR; if (!L) return;
+        if (!this.selMode) {
+          stylePillBtn(L, '46%', 'sell'); L.textContent = '💰 售卡';   // demo .pill.sell 琥珀謹慎色
+          this._footLCb = () => { this.selMode = true; this.dsel = new Set(); this.rebuild(); };
+          stylePillBtn(R, '46%', 'ghost'); R.textContent = '‹ 返回';
+          this._footRCb = () => { this.scene.manager.start('home'); this.scene.manager.stop('collection'); };
+        } else {
+          stylePillBtn(L, '46%', 'ghost'); L.textContent = '✖ 取消';
+          this._footLCb = () => { this.selMode = false; this.dsel = new Set(); this.rebuild(); };
+          const n = this.dsel ? this.dsel.size : 0;
+          stylePillBtn(R, '46%', 'bad'); R.textContent = '✓ 售出 ' + n + ' 張';   // 真正破壞步驟=實色警示
+          this._footRCb = () => {   // 🔐 售出(分解)改打伺服器,async 期間防連點(原「✔ 分解」流程)
+            if (!n) { this.toast('還沒勾選卡'); return; }
+            if (this._busyDis) return; this._busyDis = true;
+            const uids = [...this.dsel], total = uids.length, before = getMeta().coins || 0;
+            this.selMode = false; this.dsel = new Set(); this.rebuild();
+            dissolveUids(uids).then(d => {
+              this._busyDis = false;
+              const nn = Array.isArray(d.removed) ? d.removed.length : 0, kept = total - nn, gain = Math.max(0, (d.coins || 0) - before);
+              this.toast('售出 ' + nn + ' 張,+' + gain + ' 金' + (kept ? '\n(每種保留最後 ' + kept + ' 張)' : ''));
+              this.rebuild();
+            }).catch(() => { this._busyDis = false; this.toast('需要連線,請稍後再試'); this.rebuild(); });
+          };
+        }
       }
       rebuild() { if (this.layer) this.layer.destroy(); this.layer = this.add.container(0, 0); this.gridG = null; this.draw(); }
       L(o) { this.layer.add(o); return o; }
@@ -5601,14 +5743,20 @@
       }
       draw() {
         const T = UI(), cards = loadSave().cards, cap = boxCap(), cnt = cards.length, full = cnt >= cap;
-        // 垂直節奏:標題36 → 副標66 → 寶玉88 → 鈕118(span100-136) → chip154(span138-170) → 卡格206起,各留 ≥8px 不重疊
-        this.txt(CX, 36, '🎒 卡冊', FS.title, T.ink, 0.5, true);
-        this.txt(CX, 66, 'BOX ' + cnt + ' / ' + cap + '　·　收集 ' + ownedCount() + '/' + ROSTER.length + ' 種', FS.cap, full ? '#e0663a' : T.ink2, 0.5);
-        const g = loadSave().gems; this.txt(CX, 88, '🔮 ' + ELEM_DUNGEONS.map(e => EL[e].name + (g[e] || 0)).join(' '), FS.cap, T.ink2, 0.5);
-        // 排序 / 擴背包(亮色藥丸,置中對稱)
-        this.btn(CX - 80, 118, 152, 36, '↕ 排序:' + SORT_MODES[this.sortMode].name, () => { this.sortMode = (this.sortMode + 1) % SORT_MODES.length; this.boxPage = 0; this.rebuild(); }, { col: T.surf, stroke: T.divider, color: T.ink, fs: FS.cap });
-        this.btn(CX + 80, 118, 152, 36, '➕ 擴背包 1💎+5格', async () => {   // 🔐 花石頭改打伺服器(POST /api/wallet/spend {action:'box_expand'});buyBoxSlots() 本體保留(devGate 測試用);_busyExpand 防連點
-          if (this._busyExpand) return; this._busyExpand = true;
+        // ── cb-head(demo collection.html):白底標題列+「🎒 卡冊 53/255」同行(title+sub 兩字級)+右側 34×34 擴充鈕 ──
+        this.rect(CX, 27, W, 54, T.surf).setStrokeStyle(1, T.divider, 1);
+        const t1 = this.L(this.add.text(0, 27, '🎒 卡冊', { fontFamily: EMOJIFONT, fontSize: FS.title, color: T.ink, fontStyle: 'bold' }).setOrigin(0, 0.5));
+        const t2 = this.L(this.add.text(0, 28, cnt + ' / ' + cap, { fontFamily: EMOJIFONT, fontSize: FS.sub, color: full ? '#e0663a' : T.ink2, fontStyle: 'bold' }).setOrigin(0, 0.5));
+        const _tw = t1.width + 8 + t2.width; t1.x = CX - _tw / 2; t2.x = t1.x + t1.width + 8;   // 兩字級同行置中(demo cb-title+cb-cap)
+        // 擴充背包 icon 鈕(demo cb-expbtn 34×34 圓角10)→先 uiConfirm 確認(demo 擴充彈窗:1💎+5格 同意/不同意)再打伺服器
+        this.L(roundRectG(this, W - 29, 27, 34, 34, 10, T.surf2, 1, T.divider, 1.5));
+        this.L(roundRectG(this, W - 29, 27, 16, 2.6, 1.3, T.ink, 1, null, 0)); this.L(roundRectG(this, W - 29, 27, 2.6, 16, 1.3, T.ink, 1, null, 0));   // + 十字(graphics,精準上下左右置中;比照 demo cb-expbtn SVG,取代會有基線偏移的 ＋ 字)
+        const expHit = this.rect(W - 29, 27, 40, 40, 0x000000, 0.001).setInteractive();
+        tapBind(this, expHit, async () => {   // 🔐 花石頭改打伺服器(POST /api/wallet/spend box_expand);_busyExpand 防連點
+          if (this._busyExpand) return;
+          const yes = await uiConfirm({ title: '🎒 擴充背包', message: '擴充背包需要 1 個魔法石 💎\n(＋5 格),確定要擴充嗎?', okLabel: '同意', cancelLabel: '不同意' });
+          if (!yes) return;
+          this._busyExpand = true;
           let r;
           try { r = await authedFetch('/api/wallet/spend', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'box_expand' }) }); }
           catch (e) { this._busyExpand = false; this.toast('需要連線,請稍後再試'); return; }
@@ -5617,49 +5765,46 @@
           const d = await r.json(); syncWallet(d);
           this._busyExpand = false;
           this.rebuild(); this.playExpandFX(boxCap());
-        }, { col: T.surf, stroke: 0xc9b6ec, color: '#7a5ec4', fs: FS.cap });
-        // 篩選 chip(圓角藥丸,整排置中)
-        const chips = [['全', null]].concat(ELEM_DUNGEONS.map(e => [EL[e].name, e]));
-        const _cw = 56, _cg = 8, _cn = chips.length, _cx0 = CX - (_cn * _cw + (_cn - 1) * _cg) / 2 + _cw / 2;
-        chips.forEach((ch, i) => {
-          const x = _cx0 + i * (_cw + _cg), on = this.filterEl === ch[1];
-          this.btn(x, 154, _cw, 32, ch[0], () => { this.filterEl = ch[1]; this.boxPage = 0; this.rebuild(); }, { col: on ? (ch[1] ? EL[ch[1]].color : 0x2b333a) : T.surf, stroke: on ? (ch[1] ? EL[ch[1]].color : 0x2b333a) : T.divider, color: on ? '#ffffff' : T.ink2, fs: '15px', bold: on });
         });
+        // (收集進度/寶玉那行已移除;排序/篩選列=DOM overlay(y≈100),見 buildDomBar;擴充鈕在標題列=demo 版面)
         // 個體清單:每張卡各佔一格(不疊×N),套元素篩選 + 排序
         let list = cards.map((c, i) => { const r = ROSTER.find(x => x.id === c.id) || { id: c.id, name: '???', el: 'junk', rank: 'genin', atk: 0, hp: 0, rcv: 0, _ghost: true }; return Object.assign({ _i: i, u: c.u }, r); });   // 卡表已移除的 id→替身卡(EL.junk 可渲染),仍可在分解模式回收,不再 EL[undefined] 崩整頁
         if (this.filterEl) list = list.filter(c => c.el === this.filterEl);
         list = list.sort(SORT_MODES[this.sortMode].fn);
         if (!this.filterEl) { const empties = Math.max(0, cap - list.length); for (let e = 0; e < empties; e++)list.push(null); }   // 全屬視圖:卡片後補「空欄」到上限→看得到還剩幾格
         // 正方形、一排 5 欄、分頁(5×6=30/頁)
-        const cols = 5, perPage = 30, cw = 64, gx = 76, gy = 74, x0 = CX - 2 * gx, y0 = 206;   // 起點下移:第一排頂緣174,不撞篩選chip(底緣170)
+        const cols = 5, perPage = 30, cw = 68, gx = 76, x0 = CX - 2 * gx, y0 = 148;   // 卡片 68(gap=8=demo);排序列上移後卡格對齊上移(與排序列等距)
+        const gy = Math.max(70, Math.min(82, Math.floor((H - 134 - y0) / 5)));   // 行距自適應:填滿排序列到分頁間的高度(高螢幕間隔大、矮螢幕70仍塞下6排)
         const pages = Math.max(1, Math.ceil(list.length / perPage));
         if (this.boxPage >= pages) this.boxPage = pages - 1; if (this.boxPage < 0) this.boxPage = 0;
         const pageList = list.slice(this.boxPage * perPage, (this.boxPage + 1) * perPage);
         this._pages = pages;
-        if (!list.length) this.txt(CX, 280, '(沒有符合條件的卡)', '12px', '#9a8a6a', 0.5);
+        if (!list.length) this.txt(CX, 300, '(沒有符合條件的卡)', '15px', '#b5aa9a', 0.5);   // 深色頁→亮字
         const _realL = this.layer, gridG = this.gridG = this.add.container(0, 0); this.layer.add(gridG); this.layer = gridG;   // 卡格暫導入可滑動 gridG(畫完還原)
         const RAD = 13, USE = 0xeaa419, teamIds = new Set(loadTeam());   // 使用中=目前出戰隊的 5 張卡→有金框+「出戰」角標(避免誤分解自己在用的卡)
         pageList.forEach((cd, k) => {
           const cx = x0 + (k % cols) * gx, cy = y0 + Math.floor(k / cols) * gy;
           if (!cd) { this.L(roundRectG(this, cx, cy, cw, cw, RAD, T.surf2, 1, T.divider, 1.5)); return; }   // 空欄:淺色圓角框
-          const inUse = teamIds.has(cd.id), tint = (T.elTint[cd.el] != null ? T.elTint[cd.el] : T.surf2);   // 圖為主:墊淡屬色;使用中=金框
-          this.L(roundRectG(this, cx, cy, cw, cw, RAD, tint, 1, inUse ? USE : T.divider, inUse ? 3 : 1.5));   // 圓角卡片底
+          const inUse = teamIds.has(cd.id), isKage = cd.rank === 'kage';
+          const bgKey = cd.el !== 'junk' && _elGradCardTex(this, cd.el, cw, RAD);   // 元素漸層卡底(透明去背角色疊上→有漸層背景)
+          if (bgKey) this.L(this.add.image(cx, cy, bgKey).setDisplaySize(cw + 4, cw + 4).setOrigin(0.5));
+          else this.L(roundRectG(this, cx, cy, cw, cw, RAD, T.surf2, 1, T.divider, 1.5));   // junk/無屬→純色底
           const onSel = this.selMode && this.dsel && this.dsel.has(cd.u);
-          const ak = cardArtKey(cd.id, 'thumb');   // 圖為主:有圖→滿格圖(內縮讓圓角露出);無圖→顯示名字(退回)
+          const ak = cardArtKey(cd.id, 'thumb');   // 角色圖疊漸層底上(cw-6:角色 62px 比原 58 大 4px,漸層當背景框、3px 內縮避免圓角外露)
           if (ak && this.textures.exists(ak)) this.L(this.add.image(cx, cy, ak).setDisplaySize(cw - 6, cw - 6).setOrigin(0.5));
-          else this.txt(cx, cy - 2, cardName(cd.id), '11px', T.ink, 0.5, true);
-          // 左上屬性徽章(圓角,屬色底/白字屬名)
+          else this.txt(cx, cy - 2, cardName(cd.id), '11px', '#ffffff', 0.5, true);
+          if (isKage || inUse) this.L(roundRectG(this, cx, cy, cw, cw, RAD, null, 0, inUse ? USE : T.gold, 2.5));   // 使用中/★4→金框疊上(蓋過元素邊框)
+          // 左上屬性徽章(demo .mini .elbadge:元素色底+白框+白 icon,共用 UI kit)
           if (cd.el !== 'junk' && EL[cd.el]) {
-            const bx = cx - cw / 2 + 14, by = cy - cw / 2 + 14;
-            this.L(roundRectG(this, bx, by, 23, 20, 6, EL[cd.el].color, 1, 0xffffff, 1.5));
-            this.L(this.add.text(bx, by, EL[cd.el].name, { fontFamily: EMOJIFONT, fontSize: '11px', color: '#ffffff', fontStyle: 'bold' }).setOrigin(0.5));
+            const [bBg, bIc] = _elBadgeParts(this, cx - cw / 2 + 13, cy - cw / 2 + 12, cd.el);
+            this.L(bBg); this.L(bIc);
           }
-          // Lv 深色圓角底條
-          const ly = cy + cw / 2 - 12;
-          this.L(roundRectG(this, cx, ly, 38, 17, 8, 0x12161a, 0.72, null, 0));
-          this.L(this.add.text(cx, ly, 'Lv' + getCardLv(cd.id), { fontFamily: EMOJIFONT, fontSize: '11px', color: '#ffffff', fontStyle: 'bold' }).setOrigin(0.5));
-          // 使用中(在隊)角標:右上「出戰」金 pill
-          if (inUse) { const bx = cx + cw / 2 - 18, by = cy - cw / 2 + 12; this.L(roundRectG(this, bx, by, 34, 17, 8, USE, 1, 0xffffff, 1.5)); this.L(this.add.text(bx, by, '出戰', { fontFamily: EMOJIFONT, fontSize: '10px', color: '#ffffff', fontStyle: 'bold' }).setOrigin(0.5)); }
+          // Lv 膠囊(demo .mini .lvpill:左下、深底、純數字)
+          const lvS = String(getCardLv(cd.id)), lw2 = 14 + lvS.length * 8, lx2 = cx - cw / 2 + lw2 / 2 + 3, ly = cy + cw / 2 - 12;
+          this.L(roundRectG(this, lx2, ly, lw2, 18, 8, 0x12161a, 0.72, null, 0));
+          this.L(this.add.text(lx2, ly, lvS, { fontFamily: EMOJIFONT, fontSize: '13px', color: '#ffffff', fontStyle: 'bold' }).setOrigin(0.5).setResolution(3));   // 13px+高解析→不糊
+          // 使用中(在隊)角標:右上「出戰」金 pill(demo .mini .battle)
+          if (inUse) { const bx = cx + cw / 2 - 20, by = cy - cw / 2 + 12; this.L(roundRectG(this, bx, by, 36, 18, 8, USE, 1, null, 0)); this.L(this.add.text(bx, by, '出戰', { fontFamily: EMOJIFONT, fontSize: '11px', color: '#ffffff', fontStyle: 'bold' }).setOrigin(0.5).setResolution(3)); }
           // 選取模式:未選變暗 / 已選綠框+勾
           if (this.selMode) {
             if (!onSel) this.L(roundRectG(this, cx, cy, cw, cw, RAD, 0x000000, 0.45, null, 0));
@@ -5672,32 +5817,15 @@
           }
         });
         this.layer = _realL;   // 還原:分頁/其餘元素回主 layer
-        if (pages > 1) {
-          const py = y0 + 6 * gy - 6;
-          this.btn(CX - 74, py, 52, 28, '◀', () => changeGridPage(this, 'boxPage', -1), { col: T.surf, stroke: T.divider, color: T.ink, fs: '15px' });
-          this.txt(CX, py, (this.boxPage + 1) + ' / ' + pages, '15px', T.ink2, 0.5);
-          this.btn(CX + 74, py, 52, 28, '▶', () => changeGridPage(this, 'boxPage', 1), { col: T.surf, stroke: T.divider, color: T.ink, fs: '15px' });
+        if (pages > 1) {   // demo cb-pager:格子下、footbar 上(◀ n/m ▶)
+          const _rowsOnPage = Math.ceil(pageList.length / cols), _gridBot = y0 + (_rowsOnPage - 1) * gy + cw / 2;
+          const py = Math.min(H - 86, _gridBot + 30);   // 跟著卡格底下方 30px(高螢幕不飄遠),但不超過白 footer 上方
+          navArrowBtn(this, CX - 60, py, -1, () => changeGridPage(this, 'boxPage', -1), { add: o => this.L(o) });   // 共用導覽鈕(與編成切隊同一顆)
+          this.txt(CX, py, (this.boxPage + 1) + ' / ' + pages, '15px', '#cfd3d8', 0.5, true);   // demo .pg-num 深底亮字
+          navArrowBtn(this, CX + 60, py, 1, () => changeGridPage(this, 'boxPage', 1), { add: o => this.L(o) });
         }
-        if (!this.selMode) {
-          this.btn(CX - 92, H - 36, 168, 44, '🗑 整理 / 分解', () => { this.selMode = true; this.dsel = new Set(); this.rebuild(); }, { col: T.surf, stroke: 0xd8b58a, color: '#c07a3a', bold: true, fs: FS.body });
-          this.btn(CX + 92, H - 36, 168, 44, '🏠 返回大廳', () => { this.scene.manager.start('home'); this.scene.manager.stop('collection'); }, { col: T.surf, stroke: 0x9fce8a, color: '#4a9a3c', bold: true, fs: FS.body });
-        } else {   // 分解模式:勾選後一次分解
-          const sel = this.dsel ? this.dsel.size : 0;
-          this.rect(CX, H - 62, W, 40, T.surf, 0.98).setStrokeStyle(1, T.divider, 1); this.txt(CX, H - 62, '已勾選 ' + sel + ' 張 → 一次分解', '15px', '#c07a3a', 0.5, true);
-          this.btn(CX - 92, H - 24, 168, 42, '✖ 取消', () => { this.selMode = false; this.dsel = new Set(); this.rebuild(); }, { col: T.surf, stroke: T.divider, color: T.ink2, bold: true, fs: '15px' });
-          this.btn(CX + 92, H - 24, 168, 42, '✔ 分解 ' + sel + ' 張', () => {   // 🔐 分解改打伺服器,async 期間防連點(_busyDis);先關選取畫面,拿到伺服器結果才 toast(不樂觀更新)
-            if (!sel) { this.toast('還沒勾選卡'); return; }
-            if (this._busyDis) return; this._busyDis = true;
-            const uids = [...this.dsel], total = uids.length, before = getMeta().coins || 0;
-            this.selMode = false; this.dsel = new Set(); this.rebuild();
-            dissolveUids(uids).then(d => {
-              this._busyDis = false;
-              const n = Array.isArray(d.removed) ? d.removed.length : 0, kept = total - n, gain = Math.max(0, (d.coins || 0) - before);
-              this.toast('分解 ' + n + ' 張,+' + gain + ' 金' + (kept ? '\n(每種保留最後 ' + kept + ' 張)' : ''));
-              this.rebuild();
-            }).catch(() => { this._busyDis = false; this.toast('需要連線,請稍後再試'); this.rebuild(); });
-          }, { col: 0xe0663a, stroke: 0xe0663a, color: '#ffffff', bold: true, fs: '15px' });
-        }
+        this.updateFootbar();   // 底列=DOM footbar(demo:💰售卡/‹返回;多選:✖取消/✓售出 n 張),隨 selMode 同步
+        this._setDomUI(!this.sel);   // 詳情(canvas modal)開啟→藏 DOM(sortbar+footbar);關閉重繪時恢復
         if (this.sel && !this.selMode) this.drawDetail();
       }
       drawDetail() {
@@ -6745,10 +6873,14 @@
         this.add.rectangle(CX, H / 2, W, H, T.page);
         this.scrollY = 0; this.contentH = 0; this.dragFrom = null; this.dragMoved = 0;
         this.build();
+        const backEl = document.createElement('button'); stylePillBtn(backEl, '220px', 'ghost'); backEl.textContent = '🏠 返回大廳';   // 返回鈕=編成確定鈕精緻款(DOM)
+        backEl.addEventListener('click', () => { this.scene.manager.start('home'); this.scene.manager.stop('dex'); });
+        const backWrap = document.createElement('div'); backWrap.style.cssText = 'text-align:center;width:' + (W - 28) + 'px;height:52px;'; backWrap.appendChild(backEl);   // 外層包裝(Phaser 只把根 div 設 block)→內層 button inline-flex 自置中,text-align 讓它水平置中
+        this.backDom = this.add.dom(CX, H - 34, backWrap).setDepth(60);
         this.input.on('pointerdown', p => { if (this._d) return; this.dragFrom = p.y; this.dragMoved = 0; });
         this.input.on('pointermove', p => {
           if (this._d || this.dragFrom == null || !p.isDown) return; const dy = p.y - this.dragFrom; this.dragFrom = p.y; this.dragMoved += Math.abs(dy);
-          const minY = Math.min(0, (H - 58) - this.contentH); this.scrollY = Phaser.Math.Clamp(this.scrollY + dy, minY, 0); if (this.scroller) this.scroller.y = this.scrollY;
+          const minY = Math.min(0, (H - 70) - this.contentH); this.scrollY = Phaser.Math.Clamp(this.scrollY + dy, minY, 0); if (this.scroller) this.scroller.y = this.scrollY;   // 捲動下限避開 68px footer
         });
         this.input.on('pointerup', () => { this.dragFrom = null; });
         bindSceneResize(this, () => { const o = H; recomputeLayout(); if (Math.abs(H - o) > 3) { this.scale.setGameSize(W, H); this.scrollY = 0; this.build(); } });
@@ -6805,17 +6937,15 @@
         this.fixed.add(this.add.rectangle(CX, 52, W, 2, T.divider, 1));
         this.fixed.add(this.add.text(CX, 20, '🗂️ 卡片圖鑑', { fontFamily: EMOJIFONT, fontSize: FS.title, color: T.ink, fontStyle: 'bold' }).setOrigin(0.5));
         this.fixed.add(this.add.text(CX, 44, '收集 ' + ownedCount() + '/' + ROSTER.length + ' 種　·　拖曳捲動', { fontFamily: EMOJIFONT, fontSize: FS.micro, color: T.ink2 }).setOrigin(0.5));
-        this.fixed.add(this.add.rectangle(CX, H - 28, W, 56, T.surf, 1));
-        this.fixed.add(this.add.rectangle(CX, H - 56, W, 2, T.divider, 1));
-        this.fixed.add(roundRectG(this, CX, H - 30, 200, 42, 21, T.surf, 1, T.divider, 2));
-        const bx = this.add.rectangle(CX, H - 30, 200, 42, 0x000000, 0.001).setInteractive(); this.fixed.add(bx);
-        this.fixed.add(this.add.text(CX, H - 30, '🏠 返回大廳', { fontFamily: EMOJIFONT, fontSize: FS.cap, color: T.ink, fontStyle: 'bold' }).setOrigin(0.5));
-        bx.on('pointerup', () => { this.scene.manager.start('home'); this.scene.manager.stop('dex'); });
+        this.fixed.add(this.add.rectangle(CX, H - 34, W, 68, T.surf, 1));   // 白 footer 底(高度=編成/卡冊 68@H-34)
+        this.fixed.add(this.add.rectangle(CX, H - 68, W, 1, T.divider, 1));
+        if (this.backDom) this.backDom.setPosition(CX, H - 34);   // 返回鈕=DOM 精緻款(create 建一次),隨版面重定位
       }
       showDetail(cd) {
         if (this._d) this._d.destroy(); const g = this._d = this.add.container(0, 0).setDepth(200);
+        if (this.backDom) this.backDom.setVisible(false);   // DOM 返回鈕永遠浮在 canvas 上→開詳情(canvas modal)時藏,關閉恢復
         _ensureFullArt(this, cd.id, () => { if (this._d) this.showDetail(cd); });   // 開詳情才補大圖,載好重開
-        cardDetailPanel(this, o => { g.add(o); return o; }, cd, { manage: false, onClose: () => { if (this._d) { this._d.destroy(); this._d = null; } } });
+        cardDetailPanel(this, o => { g.add(o); return o; }, cd, { manage: false, onClose: () => { if (this._d) { this._d.destroy(); this._d = null; } if (this.backDom) this.backDom.setVisible(true); } });
       }
       toast(msg) {
         const t = this.add.text(CX, Math.round(H * 0.4), msg, { fontFamily: EMOJIFONT, fontSize: '16px', color: '#ffd56a', fontStyle: 'bold', backgroundColor: '#000000cc', padding: { x: 14, y: 9 } }).setOrigin(0.5).setDepth(3000);
