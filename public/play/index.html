@@ -57,7 +57,7 @@
   <script>
     /* ===== 純邏輯(N/EL/SHAPES/CONFIG/computeClears/種子亂數 等戰鬥核心已抽到 battle-core.js,瀏覽器當共用全域)===== */
     const KEYS = ['fire', 'wind', 'thunder', 'earth', 'water'];
-    const MONSTER_IMG = { water: 'art/monsters/slime_water.png', fire: 'art/monsters/slime_fire.png', thunder: 'art/monsters/slime_thunder.png', earth: 'art/monsters/slime_earth.png', wind: 'art/monsters/slime_wind.png' };   // 舊五屬史萊姆(fallback);無對應則用 emoji 臉。圖檔放 001_website/art/monsters/
+    const MONSTER_IMG = { water: 'art/monsters/slime_water.webp', fire: 'art/monsters/slime_fire.webp', thunder: 'art/monsters/slime_thunder.webp', earth: 'art/monsters/slime_earth.webp', wind: 'art/monsters/slime_wind.webp' };   // 舊五屬史萊姆(fallback);無對應則用 emoji 臉。圖檔放 001_website/art/monsters/(webp)
     const CARD_ART = { c03: 1, c06: 1, c19: 1, c10: 1, c12: 1, c02: 1, c05: 1, c08: 1, c09: 1, c11: 1, c13: 1, c16: 1, c20: 1, c23: 1, c27: 1, c15: 1, c18: 1, c22: 1, c26: 1, c30: 1, c31: 1, c32: 1, c33: 1, c34: 1, c35: 1, c14: 1, c17: 1, c21: 1, c24: 1, c28: 1, c01: 1, c04: 1, c07: 1, c25: 1, c29: 1, c36: 1, c37: 1, c38: 1, c39: 1, c40: 1, c41: 1, c42: 1, c43: 1, c44: 1, c45: 1, c46: 1, c47: 1, c48: 1, c49: 1, c50: 1, c51: 1, c52: 1, c53: 1, c54: 1, c55: 1, c56: 1, c57: 1, c58: 1, c59: 1, c60: 1, c61: 1, c62: 1, c63: 1, c64: 1, c65: 1 };   // 有角色圖的卡:犬/貓/鼠/台灣/兔/魚(c14,17,21,24,28)/鳥(c01,04,07,25,29)/妖·蜘蛛(c36-c40,1→2星換_e圖)/妖·鬼(c41-c45,1→2星換_e圖),各火水雷土風 → art/cards/<id>_thumb.webp+_full.webp
     function cardArtKey(id, size) { if (id && EVO_CARDS[id] && getCardEvo(id) >= 1) return 'card_' + id + '_e_' + size; return (id && CARD_ART[id]) ? ('card_' + id + '_' + size) : null; }   // 回傳 texture key(thumb/full),無圖回 null→退回 emoji;進化雜牌卡(evo≥1)→改回 <id>_e_<size>
     function _loadCardArt(scene, ids) { (ids || []).forEach(id => { if (!id || !CARD_ART[id]) return;['thumb', 'full'].forEach(s => { const k = 'card_' + id + '_' + s; if (!scene.textures.exists(k)) scene.load.image(k, 'art/cards/' + id + '_' + s + '.webp'); }); if (EVO_CARDS[id]) { ['thumb', 'full'].forEach(s => { const k = 'card_' + id + '_e_' + s; if (!scene.textures.exists(k)) scene.load.image(k, 'art/cards/' + id + '_e_' + s + '.webp'); }); } }); }   // 按需載卡圖(戰鬥/大廳只載出戰隊);繪製端皆有 textures.exists 保護→沒載到退回 emoji;進化雜牌卡額外多載 _e 進化圖(兩形都要有)
@@ -296,71 +296,8 @@
         rr(BC, BY + 52, 64, 18, 9, 0x12161a, 0.8, null, 0); txt(BC, BY + 52, '產生方塊', '11px', '#ffffff', 0.5, true);
       }
     }
-    function _cardDetailPanel_legacy(scene, add, cd, opt) {   // 舊版彈窗(已停用,保留可回退;確認新版後可刪)
-      opt = opt || {};
-      const py = Math.round(H / 2), PH = Math.min(H - 30, 680), T = py - PH / 2, L = CX - 176;
-      const elc = EL[cd.el].color, ac = activeSkill(cd.el, cd.id), ls = leadSkill(cd.id);
-      const lv = getCardLv(cd.id), n = (loadOwned()[cd.id] || 0), atk = cardAtk(cd.id);
-      const exp = getCardExp(cd.id), need = expToNext(lv), mx = lv >= MAXLV;
-      const RI = { human: { n: '人類', e: '🥷', c: '#7fc1ff', bg: 0x16314d }, yokai: { n: '妖怪', e: '👹', c: '#e0905a', bg: 0x3a2418 }, beast: { n: '靈獸', e: '🐾', c: '#8fd16a', bg: 0x1d3a1f } };
-      const ri = CARD_SPECIES[cd.id] || RI[cd.race] || RI.human;   // 已歸物種隊→顯示貓/犬/鼠/台灣特有;其餘照舊人類/妖怪/靈獸
-      const TK = UI();   // UI token(亮/暗主題;T 已被面板頂座標用掉,故取名 TK)
-      const txt = (x, y, s, fs, col, ox, bold) => add(scene.add.text(x, y, s, { fontFamily: EMOJIFONT, fontSize: fs, color: col || TK.ink, fontStyle: bold ? 'bold' : 'normal' }).setOrigin(ox == null ? 0.5 : ox, 0.5));
-      const rect = (x, y, w, h, col, a) => add(scene.add.rectangle(x, y, w, h, col, a == null ? 1 : a));
-      const rr = (x, y, w, h, r, fill, fa, stroke, sw) => add(roundRectG(scene, x, y, w, h, r, fill, fa, stroke, sw));
-      const mkbtn = (x, y, w, h, label, fill, stroke, col, fs, cb) => { rr(x, y, w, h, h / 2, fill, 1, stroke, 1.5); add(scene.add.text(x, y, label, { fontFamily: EMOJIFONT, fontSize: fs, color: col, fontStyle: 'bold' }).setOrigin(0.5)); const hit = add(scene.add.rectangle(x, y, w, h, 0x000000, 0.001).setInteractive()); tapBind(scene, hit, cb); return hit; };   // 圓角藥丸鈕
-      // 遮罩(點背景關閉)+ 圓角面板
-      tapBind(scene, rect(CX, H / 2, W, H, 0x000000, 0.55).setInteractive(), () => opt.onClose && opt.onClose());
-      rr(CX, py, 406, PH, 24, TK.surf, 1, TK.divider, 1.5);
-      rect(CX, py, 406, PH, 0x000000, 0.001).setInteractive();   // 擋點擊穿透(圓角 graphics 不可互動→用透明 rect 接)
-      // 標頭
-      txt(CX, T + 24, 'No.' + cd.id.replace(/\D/g, '').padStart(3, '0') + '   ' + starStr(cd.id), '15px', TK.goldTx, 0.5, true);
-      txt(CX, T + 48, (cd.hero ? '👑 ' : '') + cd.name, FS.title, TK.ink, 0.5, true);
-      // 滿版角色圖(3:2,圓角淡屬色底)+ 各屬環境動畫
-      const aCY = T + 190, fk = cardArtKey(cd.id, 'full');
-      rr(CX, aCY, 378, 252, 18, (TK.elTint[cd.el] != null ? TK.elTint[cd.el] : TK.surf2), 1, null, 0);   // 淡屬色圓角底(透明背景角色圖疊上面)
-      if (fk && scene.textures.exists(fk)) add(scene.add.image(CX, aCY, fk).setDisplaySize(378, 252).setOrigin(0.5));   // 透明背景的角色疊在淡屬底之上→角色清楚
-      else txt(CX, aCY, EL[cd.el].name, '64px', TK.ink3, 0.5, true);
-      elementBgFX(scene, add, cd.el, CX, aCY, 378, 252);   // 環境動畫粒子疊在角色「之上」(additive 氛圍)→ 滿版立繪會擋住背後的粒子,故疊在上層才看得見
-      // 屬性 + 種族 徽章(疊左上、種族在屬性下;圓角 chip:屬性=屬色底白字、種族=白底深字)
-      rr(CX - 126, T + 76, 112, 30, 15, elc, 1, 0xffffff, 1.5); txt(CX - 126, T + 76, EL[cd.el].fx + ' ' + EL[cd.el].name + '屬', '15px', '#ffffff', 0.5, true);
-      rr(CX - 126, T + 110, 112, 30, 15, TK.surf, 0.95, TK.divider, 1.5); txt(CX - 126, T + 110, ri.e + ' ' + ri.n, '15px', TK.ink, 0.5, true);
-      // 主技形狀圖示(右疊、深色底):5×5 格,LV1→LV5 循環變形演示主技生成的形狀塊
-      {
-        const BC = CX + 126, BY = T + 104, GS = 5, cs = 14, half = (GS - 1) / 2 * cs;
-        rr(BC, BY, 82, 82, 10, 0x12161a, 0.88, elc, 1.5);   // 深色圓角小盤(方塊預覽=盤面的縮影,保留深底)
-        const cells = [];
-        for (let r = 0; r < GS; r++)for (let c = 0; c < GS; c++) { cells.push(rect(BC - half + c * cs, BY - half + r * cs, cs - 2, cs - 2, 0x000000, 0.18).setStrokeStyle(1, 0x3a3a3a, 0.35)); }
-        const setLv = (lv) => {
-          const nc = normCells(chakraShape(cd.el, lv));
-          const maxR = Math.max(...nc.map(c => c[0])), maxC = Math.max(...nc.map(c => c[1]));
-          const offR = Math.floor((GS - 1 - maxR) / 2), offC = Math.floor((GS - 1 - maxC) / 2), occ = new Set(nc.map(([r, c]) => (r + offR) + ',' + (c + offC)));
-          for (let r = 0; r < GS; r++)for (let c = 0; c < GS; c++) { const cell = cells[r * GS + c], on = occ.has(r + ',' + c); cell.setFillStyle(on ? elc : 0x000000, on ? 1 : 0.18).setStrokeStyle(1, on ? 0xffffff : 0x3a3a3a, on ? 0.5 : 0.35); }
-        };
-        let lastLv = 0; setLv(1); const drv = { v: 0 };
-        const tw = scene.tweens.add({ targets: drv, v: 5, duration: 3600, repeat: -1, ease: 'Linear', onUpdate: () => { if (!cells[0] || !cells[0].active) { tw.stop(); return; } const L2 = Math.max(1, Math.min(5, Math.floor(drv.v) + 1)); if (L2 !== lastLv) { lastLv = L2; setLv(L2); } } });   // LV1→5 循環變形;面板銷毀(格子失效)即自動停
-      }
-      // 數值區塊:左 生命/攻擊/回復,右 Lv/持有(淺色圓角卡)
-      rr(CX, T + 374, 378, 92, 16, TK.surf2, 1, null, 0); rect(CX + 20, T + 374, 1, 76, TK.divider);
-      const row = (yy, ic, lab, val, lc) => { txt(L, yy, ic + ' ' + lab, '16px', TK.ink2, 0); txt(CX - 4, yy, String(val), '21px', TK.ink, 1, true); };
-      row(T + 348, '❤️', '生命', cardHp(cd.id)); row(T + 374, '⚔️', '攻擊', atk); row(T + 400, '💚', '回復', cardRcv(cd.id));
-      txt(CX + 36, T + 356, 'Lv.' + lv + (mx ? '  最大' : ' / ' + MAXLV), '16px', TK.ink, 0, true); txt(CX + 36, T + 394, '持有 ×' + n, '16px', TK.ink2, 0);
-      // EXP 條
-      rect(L, T + 426, 352, 7, TK.divider).setOrigin(0, 0.5); rect(L, T + 426, 352 * (mx ? 1 : Math.min(1, exp / need)), 7, 0x5a7ff0).setOrigin(0, 0.5);
-      // 主動技 / 隊長技(淡屬色圓角卡:主動=水藍調、隊長=琥珀調)
-      rr(CX, T + 478, 378, 48, 14, TK.elTint.water, 1, null, 0); txt(L, T + 466, '⚡ 主動技 ' + (ac ? ac.name + '  (CD' + ac.cd + ')' : '—'), '15px', TK.ink, 0, true); txt(L, T + 490, ac ? ac.desc : '', '13px', TK.ink2, 0);
-      rr(CX, T + 532, 378, 48, 14, TK.elTint.thunder, 1, null, 0); txt(L, T + 520, '🎖 隊長技 ' + (ls ? ls.name : '—'), '15px', TK.ink, 0, true); txt(L, T + 544, ls ? ls.desc : '', '13px', TK.ink2, 0);
-      // 底排按鈕(圓角藥丸;主=該屬色、次=白底;manage=卡冊→強化/解散;否則=只關閉)
-      if (opt.manage) {
-        mkbtn(CX - 86, T + 602, 158, 46, '⬆️ 強化合成', elc, elc, '#ffffff', FS.body, () => opt.onFuse && opt.onFuse());
-        mkbtn(CX + 86, T + 602, 158, 46, '✖ 關閉', TK.surf, TK.divider, TK.ink2, FS.body, () => opt.onClose && opt.onClose());
-        const dz = add(scene.add.text(CX + 186, T + 24, '♻️', { fontFamily: EMOJIFONT, fontSize: '22px' }).setOrigin(0.5).setInteractive()); tapBind(scene, dz, () => opt.onDissolve && opt.onDissolve());
-      } else {
-        mkbtn(CX, T + 602, 210, 48, '✖ 關閉', TK.surf, TK.divider, TK.ink2, FS.body, () => opt.onClose && opt.onClose());
-      }
-    }
     // 方塊敵正式美術:雜兵(grunt)+ 魔王三階(baby/beg/nrm)× 五屬。texture key→路徑;preload 全載,enemyTexKey() 依「是否魔王×難度×元素」挑圖
-    const ENEMY_IMG = (() => { const m = {};['fire', 'water', 'thunder', 'earth', 'wind'].forEach(el => { ['grunt', 'grunt2', 'guard', 'caster', 'healer', 'shield', 'boss_baby', 'boss_beg', 'boss_nrm'].forEach(c => { m[c + '_' + el] = 'art/monsters/' + c + '_' + el + '.png'; }); }); return m; })();   // caster=術士兵(麻痺);healer=補師(m006,回血);shield=盾兵(m007,護盾)
+    const ENEMY_IMG = (() => { const m = {};['fire', 'water', 'thunder', 'earth', 'wind'].forEach(el => { ['grunt', 'grunt2', 'guard', 'caster', 'healer', 'shield', 'boss_baby', 'boss_beg', 'boss_nrm'].forEach(c => { m[c + '_' + el] = 'art/monsters/' + c + '_' + el + '.webp'; }); }); return m; })();   // caster=術士兵(麻痺);healer=補師(m006,回血);shield=盾兵(m007,護盾)
     const ENEMY_BRIEF = {   // 🎓中級敵情簡報:每城第一次進場(中級+)跳一次說明,可勾「本關不再顯示」
       fire: { name: '火之洞窟', icon: '🔥', skill: '終結技', art: 'grunt_fire', threat: '魔王會「蓄力」放大招,一發打掉你大量血!', counter: '看到牠蓄力,趁機用「水」(剋火)清宮 → 打斷大招' },
       water: { name: '水之神殿', icon: '💚', skill: '補師', art: 'healer_water', threat: '補師會幫全體敵人回血,魔王還會「復活」被你清掉的小兵!', counter: '先集火解決補師;魔王詠唱復活時用「土」(剋水)清宮打斷' },
