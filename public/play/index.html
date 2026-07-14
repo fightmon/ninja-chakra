@@ -1845,13 +1845,12 @@
       }
       layoutBench() {   // 依 sortKey/filterEl 排序篩選 → 重新定位可見卡、隱藏被篩掉的、重算捲動
         const CS2 = 72, x0 = 48, step = 81, ord = { fire: 0, water: 1, thunder: 2, earth: 3, wind: 4 };
-        const spec = c => CARD_SPECIES[c._cd.id] || c._cd.race || '';   // 顯示種族(貓/犬/鼠…覆蓋 human/yokai/beast)
         let list = this.cards.slice();
         if (this.filterEl) list = list.filter(c => c._cd.el === this.filterEl);
         const byEl = (a, b) => ord[a._cd.el] - ord[b._cd.el];   // 次要排序:屬性序
         const cmp = {
           el: (a, b) => byEl(a, b) || (getCardLv(b._cd.id) - getCardLv(a._cd.id)),
-          species: (a, b) => spec(a).localeCompare(spec(b)) || byEl(a, b),
+          species: (a, b) => (_spOrd(a._cd.id) - _spOrd(b._cd.id)) || byEl(a, b),   // 種族序用現成 _spOrd(SPECIES_ORDER 序號;⚠️CARD_SPECIES[id] 是物件不能 localeCompare,曾把有卡帳號的編成頁炸空)
           lv: (a, b) => (getCardLv(b._cd.id) - getCardLv(a._cd.id)) || byEl(a, b),
           pwr: (a, b) => (cardAtk(b._cd.id) - cardAtk(a._cd.id)) || byEl(a, b),
           hp: (a, b) => (cardHp(b._cd.id) - cardHp(a._cd.id)) || byEl(a, b),
