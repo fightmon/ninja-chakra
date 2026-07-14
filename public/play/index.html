@@ -559,6 +559,8 @@
       },
     };
     const FS = { display: '34px', title: '27px', sub: '18px', body: '16px', cap: '15px', micro: '13px' };   // 字級階梯(見設計系統;往大開;txt() 另有 15px 下限)
+    // 元素屬性彩色 icon(demo 002_art 元素LOGO,base64 內嵌 data URI)→編成頁篩選列用;內嵌而非外部檔=任何路徑/部署/內嵌環境都不 404(白版用 CSS filter brightness(0) invert(1) 產生)
+    const EL_ICON = {"fire":"data:image/svg+xml;base64,PHN2ZyBpZD0iX+WcluWxpF8yIiBkYXRhLW5hbWU9IuWcluWxpCAyIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMDAgMTAwIj48ZGVmcz48c3R5bGU+IC5jbHMtMSB7IGZpbGw6ICNlODUxM2E7IH0gPC9zdHlsZT48L2RlZnM+PHBhdGggY2xhc3M9ImNscy0xIiBkPSJNNTIuOTQsMS44N2MuMzctLjA0LDEuMDUtLjA0LDEuNDEsMCwuMDYsMCwuMS4xNS4xNi4xNi4xOS4wMy40NC0uMDQuNjMsMCwuMDYuMDEuMzguMjguNDcuMzFzLjIzLS4wNC4zMSwwYy44Ny4zOCwyLjI1LDEuODMsMi41OCwyLjc0LjAzLjA5LS4wMy4yMiwwLC4zMS4wMi4wNi4xNC4xLjE2LjE2LjA0LjEzLS4wMy4zMiwwLC40Ny4wMS4wNi4xNS4xLjE2LjE2LjA3LjQ3LjA1LDEuNTQsMCwyLjAzLDAsLjA2LS4xNS4xLS4xNi4xNi0xLjMxLDEwLjMzLS4yNCwxNy4xOSw1LjQ4LDI1LjY3LjI1LjM3LjUuOS43OCwxLjI1LjE2LjE5LjM4LjM2LjU1LjU1bC4zOS0uNTVjLjI3LS42Ny4yMy0xLjIyLjMxLTEuODgsMC0uMDYuMTUtLjEuMTYtLjE2LjAzLS4zLjAzLS44LDAtMS4xLDAtLjA2LS4xNS0uMS0uMTYtLjE2LS4wNy0uNTUtLjA0LTEuMDQtLjE2LTEuNTctLjAzLS4xMi0uMy0uNjktLjMxLS43OC0uMDQtLjI4LS4wNC0uOTcsMC0xLjI1LDAtLjA2LjE0LS4xLjE2LS4xNi4wMy0uMTQtLjA0LS4zNCwwLS40Ny4wMi0uMDYuMTQtLjA5LjE2LS4xNi4wNi0uMTcuMDUtLjQ1LjE2LS42My4zOC0uNjMsMS40Ny0xLjcsMi4xMS0xLjk2LjA5LS4wMy4yMi4wMy4zMSwwLC4wNi0uMDIuMS0uMTQuMTYtLjE2LjEzLS4wNC4zMi4wMy40NywwLC4wNi0uMDEuMS0uMTUuMTYtLjE2LjI4LS4wNC45Ny0uMDQsMS4yNSwwLC4wNiwwLC4xLjE0LjE2LjE2LjE0LjAzLjM0LS4wNC40NywwLC4wNi4wMi4wOS4xMy4xNi4xNi44Ny4zMiwxLjUxLjk0LDIuMTEsMS42NC41NC42MywxLjA2LDEuNSwxLjU3LDIuMTksNC41Niw2LjI4LDguMSwxMy4yMiwxMC4xNywyMC42NiwxLjc1LDYuMywyLjQxLDEzLjE5Ljk0LDE5Ljg4LTIuNjksMTIuMjItMTIuMTUsMjIuNzYtMjQuMzQsMjYuODUtMTkuMjcsNi40Ni00MS4wNi00LjAzLTQ3LjItMjQuMDMtLjM4LTEuMjUtLjg1LTIuNjItMS4xLTMuOTEtMi4wNi0xMS4wMywxLjQ2LTIyLjI1LDcuNjctMzEuMTUuNjgtLjk4LDEuNTEtMi4xMywyLjc0LTIuNTguMDktLjAzLjIxLjAzLjMxLDAsLjA2LS4wMi4xLS4xNS4xNi0uMTYuMzItLjA2LDEuMzktLjA1LDEuNzIsMCwuMDYsMCwuMS4xNC4xNi4xNi4xNC4wMy4zNC0uMDQuNDcsMCwuMDYuMDIuMDkuMTMuMTYuMTYuODQuMywxLjUuOTEsMS45NiwxLjY0LjEzLjIxLjU5Ljk1LjYzLDEuMS4wNC4xOC0uMDMuNDMsMCwuNjMuMDEuMDYuMTUuMS4xNi4xNi4xNSwxLjIxLS4xNSwyLjcsMCwzLjkxLDAsLjA2LjE1LjEuMTYuMTYuMTgsMSwuMzYsMi4wMS43OCwyLjk3LjM4Ljg4LDEuNDEsMi4zNCwyLjI3LDIuNzQuMDYuMDMuMS4xMy4xNi4xNi4wOC4wMy4yMS0uMDMuMzEsMCwuMDYuMDIuMS4xNS4xNi4xNi4yMS4wNC44OC4wNCwxLjEsMCwuMDYtLjAxLjA5LS4xNC4xNi0uMTYuMDktLjAzLjIyLjAzLjMxLDAsLjA3LS4wMi4yMS0uMjQuMzEtLjMxLjA0LS4wMy4xMi4wMi4xNiwwLC4xMy0uMDkuNDctLjQyLjU1LS41NS4wMi0uMDMtLjAyLS4xMiwwLS4xNi4wNi0uMTEuMjktLjQuMzEtLjQ3LjA0LS4xMy0uMDMtLjMzLDAtLjQ3LjAxLS4wNi4xNS0uMS4xNi0uMTYuMDQtLjI2LjAzLS44MywwLTEuMS0uMDItLjE0LS4yOC0uNzctLjMxLS45NC0uNjMtMy4wNS0xLjMxLTUuOTgtMS44OC05LjA4LTEuMjYtNi45MS0xLjE3LTEzLjM5LDEuNzItMTkuNzJzOC43LTExLjU2LDE1LjczLTEzLjA3Yy4yMy0uMDUuODktLjI5LDEuMS0uMzFaTTUwLjIsMTEuNDJjLS4zOC0uMDQtLjYxLjMxLS44Ni40Ny0zLjM1LDIuMS01Ljc1LDUuNTEtNi44MSw5LjMxLTEuMTksNC4yNy0uODQsOS4xNCwwLDEzLjQ2LjYsMy4xLDEuNTYsNi4wOCwyLjAzLDkuMjQsMCwuMDYuMTUuMS4xNi4xNi4wOC43OC4wOCwyLjM1LDAsMy4xMywwLC4wNi0uMTUuMS0uMTYuMTYtLjEzLjg0LS4xOCwxLjUyLS40NywyLjM1LTMuNjcsOC43NS0xNS4zOSw5LjE1LTE5Ljg4Ljc4bC0uNjMtLjctLjQ3LDEuMTdjLTQuNDgsMTEuNjYtMS4xNywyNC45OCw5LDMyLjk1LDE1LjY0LDEyLjMzLDM5LjU0LDUuMzYsNDUuNDctMTQuMTcsMS42Ny01LjUxLDEuNTctMTAuMTUuMzEtMTUuODEtMS4wMi00LjU4LTIuNzgtOS4xNi01LjAxLTEzLjMxLS4wNi0uMTEtLjMyLS41NS0uMzktLjU1LS4xNy4yMy0uMzguNDctLjU1LjctMS4zNCwxLjgzLTIuNzEsMi43Ny00LjkzLDMuMjEtLjA2LjAxLS4xLjE1LS4xNi4xNi0uNTcuMDgtMi4yMy4wNy0yLjgyLDAtLjA2LDAtLjEtLjE1LS4xNi0uMTYtLjE5LS4wMy0uNDQuMDQtLjYzLDAtLjMtLjA2LTEuMDctLjQ3LTEuNDEtLjYzLTItLjkyLTMuMjctMi44Mi00LjQ2LTQuNjItMy43NS01LjY0LTYuNTMtMTEuODYtNy4yLTE4LjMxLS4yOC0yLjY4LS4xMS01LjUyLS4xNi04LjNsLjE2LS43WiIvPjwvc3ZnPg==","water":"data:image/svg+xml;base64,PHN2ZyBpZD0iX+awtCIgZGF0YS1uYW1lPSLmsLQiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyIgdmlld0JveD0iMCAwIDEwMCAxMDAiPjxkZWZzPjxzdHlsZT4gLmNscy0xIHsgZmlsbDogIzNhOWJlODsgfSA8L3N0eWxlPjwvZGVmcz48cGF0aCBjbGFzcz0iY2xzLTEiIGQ9Ik00OS4wNSwyLjY3YzYuNDMtLjUzLDguOTYsMy4yNiwxMi4zMiw3Ljc2LDguNTYsMTEuNDcsMjIuMzcsMzIuMDYsMjQuNjIsNDYuMDcsMy4wMiwxOC43Ny0xMC42MSwzNi41Ny0yOC44OCw0MC4xOC0yNS45Myw1LjEzLTQ5LjYtMTguNzQtNDIuMTUtNDQuNjIsMy43My0xMi45NSwxNC4zMi0yOC44NSwyMi4yOC0zOS43OCwzLjIxLTQuNDEsNS43NS05LjExLDExLjgtOS42MVpNNDkuMzUsMTAuNjdjLS44MS4xNC0xLjQzLjgzLTEuOTYsMS40My00Ljc2LDUuNC0xMC4xLDE0LjAzLTEzLjkzLDIwLjI2LTksMTQuNjUtMTguNDIsMzAuOTYtNS40OCw0Ni43MiwxNy4xMywyMC44Niw1Mi4wMyw3LjYzLDUwLjM2LTE5LjI1LS42NS0xMC40OC0xMS4zLTI2Ljk1LTE3LjIyLTM1Ljc2LTIuNDYtMy42Ni01Ljc5LTguOTQtOC42Ni0xMi4xMy0uOTItMS4wMi0xLjY2LTEuNTMtMy4xMi0xLjI4WiIvPjwvc3ZnPg==","thunder":"data:image/svg+xml;base64,PHN2ZyBpZD0iX+WcluWxpF80IiBkYXRhLW5hbWU9IuWcluWxpCA0IiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMDAgMTAwIj48ZGVmcz48c3R5bGU+IC5jbHMtMSB7IGZpbGw6ICNlNmMxMmY7IH0gPC9zdHlsZT48L2RlZnM+PHBhdGggY2xhc3M9ImNscy0xIiBkPSJNNjMuNzEsMzYuMjFoMTguNjdjLjA1LDAsLjA5LjE0LjE1LjE1LjI3LjA2LjMzLjA1LjYxLjE1Ljc0LjI3LDEuNDMuNjYsMS45LDEuMy4xMS4xNC43MSwxLjIuNzYsMS4zNy4wMy4xMy0uMDMuMzIsMCwuNDYuMDEuMDYuMTQuMS4xNS4xNS4wNi4zOC4wNiwxLjQ1LDAsMS44MywwLC4wNi0uMTQuMDktLjE1LjE1LS4xMy42NC0uMjcsMS4zOS0uNjEsMS45OC0uOTEsMS42LTIuMDcsMy4wOS0zLjA1LDQuNTctNy40MSwxMS4yNS0xNC43OSwyMi40NS0yMi4yNSwzMy42Ny0yLjYxLDMuOTMtNC43Nyw4LjAyLTguNzYsMTEuMDVzLTkuMTYsNC41MS0xNC4xNywzLjVjLTIuNTMtLjUxLTQuNTQtMS43OS01Ljg3LTQuMDQtLjQ3LS44LS41OS0xLjEyLS43Ni0xLjk4LS4wMS0uMDYtLjE0LS4xLS4xNS0uMTUtLjA5LS41OC0uMDctMi4zLDAtMi45LjA3LS41Ni4zMy0xLjQ5LjQ2LTIuMTMsMS42OC04LjIsMy41OC0xNi40MSw1LjAzLTI0LjY4LjAxLS4wNi4yNC0uMTQuMTUtLjM4aC0xOC4yMWMtLjA1LDAtLjA5LS4xNC0uMTUtLjE1LS4xOS0uMDMtLjQzLjA0LS42MSwwLS4wNi0uMDEtLjA5LS4xMy0uMTUtLjE1LS4xOC0uMDUtLjQyLS4wNS0uNjEtLjE1LS40MS0uMzYtLjk0LS42Ny0xLjMtMS4xNC0uMDItLjAzLjAzLS4xMiwwLS4xNS0uMTYtLjIzLS41My0uNjQtLjYxLS45MS0uMDMtLjEzLjAzLS4zMiwwLS40Ni0uMDEtLjA2LS4xNC0uMS0uMTUtLjE1LS4wNS0uMzUtLjA1LTEuMzIsMC0xLjY4LjA3LS40Ny40Ni0xLjE4LjYxLTEuNjgsNC40LTE0LjYyLDguODYtMjkuMjcsMTMuNDEtNDMuODguNC0xLjI5LjY4LTIuODksMS4yMi00LjExLjE1LS4zNC45NS0xLjM0LDEuMy0xLjYuMDMtLjAyLjEyLjAzLjE1LDAsLjI2LS4xOS41OS0uNDkuOTEtLjYxLjM4LS4xNC45Mi0uMDcsMS4yMi0uM2gzOC43Yy4xNy4yNy41LjEuNzYuMTUuMDYuMDEuMDkuMTMuMTUuMTUuMS4wMy4yMi0uMDMuMywwLC4yMy4wOS40Mi4zMy42MS40Ni42Mi40MywxLjQ1LDEuMTYsMS43NSwxLjkuMDMuMDgtLjAzLjIxLDAsLjMuMDIuMDYuMTQuMDkuMTUuMTUuMDQuMTgtLjAzLjQyLDAsLjYxLjAxLjA2LjE1LjEuMTUuMTUuMDMuMjQuMDMuNjgsMCwuOTEsMCwuMDYtLjE0LjA5LS4xNS4xNS0uMDYuMzItLjA4LjQ3LS4xNS43Ni0uMzMsMS4yNy0uOSwyLjM1LTEuMzcsMy41LTMuMiw3Ljc5LTYuNTMsMTUuNDctOS43NSwyMy4zMS0uMDUuMTMtLjI3LjM2LS4zLjUzWk02NS41NCwxMS4yMmgtMjkuNTZsLTEyLjQ5LDQwLjk5aDE3LjI5Yy4wNSwwLC4wOS4xNC4xNS4xNS4zMy4wNi43My4wMywxLjA3LjE1LjM2LjEzLjczLjUyLDEuMDcuNjEsMS4wOS45OCwxLjc5LDIuNTQsMS42LDQuMDQsMCwuMDYtLjE0LjA5LS4xNS4xNS0xLjgzLDEwLjI5LTQuMjIsMjAuMzUtNi4wOSwzMC42My0uMDEuMDYtLjEzLjA5LS4xNS4xNXYuM2MuMzQuNDcuODMuMzEsMS4zLjM4LjA2LDAsLjA5LjE0LjE1LjE1LjI1LjA2LDEuNjQtLjI0LDEuOTgtLjMsMy4xNi0uNjMsNS4yNi0yLjIsNy4yNC00LjgsMi45NS0zLjg3LDUuNTItOC4yNSw4LjIzLTEyLjM0LDUuODQtOC44NCwxMS44NC0xNy41MywxNy41Mi0yNi41MS4xMy0uMjEuNC0uNC40Ni0uNjloLTE3LjE0Yy0uMDUsMC0uMS0uMTUtLjE1LS4xNS0uMjktLjA0LS42NC4wNS0uOTEsMC0uMTctLjAzLS42Mi0uMzgtLjkxLS4zLS45My0uNTctMS40NC0xLjAzLTEuOS0yLjA2LS4wMy0uMDYtLjEzLS4wOS0uMTUtLjE1LS4wNS0uMTMuMDgtLjMzLS4xNS0uNDZ2LTEuOThjLjU4LTEuNiwxLjMzLTMuMTcsMS45OC00LjcyLDMuMTEtNy40Nyw2LjM0LTE1LjA1LDkuNDUtMjIuNTUuMDQtLjEuNDMtLjU3LjMtLjY5WiIvPjwvc3ZnPg==","earth":"data:image/svg+xml;base64,PHN2ZyBpZD0iX+WcluWxpF82IiBkYXRhLW5hbWU9IuWcluWxpCA2IiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMDAgMTAwIj48ZGVmcz48c3R5bGU+IC5jbHMtMSB7IGZpbGw6ICNjODgwM2E7IH0gPC9zdHlsZT48L2RlZnM+PHBhdGggY2xhc3M9ImNscy0xIiBkPSJNNDkuMjQsNi4wNWMyLjE5LS4yLDQuMjkuNTgsNiwxLjg2LDUuOTYsNi4wMywxMS4yOSwxMi40NywxNy4wOSwxOC41MSwxLjYsMS42NywzLjI5LDMuMDUsNC45Myw0LjUsMi41MywyLjI0LDQuMDMsNi4yMiw1LjM2LDkuMjIsNC40NiwxMC4wNyw4Ljc5LDIwLjE5LDEzLjAxLDMwLjMxLjU0LDEuMywxLjE2LDIuNDEsMS40MywzLjcyLDEuNjksOC4wOS01LDE1LjI1LTExLjk0LDE4LjM3LTEuNjQuODMtMy40LDEuMDktNS4xNSwxLjQzSDIwLjA3Yy05LjU2LTEuMTYtMjAuNjQtMTEuMzQtMTYuNTEtMjEuOCwzLjg5LTkuMDEsNy43NS0xOC4xOSwxMS41OC0yNy4xNiwxLjI4LTIuOTksMi40NC02LjE0LDQtOS4wMS45Mi0xLjY4LDIuMTMtMi40MSwzLjUtMy42NSw2Ljg5LTYuMTksMTIuMTUtMTMuMjgsMTguMDktMjAuMDksMS40OC0xLjcsMi45Ni0zLjc0LDQuOTMtNC45My4zMi0uMTksMS4yOS0uNzgsMS41Ny0uODYuMTktLjA1LjQxLS4xLjU3LS4xNC40Ny0uMTIuODItLjA4LDEuMjktLjE0LjA1LDAsLjA5LS4xNC4xNC0uMTRaTTQ4LjQ1LDE0LjM0bC0xLjQzLDEuNjRjLTQuOTgsNS42Ny05LjUsMTEuODItMTQuNzMsMTcuNDQtMS4wNywxLjE1LTIuNDYsMi45NS0zLjc5LDMuNzktLjA4LjA1LS4xNC4xNi0uMjEuMjFsNi45MywxMC4zNywxNi45NC0xMy41MS0zLjcyLTE5Ljk0Wk01Ny4wMywyMC40OWMuMDIuMjEtLjAzLjQ1LDAsLjY0LjIyLDEuMzIuNjEsMi42OS44Niw0LC41MiwyLjc1Ljk3LDUuNDYsMS41Nyw4LjE1LjA3LjI5LjA1LjY3LjE0LDEsLjA0LjEzLDEuMSwxLjIsMS4yOSwxLjQzLjkzLDEuMTMsMS45MywyLjQzLDIuODYsMy41Ny4xNS4xOC4zNS4zMy41LjVoLjI5bDUuMjItNS41LTYuNDMtNi43Mi02LjI5LTcuMDhaTTc0LjQsMzkuOTRsLTYuMjIsNi41MWMtLjA4LjI5LjEzLjM3LjE0LjQzLjk5LDQuMjksMi4xOSw4LjQ5LDMuMjksMTIuNzIsMi4yNyw4LjcyLDQuNSwxNy40Miw2LjcyLDI2LjE2LjAyLjA5LjI2LjI5LjE0LjU3bC4zNi4yMWMuMjYtLjI4Ljc2LS4wOSwxLjE0LS4xNC40Ni0uMDcsMS4yNS0uNDEsMS43Mi0uNTcsMy4wNy0xLjEsNi43Ny0zLjk0LDcuOTMtNy4wOC4wOS0uMjQuMDktLjYxLjE0LS44Ni4wMS0uMDYuMTQtLjA5LjE0LS4xNC4xMi0uODQtLjA2LTEuOTktLjI5LTIuNzItLjQxLTEuMzMtMS4xNy0yLjcyLTEuNzItNC0zLjQtNy45OS02LjgzLTE2LjA0LTEwLjI5LTI0LjAyLS45NC0yLjE3LTEuNzQtNC4yOS0yLjg2LTYuNDMtLjEtLjE5LS4xMi0uNDktLjM2LS42NFpNNzEuMDQsODYuNTRjLS4wMi0uMTYuMDMtLjM1LDAtLjUtLjA4LS4zNy0uMzMtLjkxLS40My0xLjI5LTIuOTUtMTEuNTYtNS45OS0yMy4wOC05LjAxLTM0LjYtLjI2LTEtLjQ3LTItLjcxLTMtMS42NC0xLjc1LTMuMDctMy44Mi00LjU4LTUuNTgtLjA5LS4xMS0uNi0uNjMtLjY0LS42NC0uMzYtLjEtLjU5LjM2LS44Ni41Ny01LjM2LDQuNC0xMS4wMyw4LjYyLTE2LjQ0LDEzLjAxLS4zOC4zMS0uNjkuNjQtMS4wNy45My0yLjMyLDkuOTktNS4yMiwxOS43Ni03LjU4LDI5Ljc0LS4wMy4xMi0uMjcuNjItLjI5LjcxLS4wMy4yLjAyLjQ0LDAsLjY0aDQxLjZaTTIzLjg2LDQzLjhjLS40OC0uMDYtLjM2LjM0LS40My41LS42NSwxLjQ1LTEuMjUsMi44NS0xLjg2LDQuMjktMy40Niw4LjE4LTcuMDEsMTYuNDctMTAuNDQsMjQuNzMtLjMzLjgtLjg3LDEuNjMtMSwyLjQzLS4wNC4yMi4wMy40OSwwLC43MS0uMDIuMTItLjIyLjMyLS4xNC43MS4wMS4wNS4xNC4wOS4xNC4xNC4wMy4yMi0uMDQuNSwwLC43MSwwLC4wNS4xMy4wOS4xNC4xNC4xNC42Ni4yNS45Ni41NywxLjU3LDEuNDUsMi43Nyw1LjA3LDUuNDUsOC4wOCw2LjM2Ljc0LjIyLDEuMzkuMTgsMi4xNC4yOS4wNSwwLC4yMy4yNC41Ny4xNC4wNy0uMDIuMzQtLjQ0LjM2LS41LjE3LS42NC4yNi0xLjM1LjQzLTIsMi41OS05Ljc0LDUuMTYtMTkuNSw3LjU4LTI5LjMxLjA0LS4xNy4wOS0uMzcuMTQtLjU3LjAyLS4wOS4yNC0uMjMuMTQtLjU3LS4yMS0uMTEtLjIzLS4zMy0uMjktLjQzLTEuOC0yLjk3LTMuOTctNS44OC01Ljg2LTguODYtLjEtLjE3LS4zNi0uMjItLjI5LS41WiIvPjwvc3ZnPg==","wind":"data:image/svg+xml;base64,PHN2ZyBpZD0iX+WcluWxpF8zIiBkYXRhLW5hbWU9IuWcluWxpCAzIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMDAgMTAwIj48ZGVmcz48c3R5bGU+IC5jbHMtMSB7IGZpbGw6ICM0Y2FmNzI7IH0gPC9zdHlsZT48L2RlZnM+PHBhdGggY2xhc3M9ImNscy0xIiBkPSJNODMuNjMsNTMuMjdjLjAyLjE3LS4wMy4zOCwwLC41NC4wMS4wNi4xNC4wOS4xNS4xNS4zMSwxLjMxLjYxLDIuOTkuNDYsNC40NSwwLC4wNi0uMTQuMS0uMTUuMTUtLjEuNjYtLjExLDEuMjEtLjMxLDEuODQtMS40LDQuNTMtNS45Myw3Ljg2LTEwLjA1LDkuNzUtLjE4LjA4LS42NC4xOS0uNjkuMzgtLjA0LjE2LjAzLjQzLDAsLjYxLS4xOSwxLjA0LS42MiwyLjIyLTEuMDcsMy4yMi0xLjkzLDQuMi01LjkzLDcuMTEtMTAuMTMsOC42Ny4wOC4yNS0uMTIuMjktLjE1LjM4LTEuMDMsMi44NC0zLjAyLDUuMS01LjA3LDcuMzctMS44OSwyLjEtNC4wMiw0LjYyLTYuNTIsNS45MS0zLjQ1LDEuMS02LjY1LS41LTguMjEtMy43Ni0uMjItLjYtLjIyLTEuMS0uMzEtMS42OS0uMTItLjgxLS4xOC0xLjgtLjMxLTIuNjEtLjA2LS40My0uMDMtLjk3LS4xNS0xLjM4LS4wNy0uMjYtLjU4LTEuNDEtLjc3LTEuNjktLjExLS4xNi0uMzYtLjQ5LS40Ni0uNjEtLjQ5LS42MS0xLjQ1LTEuMjUtMi4wNy0xLjYxLTEuODYtMS4wOS00LjAyLTEuOC01LjgzLTMuMDctMi41LTEuNzYtNC4xMS0zLjc4LTQuODMtNi42OC0uMjYtMS4wNi0uNDYtMi4zLS4zMS0zLjUzLjA0LS4zLjIyLTEsLjMxLTEuMzguMDEtLjA2LjI0LS4xNS4xNS0uNDYtLjIyLS4xNS0uNDktLjQxLS42OS0uNTQtNC4xLTIuNTktNi43My01LjQ2LTcuNi0xMC4zNi0uMDEtLjA2LS4xNS0uMS0uMTUtLjE1LS4xMy0xLjA0LjA5LTIuMzEsMC0zLjM4LS4xNC0uMS0uMjUtLjMtLjM4LS4zOC0uMDQtLjAyLS4xMi4wMi0uMTUsMC0yLjg4LTEuODYtNS4xOC0zLjcyLTYuMDYtNy4xNC0uMDUtLjE5LS4yOS0uNzctLjMxLS45Mi0uMDgtLjYyLjA2LTEuMzYsMC0yLS4xLS4yMS0uMzEtLjE5LS4zOC0uMjMtLjQxLS4yMy0uNzItLjUyLTEuMDctLjc3LTUuMTQtMy41Ny03LjQyLTkuNTMtNC4wNy0xNS4xMmwxLjM4LTEuNzdjLS4wOCwwLS4xOC4wMy0uMjMsMC0uNzEtLjQtMi4yMy0yLjQ5LTIuNTMtMy4xNS0uMDktLjItLjQyLS43NS0uNDYtLjkyLS4wNS0uMi0uMTEtLjQ0LS4xNS0uNjEtMS4wMi00LjE2LDIuMDctNy41OCw1LjMtOS43NSwyLjE2LTEuMjEsNC40OS0yLjQsNi43NS0zLjIyLDIuODUtMS4wNCw1LjYzLTEuNjgsOC40NC0yLjMsOS44My0yLjE3LDIwLjg4LTIuOTMsMzEuNjItMi40Niw3LjQ5LjMzLDE1LjM4LDEuNTEsMjIuMjYsMy4zOCw0Ljg1LDEuMzEsMTQuMjEsNC4zNywxNi4zNSw5Ljc1LjMuNzYuMzQsMS41My40NiwyLjMsMCwuMDYuMTUuMS4xNS4xNS4wMy4yNC4wMy42OCwwLC45MiwwLC4wNi0uMTUuMS0uMTUuMTUtLjA0LjI5LjA1LjY1LDAsLjkyLS4wNi4zMy0uNDkuOTEtLjQ2LDEuMzhsLTEuNjksMi40Ni4zMS45MmMuMjYsMS41NS42NCwzLjE4LjQ2LDQuOTEsMCwuMDYtLjE0LjEtLjE1LjE1LS4wNC4yNC4wNC41MywwLC43Ny0uMS41OC0uNTMsMS41My0uNzcsMi4xNS0uOSwyLjMzLTIuMzksMy44LTQuMzcsNS4zLS4xNC4xLS4yNS4yNy0uMzguMzh2LjE1Yy4yMy4xMi4yNC4zNC4zMS40Ni40NC43OS42OSwxLjI2LjkyLDIuMTUuMjcsMS4wNS40OSwyLjQ3LjMxLDMuNjgsMCwuMDUtLjExLjQ1LS4xNS42MS0uNjUsMi42My0yLjY3LDQuNjctNC44Myw2LjIyLS4zNi4yNi0uODYuNzItMS4yMy45Mi0uMDcuMDQtLjItLjAzLS4yMywwWk00My45NSwxMC4yOWMtNy4xNy4yOC0xNC43OCwxLjQxLTIxLjM0LDMuMjItMi44NS43OS03LjQyLDIuMjEtOS44Miw0LjE0LS4yNy4yMi0xLjIzLDEuMTctMS4xNSwxLjQ2LjE3LjA4LjEzLjI2LjE1LjMxLjExLjE5Ljk0Ljk5LDEuMTUsMS4xNSwxLjkzLDEuNSw1LjYsMi43MSw3Ljk4LDMuMzgsNS4wNSwxLjQxLDExLjEzLDIuNTUsMTYuNTgsMi45MiwxMy43OS45MSwyNy43NS42Myw0MC4zNy0yLjYxLDIuODMtLjczLDYuOS0xLjkyLDkuMzYtMy44NC4xNy0uMTMuNzYtLjcuODQtLjg0LjAyLS4wMy0uMDItLjExLDAtLjE1LjA4LS4xOC4yNC0uMjguMTUtLjYxLS4wMy0uMS0xLjI3LTEuMzEtMS40Ni0xLjQ2LTEuNTktMS4yNC00LjUtMi4yNi02LjQ1LTIuOTItNi45LTIuMzEtMTMuODgtMy4zNi0yMS40OS0zLjg0LTQuNzYtLjMtOS45NC0uNS0xNC44OS0uMzFaTTg2Ljg1LDI4Ljg3Yy0uMDUtLjA1LS40My4xMS0uNTQuMTUtOC41MSwzLjMtMTcuODksNC45My0yNy4zMiw1LjM3LTExLjY5LjU0LTIzLjYzLjA2LTM0LjM4LTIuMTUtMy40OS0uNzItNi4yMi0xLjM3LTkuNjctMi43Ni0uMTItLjA1LS4zNC4wOC0uNDYtLjE1bC0xLjc3LDEuNjFjMCwuMzEtLjQuNzEtLjQ2LjkyLS4wNC4xMy4wMy4zMiwwLC40Ni0uMDMuMTEtLjI0LjIzLS4xNS42MS4wMS4wNi4xNC4wOS4xNS4xNS4wNi4yNi4wNy42NC4xNS45MiwxLjQ3LDIuNSw0LjIyLDMuNjgsNi42OCw0LjgzLjE4LjA4LjU0LjE0Ljc3LjMxLjU2LjQuOTIuOTgsMS4xNSwxLjYxLjAyLjA2LjE0LjA5LjE1LjE1LjAzLjEzLS4wMy4zMiwwLC40Ni4wMS4wNi4xNS4xLjE1LjE1LjA0LjI1LjA0LjgzLDAsMS4wNywwLC4wNi0uMTQuMDktLjE1LjE1LS4wMy4xNC4wMy4zMywwLC40Ni0uMDEuMDUtLjQzLjg3LS40Ni45Mi0uMDguMTItLjc0Ljc5LS44NC44NC0uMDcuMDQtLjItLjAzLS4yMywwdi4yM2MuMy4yNS4zNy42LjY5Ljg0LDMuMzIsMi41MSw3LjI0LDMuNTUsMTEuMDUsNC40NSwzLjI5Ljc4LDcuMTIsMS41OCwxMC41OSwxLjg0LDEwLjIxLjc2LDIwLjY2LjI2LDI5LjkzLTIuMTUsMy4xNi0uODIsNi40MS0xLjczLDkuMjEtMy44NC41OC0uNDMuNzItLjU0LDEuMTUtMS4xNS4xMy0uMTkuMzQtLjM3LjQ2LS42MS4xNy0xLS4zMS0xLjQ1LTEtMi4wNy0uMy0uMS0uNTUuMjMtLjc3LjMxLTcuNTYsMi43Mi0xNy4zNyw0LTI1Ljc5LDQuMy0yLjA5LjA3LTQuMi0uMDYtNi4yOSwwLS4xNC0uMjYtLjQxLS4xLS42MS0uMTUtLjA1LS4wMS0uODctLjQzLS45Mi0uNDYtLjU3LS4zOC0xLjA4LTEuMTQtMS4zLTEuNzctLjAyLS4wNi0uMTQtLjA5LS4xNS0uMTUtLjAzLS4xMy4wMy0uMzIsMC0uNDYtLjAxLS4wNi0uMTUtLjEtLjE1LS4xNS0uMDMtLjE5LS4wMy0uNTgsMC0uNzcsMC0uMDYuMTQtLjA5LjE1LS4xNS4wMy0uMTktLjA0LS40NCwwLS42MS4wNC0uMi40OC0uNjUuNDYtLjkybDEuNDYtMS4zLjkyLS4zMWM5Ljg4LjA5LDE5LjM2LS43MywyOC4wOS0zLjM4LDIuNy0uODIsNS4wNi0xLjY4LDcuMzctMy4zOCwxLjI5LS45NCwyLjA3LTEuNTQsMi41My0zLjE1LjAyLS4wNi4xNC0uMS4xNS0uMTV2LTFaTTQ4LjYzLDg4LjQyYy4yNi4wNi4zLS4xLjQ2LS4yMywyLjYzLTIuMTksNS4zOS01Ljg3LDYuNDUtOC45LjE3LS41LjMtLjk1LjYxLTEuMzhzLjgxLS41OCwxLjE1LTFsLjMxLS4xNWMyLjU1LS42NCw1LjItMS45NSw2LjgzLTQuMDcuNzYtLjk5Ljk5LTEuNDIsMS4yMy0yLjYxLjE2LS43OC4xNy0xLjY3LjMxLTIuNDYuMDMtLjE5LS4wNC0uNDMsMC0uNjEuMDEtLjA2LjE0LS4wOS4xNS0uMTUuMDMtLjEtLjAzLS4yMiwwLS4zMS4wMy0uMDcuMjgtLjU3LjMxLS42MS4xMi0uMTcuOTgtMS4wMywxLjE1LTEuMTUuNS0uMzMsMS4xOS0uNDEsMS42OS0uNjEsMS40Ni0uNiwzLjIyLTEuNDMsNC40NS0yLjMuMjEtLjE1LjM0LS40OS42MS0uNDYsMS4xMS0xLjA5LDItMS43NywyLjM4LTMuMy4wMi0uMDYuMTQtLjEuMTUtLjE1LjA1LS4yNS4wNC0uOTYsMC0xLjIzLS4wMy0uMjEtLjA3LS4yNi0uMjMtLjM4LS4xOS4xMS0uNDcuMTEtLjYxLjE1LTUuNDQsMS43OS0xMS4zMywyLjYyLTE3LjM0LDMuMDctOC4wOC42LTE2LjEuMzMtMjMuNzktLjkyLTIuMjctLjM3LTQuNTYtLjk2LTYuNzUtMS41M2wtMS43Ny0uNDZjLS4wNi42LjMzLDEuMTIuNjEsMS42MSwxLjg1LDMuMTUsNS42NSw0LjU3LDguODMsNS42LjU1LjE4LDEuMjEuMywxLjY5LjYxLjYyLjQxLjk1LDEuMTcsMS4zLDEuNzdsLjE1LjQ2djEuNTNjLS4yMi4yLS4yMi42My0uMzEuOTItLjAyLjA3LS4yNC4yLS4zMS4zMS0uMDIuMDQuMDIuMTItMCwuMTUtLjQuNTYtLjk4LjkyLTEuNjEsMS4xNS0uMDYuMDItLjA5LjE0LS4xNS4xNS0uMTMuMDMtLjMyLS4wMy0uNDYsMC0uMDYuMDEtLjEuMTUtLjE1LjE1LS4yMy4wMy0uNjkuMDMtLjkyLDAtLjA2LDAtLjEtLjE0LS4xNS0uMTUtLjIxLS4wMy0uNDcuMDItLjY5LDAsLjA1LjM1LS4wNy44MywwLDEuMTUuMDEuMDUuMjYuMzYuMzEuNDYuOCwxLjU0LDIuMjQsMi4xLDMuNzYsMi44NC43Ny4zNywxLjYzLjc3LDIuNDYsMS4yMywzLjg3LDIuMTYsNi4yNyw0LjY4LDcuNDQsOC45OC4xMy40Ni40MSwxLjI1LjQ2LDEuNjkuMDQuMzYtLjAzLjc4LDAsMS4xNVoiLz48L3N2Zz4="};
     let UI_MODE = (() => { try { return localStorage.getItem('nb_theme') === 'dark' ? 'dark' : 'light'; } catch (e) { return 'light'; } })();   // 初始亮色;夜間模式存 localStorage
     function UI() { return UI_THEMES[UI_MODE]; }
     function setUITheme(m) { UI_MODE = (m === 'dark') ? 'dark' : 'light'; try { localStorage.setItem('nb_theme', UI_MODE); } catch (e) { } }
@@ -1556,12 +1558,12 @@
         const CARD_TOP = TOPBAR_H + 8;
         const HEAD_Y = CARD_TOP + 24;
         const FORM_TOP = HEAD_Y + 26;
-        const FC_W = 126, FC_H = 68, FCL_W = 144, FCL_H = 78, ROW_GAP = 8;   // 一般宮位/隊長宮位(較大)
-        const ROW1_Y = FORM_TOP + FC_H / 2;
-        const ROW2_Y = ROW1_Y + FC_H / 2 + ROW_GAP + FCL_H / 2;
-        const ROW3_Y = ROW2_Y + FCL_H / 2 + ROW_GAP + FC_H / 2;
-        const DIVIDER_Y = ROW3_Y + FC_H / 2 + 14;
-        const STATS_Y = DIVIDER_Y + 20;
+        const FC_W = 126, FC_H = 68, FCL_W = 146, FCL_H = 82;   // demo 隊員 126×68 / 隊長 146×82(較大)
+        const MEMBER_DX = 107;   // 隊員距中心 X(demo:中心±107→與置中隊長左右各重疊約 29px)
+        const ROW1_Y = FORM_TOP + FC_H / 2;   // 上排(2 隊員)
+        const ROW2_Y = ROW1_Y + 74;   // 下排(2 隊員);demo 兩排中心距 74=6px 視覺間隙→佈陣只佔 2 排高
+        const LEADER_Y = (ROW1_Y + ROW2_Y) / 2;   // 隊長:絕對置中在兩排縫隙、疊最上層(leaderG)
+        const STATS_Y = ROW2_Y + FC_H / 2 + 18;   // §90:佈陣與總數值間不放分隔線(直接接)
         const LEAD_Y = STATS_Y + 26;
         const CARD_BOT = LEAD_Y + 16;
         const SORT_Y = CARD_BOT + 30;
@@ -1577,9 +1579,23 @@
 
         // ===== 隊伍卡(暖色漸層底 + 金框 + 飄浮方塊粒子;比照 demo .teamcard)=====
         const cardW = W - 24, cardL = CX - cardW / 2, cardR = CX + cardW / 2, cardH = CARD_BOT - CARD_TOP;
-        const cardBg = this.add.graphics().setDepth(5);
-        cardBg.fillGradientStyle(0xfcf9f4, 0xfcf9f4, 0xf1ebe0, 0xf1ebe0, 1); cardBg.fillRoundedRect(cardL, CARD_TOP, cardW, cardH, 18);
-        cardBg.lineStyle(2, T.gold, 1); cardBg.strokeRoundedRect(cardL, CARD_TOP, cardW, cardH, 18);
+        // Phaser fillGradientStyle+圓角矩形會三角化→漸層出現斜向接縫(左上明顯);改用 2D canvas 畫平滑漸層(無縫,抗鋸齒)存貼圖當 Image,質感=demo CSS linear-gradient
+        if (this.textures.exists('teamCardBg')) this.textures.remove('teamCardBg');
+        {
+          const S = 3, PAD = 16, cw = cardW + PAD * 2, ch = cardH + PAD * 2, r = 18;
+          const cv = document.createElement('canvas'); cv.width = cw * S; cv.height = ch * S;
+          const c = cv.getContext('2d'); c.scale(S, S);
+          const bx = PAD, by = PAD;
+          const rr = (x, y, w, h, rad) => { c.beginPath(); c.moveTo(x + rad, y); c.arcTo(x + w, y, x + w, y + h, rad); c.arcTo(x + w, y + h, x, y + h, rad); c.arcTo(x, y + h, x, y, rad); c.arcTo(x, y, x + w, y, rad); c.closePath(); };
+          const ang = 160 * Math.PI / 180, dx = Math.sin(ang), dy = -Math.cos(ang), len = Math.abs(cardW * dx) + Math.abs(cardH * dy);   // demo linear-gradient(160deg,…)
+          const grad = c.createLinearGradient(bx + cardW / 2 - dx * len / 2, by + cardH / 2 - dy * len / 2, bx + cardW / 2 + dx * len / 2, by + cardH / 2 + dy * len / 2);
+          grad.addColorStop(0, '#fcf9f4'); grad.addColorStop(1, '#f1ebe0');
+          c.save(); c.shadowColor = 'rgba(43,51,58,0.10)'; c.shadowBlur = 16; c.shadowOffsetY = 4; c.fillStyle = '#f4eee2'; rr(bx, by, cardW, cardH, r); c.fill(); c.restore();   // 柔落影 demo box-shadow 0 4px 16px rgba(43,51,58,.10)
+          c.fillStyle = grad; rr(bx, by, cardW, cardH, r); c.fill();   // 平滑連續漸層(無三角接縫)
+          c.lineWidth = 2; c.strokeStyle = '#f4b73c'; rr(bx, by, cardW, cardH, r); c.stroke();   // 金框 2px(demo --gold #f4b73c)
+          this.textures.addCanvas('teamCardBg', cv);
+          this.add.image(CX, CARD_TOP + cardH / 2, 'teamCardBg').setDisplaySize(cw, ch).setDepth(5);
+        }
         this.spawnCardParticles(cardL, cardR, CARD_TOP, CARD_BOT);   // demo tc-particles:左右緣飄浮方塊
 
         // ── tc-head:‹ 隊名 › ✎(換隊+改名,取代舊「出戰編隊」標題列)──
@@ -1597,25 +1613,44 @@
         // ── formation:十字佈陣(5 宮位;中央=隊長,較大+👑)──
         this.formG = this.add.container(0, 0).setDepth(6);
         const defs = [
-          { x: CX - 76, y: ROW1_Y, w: FC_W, h: FC_H, leader: false },
-          { x: CX + 76, y: ROW1_Y, w: FC_W, h: FC_H, leader: false },
-          { x: CX, y: ROW2_Y, w: FCL_W, h: FCL_H, leader: true },
-          { x: CX - 76, y: ROW3_Y, w: FC_W, h: FC_H, leader: false },
-          { x: CX + 76, y: ROW3_Y, w: FC_W, h: FC_H, leader: false },
+          { x: CX - MEMBER_DX, y: ROW1_Y, w: FC_W, h: FC_H, leader: false },   // 上排左
+          { x: CX + MEMBER_DX, y: ROW1_Y, w: FC_W, h: FC_H, leader: false },   // 上排右
+          { x: CX, y: LEADER_Y, w: FCL_W, h: FCL_H, leader: true },            // 隊長:絕對置中、疊最上層(index 2,stats/技能靠此)
+          { x: CX - MEMBER_DX, y: ROW2_Y, w: FC_W, h: FC_H, leader: false },   // 下排左
+          { x: CX + MEMBER_DX, y: ROW2_Y, w: FC_W, h: FC_H, leader: false },   // 下排右
         ];
-        const GRAD = {   // 元素漸層底(比照 demo .fcard.b-*)
+        const GRAD = {   // 元素漸層底(比照 demo .fcard.b-*):[亮, 暗, 邊框色]
           fire: [0xe8663e, 0x9c3620, 0xffb59c], water: [0x45a0e2, 0x235f8c, 0xa9d6f6], thunder: [0xe6c33d, 0xa5821c, 0xf4de8c],
           earth: [0xcc9350, 0x875629, 0xe0b98c], wind: [0x5bbd76, 0x2e7846, 0x9fe0b8]
         };
+        const HEX = n => '#' + n.toString(16).padStart(6, '0');
+        const slotPad = leader => leader ? 15 : 9;   // 陰影留邊(隊長浮起陰影較大)
+        const slotGradTex = (el, w, h, leader) => {   // demo .fcard.b-*:135deg 平滑漸層(無三角接縫)+元素邊框+落影;隊長多金色外環+更大浮起陰影
+          const key = 'sg_' + el + '_' + Math.round(w) + 'x' + Math.round(h) + (leader ? 'L' : '');
+          if (this.textures.exists(key)) return key;
+          const PAD = slotPad(leader), S = 3, cw = w + PAD * 2, ch = h + PAD * 2, r = 12, [top, bot, brd] = GRAD[el];
+          const cv = document.createElement('canvas'); cv.width = cw * S; cv.height = ch * S;
+          const c = cv.getContext('2d'); c.scale(S, S); const bx = PAD, by = PAD;
+          const rr = (x, y, ww, hh, rad) => { c.beginPath(); c.moveTo(x + rad, y); c.arcTo(x + ww, y, x + ww, y + hh, rad); c.arcTo(x + ww, y + hh, x, y + hh, rad); c.arcTo(x, y + hh, x, y, rad); c.arcTo(x, y, x + ww, y, rad); c.closePath(); };
+          c.save(); c.shadowColor = leader ? 'rgba(0,0,0,0.5)' : 'rgba(0,0,0,0.3)'; c.shadowBlur = leader ? 20 : 9; c.shadowOffsetY = leader ? 7 : 3; c.fillStyle = HEX(bot); rr(bx, by, w, h, r); c.fill(); c.restore();   // 落影(demo box-shadow;隊長更深更大=浮起感)
+          const grad = c.createLinearGradient(bx, by, bx + w, by + h); grad.addColorStop(0, HEX(top)); grad.addColorStop(1, HEX(bot));   // 135deg 左上亮→右下暗
+          c.fillStyle = grad; rr(bx, by, w, h, r); c.fill();
+          c.lineWidth = leader ? 3 : 2.5; c.strokeStyle = leader ? '#f4b73c' : HEX(brd); rr(bx, by, w, h, r); c.stroke();
+          if (leader) { c.lineWidth = 2; c.strokeStyle = 'rgba(244,183,60,0.45)'; rr(bx - 2, by - 2, w + 4, h + 4, r + 2); c.stroke(); }   // demo 隊長金色外環 0 0 0 2px rgba(244,183,60,.4)
+          this.textures.addCanvas(key, cv); return key;
+        };
+        this.leaderG = this.add.container(0, 0);   // 隊長獨立層:巢狀在 formG 內、map 後最後加入→永遠疊在隊員之上;身為 formG 子容器→隨切隊滑動自動連動,不必另同步
         this.slots = defs.map(d => {
-          const g = this.add.graphics();   // 圓角宮位(可重繪換色/換漸層);不個別 setInteractive,取消宮位改場景層 slotAt 命中
+          const cont = d.leader ? this.leaderG : this.formG;   // 隊長內容進 leaderG(上層),隊員進 formG
+          const g = this.add.graphics();   // 空宮位純色底(純色不會接縫);填入時改用 gimg 平滑漸層貼圖
+          const gimg = this.add.image(d.x, d.y, '__DEFAULT').setVisible(false);   // 填入卡片時的元素漸層底(平滑無接縫,含落影)
+          const pad2 = slotPad(d.leader) * 2;   // 漸層貼圖含陰影邊,顯示尺寸=卡+左右 PAD
           const draw = (elKey) => {
             g.clear();
             if (elKey && GRAD[elKey]) {
-              const [top, bot, brd] = GRAD[elKey];
-              g.fillGradientStyle(top, top, bot, bot, 1); g.fillRoundedRect(d.x - d.w / 2, d.y - d.h / 2, d.w, d.h, 12);
-              g.lineStyle(d.leader ? 3 : 2.5, d.leader ? T.gold : brd, 1); g.strokeRoundedRect(d.x - d.w / 2, d.y - d.h / 2, d.w, d.h, 12);
+              gimg.setTexture(slotGradTex(elKey, d.w, d.h, d.leader)).setDisplaySize(d.w + pad2, d.h + pad2).setPosition(d.x, d.y).setVisible(true);   // 平滑漸層+邊框+落影(無三角接縫)
             } else {
+              gimg.setVisible(false);
               g.fillStyle(T.surf2, 1); g.fillRoundedRect(d.x - d.w / 2, d.y - d.h / 2, d.w, d.h, 12);
               g.lineStyle(2, T.divider, 1); g.strokeRoundedRect(d.x - d.w / 2, d.y - d.h / 2, d.w, d.h, 12);
             }
@@ -1623,14 +1658,14 @@
           draw(null);   // 空宮=淺灰
           const plus = this.add.text(d.x, d.y, '＋', { fontFamily: EMOJIFONT, fontSize: '22px', color: T.ink3 }).setOrigin(0.5);
           const nameTxt = this.add.text(d.x, d.y, '', { fontFamily: EMOJIFONT, fontSize: '13px', color: '#ffffff', fontStyle: 'bold' }).setOrigin(0.5).setVisible(false);   // 無大圖時的卡名退回字
-          this.formG.add(g); this.formG.add(plus); this.formG.add(nameTxt);
-          const slot = { el: null, cardId: null, uid: null, g, draw, plus, nameTxt, x: d.x, y: d.y, w: d.w, h: d.h, leader: d.leader, img: null, _ov: [] };
-          if (d.leader) { slot.crown = this.add.text(d.x - d.w / 2 + 10, d.y - d.h / 2 + 9, '👑', { fontFamily: EMOJIFONT, fontSize: '14px' }).setOrigin(0.5); this.formG.add(slot.crown); }
+          cont.add(g); cont.add(gimg); cont.add(plus); cont.add(nameTxt);
+          const slot = { el: null, cardId: null, uid: null, cont, g, gimg, draw, plus, nameTxt, x: d.x, y: d.y, w: d.w, h: d.h, leader: d.leader, img: null, _ov: [] };
+          if (d.leader) { slot.crown = this.add.text(d.x - d.w / 2 + 10, d.y - d.h / 2 + 9, '👑', { fontFamily: EMOJIFONT, fontSize: '14px' }).setOrigin(0.5); cont.add(slot.crown); }
           return slot;
         });
+        this.formG.add(this.leaderG);   // leaderG 最後加入 formG→隊長層永遠在隊員之上(z-index 最高)
 
-        // ── tc-stats:PWR/HP/RCV(分隔線 + 置中一列,標籤小字/數值放大)──
-        this.add.rectangle(CX, DIVIDER_Y, cardW - 24, 1, T.divider).setDepth(6);
+        // ── tc-stats:PWR/HP/RCV(置中一列,標籤小字/數值放大;§90 與佈陣間不放分隔線)──
         const mkStat = (cx, label, color) => {
           this.add.text(cx - 4, STATS_Y, label, { fontFamily: EMOJIFONT, fontSize: '12px', color: T.ink3, fontStyle: 'bold' }).setOrigin(1, 0.5).setDepth(6);
           return this.add.text(cx + 4, STATS_Y, '0', { fontFamily: EMOJIFONT, fontSize: '21px', color, fontStyle: 'bold' }).setOrigin(0, 0.5).setDepth(6);
@@ -1640,7 +1675,7 @@
         this.leadTxt = this.add.text(CX, LEAD_Y, '👑 隊長技 · —', { fontFamily: EMOJIFONT, fontSize: FS.cap, color: T.ink2 }).setOrigin(0.5).setDepth(6);
 
         // ===== 排序/篩選列(固定;沿用原 buildSortFilter 邏輯,只搬到卡片下方)=====
-        this.sortKey = 'el'; this.filterEl = null; this.buildSortFilter(SORT_Y);
+        this.sortKey = 'species'; this.filterEl = null; this.buildSortFilter(SORT_Y);   // 預設種族排序(排序選項:種族/LV/PWR/HP/RCV,無屬性)
 
         // ===== 下方:可捲動卡區(5 張一排、正方形、點選加入;可排序/篩選) =====
         const CS2 = 72;
@@ -1658,12 +1693,12 @@
           const nm = dimg ? null : this.add.text(0, -4, cardName(cd.id), { fontFamily: EMOJIFONT, fontSize: '13px', color: T.ink, fontStyle: 'bold' }).setOrigin(0.5);
           const kids = [bg]; if (dimg) kids.push(dimg); if (nm) kids.push(nm);
           if (EL[cd.el]) {
-            const bx = -CS2 / 2 + 13, by = -CS2 / 2 + 12;   // 左上圓角屬性徽章(屬色底白字)
-            kids.push(roundRectG(this, bx, by, 22, 18, 6, EL[cd.el].color, 1, 0xffffff, 1.5));
-            kids.push(this.add.text(bx, by, EL[cd.el].name, { fontFamily: EMOJIFONT, fontSize: '11px', color: '#ffffff', fontStyle: 'bold' }).setOrigin(0.5));
+            const bx = -CS2 / 2 + 13, by = -CS2 / 2 + 12;   // 左上圓角屬性徽章(demo .mini .elbadge:屬色底+白框+白 icon)
+            const [bBg, bIc] = this._elBadge(bx, by, cd.el);
+            kids.push(bBg, bIc);
           }
-          kids.push(roundRectG(this, 0, CS2 / 2 - 11, 34, 15, 7, 0x12161a, 0.72, null, 0));   // Lv 深色圓角底條
-          kids.push(this.add.text(0, CS2 / 2 - 11, 'Lv' + getCardLv(cd.id), { fontFamily: EMOJIFONT, fontSize: '11px', color: '#ffffff', fontStyle: 'bold' }).setOrigin(0.5));
+          kids.push(roundRectG(this, 0, CS2 / 2 - 12, 42, 18, 9, 0x12161a, 0.72, null, 0));   // Lv 深色圓角底條(放大)
+          kids.push(this.add.text(0, CS2 / 2 - 12, 'Lv' + getCardLv(cd.id), { fontFamily: EMOJIFONT, fontSize: '13px', color: '#ffffff', fontStyle: 'bold' }).setOrigin(0.5).setResolution(3));   // 高倍率算文字→不糊
           const checkRing = roundRectG(this, 0, 0, CS2, CS2, 13, null, 0, 0x35a866, 2.5).setVisible(false);   // 已入隊標記(取代原本 alpha 變暗):綠框 + 右上 ✓
           const checkDot = this.add.circle(CS2 / 2 - 8, -CS2 / 2 + 8, 8, 0x35a866).setVisible(false);
           const checkTxt = this.add.text(CS2 / 2 - 8, -CS2 / 2 + 8, '✓', { fontFamily: EMOJIFONT, fontSize: '11px', color: '#ffffff', fontStyle: 'bold' }).setOrigin(0.5).setVisible(false);
@@ -1724,17 +1759,21 @@
         // ===== 固定下方:單一「✔ 確定」滿寬大鈕(取代舊 🎲隨機/📖卡冊/確定 三鈕)=====
         const navY = H - 34;
         this.add.rectangle(CX, navY, W, 68, T.surf).setStrokeStyle(1, T.divider).setDepth(5);   // 底部白列(分隔)
-        const btnW = W - 36, btnH = 52, R = btnH / 2;   // demo .pill.lg:滿寬(左右各18)、高52、全圓角
-        this.confirmBtn = this.add.graphics().setPosition(CX, navY).setDepth(6);   // 圓角確定鈕(graphics→可重繪換色+以中心為縮放樞紐做齊隊脈動)
-        this._confirmDraw = (fillTop, fillBot, lip) => {   // demo .pill:底部深色唇邊(3D)+上→下漸層+上緣白高光
-          const g = this.confirmBtn; g.clear();
-          g.fillStyle(lip, 1); g.fillRoundedRect(-btnW / 2, -btnH / 2 + 3, btnW, btnH, R);   // 底部唇邊(往下 3px 露出深色=立體)
-          g.fillGradientStyle(fillTop, fillTop, fillBot, fillBot, 1); g.fillRoundedRect(-btnW / 2, -btnH / 2, btnW, btnH, R);   // 主體上亮下暗漸層
-          g.fillStyle(0xffffff, 0.22); g.fillRoundedRect(-btnW / 2 + 5, -btnH / 2 + 3, btnW - 10, R - 3, R - 4);   // 上緣高光(inset)
+        const btnW = 130, btnH = 52, R = btnH / 2, btnCX = W - 18 - btnW / 2;   // demo .footer .pill.block:width 130px、靠右(距右緣18)、高52、全圓角26(左側留白給未來按鈕)
+        // 真 HTML <button> 疊在畫布上(add.dom):樣式 100% 照 demo .pill.ok.lg / .pill.ghost.lg 內聯;flex 置中→文字自動上下左右置中;瀏覽器原生渲染→圓角/漸層/陰影任意 dpi 都銳利(canvas 畫的會被 420px framebuffer 放大而鋸齒)
+        const confirmEl = document.createElement('button');
+        confirmEl.style.cssText = 'box-sizing:border-box;width:' + btnW + 'px;height:' + btnH + 'px;border-radius:' + R + 'px;'
+          + "border:1.5px solid transparent;font-family:'Segoe UI Emoji','GenSen','Microsoft JhengHei',sans-serif;font-size:18px;font-weight:700;"
+          + 'cursor:pointer;text-align:center;line-height:' + btnH + 'px;padding:0;'   // line-height=按鈕高→單行文字上下置中(Phaser add.dom 會把 display 設回 block,故不靠 flex);text-align:center→左右置中
+          + 'background-image:linear-gradient(rgba(255,255,255,.16),rgba(0,0,0,.05));transition:filter .1s ease;-webkit-tap-highlight-color:transparent;';
+        this.confirmEl = confirmEl;
+        this.confirmDom = this.add.dom(btnCX, navY, confirmEl).setDepth(6);   // add.dom 以中心定位並隨畫布縮放對齊
+        confirmEl.addEventListener('click', () => this.confirm());
+        this._confirmDraw = (ok) => {   // 只切換 demo .pill.ok / .pill.ghost 的視覺(文字由 refreshStart 設)
+          const b = this.confirmEl;
+          if (ok) { b.style.backgroundColor = '#35a866'; b.style.borderColor = '#35a866'; b.style.color = '#fff'; b.style.boxShadow = 'inset 0 1px 0 rgba(255,255,255,.45), 0 3px 0 #26824e, 0 5px 9px rgba(43,51,58,.16)'; }
+          else { b.style.backgroundColor = '#f6f4f1'; b.style.borderColor = '#e4ded4'; b.style.color = '#a6adb3'; b.style.boxShadow = 'inset 0 1px 0 rgba(255,255,255,.45), 0 3px 0 #ddd7cd, 0 5px 9px rgba(43,51,58,.14)'; }
         };
-        this._confirmDraw(0xf8f5f0, 0xeae4da, 0xddd7cd);
-        this.confirmTxt = this.add.text(CX, navY - 1, '確定', { fontFamily: EMOJIFONT, fontSize: FS.sub, color: T.ink, fontStyle: 'bold' }).setOrigin(0.5).setDepth(7);   // demo .pill.lg 字級=fs-sub(18)
-        const confirmHit = this.add.rectangle(CX, navY, btnW, btnH, 0x000000, 0.001).setInteractive().setDepth(7); tapBind(this, confirmHit, () => this.confirm());   // 確定鈕命中區(存隊+回大廳)
 
         if (!this.tutTeam) this.loadTeamSlots();   // 回填目前選中隊;教學編隊從空隊開始
         this.updateSwitcher(); this.updateStats(); this.refreshStart();
@@ -1759,38 +1798,64 @@
           this.tweens.add({ targets: blk, alpha: { from: 0, to: op }, duration: dur * 0.18, hold: dur * 0.64, yoyo: true, delay, repeat: -1, ease: 'Linear' });   // 淡入 18% → 維持 64% → 淡出 18%
         });
       }
-      buildSortFilter(y) {   // 排序鍵循環 + 元素篩選 chip;整列包進 sfG 容器,選取即重建(圓角藥丸)
-        this._sfY = y;
-        if (this.sfG) this.sfG.destroy();
-        const T = UI(), g = this.sfG = this.add.container(0, 0).setDepth(6), labels = { el: '屬性', lv: '等級', rank: '星數' };
-        // 排序藥丸(去掉「排序」二字,只顯示鍵名+▾;demo sortsel 樣:淺灰底+底部細深邊 3D)
-        const sortX = 54, sortW = 88;
-        g.add(roundRectG(this, sortX, y + 2, sortW, 30, 15, 0xddd7cd, 1, null, 0));
-        g.add(roundRectG(this, sortX, y, sortW, 30, 15, T.surf2, 1, T.divider, 1.5));
-        this.sortTxt = this.add.text(sortX, y, labels[this.sortKey] + ' ▾', { fontFamily: EMOJIFONT, fontSize: FS.cap, color: T.ink, fontStyle: 'bold' }).setOrigin(0.5); g.add(this.sortTxt);
-        const sortHit = this.add.rectangle(sortX, y, sortW, 30, 0x000000, 0.001).setInteractive(); g.add(sortHit);
-        tapBind(this, sortHit, () => { this.sortKey = this.sortKey === 'el' ? 'lv' : this.sortKey === 'lv' ? 'rank' : 'el'; this.layoutBench(); this.buildSortFilter(this._sfY); });
-        // 篩選:all + 火/水/雷/土/風(用戰鬥宮上那套元素 SVG 圖示,tint 上屬色/選中白)
-        const els = [{ k: null }, { k: 'fire' }, { k: 'water' }, { k: 'thunder' }, { k: 'earth' }, { k: 'wind' }];
-        const fx0 = 132, step = 47;
-        els.forEach((e, i) => {
-          const x = fx0 + i * step, on = this.filterEl === e.k, elc = e.k ? EL[e.k].color : T.gold;
-          g.add(roundRectG(this, x, y, 42, 30, 15, on ? elc : T.surf, 1, on ? elc : T.divider, on ? 2 : 1.5));
-          if (!e.k) g.add(this.add.text(x, y, 'all', { fontFamily: EMOJIFONT, fontSize: '13px', color: on ? '#ffffff' : T.ink2, fontStyle: 'bold' }).setOrigin(0.5));   // 全=all
-          else if (this.textures.exists('el_' + e.k)) g.add(this.add.image(x, y, 'el_' + e.k).setDisplaySize(20, 20).setTintFill(on ? 0xffffff : EL[e.k].color));   // 元素 SVG 剪影→tint 屬色/選中白
-          else g.add(this.add.text(x, y, EL[e.k].name, { fontFamily: EMOJIFONT, fontSize: '13px', color: on ? '#ffffff' : '#' + EL[e.k].color.toString(16).padStart(6, '0'), fontStyle: 'bold' }).setOrigin(0.5));   // SVG 沒載→退回文字
-          const hit = this.add.rectangle(x, y, 42, 30, 0x000000, 0.001).setInteractive(); g.add(hit);
-          tapBind(this, hit, () => { this.filterEl = e.k; this.layoutBench(); this.buildSortFilter(this._sfY); });
+      buildSortFilter(y) {   // 排序下拉 + 元素篩選:100% 照 demo .sortbar/.sortsel/.pill.sm(DOM overlay→銳利對齊,同確定鈕做法);彩色 -c icon、選中金底改白 -w icon
+        if (this.sortDom) { this.sortDom.destroy(); this.sortDom = null; }
+        const CAP = '15px';   // demo --fs-cap
+        const FONT = "'Segoe UI Emoji','GenSen','Microsoft JhengHei',sans-serif";
+        const root = document.createElement('div');   // 外層 block 包裝(Phaser add.dom 會把根元素 display 設 block→內層才放 flex)
+        root.style.cssText = 'width:' + (W - 20) + 'px;';
+        const bar = document.createElement('div');
+        bar.style.cssText = 'display:flex;align-items:center;gap:6px;width:100%;font-family:' + FONT + ';';
+        root.appendChild(bar);
+        // 排序鈕(demo .sortsel 樣式;點一下循環切下一個,非下拉):屬性/種族/LV/PWR/HP/RCV
+        const SORT_KEYS = [['species', '種族'], ['lv', 'LV'], ['pwr', 'PWR'], ['hp', 'HP'], ['rcv', 'RCV']];   // 移除「屬性」:右側已有屬性篩選,排序不重複
+        if (!SORT_KEYS.some(s => s[0] === this.sortKey)) this.sortKey = SORT_KEYS[0][0];   // 舊值(el/rank/等級)相容→退回第一鍵(種族)
+        const sel = document.createElement('div');
+        sel.style.cssText = 'flex:none;height:34px;min-width:66px;border-radius:17px;border:1.5px solid #e4ded4;background:#f6f4f1;'
+          + 'color:#2b333a;font-family:inherit;font-size:' + CAP + ';font-weight:700;padding:0 11px;cursor:pointer;'
+          + 'display:inline-flex;align-items:center;justify-content:center;gap:3px;-webkit-tap-highlight-color:transparent;'
+          + 'box-shadow:inset 0 1px 0 rgba(255,255,255,.5), 0 2px 0 #ddd7cd;';
+        const sortLabel = () => (SORT_KEYS.find(s => s[0] === this.sortKey) || SORT_KEYS[0])[1] + ' ⇄';
+        sel.textContent = sortLabel();
+        sel.addEventListener('click', () => {
+          const i = SORT_KEYS.findIndex(s => s[0] === this.sortKey);
+          this.sortKey = SORT_KEYS[(i + 1) % SORT_KEYS.length][0];   // 循環切下一個排序鍵
+          sel.textContent = sortLabel(); this.layoutBench();
         });
+        bar.appendChild(sel);
+        // 篩選藥丸(demo .pill.sm,flex:1 等寬):全 + 火水雷土風
+        const els = [{ k: null, t: '全' }, { k: 'fire' }, { k: 'water' }, { k: 'thunder' }, { k: 'earth' }, { k: 'wind' }];
+        this._filterPills = [];
+        const paint = (p, on, el) => {   // demo .pill.sm ↔ .pill.sm.primary
+          if (on) { p.style.backgroundColor = '#f4b73c'; p.style.borderColor = '#f4b73c'; p.style.color = '#fff'; p.style.boxShadow = 'inset 0 1px 0 rgba(255,255,255,.45), 0 2px 0 #cf9a1f, 0 3px 6px rgba(43,51,58,.14)'; }
+          else { p.style.backgroundColor = '#fff'; p.style.borderColor = '#e4ded4'; p.style.color = '#2b333a'; p.style.boxShadow = 'inset 0 1px 0 rgba(255,255,255,.4), 0 2px 0 #d9d3c9, 0 3px 6px rgba(43,51,58,.14)'; }
+          if (el) { const ic = p.firstChild; ic.style.backgroundImage = "url('" + EL_ICON[el] + "')"; ic.style.filter = on ? 'brightness(0) invert(1)' : 'none'; }   // 內嵌 data URI(不依賴外部檔);選中金底→CSS filter 轉純白,否則彩色
+        };
+        els.forEach(e => {
+          const p = document.createElement('span');
+          p.style.cssText = 'box-sizing:border-box;flex:1;min-width:0;height:34px;border-radius:17px;display:inline-flex;align-items:center;justify-content:center;padding:0;cursor:pointer;'
+            + 'background-image:linear-gradient(rgba(255,255,255,.16),rgba(0,0,0,.05));border:1.5px solid #e4ded4;font-family:inherit;font-size:' + CAP + ';font-weight:700;-webkit-tap-highlight-color:transparent;';
+          if (e.k) { const ic = document.createElement('i'); ic.style.cssText = 'display:inline-block;width:22px;height:22px;background:center/contain no-repeat;'; p.appendChild(ic); }
+          else p.textContent = e.t;
+          paint(p, this.filterEl === e.k, e.k);
+          p.addEventListener('click', () => { this.filterEl = e.k; this.layoutBench(); this._filterPills.forEach(fp => paint(fp.p, this.filterEl === fp.k, fp.k)); });
+          bar.appendChild(p); this._filterPills.push({ p, k: e.k });
+        });
+        this.sortDom = this.add.dom(CX, y, root).setDepth(6);
       }
       layoutBench() {   // 依 sortKey/filterEl 排序篩選 → 重新定位可見卡、隱藏被篩掉的、重算捲動
         const CS2 = 72, x0 = 48, step = 81, ord = { fire: 0, water: 1, thunder: 2, earth: 3, wind: 4 };
+        const spec = c => CARD_SPECIES[c._cd.id] || c._cd.race || '';   // 顯示種族(貓/犬/鼠…覆蓋 human/yokai/beast)
         let list = this.cards.slice();
         if (this.filterEl) list = list.filter(c => c._cd.el === this.filterEl);
+        const byEl = (a, b) => ord[a._cd.el] - ord[b._cd.el];   // 次要排序:屬性序
         const cmp = {
-          el: (a, b) => (ord[a._cd.el] - ord[b._cd.el]) || (getCardLv(b._cd.id) - getCardLv(a._cd.id)),
-          lv: (a, b) => (getCardLv(b._cd.id) - getCardLv(a._cd.id)) || (ord[a._cd.el] - ord[b._cd.el]),
-          rank: (a, b) => ((b._cd.rank || 0) - (a._cd.rank || 0)) || (ord[a._cd.el] - ord[b._cd.el])
+          el: (a, b) => byEl(a, b) || (getCardLv(b._cd.id) - getCardLv(a._cd.id)),
+          species: (a, b) => spec(a).localeCompare(spec(b)) || byEl(a, b),
+          lv: (a, b) => (getCardLv(b._cd.id) - getCardLv(a._cd.id)) || byEl(a, b),
+          pwr: (a, b) => (cardAtk(b._cd.id) - cardAtk(a._cd.id)) || byEl(a, b),
+          hp: (a, b) => (cardHp(b._cd.id) - cardHp(a._cd.id)) || byEl(a, b),
+          rcv: (a, b) => (cardRcv(b._cd.id) - cardRcv(a._cd.id)) || byEl(a, b)
         };
         list.sort(cmp[this.sortKey] || cmp.el);
         this.cards.forEach(c => { c.setVisible(false); if (c.input) c.input.enabled = false; });
@@ -1863,26 +1928,28 @@
         slot.el = cd.el; slot.cardId = cd.id; slot.uid = inst.u;
         slot.draw(cd.el); slot.plus.setVisible(false);
         const dk = cardArtKey(cd.id, 'full'), hasArt = !!(dk && this.textures.exists(dk));   // 陣型用 _01 大圖(3:2 橫式,填滿格子)
-        if (hasArt) { if (!slot.img) { slot.img = this.add.image(slot.x, slot.y, dk); this.formG.add(slot.img); } else slot.img.setTexture(dk); this._fitSlotImg(slot); }
+        if (hasArt) { if (!slot.img) { slot.img = this.add.image(slot.x, slot.y, dk); slot.cont.add(slot.img); } else slot.img.setTexture(dk); this._fitSlotImg(slot); }
         else { if (slot.img) slot.img.setVisible(false); if (dk) { _loadCardArt(this, [cd.id]); this.load.once('complete', () => this._refreshSlotArt()); try { this.load.start(); } catch (e) { } } }   // 🖼️ full 大圖還沒載(bench 只載縮圖、預載只載原隊)→補載,載好自動換上圖(修「加入佈陣顯示金卡+卡名缺圖」)
         slot.nameTxt.setText(cardName(cd.id)).setVisible(!hasArt);
-        if (slot.crown) this.formG.bringToTop(slot.crown);   // 圖層蓋過去→大圖不能蓋掉皇冠
+        if (slot.crown) slot.cont.bringToTop(slot.crown);   // 圖層蓋過去→大圖不能蓋掉皇冠
         this.rebuildSlotOverlay(slot, cd);   // 重繪右上屬性徽章 + 左下 Lv 膠囊
         this.cardUsed[inst.u] = true; const card = this.cards.find(c => c._inst.u === inst.u);
         if (card) card.setCheck(true);   // 已入隊標記(取代原本 alpha 變暗)
         this.updateStats(); this.refreshStart();
+        if (this.leaderG) this.formG.bringToTop(this.leaderG);   // 隊員卡圖是 assign 時才 append 進 formG→會排在 leaderG 之後蓋住隊長,須把隊長層重提最上
       }
       _refreshSlotArt() {   // 🖼️ full 大圖補載完成→把還在顯示卡名的已填宮位換成圖(徽章/Lv 重繪疊上、皇冠置頂;順序比照 assign)
         this.slots.forEach(slot => {
           if (!slot.cardId || (slot.img && slot.img.visible)) return;
           const dk = cardArtKey(slot.cardId, 'full');
           if (!dk || !this.textures.exists(dk)) return;
-          if (!slot.img) { slot.img = this.add.image(slot.x, slot.y, dk); this.formG.add(slot.img); } else slot.img.setTexture(dk);
+          if (!slot.img) { slot.img = this.add.image(slot.x, slot.y, dk); slot.cont.add(slot.img); } else slot.img.setTexture(dk);
           this._fitSlotImg(slot);
           if (slot.nameTxt) slot.nameTxt.setVisible(false);
-          if (slot.crown) this.formG.bringToTop(slot.crown);
+          if (slot.crown) slot.cont.bringToTop(slot.crown);
           const cd = ROSTER.find(c => c.id === slot.cardId); if (cd) this.rebuildSlotOverlay(slot, cd);
         });
+        if (this.leaderG) this.formG.bringToTop(this.leaderG);   // 補載卡圖後同樣把隊長層重提最上
       }
       _fitSlotImg(slot) {   // 陣型宮位圖:object-fit cover(放大到覆蓋格子→置中裁切),保原圖比例不壓扁(比照 demo .fcard img)
         const img = slot.img; if (!img) return;
@@ -1903,21 +1970,28 @@
         this.rebuildSlotOverlay(slot, null);
         this.updateStats(); this.refreshStart();
       }
+      _elBadge(cx, cy, el) {   // demo .elbadge:22×18 圓角6 + 元素色底 + 白1.5px框 + 14×14 白色元素 SVG icon(非文字);回傳 [底, icon] 由呼叫端加進對應容器
+        const bg = roundRectG(this, cx, cy, 22, 18, 6, EL[el].color, 1, 0xffffff, 1.5);
+        const icon = this.textures.exists('el_' + el)
+          ? this.add.image(cx, cy, 'el_' + el).setDisplaySize(14, 14).setTintFill(0xffffff)   // 單色元素貼圖 tint 白=demo 白版 icon
+          : this.add.text(cx, cy, EL[el].name, { fontFamily: EMOJIFONT, fontSize: '11px', color: '#ffffff', fontStyle: 'bold' }).setOrigin(0.5);   // el_ 沒載→退回文字
+        return [bg, icon];
+      }
       rebuildSlotOverlay(slot, cd) {   // 右上元素徽章 + 左下 Lv 膠囊(隨指派卡片重繪,先銷毀舊的避免殘留)
         if (slot._ov && slot._ov.length) slot._ov.forEach(o => o.destroy());
         slot._ov = [];
         if (!cd) return;
         const x = slot.x, y = slot.y, w = slot.w, h = slot.h;
+        const outerRight = x >= CX;   // 徽章/LV 一律放「外側」→左欄卡靠左、右欄卡靠右,避免被中央置中的隊長卡蓋住
         if (EL[cd.el]) {
-          const bx = x + w / 2 - 14, by = y - h / 2 + 11;
-          const bBg = roundRectG(this, bx, by, 22, 18, 6, EL[cd.el].color, 1, 0xffffff, 1.5);
-          const bTxt = this.add.text(bx, by, EL[cd.el].name, { fontFamily: EMOJIFONT, fontSize: '11px', color: '#ffffff', fontStyle: 'bold' }).setOrigin(0.5);
-          this.formG.add(bBg); this.formG.add(bTxt); slot._ov.push(bBg, bTxt);
+          const bx = outerRight ? (x + w / 2 - 14) : (x - w / 2 + 14), by = y - h / 2 + 11;   // 屬性徽章:外側上角
+          const [bBg, bIc] = this._elBadge(bx, by, cd.el);
+          slot.cont.add(bBg); slot.cont.add(bIc); slot._ov.push(bBg, bIc);
         }
-        const lx = x - w / 2 + 22, ly = y + h / 2 - 9;
-        const lBg = roundRectG(this, lx, ly, 40, 15, 7, 0x12161a, 0.72, null, 0);
-        const lTxt = this.add.text(lx, ly, 'Lv.' + getCardLv(cd.id), { fontFamily: EMOJIFONT, fontSize: '11px', color: '#ffffff', fontStyle: 'bold' }).setOrigin(0.5);
-        this.formG.add(lBg); this.formG.add(lTxt); slot._ov.push(lBg, lTxt);
+        const lw = 46, lx = outerRight ? (x + w / 2 - lw / 2 - 3) : (x - w / 2 + lw / 2 + 3), ly = y + h / 2 - 11;   // Lv 膠囊:外側下角,放大
+        const lBg = roundRectG(this, lx, ly, lw, 18, 9, 0x12161a, 0.72, null, 0);
+        const lTxt = this.add.text(lx, ly, 'Lv.' + getCardLv(cd.id), { fontFamily: EMOJIFONT, fontSize: '13px', color: '#ffffff', fontStyle: 'bold' }).setOrigin(0.5).setResolution(3);   // resolution 3=高倍率算文字貼圖→畫布放大也不糊
+        slot.cont.add(lBg); slot.cont.add(lTxt); slot._ov.push(lBg, lTxt);
       }
       showCardDetail(cd) {   // 久按卡片→就地詳細(共用 cardDetailPanel,版面與卡冊完全一致,只少管理鈕)
         if (this._detailG) this._detailG.destroy();
@@ -1927,14 +2001,13 @@
       }
       refreshStart() {
         const n = this.slots.filter(s => s.el).length, ok = n === 5;   // 確定鈕外觀反映齊不齊(永遠可按=可離開,出戰時再擋)
-        if (this.confirmBtn) {
-          if (ok) this._confirmDraw(0x4cc07f, 0x35a866, 0x26824e);   // demo .pill.ok:綠底漸層+深綠唇邊
-          else this._confirmDraw(0xf8f5f0, 0xeae4da, 0xddd7cd);      // 未齊隊=灰(仍立體藥丸)
-          this.confirmTxt.setText(ok ? '✔ 確定' : '確定 ' + n + '/5').setColor(ok ? '#ffffff' : UI().ink3);
+        if (this.confirmEl) {
+          this._confirmDraw(ok);   // 切 demo .pill.ok / .pill.ghost 視覺
+          this.confirmEl.textContent = ok ? '✓ 確定' : '確定 ' + n + '/5';   // 文字內嵌 button,flex 自動上下左右置中;✓(U+2713)在 HTML 吃 color:#fff=白
         }
-        if (this.tutTeamArmed && this.confirmBtn) {
-          this.tweens.killTweensOf(this.confirmBtn); this.tweens.killTweensOf(this.confirmTxt); this.confirmBtn.setScale(1); this.confirmTxt.setScale(1);
-          if (ok) this.tweens.add({ targets: [this.confirmBtn, this.confirmTxt], scaleX: 1.1, scaleY: 1.1, duration: 520, yoyo: true, repeat: -1, ease: 'Sine.inOut' });
+        if (this.tutTeamArmed && this.confirmDom) {
+          this.tweens.killTweensOf(this.confirmDom); this.confirmDom.setScale(1);
+          if (ok) this.tweens.add({ targets: this.confirmDom, scaleX: 1.1, scaleY: 1.1, duration: 520, yoyo: true, repeat: -1, ease: 'Sine.inOut' });   // 齊隊脈動:DOM 元件 scale(CSS transform,保持銳利)
         }
       }
     }
@@ -6751,6 +6824,7 @@
     function bootGame() {
       window.GAME = new Phaser.Game({
         type: Phaser.AUTO, parent: 'game', backgroundColor: '#160f18',
+        dom: { createContainer: true },   // 允許 add.dom:編成頁確定鈕用真 HTML <button> 疊在畫布上(canvas 只算 420px 再放大→曲線邊緣會鋸齒;DOM 元件走瀏覽器原生渲染,任意 dpi 都銳利,質感=demo)
         scale: { mode: Phaser.Scale.FIT, autoCenter: Phaser.Scale.CENTER_BOTH, width: W, height: H },
         scene: [HomeScene, TeamScene, GameScene, CollectionScene, FuseScene, DexScene],
       });
