@@ -608,13 +608,18 @@
     const SPECIES_ORDER = { '貓': 0, '犬': 1, '鳥': 2, '鼠': 3, '兔': 4, '魚': 5, '台灣特有': 6 };   // 種族排序:同種族排一起,種族內再按屬性
     const _spOrd = id => { const s = CARD_SPECIES[id]; return s && SPECIES_ORDER[s.n] != null ? SPECIES_ORDER[s.n] : 99; };
     const SORT_MODES = [   // 卡冊排序鍵(demo collection.html cb-sort:編號/種族/LV/PWR/HP/RCV;屬性交給篩選列不重複)
-      { name: '編號', fn: (a, b) => a._i - b._i },
-      { name: '種族', fn: (a, b) => (_spOrd(a.id) - _spOrd(b.id)) || (EL_ORDER[a.el] - EL_ORDER[b.el]) || (a._i - b._i) },
-      { name: 'LV', fn: (a, b) => (getCardLv(b.id) - getCardLv(a.id)) || (a._i - b._i) },
-      { name: 'PWR', fn: (a, b) => (cardAtk(b.id) - cardAtk(a.id)) || (a._i - b._i) },
-      { name: 'HP', fn: (a, b) => (cardHp(b.id) - cardHp(a.id)) || (a._i - b._i) },
-      { name: 'RCV', fn: (a, b) => (cardRcv(b.id) - cardRcv(a.id)) || (a._i - b._i) },
+      { name: '編號', fn: () => 0 },   // 純卡號序→整個交給下面的統一 tiebreaker(舊版排的是入手序_i,不是卡號)
+      { name: '種族', fn: (a, b) => (_spOrd(a.id) - _spOrd(b.id)) || (EL_ORDER[a.el] - EL_ORDER[b.el]) },
+      { name: 'LV', fn: (a, b) => getCardLv(b.id) - getCardLv(a.id) },
+      { name: 'PWR', fn: (a, b) => cardAtk(b.id) - cardAtk(a.id) },
+      { name: 'HP', fn: (a, b) => cardHp(b.id) - cardHp(a.id) },
+      { name: 'RCV', fn: (a, b) => cardRcv(b.id) - cardRcv(a.id) },
     ];
+    // 統一 tiebreaker:不管哪種排序,「相同卡(id)一定相鄰」,同 id 內 LV 高的在前,最後才依入手序。
+    // ⚠️ 各比較器尾端不可再自己接 (a._i-b._i)——_i 唯一會讓下面的 id 分組永遠跑不到。
+    // ⚠️ getCardLv 目前是「每卡種」一個 LV(雲端同步把同 id 個體塌成最高的),故 LV 段現為 no-op;日後改 per-instance LV 會自動生效。
+    const _byIdLv = (aid, bid) => (aid < bid ? -1 : aid > bid ? 1 : 0) || (getCardLv(bid) - getCardLv(aid));
+    SORT_MODES.forEach(m => { const f = m.fn; m.fn = (a, b) => f(a, b) || _byIdLv(a.id, b.id) || (a._i - b._i); });
     /* 隊長技:隊伍首位(隊長)的常駐被動,塑造流派 */
     const LEADER_SKILLS = {
       c01: { name: '業火統領', desc: '清到火印那手 全傷害 ×1.5', type: 'elemAtk', el: 'fire', v: 1.5 },
@@ -1203,7 +1208,7 @@
       if (r.ok) {
         const d = await r.json(); syncWallet(d); if (d.gems) syncGems(d.gems);
         mutSave(s => { s.pendingRuns = (s.pendingRuns || []).filter(x => x.runId !== item.runId); });
-        return { ok: true, drops: Array.isArray(d.drops) ? d.drops : [], firstClearStones: d.firstClearStones || 0, bagFull: !!d.bagFull };   // 🔐[首通石]非首通/序章/重放=0,伺服器已算好直接帶出;bagFull=背包滿→伺服器跳過部分/全部掉落,前端要提示玩家清背包
+        return { ok: true, drops: Array.isArray(d.drops) ? d.drops : [], firstClearStones: d.firstClearStones || 0, bagFull: !!d.bagFull, clearSec: (typeof d.clearSec === 'number' ? d.clearSec : null), bestSec: (typeof d.bestSec === 'number' ? d.bestSec : null) };   // 🔐[首通石]非首通/序章/重放=0,伺服器已算好直接帶出;bagFull=背包滿→伺服器跳過部分/全部掉落,前端要提示玩家清背包;clearSec=這趟耗時、bestSec=全服最速(皆伺服器算,離線 fallback 為 null)
       }
       if (r.status === 400 || r.status === 429) { mutSave(s => { s.pendingRuns = (s.pendingRuns || []).filter(x => x.runId !== item.runId); }); console.warn('run/complete rejected', r.status, item.runId); return { ok: false, rejected: true }; }   // 非法/被限流:不重試,丟棄該筆
       return null;   // 其他失敗狀態:保留該筆,下次再試
@@ -1880,6 +1885,8 @@
           hp: (a, b) => (cardHp(b._cd.id) - cardHp(a._cd.id)) || byEl(a, b),
           rcv: (a, b) => (cardRcv(b._cd.id) - cardRcv(a._cd.id)) || byEl(a, b)
         };
+        // 統一 tiebreaker(同卡冊):任何排序下「相同卡(id)一定相鄰」、同 id 內 LV 高的在前,最後依個體 uid 穩定收尾
+        Object.keys(cmp).forEach(k => { const f = cmp[k]; cmp[k] = (a, b) => f(a, b) || _byIdLv(a._cd.id, b._cd.id) || (((a._inst && a._inst.u) || 0) - ((b._inst && b._inst.u) || 0)); });
         list.sort(cmp[this.sortKey] || cmp.el);
         this.cards.forEach(c => { c.setVisible(false); if (c.input) c.input.enabled = false; });
         list.forEach((c, i) => { c.setPosition(x0 + (i % 5) * step, this.vpTop + CS2 / 2 + Math.floor(i / 5) * step); c.setVisible(true); });
@@ -2550,7 +2557,7 @@
         this.maxHP = Math.round(teamHp * ((this.lead && (this.lead.type === 'hp' || this.lead.type === 'dog')) ? this.lead.v : 1));   // 🐶犬攻守雙修:也吃 HP×v
         this.teamRcv = (this.presetTeam || []).reduce((s, c) => s + (c.rcv || 0), 0) || 0;   // 隊伍回復力總和(清無屬區回血用)
         this.teamMaxAtk = (this.presetTeam || []).reduce((m, c) => Math.max(m, c.atk || 0), 0) || 0;   // 隊伍最高攻擊(無屬傷害基準=此值×普通×0.08,= 屬·普通)
-        this.playerHP = this.maxHP; this.stage = 1; this.resultOpen = false; this.chests = 0; this.gold = 0; this.runDrops = []; this._runDropsPending = false; this.runExp = 0; this.runCoins = 0; this._runGranted = false; this._runRw = null; this._firstClearStones = 0;   // 🔐 掉落/寶玉改伺服器 run/complete 決定,不再前端 runGems 預累積;🔐[首通石]每場重置,避免殘留上一場的值
+        this.playerHP = this.maxHP; this.stage = 1; this.resultOpen = false; this.chests = 0; this.gold = 0; this.runDrops = []; this._runDropsPending = false; this.runExp = 0; this.runCoins = 0; this._runGranted = false; this._runRw = null; this._firstClearStones = 0; this._clearSec = null; this._bestSec = null;   // 🔐 掉落/寶玉改伺服器 run/complete 決定,不再前端 runGems 預累積;🔐[首通石]每場重置,避免殘留上一場的值;⏱ 通關時間/最速同理每場重置
         this.charge = [0, 0, 0, 0, 0];   // 主動技蓄力(整場累積、跨關保留)
         this.stored = [null, null, null, null, null];   // 每卡存放的屬塊 {el,lv}(跨關保留,新局/重挑才清)
         this.firstClear = true;   // 新手鉤子:本場第一次消除=隆重慶祝
@@ -5082,6 +5089,7 @@
         _sendRunComplete(item).then(res => {   // 🔐 立即嘗試送出(在場景還開著時,盡量讓結算畫面就能顯示真實掉落);離線/失敗會保留在 pendingRuns,由 flushPendingRuns 之後補發
           if (!res || !res.ok) return;   // res.ok 才代表這筆已經被伺服器接受(冪等重放也算,drops 可能是空陣列)
           this._firstClearStones = res.firstClearStones || 0;   // 🔐[首通石]showResult 若已畫完面板不會補畫(同下方掉落的邊角案例註解);正常情況下這裡拿到得夠快
+          this._clearSec = res.clearSec; this._bestSec = res.bestSec;   // ⏱ 通關時間/全服最速(伺服器算;離線 fallback=null→結算改用本地 _runStartMs 顯示、不顯示最速)
           const drops = res.drops || [];
           this.runDrops = drops.map(x => { const cd = ROSTER.find(c => c.id === x.id); return cd ? { cd: cd, isNew: !!x.isNew } : null; }).filter(Boolean);
           this._runDropsPending = false;
@@ -5498,34 +5506,50 @@
         this.resultOpen = true; if (win) track('dungeon_win'); win ? SFX.win() : SFX.lose(); const wasTut = !!this.tut; if (this.tut) this.tutDone(win); const g = this.overlay(); const cy = H / 2, T = UI();   // 🔐[8] 教學打輸 tutDone(false):不畢業,下次重進教學重試(不會 0 卡死鎖);贏=tutDone(true) 畢業,行為與舊版一致
         if (wasTut && win) { this.showTutComplete(g); return; }   // 教學通關 → 專屬綠框完成畫面(導向編隊教學)
         const panel = this.add.container(0, 0); g.add(panel);   // 內容容器:整體滑入淡入
-        const PW = Math.min(W - 24, 400), PH = win ? 360 : 320, PCY = win ? cy - 6 : cy - 26;
-        panel.add(roundRectG(this, CX, PCY, PW, PH, 16, T.surf, 1, T.divider, 1.5));   // 白色圓角面板(暗背幕之上承載結算內容)
-        panel.add(this.add.text(CX, cy - 152, win ? (wasTut ? '🎓 教學完成!' : '🏆 通關 ' + this.dungeon.name + '!') : '☠️ 敗北', { fontFamily: EMOJIFONT, fontSize: FS.title, color: win ? T.goldTx : T.badTx, fontStyle: 'bold' }).setOrigin(0.5));
-        panel.add(this.add.text(CX, cy - 112, win ? (wasTut ? '你已學會核心:放塊→清屬性宮→相剋打弱點。出發吧!' : (this.dungeon.name + ' · ' + this.stagesEff.length + ' 關全清!')) : '第 ' + this.stage + ' 關失敗', { fontFamily: EMOJIFONT, fontSize: FS.cap, color: T.ink, align: 'center', wordWrap: { width: W - 60 } }).setOrigin(0.5));
+        const PW = Math.min(W - 24, 400);
+        const TX = (yc, s, fs, col, bold) => panel.add(this.add.text(CX, yc, s, { fontFamily: EMOJIFONT, fontSize: fs, color: col, fontStyle: bold ? 'bold' : 'normal' }).setOrigin(0.5).setResolution(2));
+        const fmtT = (s) => { if (s == null) return '--:--:--'; const x = Math.max(0, Math.floor(s)), p2 = (n) => String(n).padStart(2, '0'); return p2(Math.floor(x / 3600)) + ':' + p2(Math.floor(x % 3600 / 60)) + ':' + p2(x % 60); };   // 秒→00:00:00
         if (win) {
-          if (this._runDropsPending) {   // 🔐 全清當下還沒拿到伺服器掉落結果(離線/連線慢):不假顯示具體卡片,顯示暫態,實際掉落會在連線後靜默入袋(見 flushPendingRuns 的待領通知)
-            panel.add(this.add.text(CX, cy - 60, '⏳ 戰利品連線後發放', { fontFamily: EMOJIFONT, fontSize: FS.sub, color: T.goldTx, fontStyle: 'bold' }).setOrigin(0.5));
-          } else {
-            const drops = this.runDrops || [], m = Math.min(drops.length, 8);
-            panel.add(this.add.text(CX, cy - 90, drops.length ? ('戰利品 ×' + drops.length) : '(這趟沒有掉落)', { fontFamily: EMOJIFONT, fontSize: FS.sub, color: T.goldTx, fontStyle: 'bold' }).setOrigin(0.5));   // 移除 🎁 emoji(部分裝置算繪成怪字);純文字更清楚
-            const per = m ? Math.min(86, Math.floor((W - 20) / m)) : 0, sq = Math.min(per - 6, 74);   // 正方形卡;字級隨卡大小放大
-            const fn = Math.max(13, Math.round(sq * 0.23)), fr = Math.max(11, Math.round(sq * 0.18));
+          // ── 流式排版(2026-07-15):PH 依內容算,間距一致;拿掉副標與「看卡冊」;標題帶難度;新增通關時間/最速通關 ──
+          const drops = this.runDrops || [], m = Math.min(drops.length, 8), pending = !!this._runDropsPending;
+          const per = m ? Math.min(86, Math.floor((W - 20) / m)) : 0, sq = m ? Math.min(per - 6, 74) : 0;
+          const hasFC = this._firstClearStones > 0;
+          const G = 16, PAD = 22, Ht = 34, Hl = 22, Hnew = 26, Hrw = 24, Hfc = 20, Hts = 20, Hb = 50;
+          const dropsH = (!pending && m) ? (Hnew + sq) : 0;   // Hnew=✦NEW 掛在卡上緣的頭頂空間(不再與「戰利品×N」擠在一起)
+          const contentH = Ht + G + Hl + (dropsH ? G + dropsH : 0) + G + Hrw + (hasFC ? 10 + Hfc : 0) + G + Hts + 6 + Hts + G + Hb;
+          const PH = contentH + PAD * 2, top = cy - PH / 2;
+          panel.add(roundRectG(this, CX, cy, PW, PH, 16, T.surf, 1, T.divider, 1.5));   // 白色圓角面板(暗背幕之上承載結算內容)
+          let y = top + PAD;
+          TX(y + Ht / 2, '🏆 通關 ' + this.dungeon.name + '！' + ((this.diff && this.diff.name) || ''), FS.title, T.goldTx, true); y += Ht + G;   // 標題帶難度→讓玩家知道過的是哪一級
+          TX(y + Hl / 2, pending ? '⏳ 戰利品連線後發放' : (drops.length ? ('戰利品 ×' + drops.length) : '(這趟沒有掉落)'), FS.sub, T.goldTx, true); y += Hl;   // 🔐 pending=還沒拿到伺服器掉落結果:不假顯示卡片
+          if (dropsH) {
+            y += G;
+            const dy = y + Hnew + sq / 2, fr = Math.max(11, Math.round(sq * 0.18));   // 卡片中心(上方留 Hnew 給 ✦NEW)
             drops.slice(0, 8).forEach((d, i) => {
-              const dx = CX + (i - (m - 1) / 2) * per, dy = cy - 40;
+              const dx = CX + (i - (m - 1) / 2) * per;
               const cardC = this.add.container(dx, dy); panel.add(cardC);   // 每張戰利品=子容器→逐張彈出
               cardC.add(roundRectG(this, 0, 0, sq, sq, 12, EL[d.cd.el].color, 1, d.isNew ? T.gold : T.divider, d.isNew ? 3 : 1.5));
-              { const _dk = cardArtKey(d.cd.id, 'thumb'); if (_dk && this.textures.exists(_dk)) cardC.add(this.add.image(0, 0, _dk).setDisplaySize(sq - 4, sq - 4).setOrigin(0.5)); }   // 戰利品狗圖
-              // 戰利卡片不顯示卡名(使用者要求 2026-07):只留卡圖 + 星等 + NEW,畫面更乾淨(fn 名稱字級因此不再使用)
-              cardC.add(this.add.text(0, sq * 0.30, RANKSTAR[d.cd.rank], { fontFamily: EMOJIFONT, fontSize: fr + 'px', color: '#ffffff', fontStyle: 'bold', stroke: '#000000', strokeThickness: 3 }).setOrigin(0.5));   // 星等下移+白字黑邊:名稱拿掉後疊在卡圖上仍清楚
-              if (d.isNew) cardC.add(this.add.text(0, -sq / 2 - 10, '✦NEW', { fontFamily: EMOJIFONT, fontSize: FS.micro, color: T.goldTx, fontStyle: 'bold' }).setOrigin(0.5));
+              { const _dk = cardArtKey(d.cd.id, 'thumb'); if (_dk && this.textures.exists(_dk)) cardC.add(this.add.image(0, 0, _dk).setDisplaySize(sq - 4, sq - 4).setOrigin(0.5)); }
+              // 戰利卡片不顯示卡名(2026-07):只留卡圖 + 星等 + NEW,畫面更乾淨
+              cardC.add(this.add.text(0, sq * 0.30, RANKSTAR[d.cd.rank], { fontFamily: EMOJIFONT, fontSize: fr + 'px', color: '#ffffff', fontStyle: 'bold', stroke: '#000000', strokeThickness: 3 }).setOrigin(0.5));
+              if (d.isNew) cardC.add(this.add.text(0, -sq / 2 - 11, '✦NEW', { fontFamily: EMOJIFONT, fontSize: FS.micro, color: T.goldTx, fontStyle: 'bold' }).setOrigin(0.5));
               cardC.setScale(0); this.tweens.add({ targets: cardC, scale: 1, duration: 300, ease: 'Back.out', delay: 260 + i * 90 });
             });
+            y += dropsH;
           }
-          panel.add(this.add.text(CX, cy + 32, '🎉 EXP +' + (this.runExp || 0) + '   💰 +' + (this.runCoins || 0), { fontFamily: EMOJIFONT, fontSize: FS.sub, color: T.goldTx, fontStyle: 'bold' }).setOrigin(0.5));
-          if (this._firstClearStones > 0) panel.add(this.add.text(CX, cy + 56, '🎁 首次通關獎勵 +' + this._firstClearStones + ' 💎', { fontFamily: EMOJIFONT, fontSize: FS.cap, color: T.goldTx, fontStyle: 'bold' }).setOrigin(0.5));   // 🔐[首通石]非首通/序章/重放為 0 不顯示;stones 餘額顯示靠 syncWallet 已更新
-          this.mkBtn(panel, cy + 72, '📖 看卡冊', () => { this.scene.manager.start('collection'); this.scene.manager.stop('game'); });
-          this.mkBtn(panel, cy + 130, '🏠 回大廳', () => { this.scene.manager.start('home'); this.scene.manager.stop('game'); });
+          y += G;
+          TX(y + Hrw / 2, '🎉 EXP +' + (this.runExp || 0) + '   💰 +' + (this.runCoins || 0), FS.sub, T.goldTx, true); y += Hrw;
+          if (hasFC) { y += 10; TX(y + Hfc / 2, '🎁 首次通關獎勵 +' + this._firstClearStones + ' 💎', FS.cap, T.goldTx, true); y += Hfc; }   // 🔐[首通石]非首通/序章/重放為 0 不顯示
+          y += G;
+          const localSec = Math.round((Date.now() - (this._runStartMs || Date.now())) / 1000);   // 離線 fallback:伺服器沒回 clearSec 時用本地起算(僅顯示)
+          TX(y + Hts / 2, '⏱ 通關時間　' + fmtT(this._clearSec != null ? this._clearSec : localSec), FS.cap, T.ink, true); y += Hts + 6;
+          TX(y + Hts / 2, '🏁 最速通關　' + fmtT(this._bestSec), FS.cap, T.ink2, false); y += Hts + G;   // 全服(該城×該難度)歷來最快;尚無紀錄/離線→--:--:--
+          this.mkBtn(panel, y + Hb / 2, '🏠 回大廳', () => { this.scene.manager.start('home'); this.scene.manager.stop('game'); });
         } else {
+          const PH = 320, PCY = cy - 26;
+          panel.add(roundRectG(this, CX, PCY, PW, PH, 16, T.surf, 1, T.divider, 1.5));
+          TX(cy - 152, '☠️ 敗北', FS.title, T.badTx, true);
+          TX(cy - 112, '第 ' + this.stage + ' 關失敗', FS.cap, T.ink, false);
           this.mkBtn(panel, cy + 30, '再挑戰本關', () => { g.destroy(); this.resultOpen = false; this.restartStage(); });
           this.mkBtn(panel, cy + 90, '🏠 回大廳', () => { this.scene.manager.start('home'); this.scene.manager.stop('game'); });
         }
@@ -5883,6 +5907,7 @@
         this.rebuild();
       }
       rebuild() { this.tweens.killAll(); if (this._tabDom) { this._tabDom.forEach(d => { if (d) d.destroy(); }); this._tabDom = null; } if (this.layer) this.layer.destroy(); this.layer = this.add.container(0, 0); this.topBar(); this.body(); this.nav(); }   // _tabDom=分頁 DOM 精緻鈕(轉蛋抽卡/設定 set-pill;scene 級不在 layer)→手動銷毀,免切分頁殘留
+      _setDomUI(on) { if (this._tabDom) this._tabDom.forEach(d => { if (d && d.node) d.setVisible(on); }); }   // DOM overlay 永遠浮在 canvas 上(setDepth 無效)→開 canvas 彈窗(勇者卡/信箱等)要先藏,關閉再恢復。同 TeamScene/CollectionScene 慣例
       L(o) { this.layer.add(o); return o; }
       txt(x, y, s, size, col, ox, bold) { return this.L(this.add.text(x, y, s, { fontFamily: EMOJIFONT, fontSize: Math.max(15, parseInt(size || '16', 10) || 16) + 'px', color: col || '#f3e9d8', fontStyle: bold ? 'bold' : 'normal' }).setOrigin(ox == null ? 0.5 : ox, 0.5)); }   // 全選單字級最小 15px(手機可讀)
       rect(x, y, w, h, col, a) { return this.L(this.add.rectangle(x, y, w, h, col, a == null ? 1 : a)); }
@@ -6610,7 +6635,8 @@
       showHeroCard() {   // 🎴 我的勇者卡:大字顯示 12 碼(顯示 XXXX-XXXX-XXXX 分組,複製給原始 12 碼)+複製+找回;點外面可關
         if (this._heroG) { this._heroG.destroy(); this._heroG = null; }
         const T = UI(), g = this.add.container(0, 0).setDepth(1800); this._heroG = g;   // 蓋過每日彈窗(1600),低於 toast(2000)→toast 能疊在上面
-        const close = () => { g.destroy(); if (this._heroG === g) this._heroG = null; };
+        this._setDomUI(false);   // ⚠️ DOM 精緻鈕(設定頁 set-pill)永遠浮在 canvas 上,setDepth 對它無效→開這個 canvas 彈窗前先整組藏起來
+        const close = () => { g.destroy(); if (this._heroG === g) this._heroG = null; this._setDomUI(true); };
         const bg = this.add.rectangle(CX, H / 2, W, H, 0x0e0a16, 0.78).setInteractive(); g.add(bg); bg.on('pointerup', close);   // 點外面可關
         const pw = Math.min(W - 24, 384), ph = 430;
         g.add(roundRectG(this, CX, H / 2, pw, ph, 20, T.surf, 1, T.gold, 3));
