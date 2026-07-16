@@ -259,7 +259,9 @@
       // 底排按鈕(藥丸:manage=三顆等寬「強化/進化/關閉」,主=屬色/金色、次=白底;非manage只有關閉)
       if (opt.manage) {
         gpill(CX - 118, H - 52, 110, 52, '⬆️ 強化', tint(elc, 0.3), elc, '#ffffff', FS.cap, () => opt.onFuse && opt.onFuse());   // 屬色漸層(上亮下深,寶可夢式)
-        gpill(CX, H - 52, 110, 52, '✨ 進化', 0xffe9a8, 0xd9932a, '#4a2c05', FS.cap, () => opt.onEvolve && opt.onEvolve());   // 金色漸層,和強化/關閉區隔
+        // 進化鈕:滿 LV20 且還能進化 → 金色漸層(可動作);未滿 LV20 / 已達進化上限 / 素材卡 → 灰階。仍可點,點了由 canEvolve 跳原因 toast
+        const _evoLit = mx && !MATERIAL_IDS.has(cd.id) && getCardEvo(cd.id) < (EVO_CARDS[cd.id] ? 1 : EVO_MAX);
+        gpill(CX, H - 52, 110, 52, '✨ 進化', _evoLit ? 0xffe9a8 : 0xe4e0d8, _evoLit ? 0xd9932a : 0xb8b0a4, _evoLit ? '#4a2c05' : '#8a8378', FS.cap, () => opt.onEvolve && opt.onEvolve());
         pill(CX + 118, H - 52, 110, 52, '✖ 關閉', TK.surf, TK.divider, TK.ink2, FS.cap, () => opt.onClose && opt.onClose());
       } else {
         pill(CX, H - 52, 220, 52, '✖ 關閉', TK.surf, TK.divider, TK.ink2, FS.sub, () => opt.onClose && opt.onClose());
@@ -427,12 +429,15 @@
       { id: 'c58', name: '雷藥師', el: 'thunder', race: 'yokai', rank: 'genin', atk: 100, hp: 100, rcv: 24, attrs: ['thunder'] },
       { id: 'c59', name: '土藥師', el: 'earth', race: 'yokai', rank: 'genin', atk: 70, hp: 165, rcv: 26, attrs: ['earth'] },
       { id: 'c60', name: '風藥師', el: 'wind', race: 'yokai', rank: 'genin', atk: 90, hp: 115, rcv: 26, attrs: ['wind'] },
-      /* ── 💎 寶玉卡系(進化素材,chunin 2★晶精):進化時消耗 1 張對應屬性寶玉卡(取代舊寶玉貨幣);屬性城掉落。肉盾型高HP低攻,五屬同數值=素材套組。不進 EVO_CARDS(不換名換圖) ── */
-      { id: 'c61', name: '火晶精', el: 'fire', race: 'spirit', rank: 'chunin', atk: 80, hp: 260, rcv: 45, attrs: ['fire'] },
-      { id: 'c62', name: '水晶精', el: 'water', race: 'spirit', rank: 'chunin', atk: 80, hp: 260, rcv: 45, attrs: ['water'] },
-      { id: 'c63', name: '雷晶精', el: 'thunder', race: 'spirit', rank: 'chunin', atk: 80, hp: 260, rcv: 45, attrs: ['thunder'] },
-      { id: 'c64', name: '土晶精', el: 'earth', race: 'spirit', rank: 'chunin', atk: 80, hp: 260, rcv: 45, attrs: ['earth'] },
-      { id: 'c65', name: '風晶精', el: 'wind', race: 'spirit', rank: 'chunin', atk: 80, hp: 260, rcv: 45, attrs: ['wind'] },
+      /* ── 💎 寶玉卡系(純進化素材,2★晶精):進化時消耗 1 張對應屬性寶玉卡;屬性城掉落。
+         ⚠️ 數值刻意做成「素材位階」(戰力 42 ≈ 3★ 的 18%),對齊 PAD/神魔的素材設計:不硬鎖上陣,但廢到沒人會放。
+         2026-07-15 修:原本 80/260/45(戰力196=3★的85%)且可進化到 evo2(917戰力),等於素材能當戰力卡練,已修正。
+         另在 MATERIAL_IDS 鎖成不可進化(前端 canEvolve + 後端 evolve.ts 雙重把關)。不進 EVO_CARDS(不換名換圖) ── */
+      { id: 'c61', name: '火晶精', el: 'fire', race: 'spirit', rank: 'chunin', atk: 20, hp: 120, rcv: 5, attrs: ['fire'] },
+      { id: 'c62', name: '水晶精', el: 'water', race: 'spirit', rank: 'chunin', atk: 20, hp: 120, rcv: 5, attrs: ['water'] },
+      { id: 'c63', name: '雷晶精', el: 'thunder', race: 'spirit', rank: 'chunin', atk: 20, hp: 120, rcv: 5, attrs: ['thunder'] },
+      { id: 'c64', name: '土晶精', el: 'earth', race: 'spirit', rank: 'chunin', atk: 20, hp: 120, rcv: 5, attrs: ['earth'] },
+      { id: 'c65', name: '風晶精', el: 'wind', race: 'spirit', rank: 'chunin', atk: 20, hp: 120, rcv: 5, attrs: ['wind'] },
     ];
     // 蜘蛛系 1★→2★進化換名換圖表:進化階(getCardEvo)≥1 → 顯示「岩甲◯蜘蛛」+ <id>_e_ 圖(canEvolve 已擋≥1 不可再進到 evo2,只有兩形)
     const SPIDER_EVO = { c36: '岩甲火蜘蛛', c37: '岩甲水蜘蛛', c38: '岩甲雷蜘蛛', c39: '岩甲土蜘蛛', c40: '岩甲風蜘蛛' };
@@ -1444,6 +1449,7 @@
     const EVO_MAX = 2, EVO_MULT = [1, 1.6, 2.4];
     function evoReq(tier) { return { gems: 3 + tier * 3, coins: 1000 + tier * 2000 }; }   // gems 欄位進化已不用(改吃寶玉卡),coins 仍用
     const JEWEL_OF = { fire: 'c61', water: 'c62', thunder: 'c63', earth: 'c64', wind: 'c65' };   // 進化素材:各屬「寶玉卡」(取代舊寶玉貨幣;伺服器 evolve 會消耗 1 張對應屬性寶玉卡)
+    const MATERIAL_IDS = new Set(Object.values(JEWEL_OF));   // 純素材卡:不可進化(素材自己能練成戰力卡就本末倒置了;且火晶精要吃火晶精=吃自己)。伺服器 evolve.ts 也擋一次
     function jewelName(el) { const c = ROSTER.find(x => x.id === JEWEL_OF[el]); return c ? c.name : (EL[el] ? EL[el].name : el) + '晶精'; }
     function ownedCardCount(id) { return loadSave().cards.filter(c => c.id === id).length; }   // 背包中某卡種的個體張數
     function getCardEvo(id) { return loadSave().cardEvo[id] || 0; }
@@ -1454,6 +1460,7 @@
     function canEvolve(id) {
       const c = ROSTER.find(x => x.id === id), t = getCardEvo(id);
       if (!c) return { ok: false, msg: '卡片資料不存在' };
+      if (MATERIAL_IDS.has(id)) return { ok: false, msg: '素材卡不可進化(拿去進化別的卡)' };   // 純素材:不給練成戰力卡
       if (EVO_CARDS[id] && t >= 1) return { ok: false, msg: '已達進化上限' };   // 🕷️蜘蛛系/👹鬼系只有 1★→2★ 兩形,evo1(2星)後不可再進到 evo2
       if (t >= EVO_MAX) return { ok: false, msg: '已達進化上限' };
       if (getCardLv(id) < MAXLV) return { ok: false, msg: '需先練滿 Lv.' + MAXLV };
