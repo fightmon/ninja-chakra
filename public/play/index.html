@@ -1072,6 +1072,7 @@
         if ((loadSave().settings || {}).heroCard) return;
         if (!cloudState().guestCode) return;
         mutSave(s => { s.settings = s.settings || {}; s.settings.heroCard = true; });
+        try { if (scene._setDomUI) scene._setDomUI(false); } catch (e) { }   // 🩹 DOM 分頁精緻鈕(抽卡/轉蛋藥丸等)永遠浮在 canvas 上、setDepth 無效→這個 canvas 彈窗的「知道了」會被 DOM 鈕蓋住吃不到點擊(在抽卡頁彈出時卡死)→先整組藏,close 時還原(同專案其他 canvas modal 慣例)
         const g = scene.add.container(0, 0).setDepth(10000);   // 蓋過戰鬥所有層(skipHit 用到 9000)
         const bg = scene.add.rectangle(CX, H / 2, W, H, 0x0e0a16, 0.82).setInteractive(); g.add(bg);
         g.add(scene.add.text(CX, H / 2 - 84, '🎴 已為你保管勇者卡!', { fontFamily: EMOJIFONT, fontSize: FS.title, color: '#ffe04a', fontStyle: 'bold', stroke: '#000000', strokeThickness: 5 }).setOrigin(0.5));
@@ -1080,7 +1081,7 @@
         g.add(roundRectG(scene, CX, by, 230, 56, 28, 0x35a866, 1, null, 0));
         g.add(scene.add.text(CX, by, '知道了', { fontFamily: EMOJIFONT, fontSize: FS.sub, color: '#ffffff', fontStyle: 'bold' }).setOrigin(0.5));
         const hit = scene.add.rectangle(CX, by, 230, 56, 0x000000, 0.001).setInteractive(); g.add(hit);
-        const close = () => { try { g.destroy(); } catch (e) { } };
+        const close = () => { try { g.destroy(); } catch (e) { } try { if (scene._setDomUI) scene._setDomUI(true); } catch (e) { } };   // 還原 DOM 分頁鈕(若當前分頁無 DOM 鈕則 _setDomUI 內建 no-op)
         hit.on('pointerup', close); bg.on('pointerup', close);
       } catch (e) { }
     }
