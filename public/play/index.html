@@ -2659,7 +2659,7 @@
         const tab = this.add.text(W - 12, 46, '💬 看提示', { fontFamily: EMOJIFONT, fontSize: FS.cap, color: '#c8912a', backgroundColor: '#fff8ecf2', padding: { x: 11, y: 7 }, fontStyle: 'bold' }).setOrigin(1, 0.5).setInteractive().setVisible(false); g.add(tab);   // demo 金字淺底 chip
         this.tutPanel = panel; this.tutTab = tab; this.tutBgShow = (!isTap && pos !== 'mid');   // 給 tutCollapse / 拖塊時自動收起用
         tab.on('pointerup', () => { panel.setVisible(true); if (this.tutBg && this.tutBgShow) this.tutBg.setVisible(true); tab.setVisible(false); });   // 叫回說明
-        if (isTap) { panel.add(this.add.text(CX, y + 64, '▶ 點任意處繼續', { fontFamily: EMOJIFONT, fontSize: FS.cap, color: '#c8912a', fontStyle: 'bold' }).setOrigin(0.5)); }   // demo goldTx 金色 CTA
+        if (isTap) { box.on('pointerup', () => this.tutEvent('tap')); panel.add(this.add.text(CX, y + 64, '▶ 點任意處繼續', { fontFamily: EMOJIFONT, fontSize: FS.cap, color: '#c8912a', fontStyle: 'bold' }).setOrigin(0.5)); }   // demo goldTx 金色 CTA;box(白卡)蓋在全螢幕 blk 上且 interactive→沒綁 handler 會吃掉點擊變「點卡沒反應」→這裡補綁,點卡面本身也推進
         else {
           panel.add(this.add.text(CX, y + 64, '↓ 移動方塊 / 點一下說明 → 自動收起', { fontFamily: EMOJIFONT, fontSize: FS.micro, color: '#6c7780', fontStyle: 'bold' }).setOrigin(0.5));   // demo ink2 次要色
           box.on('pointerup', () => this.tutCollapse());
@@ -2778,7 +2778,7 @@
         const tab = this.add.text(W - 12, 46, '💬 看提示', { fontFamily: EMOJIFONT, fontSize: FS.cap, color: '#c8912a', backgroundColor: '#fff8ecf2', padding: { x: 11, y: 7 }, fontStyle: 'bold' }).setOrigin(1, 0.5).setInteractive().setVisible(false); g.add(tab);
         this.tutPanel = panel; this.tutTab = tab; this.tutBgShow = (!isTap && pos !== 'mid');
         tab.on('pointerup', () => { panel.setVisible(true); if (this.tutBg && this.tutBgShow) this.tutBg.setVisible(true); tab.setVisible(false); });
-        if (isTap) { panel.add(this.add.text(CX, ctaY, '▶ 點任意處繼續', { fontFamily: EMOJIFONT, fontSize: FS.cap, color: '#c8912a', fontStyle: 'bold' }).setOrigin(0.5)); }
+        if (isTap) { box.on('pointerup', () => this.lessonEvent('tap')); panel.add(this.add.text(CX, ctaY, '▶ 點任意處繼續', { fontFamily: EMOJIFONT, fontSize: FS.cap, color: '#c8912a', fontStyle: 'bold' }).setOrigin(0.5)); }   // 同 tutShow:box 蓋在 blk 上會吃掉點擊→補綁,點卡面本身也推進
         else {
           panel.add(this.add.text(CX, ctaY, '↓ 移動方塊 / 點一下說明 → 自動收起', { fontFamily: EMOJIFONT, fontSize: FS.micro, color: '#6c7780', fontStyle: 'bold' }).setOrigin(0.5));
           box.on('pointerup', () => this.tutCollapse());
