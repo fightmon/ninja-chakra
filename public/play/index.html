@@ -6180,7 +6180,7 @@
         this.add.rectangle(CX, H / 2, W, H, 0x160f18);
         this._diving = false; try { this.cameras.main.resetFX(); } catch (e) { }   // 🎬回大廳:重置出擊轉場鎖(否則第二次進火城被擋)+ 清相機殘留淡出
         const st = loadSave().settings || {};
-        if (st.freePull) { this._doFreePull(); }   // 教學完成→免費十連改打伺服器(防重放);freePull10() 本體保留(devGate 測試用)
+        if (st.freePull) { this.tab = 'gacha'; this._freeGuide = true; }   // 🎁 新手免費十連改「引導式」:落在抽卡頁,召喚勇者「十連」鈕脈動、其餘全禁用,玩家按下才抽(見 gachaBanner/switchTab/_doFreePull);不再進大廳自動抽
         this.rebuild();
         this._otherScrollY = 0;
         this.input.on('pointerdown', p => { if (this.tab !== 'other') return; this._oDragFrom = p.y; this._oDragMoved = 0; });
@@ -6205,18 +6205,23 @@
         { const _prd = getMeta()._pendingRunsDropped; if (_prd) { mutSave(s => { delete s.meta._pendingRunsDropped; }); this.time.delayedCall(_lu ? 3300 : 900, () => this.toast('⚠️ 離線佇列已滿,有 ' + _prd + ' 場通關獎勵漏發,請見諒')); } }   // 🔐[12] 離線期間 pendingRuns 佇列爆量被迫丟棄的最舊通關,明確告知玩家(而非靜默消失)
         if (!st.freePull && tutSeen() && !st.bindPrompted && !st.heroCard) this.time.delayedCall(700, () => promptAccountBindAfterTutorial(this));   // 🔑 教學完成後(非十連 reveal 那次)一次性邀綁 Google;拒絕→勇者卡提示
       }
-      async _doFreePull() {   // 🔐 新手免費十連改打伺服器(POST /api/gacha/pull {poolId:'premium',count:10,free:true});防重放
+      async _doFreePull() {   // 🔐 新手免費十連(引導式:玩家按脈動的十連鈕才觸發)改打伺服器(POST /api/gacha/pull {poolId:'premium',count:10,free:true});防重放
+        if (this._freePulling) return; this._freePulling = true; this._busyPull = true;   // 防連點雙抽;_busyPull→gachaBanner 讓按鈕變灰(pending)
+        this.rebuild();   // 立刻重繪讓按鈕變灰,避免等 fetch 期間被連點
         let r;
         try { r = await authedFetch('/api/gacha/pull', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ poolId: 'premium', count: 10, free: true }) }); }
-        catch (e) { this.toast('新手十連需要連線,稍後自動再試'); return; }   // 網路失敗:保留 freePull 旗標,下次進大廳再試
-        if (r.status === 409) { mutSave(s => { s.settings.freePull = false; }); this.rebuild(); return; }   // 伺服器說領過了:清旗標,不給卡
-        if (!r.ok) { this.toast('新手十連需要連線,稍後自動再試'); return; }   // 其他失敗:保留旗標下次再試
+        catch (e) { this._freePulling = false; this._busyPull = false; this.toast('連線失敗,再按一次領取'); this.rebuild(); return; }   // 網路失敗:保留 freePull/引導旗標→玩家可再按脈動鈕
+        if (r.status === 409) { this._freePulling = false; this._busyPull = false; this._freeGuide = false; mutSave(s => { s.settings.freePull = false; }); this.rebuild(); return; }   // 伺服器說領過了:解除引導,顯示一般抽卡頁
+        if (!r.ok) { this._freePulling = false; this._busyPull = false; this.toast('連線失敗,再按一次領取'); this.rebuild(); return; }   // 其他失敗:保留引導旗標,可再按
         const d = await r.json();
+        this._freeGuide = false;   // 領到了→解除引導(鎖住換頁/齒輪同步解除)
         mutSave(s => { s.settings.freePull = false; s.meta.freePullUsed = 1; }); syncWallet(d);   // 領成功→本地即標記已領(不必等下次 wallet 同步),立刻重玩教學就不會再被提供十連
         const out = d.results.map(x => { const cd = ROSTER.find(c => c.id === x.id); addCard(x.id); return { cd, isNew: !!x.isNew, pity: false }; });   // 🔐 isNew 改由伺服器回
         cardsFetch();   // 背景校正 uid
         this.tab = 'gacha'; this.gachaResult = out; this.gachaRevealed = false; this._afterPull = 'team';
-        this.rebuild();
+        this._freePulling = false; this._busyPull = false;
+        _loadCardArt(this, out.map(o => o.cd.id));   // 大廳只載出戰隊→補載抽到的卡圖,reveal 才有圖(比照 pull())
+        if (this.load.list.size) { this.load.once('complete', () => this.rebuild()); this.load.start(); } else this.rebuild();
       }
       rebuild() { this.tweens.killAll(); if (this._tabDom) { this._tabDom.forEach(d => { if (d) d.destroy(); }); this._tabDom = null; } if (this.layer) this.layer.destroy(); this.layer = this.add.container(0, 0); if (this.tab === 'other') { this.body(); this.topBar(); this.nav(); } else { this.topBar(); this.body(); this.nav(); } }   // _tabDom=分頁 DOM 精緻鈕(轉蛋抽卡;scene 級不在 layer)→手動銷毀,免切分頁殘留;'other' 分頁改為可捲動 canvas 內容→先畫內容、頂欄/導覽列後畫(z 序更高,蓋住捲出的溢出內容+輸入優先)
       _setDomUI(on) { if (this._tabDom) this._tabDom.forEach(d => { if (d && d.node) d.setVisible(on); }); }   // DOM overlay 永遠浮在 canvas 上(setDepth 無效)→開 canvas 彈窗(勇者卡/信箱等)要先藏,關閉再恢復。同 TeamScene/CollectionScene 慣例
@@ -6276,7 +6281,7 @@
         clc.on('pointerup', close);
       }
       go(key) { this.scene.manager.start(key); this.scene.manager.stop('home'); }
-      switchTab(t) { if (t === 'other') this._otherScrollY = 0; this.tab = t; this.gachaResult = null; this.rebuild(); }   // 進 'other' 捲回頂端;同分頁內 rebuild(如調音量)不重置,避免跳位
+      switchTab(t) { if (this._freeGuide) { this.toast('先領取免費新手十連!'); return; } if (t === 'other') this._otherScrollY = 0; this.tab = t; this.gachaResult = null; this.rebuild(); }   // 進 'other' 捲回頂端;同分頁內 rebuild(如調音量)不重置,避免跳位。🎁 引導式新手十連期間鎖住換頁/齒輪(都經此)→只能按脈動的十連鈕
       topBar() {
         const m = getMeta(), T = UI();
         this.rect(CX, 42, W, 84, T.surf); this.rect(CX, 84, W, 1.5, T.divider);   // 白底資源列(84 高,2 排) + 底部細線
@@ -6677,7 +6682,8 @@
         this._tabDom = [];   // 本次重繪的 DOM 抽卡鈕(精緻款);rebuild 會先清舊的
         this.gachaBanner(cTop + 134, 'premium', '✨ 六星 限定 · 機率 3%', 0x7c5cd0, 0xf3eefc, 'purple');   // 結印:紫框 + 淡紫卡 + 紫鈕
         this.gachaBanner(cTop + 322, 'normal', '金錢轉蛋（無六星）', 0x35a866, 0xecf8ee, 'ok');   // 一般:綠框 + 淡綠卡 + 綠鈕(加高後拉開 188 避免重疊)
-        this.txt(CX, H - 74, '※ 機率已公示;六星僅「召喚勇者」可得', FS.micro, '#c9c3ba', 0.5);   // 深底→淺灰註解
+        if (this._freeGuide) this.txt(CX, H - 74, '👇 按下發光的「十連」領取你的第一批勇者!', FS.cap, '#ffe04a', 0.5, true);   // 🎁 引導文案(取代機率註解)
+        else this.txt(CX, H - 74, '※ 機率已公示;六星僅「召喚勇者」可得', FS.micro, '#c9c3ba', 0.5);   // 深底→淺灰註解
         if (this.gachaResult) this.drawGachaResult();
       }
       gachaBanner(y, bankey, tagline, accent, cardBg, btnVariant) {
@@ -6694,17 +6700,25 @@
         // 抽卡鈕=編成確定鈕精緻款(DOM overlay + stylePillBtn,任意 dpi 銳利;canvas 畫的會被 420 framebuffer 鋸齒)。
         // DOM 永遠浮在 canvas 上→結果彈窗(canvas)蓋不住它:顯示結果時不建鈕(關閉會 rebuild 重建)。DOM 掛 scene 級,存 _tabDom 供 rebuild 清。
         if (!this.gachaResult) {
+          const guide = !!this._freeGuide;   // 🎁 引導式新手十連:只有召喚勇者「十連」可按+脈動,其餘一律禁用
           const mk = (bx, label, count) => {
+            const isFree = guide && bankey === 'premium' && count === 10;   // 免費十連目標鈕
+            const off = busy || (guide && !isFree);   // 引導期非目標鈕全禁用(灰)
             const el = document.createElement('button');
-            stylePillBtn(el, '162px', busy ? 'ghost' : btnVariant);
-            el.textContent = label;
-            if (!busy) el.addEventListener('click', () => this.pull(bankey, count));
-            this._tabDom.push(this.add.dom(bx, y + 40, el).setDepth(6));   // add.dom 以中心定位;離卡底 18px、左右內縮 19px(不貼邊)
+            stylePillBtn(el, '162px', off ? 'ghost' : btnVariant);
+            el.textContent = isFree ? '🎁 免費十連' : label;   // 引導時目標鈕改字強調免費
+            if (isFree) el.addEventListener('click', () => this._doFreePull());   // 按下才抽免費十連
+            else if (guide) el.addEventListener('click', () => this.toast('先領取免費新手十連!'));   // 其餘引導期禁用鈕→提示
+            else if (!busy) el.addEventListener('click', () => this.pull(bankey, count));
+            const dom = this.add.dom(bx, y + 40, el).setDepth(6);   // add.dom 以中心定位;離卡底 18px、左右內縮 19px(不貼邊)
+            this._tabDom.push(dom);
+            if (isFree) this._pulseDom(dom);   // 脈動提示玩家按這顆
           };
           mk(CX - 90, '單抽 ' + unit + cost1, 1);
           mk(CX + 90, '十連 ' + unit + cost10, 10);
         }
       }
+      _pulseDom(dom) { if (!dom) return; this.tweens.add({ targets: dom, scaleX: 1.1, scaleY: 1.1, duration: 540, yoyo: true, repeat: -1, ease: 'Sine.inOut' }); }   // 🎁 DOM 鈕脈動(引導新手按十連);Phaser DOMElement 的 scale 會併入 transform matrix→放大縮小(rebuild 會 killAll tween 並銷毀鈕,不殘留)
       async pull(bankey, count) {   // 🔐 抽卡改打伺服器(/api/gacha/pull);doGacha/gachaPull/rollRarity 本體保留(devGate 測試用),此處不再呼叫;_busyPull 防連點(慢網雙擊=雙抽雙扣石頭),所有出口都要重置
         if (this._busyPull) return; this._busyPull = true;
         {
