@@ -6504,7 +6504,7 @@
           const rc = this.add.container(CX, y, kids); g.add(rc);
           rc.alpha = 0; rc.y = y + 18;
           this.tweens.add({ targets: rc, alpha: 1, y: y, delay: 70 + i * 50, duration: 240, ease: 'Cubic.out' });   // 逐列滑入淡入
-          hit.on('pointerup', () => { if (!ready) return; if (!unlocked) { this.toast('先破【' + list[i - 1].name + '】才能挑戰'); return; } if (!afford) { this.toast('體力不足!去商店回復'); return; } close(); this.startBattle(id, df); });   // 🔐[難度解鎖]優先擋未解鎖(不管體力),解鎖後才看體力
+          hit.on('pointerup', () => { if (!ready) return; if (!unlocked) { showWhiteToast(this, '先破【' + list[i - 1].name + '】才能挑戰', { hold: 1500 }); return; } if (!afford) { showWhiteToast(this, '體力不足!去商店回復', { hold: 1500 }); return; } close(); this.startBattle(id, df); });   // 🔐[難度解鎖]優先擋未解鎖(不管體力),解鎖後才看體力。輕提醒用小卡~1.5秒(不用大廳大卡 4.6 秒→不搶版面),跟其他頁一般 toast 一致
         });
         // 底部:返回大廳(白色藥丸)
         const bb = roundRectG(this, 0, 0, rw, backH, backH / 2, T.surf, 1, T.divider, 2), bhit = this.add.rectangle(0, 0, rw, backH, 0x000000, 0.001).setInteractive();
