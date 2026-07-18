@@ -1987,7 +1987,7 @@
         if (this.leadTxt) this.leadTxt.setText(ls ? ('👑 隊長技 · ' + ls.desc) : '👑 隊長技 · —');
       }
       async doRename() { const i = getTeamIdx(), v = await uiPrompt({ title: '隊伍名稱', message: '最多 6 字,留空=隊' + (i + 1), value: teamCustomName(i), maxLen: 6 }); if (v != null) { renameTeam(i, v); this.updateSwitcher(); } }
-      confirm() { saveTeamAt(getTeamIdx(), this.slots.map(s => s.cardId).filter(Boolean)); this.scene.manager.start('home'); this.scene.manager.stop('team'); }   // 存當前隊 + 回大廳(未滿也可離開,出戰時再擋)
+      confirm() { saveTeamAt(getTeamIdx(), this.slots.map(s => s.cardId).filter(Boolean)); this.scene.manager.start('home', this.tutTeam ? { tab: 'dungeon' } : undefined); this.scene.manager.stop('team'); }   // 存當前隊 + 回大廳(未滿也可離開,出戰時再擋);🗺️ 教學編隊完成→強制落在地圖(dungeon)分頁(否則沿用 persisted 的 gacha tab,看不到序章島指引)
       tutTeamCoach() {   // 編隊教學說明卡:對齊全站教學風格(白 _softPanelTex 面板 + 18px ink 字 + 綠圓角 CTA),量測自適應高度
         this._setDomUI(false);   // 教學也是 canvas modal→同樣蓋不住 DOM UI,先藏
         const g = this.add.container(0, 0).setDepth(200); this._coachG = g;   // 🩹 記旗標→場景層 pointerdown 讀它擋輸入,避免按鈕點擊穿透到底下卡片(見 input.on('pointerdown'))
@@ -5700,7 +5700,7 @@
         const body = mk('你已學會核心:\n放塊 → 清屬性宮 → 相剋打弱點 → 屬塊覆蓋', '17px', '#2b333a', 9);   // 深墨內文(放大 15→17)
         const note = mk(first ? '🎁 送你「新手十連」→ 試試抽卡、拿新夥伴!' : '複習完成!核心玩法已經熟囉 👍', '17px', first ? '#c8912a' : '#2b333a', 6);
         const ht = Math.ceil(title.height), hb = Math.ceil(body.height), hn = Math.ceil(note.height);
-        const btnBlock = first ? (bh * 2 + GBTN) : bh;
+        const btnBlock = bh;   // 單鈕(移除「之後再領」→教學完只給一顆「領取新手十連」)
         const PH = M + ht + G + hb + G + hn + G + btnBlock + M;   // 上M ┃ 標題 G 內文 G 提示 G 按鈕組 ┃ 下M → 四邊留白一致、區塊間距一致
         let cy = Math.round(H * 0.42), top = cy - PH / 2;
         if (top < 8) { top = 8; cy = top + PH / 2; }   // 太高→貼上邊防切
@@ -5712,8 +5712,7 @@
         const back = () => { this.scene.manager.start('home'); this.scene.manager.stop('game'); };
         const setFree = () => mutSave(s => { if (!s.settings) s.settings = {}; s.settings.freePull = true; });   // 兩鈕都設 freePull 旗標→回大廳自動 reveal
         if (first) {
-          this.tutBtn(g, yy + bh / 2, '🎁 領取新手十連!', () => { setFree(); back(); });   // 回大廳→自動抽十連 reveal→看完導向編隊教學
-          this.tutBtn(g, yy + bh + GBTN + bh / 2, '🏠 之後再領', () => { setFree(); back(); }, true);   // 🔐[8] 這裡能顯示=已真正過完教學;兩鈕都算完成、都給十連,只差有沒有立刻看 reveal
+          this.tutBtn(g, yy + bh / 2, '🎁 領取新手十連!', () => { setFree(); back(); });   // 教學完只給一顆鈕→回大廳落抽卡頁引導十連(移除「之後再領」)
         } else {
           this.tutBtn(g, yy + bh / 2, '🏠 回大廳', back);   // 🔁 已領過十連(複習)→純回大廳(伺服器 free_pull_used 亦會擋)
         }
@@ -6439,6 +6438,14 @@
         if (open) {
           const hit = this.add.circle(0, Math.round(dh * 0.06), Math.min(dw, dh) * 0.4, 0xffffff, 0.001).setInteractive(); cont.add(hit); tapBind(this, hit, () => this.enterDungeon(is.id));   // 中央近隱形點擊區(縮小,減少島互相蓋到)
           this.tweens.add({ targets: cont, y: sy - 6, duration: 1800 + Math.floor(Math.random() * 800), yoyo: true, repeat: -1, ease: 'Sine.inOut' });   // 上下微浮
+          if (is.id === 'prologue' && !cl) {   // 🗨️ 序章未破→島右上浮「對話框驚嘆號」,指引新玩家先去玩序章(破過即消失)
+            const bub = this.add.container(dw * 0.30, -dh * 0.30);
+            const tail = this.add.graphics(); tail.fillStyle(0xffd54a, 1); tail.fillTriangle(-5, 11, 6, 11, -1, 22); bub.add(tail);   // 對話框小尾巴(指向島)
+            bub.add(roundRectG(this, 0, 0, 40, 32, 10, 0xffd54a, 1, 0xffffff, 3));   // 黃圓角對話框
+            bub.add(this.add.text(0, -1, '!', { fontFamily: EMOJIFONT, fontSize: '22px', color: '#c0492c', fontStyle: 'bold' }).setOrigin(0.5));   // 紅驚嘆號
+            cont.add(bub);
+            this.tweens.add({ targets: bub, y: bub.y - 6, scaleX: 1.1, scaleY: 1.1, duration: 620, yoyo: true, repeat: -1, ease: 'Sine.inOut' });   // 上下彈跳+脈動吸睛
+          }
         } else {
           img.setTint(0x50505e); cont.setAlpha(0.5);
           cont.add(this.add.text(0, 0, '🔒', { fontFamily: EMOJIFONT, fontSize: '32px' }).setOrigin(0.5));   // 鎖住只留 🔒,不放關卡名
