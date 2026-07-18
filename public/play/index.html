@@ -1067,10 +1067,10 @@
         else scene.toast('網路錯誤,稍後再試');
       }
     }
-    function maybeHeroCardNotice(scene) {   // 🎴 首次通關(first_clear)後一次性大字提示:勇者卡已保管;拿不到 guestCode(帳號還沒建成)→這次不彈,留到下次檢查
-      try {
+    function maybeHeroCardNotice(scene) {   // 🚫 勇者卡保管提示「不再自動彈」(2026-07-18 產品決定:教學/首通/綁定 fallback 都不打斷玩家)。玩家想知道→自己去「其他」頁的勇者卡區看(bOther _heroG)。下方原彈窗內容保留但已停用
+      return;
+      try {   // eslint-disable-line no-unreachable
         if ((loadSave().settings || {}).heroCard) return;
-        if ((loadSave().settings || {}).freePull) return;   // 🎁 新手引導十連進行中→不打斷「保管勇者卡」提示(等領完十連/之後綁定 fallback 再顯示)
         if (!cloudState().guestCode) return;
         mutSave(s => { s.settings = s.settings || {}; s.settings.heroCard = true; });
         try { if (scene._setDomUI) scene._setDomUI(false); } catch (e) { }   // 🩹 DOM 分頁精緻鈕(抽卡/轉蛋藥丸等)永遠浮在 canvas 上、setDepth 無效→這個 canvas 彈窗的「知道了」會被 DOM 鈕蓋住吃不到點擊(在抽卡頁彈出時卡死)→先整組藏,close 時還原(同專案其他 canvas modal 慣例)
@@ -6198,14 +6198,14 @@
         }
         const _lu = getMeta()._lvUp; if (_lu) { mutSave(s => { delete s.meta._lvUp; }); this.time.delayedCall(400, () => this.toast('🎉 升級! Lv.' + _lu.rank + '\n⚡ 體力已補滿')); }   // 戰鬥升級→回大廳彈 5 秒升級公告(體力已補滿)
         if (this._freeGuide) { if (dailyAvailable()) claimDailyServer().then(() => { if (this.scene.isActive()) this.rebuild(); }); }   // 🎁 新手引導十連期間:不彈每日登入卡(避免打斷),靜默領當日獎勵入帳(D1 → 30 簽到石 +1 = 31),領到再刷新頂欄石數
-        else if (dailyAvailable()) this.time.delayedCall(_lu ? 2600 : 350, () => this.showDaily());   // 每日登入獎勵(進大廳自動彈,領了才不再彈;若同時升級則延後不撞)
+        else if (dailyAvailable() && isDungeonCleared('prologue')) this.time.delayedCall(_lu ? 2600 : 350, () => this.showDaily());   // 每日登入卡:序章通關前(新手 onboarding=教學→十連→編成→序章)一律不彈,避免打斷;序章後恢復正常自動彈(引導期已由上面 silent 領 D1,不會漏)
         maybeConfigToast(this);   // ☁️ 公告/維護訊息 toast(每 session 各一次;toast 深度 2000 疊在每日彈窗上)
         this.refreshMailBadge();   // 📬 進首頁 fire-and-forget 拉一次信箱未讀數(time-box 走 authedFetch 內建逾時,失敗靜默不阻塞)
         flushPendingRuns();   // 🔐 進大廳順帶再試一次補送離線期間累積的通關金幣佇列(fire-and-forget)
         cardsFetch();   // 🔐 每次進大廳強制校正收藏(切帳/找回都會 reload 回大廳,不靠時間戳比較)
         { const _pdn = getMeta()._pendingDropsNotice; if (_pdn) { mutSave(s => { delete s.meta._pendingDropsNotice; }); this.time.delayedCall(_lu ? 3000 : 500, () => this.toast('🎁 你有 ' + _pdn + ' 張待領戰利品已入袋!')); } }   // 離線期間補發的通關掉落(見 flushPendingRuns)
         { const _prd = getMeta()._pendingRunsDropped; if (_prd) { mutSave(s => { delete s.meta._pendingRunsDropped; }); this.time.delayedCall(_lu ? 3300 : 900, () => this.toast('⚠️ 離線佇列已滿,有 ' + _prd + ' 場通關獎勵漏發,請見諒')); } }   // 🔐[12] 離線期間 pendingRuns 佇列爆量被迫丟棄的最舊通關,明確告知玩家(而非靜默消失)
-        if (!st.freePull && tutSeen() && !st.bindPrompted && !st.heroCard) this.time.delayedCall(700, () => promptAccountBindAfterTutorial(this));   // 🔑 教學完成後(非十連 reveal 那次)一次性邀綁 Google;拒絕→勇者卡提示
+        if (!st.freePull && tutSeen() && !st.bindPrompted && isDungeonCleared('prologue')) this.time.delayedCall(700, () => promptAccountBindAfterTutorial(this));   // 🔑 綁定 Google 邀請改到「玩完序章後」才跳(一次性)→不打斷「教學→十連→編成」;序章前 isDungeonCleared('prologue')=false 就不彈。勇者卡提示已停用(見 maybeHeroCardNotice)
       }
       async _doFreePull() {   // 🔐 新手免費十連(引導式:玩家按脈動的十連鈕才觸發)改打伺服器(POST /api/gacha/pull {poolId:'premium',count:10,free:true});防重放
         if (this._freePulling) return; this._freePulling = true; this._busyPull = true;   // 防連點雙抽;_busyPull→gachaBanner 讓按鈕變灰(pending)
