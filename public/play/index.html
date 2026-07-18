@@ -1228,6 +1228,7 @@
         // 沒有(run/start、wallet/spend 等變更端點只回目前值,不回 ts)就用 Date.now() 當基準,避免拿舊 ts 疊加多算 regen(前端只做顯示層 regen,不再本地權威遞減)
         if (typeof d.staminaMax === 'number') m.staminaMax = d.staminaMax;
         if (typeof d.stamina === 'number') { m.stamina = d.stamina; m.staTs = (typeof d.staminaTs === 'number') ? d.staminaTs * 1000 : Date.now(); }
+        if (typeof d.rank === 'number') m.rank = d.rank; if (typeof d.exp === 'number') m.exp = d.exp;   // 🔐 玩家等級/經驗伺服器化(run/complete 回 rank/exp)→落地顯示;升級由伺服器算,前端不再本地遞增(見 _grantRun 已拿掉 addRewards)
         if (Array.isArray(d.cleared)) m.cleared = d.cleared;   // 已破地城 id 陣列落地快取,供未來 UI 灰掉未解鎖城(目前未接顯示,僅存起來)
         if (Array.isArray(d.diffCleared)) { m.diffCleared = m.diffCleared || {}; d.diffCleared.forEach(k => { m.diffCleared[k] = true; }); }   // 🔐[難度解鎖]伺服器真相「城:難度」字串陣列→union 疊加落地,不覆蓋既有(避免離線樂觀解鎖被伺服器回應洗掉;一旦解鎖就永久解鎖)
         if (d.firstClearConfig && typeof d.firstClearConfig === 'object') m.firstClearConfig = d.firstClearConfig;   // 🎁 首通石設定(後台可調)→難度選單「未破」顯示「首通 +N💎」
@@ -1263,7 +1264,7 @@
       if (r.ok) {
         const d = await r.json(); syncWallet(d); if (d.gems) syncGems(d.gems);
         mutSave(s => { s.pendingRuns = (s.pendingRuns || []).filter(x => x.runId !== item.runId); });
-        return { ok: true, drops: Array.isArray(d.drops) ? d.drops : [], firstClearStones: d.firstClearStones || 0, bagFull: !!d.bagFull, clearSec: (typeof d.clearSec === 'number' ? d.clearSec : null), bestSec: (typeof d.bestSec === 'number' ? d.bestSec : null) };   // 🔐[首通石]非首通/序章/重放=0,伺服器已算好直接帶出;bagFull=背包滿→伺服器跳過部分/全部掉落,前端要提示玩家清背包;clearSec=這趟耗時、bestSec=全服最速(皆伺服器算,離線 fallback 為 null)
+        return { ok: true, drops: Array.isArray(d.drops) ? d.drops : [], firstClearStones: d.firstClearStones || 0, bagFull: !!d.bagFull, clearSec: (typeof d.clearSec === 'number' ? d.clearSec : null), bestSec: (typeof d.bestSec === 'number' ? d.bestSec : null), leveledUp: !!d.leveledUp, rank: (typeof d.rank === 'number' ? d.rank : null) };   // 🔐[首通石]非首通/序章/重放=0,伺服器已算好直接帶出;bagFull=背包滿→伺服器跳過部分/全部掉落,前端要提示玩家清背包;clearSec=這趟耗時、bestSec=全服最速(皆伺服器算,離線 fallback 為 null);leveledUp/rank=伺服器升級判定(rank/exp/體力已在上面 syncWallet 落地),給結算慶祝用
       }
       if (r.status === 400 || r.status === 429) { mutSave(s => { s.pendingRuns = (s.pendingRuns || []).filter(x => x.runId !== item.runId); }); console.warn('run/complete rejected', r.status, item.runId); return { ok: false, rejected: true }; }   // 非法/被限流:不重試,丟棄該筆
       return null;   // 其他失敗狀態:保留該筆,下次再試
@@ -5333,7 +5334,7 @@
       creditRun() { bumpRecords(this.runMaxHit || 0, this.runMaxCombo || 0); const nw = checkAchievements(); nw.forEach((t, i) => this.time.delayedCall(i * 320, () => { try { this.tonFloat('🏅 解鎖稱號:' + t, '#ffe04a'); } catch (e) { } })); }   // 提交本局紀錄 + 檢查成就解鎖(過關與戰敗都跑)
       _grantRun() {
         if (this._runGranted) return; this._runGranted = true;   // 🏆全清結算:整趟累積的 EXP 一次入帳(只有全清才呼叫→中途放棄/戰敗自然全沒收);🔐 卡片掉落/寶玉/金幣改由伺服器 run/complete 回應決定(見下),不再前端算
-        this._runRw = addRewards(this.runExp || 0, 0); if (this._runRw._ups > 0) this.tonFloat('🆙 等級提升! Lv.' + this._runRw.rank, '#ffe04a');   // 金幣不再本地入帳(displayed runCoins 照舊,入帳走伺服器 run/complete)
+        // 🔐 等級/經驗改伺服器權威:通關 exp/升級/上限+補滿由 run/complete 決定,前端不再本地 addRewards 遞增(擋竄改);升級慶祝改由回應 leveledUp 觸發(見 _sendRunComplete().then)。金幣/掉卡入帳同樣走伺服器,displayed runCoins/runExp 照舊只是本場顯示。
         const item = { dungeonId: this.dungeon.id, diff: (this.diff && this.diff.key) || 'normal', runId: this.serverRunId || ('r' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8)) };   // 🔐 優先用開戰領到的伺服器票券(含'.',run/complete 走時間閘+一次性);拿不到→本地 runId 走離線 fallback(限流)
         this.runDrops = []; this._runDropsPending = true;   // showResult 顯示「連線後發放」暫態,直到下面拿到結果或確認離線
         mutSave(s => {
@@ -5343,6 +5344,7 @@
         });
         _sendRunComplete(item).then(res => {   // 🔐 立即嘗試送出(在場景還開著時,盡量讓結算畫面就能顯示真實掉落);離線/失敗會保留在 pendingRuns,由 flushPendingRuns 之後補發
           if (!res || !res.ok) return;   // res.ok 才代表這筆已經被伺服器接受(冪等重放也算,drops 可能是空陣列)
+          if (res.leveledUp) { this.tonFloat('🆙 等級提升! Lv.' + res.rank, '#ffe04a'); mutSave(s => { s.meta._lvUp = { rank: res.rank }; }); }   // 🔐 升級改吃伺服器 leveledUp(rank/exp/體力上限+補滿已由 _sendRunComplete→syncWallet 落地);_lvUp 讓回大廳也彈公告
           this._firstClearStones = res.firstClearStones || 0;   // 🔐[首通石]showResult 若已畫完面板不會補畫(同下方掉落的邊角案例註解);正常情況下這裡拿到得夠快
           this._clearSec = res.clearSec; this._bestSec = res.bestSec;   // ⏱ 通關時間/全服最速(伺服器算;離線 fallback=null→結算改用本地 _runStartMs 顯示、不顯示最速)
           const drops = res.drops || [];
@@ -6496,28 +6498,34 @@
         let ready = false;
         const close = () => { g.destroy(); this._lessonPickG = null; };
         const T = UI(), lc = (getMeta().lessonCleared || {});
+        const prologueCleared = isDungeonCleared('prologue');   // 序章(召喚之章)破過沒:沒破→picker 只給「序章關卡」一項(真出擊/扣體力/真掉落,打贏解鎖五屬關);破過→序章消失,改列三堂練習課程(免體力可重玩)。序章一破即消失,沒人回頭刷它
         const bg = this.add.rectangle(CX, H / 2, W, H, 0x0e0a16, 0).setInteractive().on('pointerup', () => { if (ready) close(); });
         g.add(bg); this.tweens.add({ targets: bg, fillAlpha: { from: 0, to: 0.72 }, duration: 170 });
-        const title = this.add.text(CX, H * 0.075, '⛩️ 序章 · 練習課程', { fontFamily: EMOJIFONT, fontSize: FS.title, color: '#ffffff', fontStyle: 'bold' }).setOrigin(0.5).setStroke('#000000', 4);
-        const sub = this.add.text(CX, H * 0.075 + 30, '一關一個玩法 · 免體力 · 可重玩', { fontFamily: EMOJIFONT, fontSize: FS.cap, color: '#e2ddd4' }).setOrigin(0.5).setStroke('#000000', 3);
+        const title = this.add.text(CX, H * 0.075, prologueCleared ? '⛩️ 序章 · 練習課程' : '⛩️ 序章 · 召喚之章', { fontFamily: EMOJIFONT, fontSize: FS.title, color: '#ffffff', fontStyle: 'bold' }).setOrigin(0.5).setStroke('#000000', 4);
+        const sub = this.add.text(CX, H * 0.075 + 30, prologueCleared ? '一關一個玩法 · 免體力 · 可重玩' : '通關序章 · 解鎖五屬關卡', { fontFamily: EMOJIFONT, fontSize: FS.cap, color: '#e2ddd4' }).setOrigin(0.5).setStroke('#000000', 3);
         g.add(title); g.add(sub);
         const backH = 50, backY = H - 38;
-        const list = [   // ⚠️ 顯示順序照「難度由易到難」:屬塊(p3) 排在 全體攻擊(p2) 前面。課程 id 維持 p2=全體攻擊/p3=屬塊不動(後端 user_lesson_clears 首通記錄綁 id,別為了排序改 id)
-          { id: 'p1', name: '① 相剋與屬塊', enabled: true },
-          { id: 'p3', name: '② 屬塊儲存與覆蓋', enabled: true },
-          { id: 'p2', name: '③ 全體攻擊', enabled: true },
+        // 序章沒破→只給「序章關卡」(kind:'battle',走正常出擊 startBattle;打贏解鎖五屬關);破過→序章消失,改列三堂練習課程(kind:'lesson')
+        // ⚠️ 練習課程顯示順序照「難度由易到難」:屬塊(p3) 排在 全體攻擊(p2) 前面。課程 id 維持 p2=全體攻擊/p3=屬塊不動(後端 user_lesson_clears 首通記錄綁 id,別為了排序改 id)
+        const list = prologueCleared ? [
+          { id: 'p1', name: '① 相剋與屬塊', kind: 'lesson', enabled: true },
+          { id: 'p3', name: '② 屬塊儲存與覆蓋', kind: 'lesson', enabled: true },
+          { id: 'p2', name: '③ 全體攻擊', kind: 'lesson', enabled: true },
+        ] : [
+          { id: 'prologue', name: '序章 · 召喚之章', kind: 'battle', enabled: true },
         ];
         const areaTop = H * 0.075 + 62, areaBot = backY - backH / 2 - 14, areaH = areaBot - areaTop;
         const rh = Math.min(72, areaH / list.length), blockTop = areaTop + (areaH - rh * list.length) / 2;
         const rw = W - 24, Lx = -rw / 2 + 18;
-        list.forEach((lesson, i) => {
-          const y = blockTop + rh * i + rh / 2, done = !!lc[lesson.id], usable = lesson.enabled;
+        list.forEach((item, i) => {
+          const y = blockTop + rh * i + rh / 2, isBattle = item.kind === 'battle', done = !!lc[item.id], usable = item.enabled;
           const kids = [];
           kids.push(roundRectG(this, 0, 0, rw, rh - 8, 15, usable ? T.surf : T.surf2, 1, usable ? 0x35a866 : T.divider, usable ? 2.5 : 1.5));   // 可點=綠框;鎖住=灰階
           const hit = this.add.rectangle(0, 0, rw, rh - 8, 0x000000, 0.001).setInteractive(); kids.push(hit);
-          kids.push(this.add.text(Lx + 6, 0, usable ? '🎓' : '🔒', { fontFamily: EMOJIFONT, fontSize: '26px' }).setOrigin(0, 0.5).setAlpha(usable ? 1 : 0.45));
-          kids.push(this.add.text(Lx + 44, 0, lesson.name, { fontFamily: EMOJIFONT, fontSize: '16px', color: usable ? T.ink : T.ink3, fontStyle: 'bold' }).setOrigin(0, 0.5));
-          if (usable && done) { kids.push(this.add.text(rw / 2 - 14, 0, '✅ 完成', { fontFamily: EMOJIFONT, fontSize: '13px', color: '#35a866', fontStyle: 'bold' }).setOrigin(1, 0.5)); }
+          kids.push(this.add.text(Lx + 6, 0, isBattle ? '🏯' : (usable ? '🎓' : '🔒'), { fontFamily: EMOJIFONT, fontSize: '26px' }).setOrigin(0, 0.5).setAlpha(usable ? 1 : 0.45));
+          kids.push(this.add.text(Lx + 44, 0, item.name, { fontFamily: EMOJIFONT, fontSize: '16px', color: usable ? T.ink : T.ink3, fontStyle: 'bold' }).setOrigin(0, 0.5));
+          if (isBattle) { kids.push(this.add.text(rw / 2 - 14, 0, '🔓 解鎖五屬關', { fontFamily: EMOJIFONT, fontSize: '13px', color: '#ffd56a', fontStyle: 'bold' }).setOrigin(1, 0.5)); }   // 序章:通關解鎖五屬關(真出擊會扣體力,startBattle 內顯示)
+          else if (usable && done) { kids.push(this.add.text(rw / 2 - 14, 0, '✅ 完成', { fontFamily: EMOJIFONT, fontSize: '13px', color: '#35a866', fontStyle: 'bold' }).setOrigin(1, 0.5)); }
           else if (usable) { kids.push(this.add.text(rw / 2 - 14, 0, '🎁 首通 +1💎', { fontFamily: EMOJIFONT, fontSize: '13px', color: '#ffd56a', fontStyle: 'bold' }).setOrigin(1, 0.5)); }
           else { kids.push(this.add.text(rw / 2 - 14, 0, '即將推出', { fontFamily: EMOJIFONT, fontSize: '13px', color: T.ink3, fontStyle: 'bold' }).setOrigin(1, 0.5)); }
           const rc = this.add.container(CX, y, kids); g.add(rc);
@@ -6525,10 +6533,11 @@
           this.tweens.add({ targets: rc, alpha: 1, y: y, delay: 70 + i * 50, duration: 240, ease: 'Cubic.out' });
           hit.on('pointerup', () => {
             if (!ready) return;
-            if (!lesson.enabled) { this.toast('即將推出'); return; }
+            if (!item.enabled) { this.toast('即將推出'); return; }
             close();
-            const team = TUTORIAL_TEAM.map(id => ROSTER.find(c => c.id === id)).filter(Boolean);
-            this.scene.manager.start('game', { team: team, dungeonId: 'prologue', lessonId: lesson.id });
+            if (isBattle) { this.startBattle('prologue', DIFFS_BY.baby); return; }   // 序章=真關卡:走正常出擊(玩家隊/扣體力/真掉落/ticket),固定 baby 難度(序章強制嬰兒美術/亂玩都過);打贏 stageClear→markDungeonCleared('prologue')→前後端(ticketed run/complete)解鎖五屬關
+            const team = TUTORIAL_TEAM.map(id => ROSTER.find(c => c.id === id)).filter(Boolean);   // 練習課程:借狗狗隊、免體力、腳本演示
+            this.scene.manager.start('game', { team: team, dungeonId: 'prologue', lessonId: item.id });
             this.scene.manager.stop('home');
           });
         });
