@@ -1803,7 +1803,7 @@
         // ── 捲動 + 宮位區左右滑動切隊 ──
         this._moved = 0; this._down = false; this._lastY = 0;
         this.input.on('pointerdown', (p) => {
-          if (this._detailG) return;   // 詳細頁開著→場景層輸入全擋(遮罩擋不住 scene 級 input.on,否則按關閉會被底下卡接到→詳細又跳出)
+          if (this._detailG || this._coachG) return;   // 詳細頁/編隊教練面板開著→場景層輸入全擋(遮罩擋不住 scene 級 input.on,否則按面板按鈕會被底下卡接到→誤開卡片詳情/誤裝備)。擋在 pointerdown→_tapHit 不會被設→pointerup 也不會觸發卡片,與關閉順序無關
           if (p.y >= this.vpTop && p.y <= this.vpBot) {
             this._down = true; this._moved = 0; this._lastY = p.y; this._vy = 0;   // 按下→停掉慣性
             this._tapX = p.x; this._tapY = p.y; this._lpFired = false; this._tapHit = this.cardAt(p.x, p.y);   // 用座標命中按到的卡(不靠逐物件事件)
@@ -1988,17 +1988,24 @@
       }
       async doRename() { const i = getTeamIdx(), v = await uiPrompt({ title: '隊伍名稱', message: '最多 6 字,留空=隊' + (i + 1), value: teamCustomName(i), maxLen: 6 }); if (v != null) { renameTeam(i, v); this.updateSwitcher(); } }
       confirm() { saveTeamAt(getTeamIdx(), this.slots.map(s => s.cardId).filter(Boolean)); this.scene.manager.start('home'); this.scene.manager.stop('team'); }   // 存當前隊 + 回大廳(未滿也可離開,出戰時再擋)
-      tutTeamCoach() {   // 編隊教學:綠框說明(統一教學風格)
+      tutTeamCoach() {   // 編隊教學說明卡:對齊全站教學風格(白 _softPanelTex 面板 + 18px ink 字 + 綠圓角 CTA),量測自適應高度
         this._setDomUI(false);   // 教學也是 canvas modal→同樣蓋不住 DOM UI,先藏
-        const g = this.add.container(0, 0).setDepth(200);
-        const dim = this.add.rectangle(CX, H / 2, W, H, 0x000000, 0.55).setInteractive(); g.add(dim);
-        const cy = Math.round(H * 0.52);
-        g.add(this.add.rectangle(CX, cy, W - 24, 232, 0x0d1a12, 0.97).setStrokeStyle(3, 0x6aaa4c));
-        g.add(this.add.text(CX, cy - 86, '🛡️ 最後一課:出戰編隊', { fontFamily: EMOJIFONT, fontSize: '20px', color: '#bff09a', fontStyle: 'bold' }).setOrigin(0.5));
-        g.add(this.add.text(CX, cy - 18, '① 點下方卡片 → 放進上方 5 個宮位\n② 👑 中央 = 隊長\n③ 放滿 5 隻 → 按右下「✅ 確定」完成!', { fontFamily: EMOJIFONT, fontSize: '15px', color: '#eafce0', align: 'left', lineSpacing: 9, wordWrap: { width: W - 72 } }).setOrigin(0.5));
-        const ok = this.add.rectangle(CX, cy + 78, 230, 46, 0x2e5a2c, 0.97).setStrokeStyle(3, 0x6aaa4c).setInteractive(); g.add(ok);
-        g.add(this.add.text(CX, cy + 78, '我知道了,開始編隊', { fontFamily: EMOJIFONT, fontSize: '16px', color: '#eafce0', fontStyle: 'bold' }).setOrigin(0.5));
-        const close = () => { g.destroy(); this._setDomUI(true); this.tutTeamArmed = true; this.refreshStart(); };
+        const g = this.add.container(0, 0).setDepth(200); this._coachG = g;   // 🩹 記旗標→場景層 pointerdown 讀它擋輸入,避免按鈕點擊穿透到底下卡片(見 input.on('pointerdown'))
+        const dim = this.add.rectangle(CX, H / 2, W, H, 0x000000, 0.6).setInteractive(); g.add(dim);
+        const _pw = W - 24, PAD = 26, GAP = 18, BTN_H = 52, cy = Math.round(H * 0.5);
+        const title = this.add.text(0, 0, '🛡️ 最後一課 · 出戰編隊', { fontFamily: EMOJIFONT, fontSize: '20px', color: '#c8912a', fontStyle: 'bold', align: 'center' }).setOrigin(0.5, 0);   // 金標題(同 showTutComplete)
+        const body = this.add.text(0, 0, '① 點下方卡片 → 放進上方 5 個宮位\n② 👑 中央 = 隊長\n③ 放滿 5 隻 → 按右下「✅ 確定」完成!', { fontFamily: EMOJIFONT, fontSize: '17px', color: '#2b333a', fontStyle: 'bold', align: 'left', lineSpacing: 10, wordWrap: { width: _pw - 52 } }).setOrigin(0.5, 0);   // 深墨字 17/行距10(同教學說明卡)
+        const th = Math.ceil(title.height), bh = Math.ceil(body.height), _ph = PAD + th + GAP + bh + GAP + BTN_H + PAD;
+        const top = cy - _ph / 2;
+        g.add(this.add.image(CX, cy, _softPanelTex(this, _pw, _ph, 16)).setDisplaySize(_pw + 80, _ph + 80));   // demo 白 .panel(柔影,任意 dpi 平滑)
+        let yy = top + PAD;
+        title.setX(CX).setY(yy); g.add(title); yy += th + GAP;
+        body.setX(CX).setY(yy); g.add(body); yy += bh + GAP;
+        const bcy = yy + BTN_H / 2;
+        g.add(roundRectG(this, CX, bcy, 260, BTN_H, BTN_H / 2, 0x35a866, 1, null, 0));   // 綠實色圓角藥丸(同設計系統 ok 色)
+        g.add(this.add.text(CX, bcy, '我知道了,開始編隊', { fontFamily: EMOJIFONT, fontSize: '18px', color: '#ffffff', fontStyle: 'bold' }).setOrigin(0.5));
+        const ok = this.add.rectangle(CX, bcy, 260, BTN_H, 0x000000, 0.001).setInteractive(); g.add(ok);
+        const close = () => { g.destroy(); this._coachG = null; this._setDomUI(true); this.tutTeamArmed = true; this.refreshStart(); };
         ok.on('pointerup', close); dim.on('pointerup', close);
       }
       cardAt(x, y) { if (y < this.vpTop || y > this.vpBot) return null; for (const c of this.cards) { if (!c.visible) continue; if (Math.abs(x - c.x) <= 36 && Math.abs(y - (c.y - this.scroll)) <= 36) return c; } return null; }   // 場景層命中:卡世界位置=(c.x, c.y-scroll),半徑 36
@@ -6832,13 +6839,16 @@
         if (this.gachaDetail) return this.drawGachaDetail();   // 詳細 modal 蓋在結果上
         const T = UI(), res = this.gachaResult, n = res.length, ADD = Phaser.BlendModes.ADD;
         const darkOv = this.rect(CX, H / 2, W, H, 0x0e0a16, 0.97).setInteractive();   // 全螢幕暗台(蓋掉選單;召喚時刻做戲劇感,亮卡在暗台上更跳)
-        const titleT = this.txt(CX, Math.round(H * 0.12), n > 1 ? '🎉 十連結果 🎉' : '🎉 抽卡結果 🎉', '20px', '#ffd56a', 0.5, true);
+        const titleT = this.txt(CX, Math.round(H * 0.12), n > 1 ? '🎉 十連結果 🎉' : '🎉 抽卡結果 🎉', FS.title, '#ffd56a', 0.5, true);   // 標題字級對齊全站頁標題(FS.title=27px)
         const reveal = !this.gachaRevealed; this.gachaRevealed = true;   // 登場動畫只首次播
-        const makeConfirm = (fadeIn) => {   // 確定/下一步鈕:單抽電影化時延到卡登場才建,演出期間不搶視線
-          const r = this.L(this.add.rectangle(CX, H - 66, 220, 48, 0x35a866).setStrokeStyle(2, 0x35a866).setInteractive());
-          const tx = this.txt(CX, H - 66, this._afterPull ? '✔ 下一步:組隊' : '✔ 確定', FS.sub, '#ffffff', 0.5, true);
+        const makeConfirm = (fadeIn) => {   // 確定/下一步鈕:3D 綠圓角藥丸(對齊全站設計系統的按鈕,取代舊扁平方角方塊);單抽電影化時延到卡登場才建,演出期間不搶視線
+          const bw = 264, bh = 54, by = H - 68;
+          const lip = this.L(roundRectG(this, CX, by + 3, bw, bh, bh / 2, 0x2a7d4f, 1, null, 0));   // 3D 底唇
+          const face = this.L(roundRectG(this, CX, by, bw, bh, bh / 2, 0x35a866, 1, null, 0));   // 綠實色面
+          const tx = this.txt(CX, by, this._afterPull ? '✔ 下一步 · 組隊' : '✔ 確定', FS.sub, '#ffffff', 0.5, true);   // 18px 白字
+          const r = this.rect(CX, by, bw, bh, 0x000000, 0.001).setInteractive();
           tapBind(this, r, () => { if (this._afterPull) { this._afterPull = null; this.gachaResult = null; this.gachaRevealed = false; this.scene.manager.start('team', { tutorial: true }); this.scene.manager.stop('home'); return; } this.gachaResult = null; this.gachaRevealed = false; this.rebuild(); });
-          if (fadeIn) { r.setAlpha(0); tx.setAlpha(0); this.tweens.add({ targets: [r, tx], alpha: 1, duration: 400 }); }   // 背景+文字一起淡入
+          if (fadeIn) { [lip, face, tx].forEach(o => o.setAlpha(0)); this.tweens.add({ targets: [lip, face, tx], alpha: 1, duration: 400 }); }   // 一起淡入
           return r;
         };
         const tint = cd => (T.elTint[cd.el] != null ? T.elTint[cd.el] : T.surf2);
