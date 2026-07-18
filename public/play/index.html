@@ -2862,7 +2862,7 @@
       }
       tutSkip() {   // 改:先問「是否老手」→老手跳過一樣送新手十連(不因跳過而漏發);新手可回去玩教學。修「跳過教學拿不到十連」坑
         if (this._tutSkipG) return;
-        const T = UI(), g = this.overlay(); this._tutSkipG = g; const cy = H / 2;
+        const T = UI(), g = this.overlay().setDepth(2700); this._tutSkipG = g; const cy = H / 2;   // 🔝 拉到教學提示卡(tutG depth 2600)+持久黑底(2598)之上,否則跳過確認卡被提示卡蓋住(overlay 預設只有 1000)
         g.add(roundRectG(this, CX, cy, Math.min(W - 24, 360), 268, 18, T.surf, 1, T.divider, 1.5));
         g.add(this.add.text(CX, cy - 98, '你已經不是新手了嗎?', { fontFamily: EMOJIFONT, fontSize: FS.title, color: T.ink, fontStyle: 'bold' }).setOrigin(0.5));
         const _canPull = !freePullDone();   // 已領過(重玩複習)→不再提「送十連」,避免誤導
