@@ -6696,8 +6696,9 @@
           this.L(this.add.image(left + iw / 2, cTop + 34, 'ui_gacha').setDisplaySize(iw, iw));
           t.setPosition(left + iw + 8 + tw / 2, cTop + 34).setOrigin(0.5); this.L(t); }
         this._tabDom = [];   // 本次重繪的 DOM 抽卡鈕(精緻款);rebuild 會先清舊的
-        this.gachaBanner(cTop + 134, 'premium', '✨ 六星 限定 · 機率 3%', 0x7c5cd0, 0xf3eefc, 'purple');   // 結印:紫框 + 淡紫卡 + 紫鈕
-        this.gachaBanner(cTop + 322, 'normal', '金錢轉蛋（無六星）', 0x35a866, 0xecf8ee, 'ok');   // 一般:綠框 + 淡綠卡 + 綠鈕(加高後拉開 188 避免重疊)
+        // 📐 上下節奏對齊「卡片管理」(bMonster):第一張卡頂緣 = cTop+68(=卡片管理第一顆按鈕頂緣,不再緊貼標題),卡間隔 = 22(=卡片管理 GAP)。卡高 168→第一張中心 cTop+68+84=cTop+152、第二張 = 上一張底(cTop+236)+22+84 = cTop+342
+        this.gachaBanner(cTop + 152, 'premium', '✨ 六星 限定 · 機率 3%', 0x7c5cd0, 0xf3eefc, 'purple');   // 結印:紫框 + 淡紫卡 + 紫鈕
+        this.gachaBanner(cTop + 342, 'normal', '金錢轉蛋（無六星）', 0x35a866, 0xecf8ee, 'ok');   // 一般:綠框 + 淡綠卡 + 綠鈕
         if (this._freeGuide) this.txt(CX, H - 74, '👇 按下發光的「十連」領取你的第一批勇者!', FS.cap, '#ffe04a', 0.5, true);   // 🎁 引導文案(取代機率註解)
         else this.txt(CX, H - 74, '※ 機率已公示;六星僅「召喚勇者」可得', FS.micro, '#c9c3ba', 0.5);   // 深底→淺灰註解
         if (this.gachaResult) this.drawGachaResult();
