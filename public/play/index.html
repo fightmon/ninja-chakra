@@ -2631,7 +2631,7 @@
         this.firstClear = true;   // 新手鉤子:本場第一次消除=隆重慶祝
         this.renderTeam(); this.startStage();
         this._startStageAudio();   // 各關 BGM + 戰鬥音效:非阻塞載入(關卡先開玩,聲音背景串流→弱網不卡關)
-        this.events.once('shutdown', () => { SFX.stopBgm(); if (this.bgmMp3) { this.bgmMp3.stop(); this.bgmMp3.destroy(); this.bgmMp3 = null; } });   // 離開戰鬥(任何方式)→停背景音
+        this.events.once('shutdown', () => { SFX.stopBgm(); if (this.bgmMp3) { this.bgmMp3.stop(); this.bgmMp3.destroy(); this.bgmMp3 = null; } this._storeHintClearObjs(); });   // 離開戰鬥(任何方式)→停背景音;順便清屬塊 JIT 提示殘留物件/tween/timer(避免殘留)
       }
       // ===== 新手教學(事件推進式教練;全程 if(this.tut) 包住,不影響正常戰鬥)=====
       tutEnemies() {
@@ -4456,6 +4456,9 @@
       startStoredDrag(i, p) {
         if (this.resultOpen || this.locked || this.camCine || this.drag || this.earthSel || this.earthDrag || this.windPick) return;
         const s = this.stored[i]; if (!s) return;
+        // ▶ 新手教學強化(屬塊):玩家真的拖用屬塊了→記存檔旗標(永久不再教)+清掉本場 JIT 提示(若有)
+        if (this._storeHintObjs || this._storeHintShown) { this._storeHintClearObjs(); this._storeHintShown = false; }
+        mutSave(s2 => { s2.settings = s2.settings || {}; s2.settings.storeTaught = true; });
         const cells = s.cells || chakraShape(s.el, s.lv), col = EL[s.el].color;
         const kids = cells.map(([dr, dc]) => this.add.image(dc * CS, dr * CS, this._ensureBlockTex(col)).setOrigin(0).setScale(RECT / 96));   // 拖曳屬塊=質感糖果貼圖(有色區=RECT,間隙同盤面)
         this.drag = { store: i, cells, kind: 'water', col, prev: this.add.container(0, 0, kids).setAlpha(0.85).setDepth(DEPTH.drag), kids }; this.grabFX(p, col); this.updateDrag(p);
@@ -5072,6 +5075,55 @@
         if (this._lockedStore && this._lockedStore[target]) { this._lockedStore[target] = 0; const so = this.teamCards[target] && this.teamCards[target].storeObj, tx = so ? so.x : CX, ty = so ? so.y : CARDS_Y; this.floatText(tx, ty - 24, '🔒 封卡·不長塊', '#c4a8e0'); this._shatterLockBadge(target); return; }   // 🌀被消塊魔王封住的卡→本手不長塊(擋一次即解、鎖被打碎)
         this.stored[target] = { el, lv, cells: randOrient(chakraShape(el, lv), el) }; this.renderStored();   // 火塊生成時就定隨機方向
         this.tonFloat(EL[el].name + '塊Lv' + lv + '→存卡', '#' + EL[el].color.toString(16).padStart(6, '0'));
+        // ▶ 新手教學強化(屬塊):只在簡單模式(baby)且不在腳本教學(this.tut)/課程(this.lesson)中才生效(序章、五屬城入門會生效)
+        if (this._babyTeachOn()) {
+          this._storeBlockGlow(target, el);   // A. 視覺juice:生塊瞬間疊一次性擴散發光環(純視覺,不影響 renderStored 既有 pop/漸層)
+          if (!this._storeHintShown && !loadSave().settings.storeTaught) this._storeHintShow(target);   // B. JIT提示:同場只彈一次(_storeHintShown)+存檔沒教過才彈(settings.storeTaught)
+        }
+      }
+      // ▶ babyTeach 判斷式:簡單模式且非腳本教學/課程中(教屬塊只在這個情境生效)
+      _babyTeachOn() { return !!(this.diff && this.diff.key === 'baby' && !this.tut && !this.lesson); }
+      // ▶ 屬塊視覺juice:存塊那張卡疊一個一次性擴散發光環(該屬色描邊,放大淡出後銷毀)
+      _storeBlockGlow(target, el) {
+        const card = this.teamCards && this.teamCards[target], so = card && card.storeObj; if (!so) return;
+        const col = (EL[el] && EL[el].color) != null ? EL[el].color : 0xffffff;
+        const ring = this.add.circle(so.x, so.y, 14, col, 0).setStrokeStyle(3, col, 0.95).setDepth(2556);   // depth 高於盤面(40)與屬塊(34)
+        this.tweens.add({ targets: ring, scaleX: 2.6, scaleY: 2.6, alpha: 0, duration: 520, ease: 'Quad.out', onComplete: () => ring.destroy() });
+      }
+      // ▶ 屬塊 JIT 提示:手指從卡上的屬塊指向盤面 + 底下一行提示文字,教玩家「抓下來蓋到盤面缺口」;一次性,同場只彈一次
+      _storeHintShow(target) {
+        this._storeHintClearObjs();   // 保險:理論上不會疊(_storeHintShown 擋),先清舊物件避免萬一重入
+        this._storeHintShown = true;
+        const card = this.teamCards && this.teamCards[target], so = card && card.storeObj; if (!so) return;
+        const objs = this._storeHintObjs = [];
+        const fromX = so.x, fromY = so.y, toX = so.x, toY = Math.min(H - 60, CARDS_Y + 90);   // 從卡上屬塊位置往下指向盤面中央附近(示意「抓下來」,不需精準格)
+        const f = this.add.text(fromX, fromY, '👆', { fontFamily: EMOJIFONT, fontSize: '38px' }).setOrigin(0.5, 0.1).setDepth(2560);
+        objs.push(f);
+        const loop = () => {   // 循環手指動畫(仿 tutHint 的 finger 閉包:靠近放大→按壓縮小→拖到盤面→淡出→重來)
+          if (!this._storeHintObjs || this._storeHintObjs.indexOf(f) < 0 || !f.active) return;
+          f.setPosition(fromX, fromY).setScale(1.4).setAlpha(1);
+          this.tweens.add({
+            targets: f, scaleX: 0.95, scaleY: 0.95, duration: 240, ease: 'Quad.out', onComplete: () => {
+              if (!f.active) return;
+              this.tweens.add({
+                targets: f, x: toX, y: toY, duration: 720, ease: 'Sine.inOut', onComplete: () => {
+                  if (!f.active) return;
+                  this.tweens.add({ targets: f, alpha: 0, duration: 240, onComplete: () => { if (f.active) this.time.delayedCall(450, loop); } });
+                }
+              });
+            }
+          });
+        };
+        loop();
+        const txt = this.add.text(CX, Math.min(H - 18, CARDS_Y + 130), '👆 這是「屬塊」!抓下來蓋到盤面缺口,能湊更多消除', { fontFamily: EMOJIFONT, fontSize: '17px', color: '#ffffff', fontStyle: 'bold', stroke: '#000000', strokeThickness: 4, align: 'center' }).setOrigin(0.5).setDepth(2560);
+        objs.push(txt);
+        this._storeHintTimer = this.time.delayedCall(7000, () => this._storeHintClearObjs());   // ~7秒沒拖→自動清,免玩家沒拖時手指一直在畫面上
+      }
+      // ▶ 只銷毀提示物件+計時器(拖用/逾時/場景關閉 三條路徑共用;不動 _storeHintShown/存檔旗標,那兩個由呼叫端各自決定要不要清)
+      _storeHintClearObjs() {
+        if (this._storeHintObjs) { this._storeHintObjs.forEach(o => { try { this.tweens.killTweensOf(o); o.destroy(); } catch (e) { } }); }
+        this._storeHintObjs = null;
+        if (this._storeHintTimer) { try { this._storeHintTimer.remove(false); } catch (e) { } this._storeHintTimer = null; }
       }
 
       enemyFinisher(e) {   // 🔥終結技:3 段蓄力(每手加強、越後越緊張)→ 放招(元氣玉砸向玩家);蓄力中被攻擊(掉血)/打死=打斷
