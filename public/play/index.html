@@ -6203,15 +6203,44 @@
           this.time.delayedCall(300, () => { const team = TUTORIAL_TEAM.map(id => ROSTER.find(c => c.id === id)); this.scene.manager.start('game', { team: team, dungeonId: 'prologue', tutorial: true }); this.scene.manager.stop('home'); }); return;
         }
         const _lu = getMeta()._lvUp; if (_lu) { mutSave(s => { delete s.meta._lvUp; }); this.time.delayedCall(400, () => this.toast('🎉 升級! Lv.' + _lu.rank + '\n⚡ 體力已補滿')); }   // 戰鬥升級→回大廳彈 5 秒升級公告(體力已補滿)
+        const _elemCleared = ELEM_DUNGEONS.some(id => isDungeonCleared(id));   // 有沒有破過任一五屬城→判斷玩家在 onboarding 的哪一段
+        const _showPrologueGuide = tutSeen() && isDungeonCleared('prologue') && !_elemCleared && !st.prologueGuideSeen;   // 🧭 破序章、還沒破任何五屬城、還沒看過指引→彈一次「下一步」指路面板(既有玩家已破五屬城的不會被打擾)
         if (this._freeGuide) { if (dailyAvailable()) claimDailyServer().then(() => { if (this.scene.isActive()) this.rebuild(); }); }   // 🎁 新手引導十連期間:不彈每日登入卡(避免打斷),靜默領當日獎勵入帳(D1 → 30 簽到石 +1 = 31),領到再刷新頂欄石數
-        else if (dailyAvailable() && isDungeonCleared('prologue')) this.time.delayedCall(_lu ? 2600 : 350, () => this.showDaily());   // 每日登入卡:序章通關前(新手 onboarding=教學→十連→編成→序章)一律不彈,避免打斷;序章後恢復正常自動彈(引導期已由上面 silent 領 D1,不會漏)
+        else if (dailyAvailable() && isDungeonCleared('prologue') && !_showPrologueGuide) this.time.delayedCall(_lu ? 2600 : 350, () => this.showDaily());   // 每日登入卡:序章通關前一律不彈;有指路面板時也讓路(下次進大廳再彈),避免兩個彈窗疊
+        if (_showPrologueGuide) this.time.delayedCall(_lu ? 2800 : 500, () => { if (this.scene.isActive()) this.showPrologueGuide(); });   // 🧭 破序章後一次性「下一步」指路(講清五屬城→寶玉卡→進化循環 + 一鍵去打火城)
         maybeConfigToast(this);   // ☁️ 公告/維護訊息 toast(每 session 各一次;toast 深度 2000 疊在每日彈窗上)
         this.refreshMailBadge();   // 📬 進首頁 fire-and-forget 拉一次信箱未讀數(time-box 走 authedFetch 內建逾時,失敗靜默不阻塞)
         flushPendingRuns();   // 🔐 進大廳順帶再試一次補送離線期間累積的通關金幣佇列(fire-and-forget)
         cardsFetch();   // 🔐 每次進大廳強制校正收藏(切帳/找回都會 reload 回大廳,不靠時間戳比較)
         { const _pdn = getMeta()._pendingDropsNotice; if (_pdn) { mutSave(s => { delete s.meta._pendingDropsNotice; }); this.time.delayedCall(_lu ? 3000 : 500, () => this.toast('🎁 你有 ' + _pdn + ' 張待領戰利品已入袋!')); } }   // 離線期間補發的通關掉落(見 flushPendingRuns)
         { const _prd = getMeta()._pendingRunsDropped; if (_prd) { mutSave(s => { delete s.meta._pendingRunsDropped; }); this.time.delayedCall(_lu ? 3300 : 900, () => this.toast('⚠️ 離線佇列已滿,有 ' + _prd + ' 場通關獎勵漏發,請見諒')); } }   // 🔐[12] 離線期間 pendingRuns 佇列爆量被迫丟棄的最舊通關,明確告知玩家(而非靜默消失)
-        if (!st.freePull && tutSeen() && !st.bindPrompted && isDungeonCleared('prologue')) this.time.delayedCall(700, () => promptAccountBindAfterTutorial(this));   // 🔑 綁定 Google 邀請改到「玩完序章後」才跳(一次性)→不打斷「教學→十連→編成」;序章前 isDungeonCleared('prologue')=false 就不彈。勇者卡提示已停用(見 maybeHeroCardNotice)
+        if (!st.freePull && tutSeen() && !st.bindPrompted && _elemCleared) this.time.delayedCall(700, () => promptAccountBindAfterTutorial(this));   // 🔑 綁定 Google 邀請改到「破第一座五屬城後」才跳(一次性)→比破序章更投入、綁定意願更高;也不與序章指路面板撞(那面板在「破序章未破五屬城」時彈,此邀請在「已破五屬城」時彈,互斥)。勇者卡提示已停用(見 maybeHeroCardNotice)
+      }
+      showPrologueGuide() {   // 🧭 破序章後一次性「下一步」指路面板(對齊教學說明卡:白 _softPanelTex + 金標題 + 綠 3D CTA);把「五屬城→寶玉卡→進化」循環講白 + 一鍵去打火城
+        if ((loadSave().settings || {}).prologueGuideSeen) return;   // 防重(併發/重繪各只彈一次)
+        mutSave(s => { s.settings = s.settings || {}; s.settings.prologueGuideSeen = true; });
+        track('prologue_guide');
+        this._setDomUI(false);   // 藏分頁 DOM 精緻鈕(canvas modal 蓋不住 DOM;在抽卡等分頁彈出時 CTA 才不會被 DOM 藥丸蓋住)
+        const g = this.add.container(0, 0).setDepth(3000); this._pGuideG = g;
+        const dim = this.add.rectangle(CX, H / 2, W, H, 0x000000, 0.66).setInteractive(); g.add(dim);
+        const _pw = W - 24, PAD = 26, GAP = 18, BTN_H = 54, cy = Math.round(H * 0.46);
+        const title = this.add.text(0, 0, '🎉 序章通關！五屬城開放了', { fontFamily: EMOJIFONT, fontSize: '20px', color: '#c8912a', fontStyle: 'bold', align: 'center', wordWrap: { width: _pw - 52 } }).setOrigin(0.5, 0);
+        const body = this.add.text(0, 0, '接下來的成長循環：\n⚔️ 打五屬城 → 掉 💎 寶玉卡\n📈 練滿等級 → ✨ 進化隊伍變更強\n→ 再挑戰更難的關卡！', { fontFamily: EMOJIFONT, fontSize: '17px', color: '#2b333a', fontStyle: 'bold', align: 'left', lineSpacing: 10, wordWrap: { width: _pw - 52 } }).setOrigin(0.5, 0);
+        const th = Math.ceil(title.height), bh = Math.ceil(body.height), _ph = PAD + th + GAP + bh + GAP + BTN_H + PAD;
+        const top = cy - _ph / 2;
+        g.add(this.add.image(CX, cy, _softPanelTex(this, _pw, _ph, 16)).setDisplaySize(_pw + 80, _ph + 80));   // demo 白 .panel
+        let yy = top + PAD;
+        title.setX(CX).setY(yy); g.add(title); yy += th + GAP;
+        body.setX(CX).setY(yy); g.add(body); yy += bh + GAP;
+        const bcy = yy + BTN_H / 2;
+        g.add(roundRectG(this, CX, bcy + 3, 260, BTN_H, BTN_H / 2, 0x2a7d4f, 1, null, 0));   // 3D 底唇
+        g.add(roundRectG(this, CX, bcy, 260, BTN_H, BTN_H / 2, 0x35a866, 1, null, 0));   // 綠實色面
+        g.add(this.add.text(CX, bcy, '⚔️ 去打 🔥 火城！', { fontFamily: EMOJIFONT, fontSize: '18px', color: '#ffffff', fontStyle: 'bold' }).setOrigin(0.5));
+        const ok = this.add.rectangle(CX, bcy, 260, BTN_H, 0x000000, 0.001).setInteractive(); g.add(ok);
+        const close = () => { try { g.destroy(); } catch (e) { } this._pGuideG = null; try { this._setDomUI(true); } catch (e) { } };
+        ok.on('pointerup', () => { close(); this.enterDungeon('fire'); });   // 一鍵進火城難度選單(enterDungeon 內含解鎖/隊伍檢查)
+        dim.on('pointerup', close);   // 點外面=先關;五屬城仍有地圖驚嘆號指引(見 _mapIsle)
+        g.alpha = 0; this.tweens.add({ targets: g, alpha: 1, duration: 260 });
       }
       async _doFreePull() {   // 🔐 新手免費十連(引導式:玩家按脈動的十連鈕才觸發)改打伺服器(POST /api/gacha/pull {poolId:'premium',count:10,free:true});防重放
         if (this._freePulling) return; this._freePulling = true; this._busyPull = true;   // 防連點雙抽;_busyPull→gachaBanner 讓按鈕變灰(pending)
@@ -6438,7 +6467,8 @@
         if (open) {
           const hit = this.add.circle(0, Math.round(dh * 0.06), Math.min(dw, dh) * 0.4, 0xffffff, 0.001).setInteractive(); cont.add(hit); tapBind(this, hit, () => this.enterDungeon(is.id));   // 中央近隱形點擊區(縮小,減少島互相蓋到)
           this.tweens.add({ targets: cont, y: sy - 6, duration: 1800 + Math.floor(Math.random() * 800), yoyo: true, repeat: -1, ease: 'Sine.inOut' });   // 上下微浮
-          if (is.id === 'prologue' && !cl) {   // 🗨️ 序章未破→島右上浮「對話框驚嘆號」,指引新玩家先去玩序章(破過即消失)
+          const _guideIsle = (is.id === 'prologue' && !cl) || (is.id === 'fire' && isDungeonCleared('prologue') && !ELEM_DUNGEONS.some(e => isDungeonCleared(e)));   // 指路徽章:序章未破→掛序章島;序章破了但還沒破任何五屬城→交棒掛火城(破第一座即消失)
+          if (_guideIsle) {   // 🗨️ 島右上浮「對話框驚嘆號」,指引玩家下一步該打哪
             const bub = this.add.container(dw * 0.30, -dh * 0.30);
             const tail = this.add.graphics(); tail.fillStyle(0xffd54a, 1); tail.fillTriangle(-5, 11, 6, 11, -1, 22); bub.add(tail);   // 對話框小尾巴(指向島)
             bub.add(roundRectG(this, 0, 0, 40, 32, 10, 0xffd54a, 1, 0xffffff, 3));   // 黃圓角對話框
