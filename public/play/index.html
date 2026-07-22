@@ -178,6 +178,8 @@
       { on: 'win', msg: '⑦ 填滿角色屬性宮,會出現屬性塊可使用,\n抓下來,它能覆蓋盤面已有的塊(任意宮都能填)!\n填滿發亮的缺口、清掉收尾過關 🎉', setup: 'finish', hint: 'store', pos: 'bottom' },
     ];
     // ===== 序章練習課程(獨立於新手教學:走 this.lesson,平行 this.tut,兩者同時只有一個非 null)=====
+    // 階段二・新手島:教學畢業後強制連玩的 3 堂課程順序(相剋與屬塊→屬塊儲存與覆蓋→全體攻擊);settings.newbieStep 追蹤進度,見 startNewbieStep()
+    const NEWBIE_SEQ = ['p1', 'p3', 'p2'];
     const LESSONS = {
       p1: {
         name: '相剋與屬塊', enemyEl: 'wind',
@@ -905,6 +907,19 @@
     function tutSeen() { return !!((loadSave().settings || {}).tut); }              // 新手教學看過沒
     function freePullDone() { return !!((loadSave().meta || {}).freePullUsed); }    // 免費新手十連是否已領(伺服器 free_pull_used 的本地鏡射,syncWallet 落地);已領→教學重玩不再提供十連
     function setTutSeen() { mutSave(s => { s.settings = s.settings || {}; s.settings.tut = true; }); }
+    // 階段二・新手島:共用啟動器,GameScene(接關)與 HomeScene(斷點續玩重導)都呼叫同一份;idx<3=啟動 NEWBIE_SEQ[idx] 那堂課程(狗隊/免體力),idx>=3=三堂全破→補發新手十連(freePull)+標記 newbieDone、回大廳(既有 freePull 引導十連接手)
+    function startNewbieStep(scene, idx) {
+      if (idx < 3) {
+        const team = TUTORIAL_TEAM.map(id => ROSTER.find(c => c.id === id)).filter(Boolean);
+        track('newbie_lesson_' + NEWBIE_SEQ[idx]);
+        const data = { team: team, dungeonId: 'prologue', lessonId: NEWBIE_SEQ[idx] };
+        if (scene.scene.key === 'game') scene.scene.restart(data);   // 🩹 game→game(接關/教學完接第一堂):用 restart 同一 scene,不能 start('game')+stop('game')(同 key 開了又關→課程不會跑)
+        else { scene.scene.manager.start('game', data); scene.scene.manager.stop(scene.scene.key); }   // home→game(斷點續玩):不同 scene,start+stop 沒問題
+      } else {
+        mutSave(s => { s.settings = s.settings || {}; s.settings.freePull = true; s.settings.newbieDone = true; });
+        scene.scene.manager.start('home'); if (scene.scene.key !== 'home') scene.scene.manager.stop(scene.scene.key);   // 全破→回大廳(既有 freePull 引導十連接手)
+      }
+    }
     /* ===== 匿名埋點(D1/D7 回流;無個資)===== */
     const ANALYTICS_URL = 'https://ninja-stats.fightmon.workers.dev';   // 匿名埋點後台(D1/D7)
     function anonId() { let id = localStorage.getItem('ninja_aid'); if (!id) { id = 'a' + Math.random().toString(36).slice(2, 10) + Date.now().toString(36); localStorage.setItem('ninja_aid', id); } return id; }
@@ -1992,18 +2007,21 @@
         this._setDomUI(false);   // 教學也是 canvas modal→同樣蓋不住 DOM UI,先藏
         const g = this.add.container(0, 0).setDepth(200); this._coachG = g;   // 🩹 記旗標→場景層 pointerdown 讀它擋輸入,避免按鈕點擊穿透到底下卡片(見 input.on('pointerdown'))
         const dim = this.add.rectangle(CX, H / 2, W, H, 0x000000, 0.6).setInteractive(); g.add(dim);
-        const _pw = W - 24, PAD = 26, GAP = 18, BTN_H = 52, cy = Math.round(H * 0.5);
-        const title = this.add.text(0, 0, '🛡️ 最後一課 · 出戰編隊', { fontFamily: EMOJIFONT, fontSize: '20px', color: '#c8912a', fontStyle: 'bold', align: 'center' }).setOrigin(0.5, 0);   // 金標題(同 showTutComplete)
-        const body = this.add.text(0, 0, '① 點下方卡片 → 放進上方 5 個宮位\n② 👑 中央 = 隊長\n③ 放滿 5 隻 → 按右下「✅ 確定」完成!', { fontFamily: EMOJIFONT, fontSize: '17px', color: '#2b333a', fontStyle: 'bold', align: 'left', lineSpacing: 10, wordWrap: { width: _pw - 52 } }).setOrigin(0.5, 0);   // 深墨字 17/行距10(同教學說明卡)
+        const _pw = W - 24, PAD = 30, GAP = 20, BTN_H = 54, SIDE = 34;   // 使用者回饋:字要和面板邊有間隔+字再大一點 → SIDE(左右內縮)34、PAD 30、字級一併放大
+        let cy = Math.round(H * 0.5);
+        const title = this.add.text(0, 0, '🛡️ 最後一課 · 出戰編隊', { fontFamily: EMOJIFONT, fontSize: '22px', color: '#c8912a', fontStyle: 'bold', align: 'center' }).setOrigin(0.5, 0);   // 金標題(放大 20→22)
+        const bodyStr = '① 點下方卡片 → 放進上方 5 個宮位\n② 👑 中央 = 隊長\n③ 放滿 5 隻 → 按右下「✅ 確定」完成!'
+          + (this.tutTeam ? '\n\n🔄 五行相剋:水剋火、火剋風、風剋雷、雷剋土、土剋水\n👉 隊伍帶「不同屬性」的卡,遇到什麼敵人都有得剋!' : '');   // 🩹 只在教學完首次編隊(tutTeam)加相剋教學,一般編隊不加
+        const body = this.add.text(0, 0, bodyStr, { fontFamily: EMOJIFONT, fontSize: '18px', color: '#2b333a', fontStyle: 'bold', align: 'left', lineSpacing: 11, wordWrap: { width: _pw - SIDE * 2 } }).setOrigin(0.5, 0);   // 深墨字放大 17→18/行距11;左右各內縮 SIDE=34(字不貼邊)
         const th = Math.ceil(title.height), bh = Math.ceil(body.height), _ph = PAD + th + GAP + bh + GAP + BTN_H + PAD;
-        const top = cy - _ph / 2;
+        let top = cy - _ph / 2; if (top < 12) { top = 12; cy = top + _ph / 2; }   // 面板變高→防貼頂/溢出(同 showTutComplete)
         g.add(this.add.image(CX, cy, _softPanelTex(this, _pw, _ph, 16)).setDisplaySize(_pw + 80, _ph + 80));   // demo 白 .panel(柔影,任意 dpi 平滑)
         let yy = top + PAD;
         title.setX(CX).setY(yy); g.add(title); yy += th + GAP;
         body.setX(CX).setY(yy); g.add(body); yy += bh + GAP;
         const bcy = yy + BTN_H / 2;
         g.add(roundRectG(this, CX, bcy, 260, BTN_H, BTN_H / 2, 0x35a866, 1, null, 0));   // 綠實色圓角藥丸(同設計系統 ok 色)
-        g.add(this.add.text(CX, bcy, '我知道了,開始編隊', { fontFamily: EMOJIFONT, fontSize: '18px', color: '#ffffff', fontStyle: 'bold' }).setOrigin(0.5));
+        g.add(this.add.text(CX, bcy, '我知道了,開始編隊', { fontFamily: EMOJIFONT, fontSize: '19px', color: '#ffffff', fontStyle: 'bold' }).setOrigin(0.5));
         const ok = this.add.rectangle(CX, bcy, 260, BTN_H, 0x000000, 0.001).setInteractive(); g.add(ok);
         const close = () => { g.destroy(); this._coachG = null; this._setDomUI(true); this.tutTeamArmed = true; this.refreshStart(); };
         ok.on('pointerup', close); dim.on('pointerup', close);
@@ -2113,6 +2131,7 @@
         this.presetTeam = (data && data.team) ? data.team : null; this.dungeonId = (data && data.dungeonId) || 'prologue'; this.dungeon = DUNGEONS[this.dungeonId] || DUNGEONS.prologue; this.hitLab = !!(data && data.lab); this.enemyLab = !!(data && data.elab); this._elabFilled = false; this.diff = DIFFS_BY[(data && data.diff)] || DIFFS_BY.normal;
         this.tut = (data && data.tutorial) ? { i: -1 } : null;   // 新手教學:腳本化引導模式(全程 if(this.tut) 包住)
         this.lesson = (data && data.lessonId && LESSONS[data.lessonId]) ? { id: data.lessonId, i: -1, free: false } : null;   // 序章練習課程:平行 this.tut 的獨立旗標,兩者同時只有一個非 null
+        this.counterTeach = this.dungeonId === 'prologue' && this.diff && this.diff.key === 'baby' && !this.tut && !this.lesson;   // 🩹序章剋屬提醒:只在序章真戰鬥(baby、非腳本教學/課程)生效→敵人頭上常駐弱點徽章 + 一次性文字提示
         this.serverRunId = (data && data.serverRunId) || null;   // 🔐 戰鬥真實性:票券改由 HomeScene.startBattle 在進場前先領(run/start 當閘,見該函式),這裡只接收;全清時 _grantRun 優先用它送 run/complete(時間閘+一次性);拿不到(離線/失敗/教學/實驗室本就不領票)→退回本地 runId 走離線 fallback
         this.dive = (data && data.dive) || null;   // 🎬從大廳俯衝進來的元素色(有值才播進場淡入+關卡橫幅)
         this.stagesEff = resolveStages(this.dungeon, this.diff.key);   // (b) 依難度解析「有效關卡結構」(規則+覆寫);slice1 規則=0 → 與 base 全等
@@ -2129,6 +2148,7 @@
           _els.forEach(el => { if (MONSTER_IMG[el] && !this.textures.exists('mon_' + el)) this.load.image('mon_' + el, MONSTER_IMG[el]); _CLS.forEach(c => { const k = c + '_' + el; if (ENEMY_IMG[k] && !this.textures.exists(k)) this.load.image(k, ENEMY_IMG[k]); }); });
         }
         _loadCardArt(this, (this.presetTeam || []).map(c => c && c.id));   // 只載「出戰 5 張」卡圖(不再一次載全部 40 張)
+        if (this.counterTeach) _loadElSvgs(this);   // 🩹序章弱點徽章要用元素 SVG icon(el_<el>)
         { const d = this.dungeonId, b = DUNGEON_BG[d]; if (b) { if (!this.textures.exists('bg_' + d + '_back')) this.load.image('bg_' + d + '_back', b.back); if (!this.textures.exists('bg_' + d + '_front')) this.load.image('bg_' + d + '_front', b.front); } }   // 只載「當前這關」背景(不再一次載全部地城)
         if (this.dungeonId === 'tower') TOWER_MID.forEach(c => { if (!this.textures.exists(c.key)) this.load.image(c.key, c.src); });   // 塔中景元素方塊→只在打塔時載
         if (this.dungeonId === 'thunder') _loadCardArt(this, ['c38']);   // 🕷️ 雷之高原借蜘蛛透明大圖當敵圖:載 c38雷蜘蛛(法師)+岩甲雷蜘蛛(魔王,_e)完整大圖
@@ -2482,7 +2502,7 @@
         (this.trayIcons || []).forEach(g => g.setAlpha(1).setScale(1));
         (this.boxLabels || []).forEach(t => { if (t.alpha < 0.15) t.setAlpha(0.15); });
         if (this.enemyG) this.enemyG.setAlpha(1);
-        this.enemies.forEach(e => { [e.sprite, e.turnG, e.hpGfx, e.shadow, e.gateTx].forEach(o => { if (o && o.alpha < 1) o.setAlpha(1); }); });
+        this.enemies.forEach(e => { [e.sprite, e.turnG, e.hpGfx, e.shadow, e.gateTx, e.weakBadge].forEach(o => { if (o && o.alpha < 1) o.setAlpha(1); }); });
         this.locked = false;
         if (this.stage === 1 && !this.hitLab && !this.enemyLab && !this.tut && ENEMY_BRIEF[this.dungeonId] && ['normal', 'advanced', 'super', 'hell'].includes((this.diff && this.diff.key) || '') && !this._briefSeen(this.dungeonId)) this.time.delayedCall(300, () => this.showEnemyBrief(this.dungeonId));   // 敵情簡報延到進場演出後才彈
       }
@@ -2600,7 +2620,7 @@
         this.enemies.forEach(e => {
           if (!e.card || e.dead) return; const x = e.card.x, cy = BATTLE_CY, sz = e.cardH;
           e.card.setPosition(x, cy);
-          e.turnG.setPosition(x - sz / 2 + 12, cy - sz / 2 + 11); if (e.hpGfx) e.hpGfx.setPosition(e.hpx, cy + sz / 2 - 3); e.mark.setPosition(x, cy - sz / 2 - 9); if (e.shadow) e.shadow.setPosition(x, cy + BG_GROUND_OFF);
+          e.turnG.setPosition(x - sz / 2 + 12, cy - sz / 2 + 11); if (e.hpGfx) e.hpGfx.setPosition(e.hpx, cy + sz / 2 - 3); e.mark.setPosition(x, cy - sz / 2 - 9); if (e.shadow) e.shadow.setPosition(x, cy + BG_GROUND_OFF); if (e.weakBadge) e.weakBadge.setPosition(x, cy - sz / 2 - 28);   // 弱點徽章跟著視窗變動重新定位
           const fy = e.img ? cy : cy - Math.round(sz * 0.14); if (e.img) e.sprite.setDisplaySize(sz, sz); e.baseScale = e.sprite.scaleX; if (e.bob) e.bob.stop(); e.sprite.setPosition(x, fy); e.restY = fy; e.bob = this.idleAnim(e, fy);
         });
       }
@@ -2631,7 +2651,7 @@
         this.firstClear = true;   // 新手鉤子:本場第一次消除=隆重慶祝
         this.renderTeam(); this.startStage();
         this._startStageAudio();   // 各關 BGM + 戰鬥音效:非阻塞載入(關卡先開玩,聲音背景串流→弱網不卡關)
-        this.events.once('shutdown', () => { SFX.stopBgm(); if (this.bgmMp3) { this.bgmMp3.stop(); this.bgmMp3.destroy(); this.bgmMp3 = null; } this._storeHintClearObjs(); });   // 離開戰鬥(任何方式)→停背景音;順便清屬塊 JIT 提示殘留物件/tween/timer(避免殘留)
+        this.events.once('shutdown', () => { SFX.stopBgm(); if (this.bgmMp3) { this.bgmMp3.stop(); this.bgmMp3.destroy(); this.bgmMp3 = null; } this._storeHintClearObjs(); this._counterHintClearObjs(); });   // 離開戰鬥(任何方式)→停背景音;順便清屬塊 JIT 提示、序章剋屬提示殘留物件/tween/timer(避免殘留)
       }
       // ===== 新手教學(事件推進式教練;全程 if(this.tut) 包住,不影響正常戰鬥)=====
       tutEnemies() {
@@ -2792,6 +2812,7 @@
           box.on('pointerup', () => this.tutCollapse());
         }
         const sk = this.add.text(W - 12, 16, '跳過 ✕', { fontFamily: EMOJIFONT, fontSize: FS.cap, color: '#6c7780', backgroundColor: '#ffffffe6', padding: { x: 10, y: 6 }, fontStyle: 'bold' }).setOrigin(1, 0.5).setInteractive(); g.add(sk); sk.on('pointerup', () => this.lessonQuit());
+        { const _nb = loadSave().settings || {}; if (_nb.newbieStep != null && NEWBIE_SEQ[_nb.newbieStep] === this.lesson.id) g.add(this.add.text(CX, 8, '🏝️ 新手島 ' + (_nb.newbieStep + 1) + '/3', { fontFamily: EMOJIFONT, fontSize: FS.micro, color: '#ffe08a', fontStyle: 'bold', backgroundColor: '#00000066', padding: { x: 10, y: 4 } }).setOrigin(0.5, 0).setDepth(2601)); }   // 階段二・新手島:只在「正在強制進行的那堂」顯示 X/3 進度標,picker 重玩非序列課程不顯示
         g.alpha = 0; this.tweens.add({ targets: g, alpha: 1, duration: 240 });
       }
       lessonEvent(type) {
@@ -3012,6 +3033,7 @@
         if (this.enemyLab) this.setupEnemyLab();   // 敵技實驗室:6×9 + 固定排法 + 按鈕(放在 spawn 之後,cellRect 已建好)
         this.paraTick = 0; this.junkTick = 0; this.paraLock = null; if (!this.enemyLab) { this.applyJunk(); }   // 🔒封鎖首手可觸發;⚡麻痺改為第一個敵回合才發(開場留 1 手寬限,不會沒動就被鎖)
         if (this.stage === 1 && !this.hitLab && !this.enemyLab) { if (this.tut) this.time.delayedCall(550, () => this.tutStart()); else if (this.lesson) this.time.delayedCall(550, () => this.lessonStart()); else if (!tutSeen()) this.showTutorial(); else if (!this.dive && ENEMY_BRIEF[this.dungeonId] && ['normal', 'advanced', 'super', 'hell'].includes((this.diff && this.diff.key) || '') && !this._briefSeen(this.dungeonId)) this.time.delayedCall(400, () => this.showEnemyBrief(this.dungeonId)); }   // 教學模式→教練;練習課程→lesson教練;首次遊玩→3步彈卡;否則五城中級+首進→敵情簡報(可勾本關不再顯示)
+        if (this.counterTeach && this.stage === 1 && !this._counterHintShown && !loadSave().settings.counterTaught) this.time.delayedCall(600, () => { if (!this._counterHintShown) this._counterHintShow(); });   // 🩹序章剋屬提醒:一次性文字(同場只彈一次+存檔沒教過才彈),常駐弱點徽章見 spawnEnemies
       }
       spawnEnemies() {
         if (this.enemyG) this.enemyG.destroy();
@@ -3046,6 +3068,20 @@
           e.hpH = 9; e.hpRatio = Math.max(0, Math.min(1, e.hp / e.max)); e.hpLag = e.hpRatio; e._hpColor = e.boss ? 0xff7a3a : 0xc23c2c;
           e.hpGfx = this.add.graphics().setPosition(e.hpx, cy + szc / 2 - 3); this.drawHpBar(e);   // HP:圓角血條 + 白色圓角外框 + 受傷白拖尾
           e.mark = this.add.text(x, cy - szc / 2 - 9, '▼', { fontFamily: EMOJIFONT, fontSize: '20px', color: '#ffd24a', fontStyle: 'bold' }).setOrigin(0.5).setStroke('#5a2e00', 5).setVisible(false);   // 目標指標(取代黃框):放大+描邊+跳動(見 updateEnemies)
+          if (this.counterTeach) {   // 🩹序章弱點徽章:常駐 affordance(非一次性),疊在 mark 上方一點,顯示「剋牠」的屬性圖示+「弱」字;敵人死亡/重生/換關由 playDeath/enemyEnter/spawnEnemies 生命週期一併處理
+            const weakEl = counterOf(e.el);
+            if (weakEl) {
+              const wy = cy - szc / 2 - 28;
+              const wCont = this.add.container(x, wy, []);
+              const wBg = roundRectG(this, 0, 0, 40, 20, 8, 0x000000, 0.45);   // 半透明黑底,提高辨識度(貼圖/文字直接疊底色場景可能太雜)
+              const wIcon = this.textures.exists('el_' + weakEl)
+                ? this.add.image(-11, 0, 'el_' + weakEl).setDisplaySize(18, 18)
+                : this.add.text(-11, 0, EL[weakEl].name, { fontFamily: EMOJIFONT, fontSize: '10px', color: '#ffffff', fontStyle: 'bold' }).setOrigin(0.5);   // el_ 沒載到→退回文字(理論上 preload 已補載,保底)
+              const wTxt = this.add.text(10, 0, '弱', { fontFamily: EMOJIFONT, fontSize: '12px', color: '#ffe86a', fontStyle: 'bold' }).setOrigin(0.5);
+              wCont.add([wBg, wIcon, wTxt]);
+              e.weakBadge = wCont;
+            }
+          }
           e.restY = e.sprite.y;   // 受擊擊退/回位的基準 y
           e.bob = this.idleAnim(e, e.sprite.y);
           let gt = null, gc = '#cfe0ff';   // 招牌行為徽章(教學)
@@ -3062,7 +3098,7 @@
           const da = Math.abs(this.enemies[a].card.x - CX), db = Math.abs(this.enemies[b].card.x - CX);
           return da !== db ? db - da : this.enemies[b].card.x - this.enemies[a].card.x;
         });
-        zorder.forEach(i => { const e = this.enemies[i];[e.card, e.sprite, e.turnG, e.hpGfx, e.mark, e.gateTx].filter(Boolean).forEach(o => this.enemyG.add(o)); });
+        zorder.forEach(i => { const e = this.enemies[i];[e.card, e.sprite, e.turnG, e.hpGfx, e.mark, e.gateTx, e.weakBadge].filter(Boolean).forEach(o => this.enemyG.add(o)); });   // weakBadge 排在 mark 之後→蓋在最上層(同容器內以加入順序決定畫面疊層)
         this.enemies.forEach((e, i) => this.enemyEnter(e, i * 120));   // 自遠方逼近入場(交錯)
         this.target = 0;
       }
@@ -3856,7 +3892,7 @@
           this.labSnd && this.labSnd('s_boom', 0.5);
           dead.forEach((m, k) => this.time.delayedCall(k * 140, () => {
             m.dead = false; m.hp = m.max; if (m.hpTw) { m.hpTw.stop(); m.hpTw = null; }
-            const sp = m.sprite; sp.setVisible(true); sp.clearTint && sp.clearTint();[m.turnG, m.hpGfx, m.shadow].forEach(o => { if (o) o.setVisible(true); }); if (m.card) m.card.setInteractive();
+            const sp = m.sprite; sp.setVisible(true); sp.clearTint && sp.clearTint();[m.turnG, m.hpGfx, m.shadow, m.weakBadge].forEach(o => { if (o) o.setVisible(true); }); if (m.card) m.card.setInteractive();
             this.enemyEnter && this.enemyEnter(m, 0);
             const mx = sp.x, my = (m.restY != null ? m.restY : sp.y); this.labSnd && this.labSnd('s_heal', 0.5); this._hearts && this._hearts(mx, my);
             const fl = this.add.circle(mx, my, 28, 0xbfffd6, 0.9).setBlendMode(ADD).setDepth(DEPTH.fx); this.tweens.add({ targets: fl, scale: 2.8, alpha: 0, duration: 440, onComplete: () => fl.destroy() });
@@ -3992,7 +4028,7 @@
           const ripple = this.add.circle(mx, my + 16, 14, 0x9fe0ff, 0).setStrokeStyle(2.5, 0xcdeeff, 0.8).setBlendMode(ADD).setDepth(DEPTH.board + 1).setScale(1, 0.45); this.tweens.add({ targets: ripple, scaleX: 3, alpha: 0, duration: 560, ease: 'Quad.out', onComplete: () => ripple.destroy() });   // 地面水波
           for (let b = 0; b < 30; b++)this.time.delayedCall(b * 20, () => { const px = mx - 24 + Math.random() * 48, bb = this.add.circle(px, my + 16, 2 + Math.random() * 4, 0xcdeeff, 0.9).setBlendMode(ADD).setDepth(DEPTH.fx); this.tweens.add({ targets: bb, y: my - 46 - Math.random() * 40, x: px + (Math.random() - 0.5) * 20, alpha: 0, scale: 0.3, duration: 660 + Math.random() * 340, ease: 'Quad.out', onComplete: () => bb.destroy() }); });   // 復活=大量氣泡湧起
           this.floatText(mx, my - 30, '復活!', '#bfefff');
-          if (c.e && c.e.dead) { const m = c.e; m.dead = false; m.hp = m.max; if (m.hpTw) { m.hpTw.stop(); m.hpTw = null; } const sp = m.sprite; if (sp) { sp.setVisible(true); sp.clearTint && sp.clearTint(); } [m.turnG, m.hpGfx, m.shadow].forEach(o => { if (o) o.setVisible(true); }); if (m.card) m.card.setInteractive(); this.enemyEnter && this.enemyEnter(m, 0); }   // 實戰:真的把小兵復活(回滿血、重新入場)
+          if (c.e && c.e.dead) { const m = c.e; m.dead = false; m.hp = m.max; if (m.hpTw) { m.hpTw.stop(); m.hpTw = null; } const sp = m.sprite; if (sp) { sp.setVisible(true); sp.clearTint && sp.clearTint(); } [m.turnG, m.hpGfx, m.shadow, m.weakBadge].forEach(o => { if (o) o.setVisible(true); }); if (m.card) m.card.setInteractive(); this.enemyEnter && this.enemyEnter(m, 0); }   // 實戰:真的把小兵復活(回滿血、重新入場)
           if (c.tw) c.tw.stop(); if (c.bub) c.bub.remove(); if (c.cross) this.tweens.add({ targets: c.cross, alpha: 0, scaleX: 1.6, scaleY: 1.6, duration: 340, onComplete: () => c.cross.destroy() });
         }));
         this.time.delayedCall(rc.circles.length * 150 + 420, () => { if (this.targetEnemy) this.targetEnemy(); if (this.updateEnemies) this.updateEnemies(); });
@@ -4986,6 +5022,11 @@
           if (this.paraLock && this.paraLock.e && !this.paraLock.e.dead && victims.includes(this.paraLock.e) && atkEls.some(el => EL[el] && EL[el].beats === this.paraLock.e.el)) this._interruptPara(this.paraLock.e);   // 🕸️蛛網解鎖=須「實際打到施法蜘蛛」:單體=牠得是鎖定目標、AoE(15HIT↑)=全體都打到;且清的屬性剋牠(風剋雷)才算。只清剋屬宮但沒打到牠→不解
           this.enemies.forEach(en => { if (en.paralyze > 0 && !en.dead && atkEls.some(el => EL[el] && EL[el].beats === en.el)) en._paraHit = true; });   // ⚡只有風(剋雷)打中麻痺敵→標記本手打斷施法(_paralyzeAct 跳過鎖);無屬等其他屬性不算
           victims.forEach(en => { if (en.dead || en._finOrb) return; if (atkEls.some(e => EL[e] && EL[e].beats === en.el)) en.timer += 1; });
+          // 🩹序章剋屬提醒:玩家真的清了一次「剋敵人」的宮並打中它→視為學會了,永久記存檔+收掉本場一次性提示(若還在);atkEls 是本區塊變數,判斷需寫在區塊關閉前
+          if (this.counterTeach && !loadSave().settings.counterTaught && victims.some(en => !en.dead && atkEls.some(e => EL[e] && EL[e].beats === en.el))) {
+            mutSave(s2 => { s2.settings = s2.settings || {}; s2.settings.counterTaught = true; });
+            this._counterHintClearObjs();
+          }
         }   // 非蓄力的「被攻擊」敵清到剋屬→出手延後一手
         if (this.firstClear) { this.firstClear = false; track('first_clear'); }   // ☁️ 勇者卡/綁定提示改到「教學結束後」(home create → promptAccountBindAfterTutorial),不再戰鬥中打斷
         data.cells.forEach(([r, c]) => { this.board[r][c] = null; });  // 立即從模型移除,避免重複觸發
@@ -5082,7 +5123,7 @@
         }
       }
       // ▶ babyTeach 判斷式:簡單模式且非腳本教學/課程中(教屬塊只在這個情境生效)
-      _babyTeachOn() { return !!(this.diff && this.diff.key === 'baby' && !this.tut && !this.lesson); }
+      _babyTeachOn() { return !!(this.dungeonId === 'prologue' && this.diff && this.diff.key === 'baby' && !this.tut && !this.lesson); }   // 屬塊教學只在「序章 baby」做→取消五屬城入門的屬塊提示(入門玩家已在序章學過;剋屬提醒另有序章 counterTeach)
       // ▶ 屬塊視覺juice:存塊那張卡疊一個一次性擴散發光環(該屬色描邊,放大淡出後銷毀)
       _storeBlockGlow(target, el) {
         const card = this.teamCards && this.teamCards[target], so = card && card.storeObj; if (!so) return;
@@ -5124,6 +5165,20 @@
         if (this._storeHintObjs) { this._storeHintObjs.forEach(o => { try { this.tweens.killTweensOf(o); o.destroy(); } catch (e) { } }); }
         this._storeHintObjs = null;
         if (this._storeHintTimer) { try { this._storeHintTimer.remove(false); } catch (e) { } this._storeHintTimer = null; }
+      }
+      // ▶ 序章剋屬提醒:一次性文字(教「敵人頭上弱點徽章」是什麼意思),同場只彈一次;~7秒自動清或點畫面關;比照 _storeHintShow 風格(depth 2560、白字黑描邊)
+      _counterHintShow() {
+        this._counterHintShown = true;
+        const y = Math.max(60, Math.min(H - 90, CARDS_Y - 34));
+        const txt = this.add.text(CX, y, '⚔️ 打敵人用「剋它」的屬性宮最痛!敵人頭上是牠的弱點屬性 → 清那個宮打牠', { fontFamily: EMOJIFONT, fontSize: '15px', color: '#ffffff', fontStyle: 'bold', stroke: '#000000', strokeThickness: 4, align: 'center', lineSpacing: 6, wordWrap: { width: W - 40 } }).setOrigin(0.5).setDepth(2560).setInteractive();
+        txt.on('pointerdown', () => this._counterHintClearObjs());   // 點畫面可提前關閉
+        this._counterHintObj = txt;
+        this._counterHintTimer = this.time.delayedCall(7000, () => this._counterHintClearObjs());   // ~7秒沒理會→自動清
+      }
+      // ▶ 只銷毀提示物件+計時器(逾時/點擊/場景關閉/教過旗標達成 皆共用;不動 _counterHintShown,那是「本場彈過沒」的旗標,不因清除而重置)
+      _counterHintClearObjs() {
+        if (this._counterHintObj) { try { this.tweens.killTweensOf(this._counterHintObj); this._counterHintObj.destroy(); } catch (e) { } this._counterHintObj = null; }
+        if (this._counterHintTimer) { try { this._counterHintTimer.remove(false); } catch (e) { } this._counterHintTimer = null; }
       }
 
       enemyFinisher(e) {   // 🔥終結技:3 段蓄力(每手加強、越後越緊張)→ 放招(元氣玉砸向玩家);蓄力中被攻擊(掉血)/打死=打斷
@@ -5287,7 +5342,7 @@
           this.time.delayedCall(950, () => {
             e.dead = false; e._labDying = false; e.hp = e.max; e.dispHp = null; if (e.hpTw) { e.hpTw.stop(); e.hpTw = null; }
             const sp = e.sprite; sp.setVisible(true); sp.clearTint && sp.clearTint();
-            [e.turnG, e.hpGfx, e.shadow].forEach(o => { if (o) o.setVisible(true); }); if (e.card) e.card.setInteractive();
+            [e.turnG, e.hpGfx, e.shadow, e.weakBadge].forEach(o => { if (o) o.setVisible(true); }); if (e.card) e.card.setInteractive();
             this.enemyEnter(e, 0); this.updateEnemies();
           });
           return;
@@ -5318,7 +5373,7 @@
         const sp = e.sprite, bs = e.baseScale || 1, x0 = sp.x, y0 = (e.restY != null ? e.restY : sp.y);
         this.labSnd('s_fall', 0.8);   // 怪被打飛/死亡音(實驗室)
         if (e.card) e.card.disableInteractive();
-        [e.turnG, e.hpGfx, e.mark, e.shadow].forEach(o => { if (o) this.tweens.add({ targets: o, alpha: 0, duration: 200, onComplete: () => { o.setVisible(false); o.setAlpha(1); } }); });
+        [e.turnG, e.hpGfx, e.mark, e.shadow, e.weakBadge].forEach(o => { if (o) this.tweens.add({ targets: o, alpha: 0, duration: 200, onComplete: () => { o.setVisible(false); o.setAlpha(1); } }); });
         this.tweens.killTweensOf(sp); sp.clearTint && sp.clearTint();
         this.tweens.add({
           targets: sp, y: y0 - 72, x: x0 + (x0 < CX ? -22 : 22), scaleX: bs * 0.12, scaleY: bs * 0.12, angle: 220, alpha: 0.15, duration: 560, ease: 'Quad.in',
@@ -5344,7 +5399,7 @@
           targets: sp, scaleX: bs, scaleY: bs, y: ry, duration: 460, delay: delay, ease: 'Back.out',
           onComplete: () => { sp.setScale(bs); sp.setY(ry); this.refreshBob(e); }
         });
-        [e.turnG, e.hpGfx, e.shadow].forEach(o => { if (o) { o.setAlpha(0); this.tweens.add({ targets: o, alpha: 1, duration: 300, delay: delay + 150 }); } });
+        [e.turnG, e.hpGfx, e.shadow, e.weakBadge].forEach(o => { if (o) { o.setAlpha(0); this.tweens.add({ targets: o, alpha: 1, duration: 300, delay: delay + 150 }); } });
       }
       // 過關前進:鏡頭往前推一下 + 直向速度線往下刷過(像往深處前進到下一關)
       stageAdvanceFX() {
@@ -5750,7 +5805,7 @@
         const mk = (str, fs, col, ls) => this.add.text(0, 0, str, { fontFamily: EMOJIFONT, fontSize: fs, color: col, fontStyle: 'bold', align: 'center', lineSpacing: ls, wordWrap: { width: innerW } }).setOrigin(0.5, 0).setResolution(2);
         const title = mk('🎓 教學完成!', '29px', '#c8912a', 0);   // 金標題(放大 27→29)
         const body = mk('你已學會核心:\n放塊 → 清屬性宮 → 相剋打弱點 → 屬塊覆蓋', '17px', '#2b333a', 9);   // 深墨內文(放大 15→17)
-        const note = mk(first ? '🎁 送你「新手十連」→ 試試抽卡、拿新夥伴!' : '複習完成!核心玩法已經熟囉 👍', '17px', first ? '#c8912a' : '#2b333a', 6);
+        const note = mk(first ? '🏝️ 接下來教你幾招基本功,連闖 3 堂特訓!' : '複習完成!核心玩法已經熟囉 👍', '17px', first ? '#c8912a' : '#2b333a', 6);   // 階段二・新手島:首次完成不再直接說「送十連」,十連改到 3 堂特訓全破才發
         const ht = Math.ceil(title.height), hb = Math.ceil(body.height), hn = Math.ceil(note.height);
         const btnBlock = bh;   // 單鈕(移除「之後再領」→教學完只給一顆「領取新手十連」)
         const PH = M + ht + G + hb + G + hn + G + btnBlock + M;   // 上M ┃ 標題 G 內文 G 提示 G 按鈕組 ┃ 下M → 四邊留白一致、區塊間距一致
@@ -5762,9 +5817,8 @@
         body.setX(CX).setY(yy); g.add(body); yy += hb + G;
         note.setX(CX).setY(yy); g.add(note); yy += hn + G;
         const back = () => { this.scene.manager.start('home'); this.scene.manager.stop('game'); };
-        const setFree = () => mutSave(s => { if (!s.settings) s.settings = {}; s.settings.freePull = true; });   // 兩鈕都設 freePull 旗標→回大廳自動 reveal
         if (first) {
-          this.tutBtn(g, yy + bh / 2, '🎁 領取新手十連!', () => { setFree(); back(); });   // 教學完只給一顆鈕→回大廳落抽卡頁引導十連(移除「之後再領」)
+          this.tutBtn(g, yy + bh / 2, '▶ 開始特訓!', () => { mutSave(s => { s.settings = s.settings || {}; s.settings.newbieStep = 0; }); startNewbieStep(this, 0); });   // 階段二・新手島:教學完不直接發十連,先強制連玩 NEWBIE_SEQ 3 堂課程,全破才 setFree(見 startNewbieStep idx>=3 分支)
         } else {
           this.tutBtn(g, yy + bh / 2, '🏠 回大廳', back);   // 🔁 已領過十連(複習)→純回大廳(伺服器 free_pull_used 亦會擋)
         }
@@ -5802,7 +5856,15 @@
               }).catch(() => { });
           } catch (e) { }
           mutSave(s => { s.meta.lessonCleared = s.meta.lessonCleared || {}; s.meta.lessonCleared[lid] = true; });
-          this.tutBtn(g, yy + bh / 2, '🏠 回大廳', back);
+          const _nb = loadSave().settings || {};   // 階段二・新手島:判斷剛破的這堂是不是「正在強制進行」的新手島序列(不是→維持原回大廳,是重玩/舊帳號)
+          if (_nb.newbieStep != null && _nb.newbieStep < 3 && NEWBIE_SEQ[_nb.newbieStep] === lid) {
+            let _newStep = 0;
+            mutSave(s => { s.settings = s.settings || {}; s.settings.newbieStep = (s.settings.newbieStep || 0) + 1; _newStep = s.settings.newbieStep; });
+            if (_newStep < 3) this.tutBtn(g, yy + bh / 2, '▶ 下一課 (' + (_newStep + 1) + '/3)', () => startNewbieStep(this, _newStep));   // 接下一堂(NEWBIE_SEQ[_newStep])
+            else this.tutBtn(g, yy + bh / 2, '▶ 領取新手十連!', () => startNewbieStep(this, 3));   // 三堂全破→startNewbieStep 內部 setFree+newbieDone+回大廳
+          } else {
+            this.tutBtn(g, yy + bh / 2, '🏠 回大廳', back);
+          }
         } else {
           this.tutBtn(g, yy + bh / 2, '再試一次', () => { g.destroy(); this.resultOpen = false; this.playerHP = this.maxHP; this.lesson = { id: this.lesson.id, i: -1, free: false }; this.startStage(); });   // 同關重來:比照 restartStage() 不重啟整個 scene,只重置血量+lesson 狀態
           this.tutBtn(g, yy + bh + GBTN + bh / 2, '🏠 回大廳', back, true);
@@ -6254,6 +6316,8 @@
           mutSave(s => { s.settings = s.settings || {}; s.settings.tutEntered = true; });
           this.time.delayedCall(300, () => { const team = TUTORIAL_TEAM.map(id => ROSTER.find(c => c.id === id)); this.scene.manager.start('game', { team: team, dungeonId: 'prologue', tutorial: true }); this.scene.manager.stop('home'); }); return;
         }
+        // 階段二・新手島:斷點續玩——教學已畢業(tutSeen)但 newbieStep 還 <3(3 堂特訓沒破完)→強制拉回還沒破的那堂,跳不掉;newbieStep 未定義(舊帳號/老手跳過)永不觸發此重導。此時 freePull 尚未設(只在三堂全破時才設),不會與下面的 freePull 引導十連判斷衝突
+        { const _nStep = (loadSave().settings || {}).newbieStep; if (_nStep != null && _nStep < 3) { this.time.delayedCall(300, () => startNewbieStep(this, _nStep)); return; } }
         const _lu = getMeta()._lvUp; if (_lu) { mutSave(s => { delete s.meta._lvUp; }); this.time.delayedCall(400, () => this.toast('🎉 升級! Lv.' + _lu.rank + '\n⚡ 體力已補滿')); }   // 戰鬥升級→回大廳彈 5 秒升級公告(體力已補滿)
         const _elemCleared = ELEM_DUNGEONS.some(id => isDungeonCleared(id));   // 有沒有破過任一五屬城→判斷玩家在 onboarding 的哪一段
         const _showPrologueGuide = tutSeen() && isDungeonCleared('prologue') && !_elemCleared && !st.prologueGuideSeen;   // 🧭 破序章、還沒破任何五屬城、還沒看過指引→彈一次「下一步」指路面板(既有玩家已破五屬城的不會被打擾)
