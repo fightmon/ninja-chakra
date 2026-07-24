@@ -86,8 +86,13 @@ const switchLabel = isEn ? '中' : 'EN';
       <a class="langsw" href={switchHref} aria-label="Switch language / 切換語言">{switchLabel}</a>
       <button class="themebtn" type="button" onclick="toggleTheme()" aria-label="切換日夜模式">🌙</button>
       <a class="miniplay" href="/play/">{playLabel}</a>
+      <button class="hambtn" type="button" onclick="toggleMenu(this)" aria-label="選單" aria-expanded="false">☰</button>
     </div>
   </div>
+  <nav class="mobmenu" id="mobmenu">
+    {nav.map((n) => <a href={n.href} class={navActive === n.key ? 'on' : ''}>{n.label}</a>)}
+    <a class="mm-play" href="/play/">{playLabel}</a>
+  </nav>
 </header>
 
 <slot />
@@ -106,6 +111,12 @@ function toggleTheme(){var d=document.documentElement,t=d.getAttribute('data-the
   document.querySelectorAll('.themebtn').forEach(function(b){b.textContent=t==='dark'?'☀️':'🌙';});}
 (function(){var t=document.documentElement.getAttribute('data-theme');
   document.querySelectorAll('.themebtn').forEach(function(b){b.textContent=t==='dark'?'☀️':'🌙';});})();
+function toggleMenu(btn){var m=document.getElementById('mobmenu');var open=m.classList.toggle('open');
+  if(btn){btn.setAttribute('aria-expanded',open);btn.textContent=open?'✕':'☰';}}
+document.addEventListener('click',function(e){var m=document.getElementById('mobmenu');
+  if(!m||!m.classList.contains('open'))return;
+  if(e.target.closest('.mobmenu')||e.target.closest('.hambtn'))return;
+  m.classList.remove('open');var b=document.querySelector('.hambtn');if(b){b.setAttribute('aria-expanded','false');b.textContent='☰';}});
 </script>
 
 <style is:global>
@@ -136,8 +147,18 @@ header{position:sticky;top:0;z-index:50;background:rgba(255,248,236,.92);backdro
 .themebtn{width:40px;height:40px;border:none;border-radius:50%;cursor:pointer;font-size:19px;line-height:1;
   background:rgba(255,255,255,.55);box-shadow:0 3px 10px rgba(140,90,20,.16);transition:transform .12s}
 .themebtn:active{transform:scale(.9)}
-.miniplay{background:linear-gradient(120deg,var(--cta1),var(--cta2));color:#3a1f00;font-weight:900;
+.miniplay{display:none;background:linear-gradient(120deg,var(--cta1),var(--cta2));color:#3a1f00;font-weight:900;
   padding:9px 20px;border-radius:999px;font-size:15px;box-shadow:0 6px 16px rgba(255,140,40,.35)}
+.hambtn{display:grid;place-items:center;width:40px;height:40px;border:none;border-radius:50%;cursor:pointer;font-size:20px;line-height:1;
+  color:var(--ink2);background:rgba(255,255,255,.55);box-shadow:0 3px 10px rgba(140,90,20,.16);transition:transform .12s}
+.hambtn:active{transform:scale(.9)}
+.mobmenu{position:absolute;left:0;right:0;top:100%;display:none;flex-direction:column;padding:6px 16px 14px;gap:2px;
+  background:rgba(255,248,236,.98);backdrop-filter:blur(8px);border-bottom:2px solid rgba(255,178,32,.2);box-shadow:0 12px 24px rgba(140,90,20,.15)}
+.mobmenu.open{display:flex}
+.mobmenu a{padding:12px 8px;font-size:16px;font-weight:800;color:var(--ink2);border-radius:10px}
+.mobmenu a.on{color:var(--fire)}
+.mobmenu a:active{background:rgba(255,178,32,.12)}
+.mobmenu .mm-play{margin-top:8px;text-align:center;color:#3a1f00;background:linear-gradient(120deg,var(--cta1),var(--cta2));box-shadow:0 6px 16px rgba(255,140,40,.35)}
 /* ===== footer ===== */
 footer{background:#2c2114;color:#cbb99a;text-align:center;padding:34px 20px;font-size:14px}
 footer a{color:#ffcf6b;margin:0 10px}
@@ -149,8 +170,11 @@ footer .cp{margin-top:12px;font-size:12px;color:#8a795c}
 [data-theme="dark"] header{background:rgba(20,16,10,.9);border-bottom-color:rgba(255,178,32,.16)}
 [data-theme="dark"] .themebtn{background:rgba(255,255,255,.1)}
 [data-theme="dark"] .langsw{background:rgba(255,255,255,.1)}
+[data-theme="dark"] .hambtn{background:rgba(255,255,255,.1)}
+[data-theme="dark"] .mobmenu{background:rgba(20,16,10,.97);border-bottom-color:rgba(255,178,32,.16)}
+[data-theme="dark"] .mobmenu a:active{background:rgba(255,255,255,.06)}
 [data-theme="dark"] footer{background:#0d0b07}
-@media(min-width:720px){.links{display:flex}}
+@media(min-width:720px){.links{display:flex}.miniplay{display:inline-block}.hambtn{display:none}.mobmenu{display:none!important}}
 </style>
 </body>
 </html>
