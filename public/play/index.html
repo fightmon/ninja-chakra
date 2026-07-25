@@ -586,7 +586,9 @@
     // opts:{ fs 字級, hold 停留 ms, depth, big 大卡(獎勵用)}。含彈入 + 淡出 + killAll 安全網(rebuild 會 killAll,用 delayedCall 保證消失)。
     function showWhiteToast(scene, msg, opts) {
       opts = opts || {};
+      if (scene._toastCon && scene._toastCon.active) scene._toastCon.destroy();   // 同時只留一則:新 toast 先清掉舊的(連同它的 tween)
       const T = UI(), con = scene.add.container(CX, Math.round(H * 0.42)).setDepth(opts.depth || 2000);
+      scene._toastCon = con;   // 記住當前 toast→切畫面/rebuild 時清掉(見各 scene rebuild;也修 killAll 凍住 fade 讓 toast 卡住的坑)
       const txt = scene.add.text(0, 0, msg, { fontFamily: EMOJIFONT, fontSize: opts.fs || '18px', color: T.ink, fontStyle: 'bold', align: 'center', lineSpacing: 7, wordWrap: { width: W - 96 } }).setOrigin(0.5).setResolution(2);
       const pad = opts.big ? 56 : 44, padV = opts.big ? 36 : 26, rad = opts.big ? 22 : 16;
       const bw = Math.min(W - 24, Math.ceil(txt.width) + pad), bh = Math.ceil(txt.height) + padV;
@@ -598,6 +600,7 @@
       const hold = opts.hold != null ? opts.hold : 1400;
       scene.tweens.add({ targets: con, alpha: 0, delay: hold, duration: 550, onComplete: () => con.destroy() });
       scene.time.delayedCall(hold + 900, () => { if (con && con.active) con.destroy(); });
+      con.once('destroy', () => { if (scene._toastCon === con) scene._toastCon = null; });   // 銷毀時清參照
       return con;
     }
     function _elBadgeParts(scene, cx, cy, el) {   // demo .elbadge(UI kit 共用:編成宮位/bench/卡冊):22×18 圓角6+元素色底+白1.5框+14×14 白色元素 SVG icon(非文字);回 [底,icon] 由呼叫端掛容器
@@ -1325,7 +1328,7 @@
     function cardsFetch() { authedFetch('/api/cards').then(r => r.ok ? r.json() : null).then(d => { if (d) syncCards(d); }).catch(() => { }); }   // 🔐 fire-and-forget 拉收藏(離線/失敗靜默,沿用本地快取);開場/切帳/找回後強制校正用
     async function _sendRunComplete(item) {   // 🔐 送出單筆通關(POST /api/run/complete,idem 靠 runId);成功→syncWallet(coins/stones/gem_*)+從 pendingRuns 佇列移除,回 {ok:true,drops};冪等重放 drops 會是空陣列;失敗/離線→回 null(呼叫端自行決定要不要保留佇列等下次)
       let r;
-      try { r = await authedFetch('/api/run/complete', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ dungeonId: item.dungeonId, diff: item.diff, runId: item.runId }) }); }
+      try { r = await authedFetch('/api/run/complete', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ dungeonId: item.dungeonId, diff: item.diff, runId: item.runId, name: item.name || getMeta().name }) }); }
       catch (e) { return null; }   // 網路失敗:保留該筆,下次再試
       if (r.ok) {
         const d = await r.json(); syncWallet(d); if (d.gems) syncGems(d.gems);
@@ -1354,6 +1357,10 @@
     /* ── 📬 遊戲內信箱(全走 authedFetch;list 依新到舊排序,claim 逐封請領)──
        GET /api/mail/list → {mails:[{id,title,body,attach:{stones?,coins?,gems?:{el:n},cards?:[id]}|null,createdAt,expiresAt,claimed}]}
        POST /api/mail/claim {mailId} → 200 {attach};409 已領/404 不存在/410 過期(見 mailClaim 丟的 err.status) */
+    async function leaderboardFetch() {   // 全服最速榜 → records[]({dungeonId,diff,clearSec,holderName});失敗回 null(前端顯示 fallback,不擋畫面)
+      try { const r = await authedFetch('/api/leaderboard/list'); if (!r.ok) return null; const d = await r.json(); return Array.isArray(d.records) ? d.records : []; }
+      catch (e) { return null; }
+    }
     async function mailFetchList() {   // → mails[](陣列);失敗(離線/逾時/非 2xx)直接丟錯給呼叫端分流
       const r = await authedFetch('/api/mail/list');
       if (!r.ok) throw new Error('mail/list ' + r.status);
@@ -3335,6 +3342,16 @@
           return da !== db ? db - da : this.enemies[b].card.x - this.enemies[a].card.x;
         });
         zorder.forEach(i => { const e = this.enemies[i];[e.card, e.sprite, e.turnG, e.hpGfx, e.mark, e.gateTx, e.weakBadge].filter(Boolean).forEach(o => this.enemyG.add(o)); });   // weakBadge 排在 mark 之後→蓋在最上層(同容器內以加入順序決定畫面疊層)
+        // 🎯 選目標命中區(選項C):把敵人帶寬用「相鄰敵人 x 中點」切成 n 等份直欄,點哪欄選哪隻。加在 zorder 之後→疊在所有敵物件最上層(topOnly 優先吃點)→中間怪不再被前後兩隻的圖蓋住點不到;點到怪之間的空白也選到最近那隻。實驗室三點固定另有排法,不套。
+        if (!this.enemyLab && this.enemies.length > 0) {
+          const cyz = BATTLE_CY, hz = Math.max(...this.enemies.map(e => e.cardH || 90)) + 36;
+          const xs = this.enemies.map(e => e.card.x), L0 = BX0, R0 = W - BX0;   // 各敵實際 x(已含 ENEMY_SPREAD 向中集中);L0/R0=帶寬左右邊界
+          this.enemies.forEach((e, i) => {
+            const left = i === 0 ? L0 : (xs[i - 1] + xs[i]) / 2, right = i === this.enemies.length - 1 ? R0 : (xs[i] + xs[i + 1]) / 2;
+            const zone = this.add.rectangle((left + right) / 2, cyz, Math.max(20, right - left), hz, 0x000000, 0.001).setInteractive();
+            zone.on('pointerdown', () => this.selectTarget(i)); this.enemyG.add(zone); e.hitZone = zone;
+          });
+        }
         this.enemies.forEach((e, i) => this.enemyEnter(e, i * 120));   // 自遠方逼近入場(交錯)
         this.target = 0;
       }
@@ -5773,7 +5790,7 @@
       _grantRun() {
         if (this._runGranted) return; this._runGranted = true;   // 🏆全清結算:整趟累積的 EXP 一次入帳(只有全清才呼叫→中途放棄/戰敗自然全沒收);🔐 卡片掉落/寶玉/金幣改由伺服器 run/complete 回應決定(見下),不再前端算
         // 🔐 等級/經驗改伺服器權威:通關 exp/升級/上限+補滿由 run/complete 決定,前端不再本地 addRewards 遞增(擋竄改);升級慶祝改由回應 leveledUp 觸發(見 _sendRunComplete().then)。金幣/掉卡入帳同樣走伺服器,displayed runCoins/runExp 照舊只是本場顯示。
-        const item = { dungeonId: this.dungeon.id, diff: (this.diff && this.diff.key) || 'normal', runId: this.serverRunId || ('r' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8)) };   // 🔐 優先用開戰領到的伺服器票券(含'.',run/complete 走時間閘+一次性);拿不到→本地 runId 走離線 fallback(限流)
+        const item = { dungeonId: this.dungeon.id, diff: (this.diff && this.diff.key) || 'normal', runId: this.serverRunId || ('r' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8)), name: getMeta().name };   // name=記錄保持者名字→run/complete 破全服最速榜時一起存(排行顯示是誰)   // 🔐 優先用開戰領到的伺服器票券(含'.',run/complete 走時間閘+一次性);拿不到→本地 runId 走離線 fallback(限流)
         this.runDrops = []; this._runDropsPending = true;   // showResult 顯示「連線後發放」暫態,直到下面拿到結果或確認離線
         mutSave(s => {
           const q = (s.pendingRuns = s.pendingRuns || []);
@@ -6711,7 +6728,7 @@
         _loadCardArt(this, out.map(o => o.cd.id));   // 大廳只載出戰隊→補載抽到的卡圖,reveal 才有圖(比照 pull())
         if (this.load.list.size) { this.load.once('complete', () => this.rebuild()); this.load.start(); } else this.rebuild();
       }
-      rebuild() { this.tweens.killAll(); if (this._tabDom) { this._tabDom.forEach(d => { if (d) d.destroy(); }); this._tabDom = null; } if (this.layer) this.layer.destroy(); this.layer = this.add.container(0, 0); if (this.tab === 'other') { this.body(); this.topBar(); this.nav(); } else { this.topBar(); this.body(); this.nav(); } }   // _tabDom=分頁 DOM 精緻鈕(轉蛋抽卡;scene 級不在 layer)→手動銷毀,免切分頁殘留;'other' 分頁改為可捲動 canvas 內容→先畫內容、頂欄/導覽列後畫(z 序更高,蓋住捲出的溢出內容+輸入優先)
+      rebuild() { this.tweens.killAll(); if (this._toastCon && this._toastCon.active) { this._toastCon.destroy(); this._toastCon = null; } if (this._tabDom) { this._tabDom.forEach(d => { if (d) d.destroy(); }); this._tabDom = null; } if (this.layer) this.layer.destroy(); this.layer = this.add.container(0, 0); if (this.tab === 'other') { this.body(); this.topBar(); this.nav(); } else { this.topBar(); this.body(); this.nav(); } }   // _tabDom=分頁 DOM 精緻鈕(轉蛋抽卡;scene 級不在 layer)→手動銷毀,免切分頁殘留;'other' 分頁改為可捲動 canvas 內容→先畫內容、頂欄/導覽列後畫(z 序更高,蓋住捲出的溢出內容+輸入優先)
       _setDomUI(on) { if (this._tabDom) this._tabDom.forEach(d => { if (d && d.node) d.setVisible(on); }); }   // DOM overlay 永遠浮在 canvas 上(setDepth 無效)→開 canvas 彈窗(勇者卡/信箱等)要先藏,關閉再恢復。同 TeamScene/CollectionScene 慣例
       L(o) { this.layer.add(o); return o; }
       txt(x, y, s, size, col, ox, bold) { return this.L(this.add.text(x, y, s, { fontFamily: EMOJIFONT, fontSize: Math.max(15, parseInt(size || '16', 10) || 16) + 'px', color: col || '#f3e9d8', fontStyle: bold ? 'bold' : 'normal' }).setOrigin(ox == null ? 0.5 : ox, 0.5)); }   // 全選單字級最小 15px(手機可讀)
@@ -6722,7 +6739,7 @@
         this.txt(x, y, label, o.fs || '15px', o.color || T.ink, 0.5, o.bold);
         const hit = this.L(this.add.rectangle(x, y, w, h, 0x000000, 0.001).setInteractive()); tapBind(this, hit, cb); return hit;
       }
-      toast(msg) { showWhiteToast(this, msg, { fs: '26px', big: true, hold: 4600 }); }   // 大廳=大卡(獎勵/重要提示,停 ~5 秒);共用白卡 toast,見 showWhiteToast
+      toast(msg) { showWhiteToast(this, msg, { fs: '26px', big: true, hold: 1200 }); }   // 大廳=大卡(獎勵/提示);停留縮到 ~1.2 秒(使用者:告示訊息別停太久),切畫面/rebuild 也會立刻清掉(見 rebuild + showWhiteToast _toastCon)
       showDaily() {   // 🎁 每日登入(2026-07-14 鏡射 007_UI_demo daily.html:白色 .panel 彈窗 + 3×3 日卡 grid + DOM 精緻領取鈕)
         if (this._dailyG) this._dailyG.destroy();
         if (this._dailyBtnDom) { this._dailyBtnDom.destroy(); this._dailyBtnDom = null; }   // 領取鈕=DOM(scene 級)→手動清
@@ -6769,7 +6786,7 @@
         clc.on('pointerup', close);
       }
       go(key) { this.scene.manager.start(key); this.scene.manager.stop('home'); }
-      switchTab(t) { if (this._freeGuide) { this.toast('先領取免費新手十連!'); return; } if (t === 'other') this._otherScrollY = 0; this.tab = t; this.gachaResult = null; this.rebuild(); }   // 進 'other' 捲回頂端;同分頁內 rebuild(如調音量)不重置,避免跳位。🎁 引導式新手十連期間鎖住換頁/齒輪(都經此)→只能按脈動的十連鈕
+      switchTab(t) { if (this._freeGuide) { this.toast('先領取免費新手十連!'); return; } if (t === 'other') this._otherScrollY = 0; if (t === 'friend') this._lbCache = undefined; this.tab = t; this.gachaResult = null; this.rebuild(); }   // 進殿堂→重抓全服榜(剛破的記錄即時反映)   // 進 'other' 捲回頂端;同分頁內 rebuild(如調音量)不重置,避免跳位。🎁 引導式新手十連期間鎖住換頁/齒輪(都經此)→只能按脈動的十連鈕
       topBar() {
         const m = getMeta(), T = UI();
         this.rect(CX, 42, W, 84, T.surf); this.rect(CX, 84, W, 1.5, T.divider);   // 白底資源列(84 高,2 排) + 底部細線
@@ -6832,17 +6849,29 @@
         });
         if (tab === 'rec') this.bRankRecords(); else if (tab === 'ach') this.bRankAch(); else this.bRankBoard();
       }
-      bRankBoard() {   // 排行=各關「最速通關記錄」(本地個人紀錄);拿掉幽靈完成率榜與上下說明文字
+      bRankBoard() {   // 排行=各關「全服最速通關記錄」+ 記錄保持者名字(伺服器 dungeon_best_clears);首次進入非同步抓一次快取
         const T = UI(), cTop = 84;
         const fmt = (s) => { if (s == null) return '--:--'; const x = Math.max(0, Math.floor(s)); return String(Math.floor(x / 60)).padStart(2, '0') + ':' + String(x % 60).padStart(2, '0'); };
-        let y = cTop + 92;   // 三分頁統一:分頁列底=cTop+50,第一列上緣距它 18px→列高48→中心=cTop+50+18+24=cTop+92
-        const PAD = 16, ROWH = 48, GAP = 10;   // 三分頁統一:左右邊距 16、列高 48、列間距 10
+        if (this._lbCache === undefined) {   // 尚未抓過→標記 pending、非同步抓,回來後 rebuild 重繪
+          this._lbCache = null;
+          leaderboardFetch().then(recs => { this._lbCache = recs || []; if (this.tab === 'friend' && (this.rankTab || 'board') === 'board' && this.scene.isActive()) this.rebuild(); });
+        }
+        const PAD = 16, ROWH = 48, GAP = 10;
+        if (this._lbCache === null) { this.txt(CX, cTop + 130, '載入全服榜…', FS.sub, T.ink3, 0.5); return; }   // 載入中
+        const best = {};   // dungeonId → 該城最速(跨難度取最快){sec,name,diff}
+        this._lbCache.forEach(r => { const c = best[r.dungeonId]; if (!c || r.clearSec < c.sec) best[r.dungeonId] = { sec: r.clearSec, name: r.holderName, diff: r.diff }; });
+        let y = cTop + 92;
         RANK_DUNGEONS.forEach(id => {
           const dg = DUNGEONS[id]; if (!dg) return;
-          const best = bestSecOf(id), has = best != null;
+          const b = best[id], has = !!b;
           this.L(roundRectG(this, CX, y, W - PAD * 2, ROWH, 12, has ? T.surf : T.surf2, 1, has ? T.gold : T.divider, has ? 2 : 1.5));   // 有記錄=金框白卡,無=淡灰
           this.txt(PAD + 12, y, dg.emoji + '  ' + dg.name, FS.body, has ? T.ink : T.ink3, 0, has);
-          this.txt(W - PAD - 12, y, has ? '🏁 ' + fmt(best) : '尚未通關', FS.sub, has ? T.goldTx : T.ink3, 1, has); y += ROWH + GAP;
+          if (has) {
+            const dq = DIFFS_BY[b.diff];
+            this.txt(W - PAD - 12, y - 9, '🏁 ' + fmt(b.sec) + (dq ? '  ' + dq.emoji : ''), FS.sub, T.goldTx, 1, true);   // 時間 + 難度圖示
+            this.txt(W - PAD - 12, y + 11, '👑 ' + (b.name || '無名英雄'), FS.micro, T.ink2, 1);   // 記錄保持者名字(null→fallback)
+          } else this.txt(W - PAD - 12, y, '尚無記錄', FS.sub, T.ink3, 1);
+          y += ROWH + GAP;
         });
       }
       bRankRecords() {
@@ -7508,7 +7537,7 @@
           ['🛏️ 宿屋（恢復體力）' + (full ? '' : '　💎1'), () => this.villageRest()],
           ['📬 信箱（通知・獎勵）', () => this.openMailPanel(), { badge: mailN > 0 }],   // 有未讀信→右上驚嘆號
           ['🏆 殿堂（排行・成就・紀錄）', () => this.switchTab('friend')],
-          ['⛩️ 神社（每日參拜）', () => this.showDaily(), { dim: !dailyOn }],   // 今日已領→灰階不可按
+          ['⛩️ 神社（每日參拜）', () => this.showDaily(), { dim: !dailyOn, badge: dailyOn }],   // 今日已領→灰階不可按;可領→右上驚嘆號(對齊底部導覽列的事件提示,讓玩家知道要點哪個)
         ];
         let y = cTop + 96;
         items.forEach(it => {
