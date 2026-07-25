@@ -1088,6 +1088,7 @@
         if (r.status === 200) { const d = await r.json(); cloudSet({ rev: d.rev, syncedAt: Date.now(), dirty: false }); }
         else if (r.status === 409 && retryRev == null) { const d = await r.json(); await cloudPush(d.rev); }   // 僅重送一次;再 409 → dirty 留著下次再送
         else if (r.status === 413) { _cloudDead = true; console.warn('☁️ 存檔過大(413),本次雲端同步已停止'); domToast('☁️ 雲端同步已暫停(存檔過大),目前為單機模式', 5200); }   // 🔐[18] 除了 console.warn,額外可見告知(_cloudDead 本身即節流:此分支整個 session 只會走一次)
+        else if (r.status === 429) { cloudSet({ dirty: true }); if (!_cloudT) { _cloudT0 = 0; _cloudT = setTimeout(() => { _cloudT = null; cloudPush(); }, 3500); } }   // 存檔太頻繁(伺服器節流 SAVE_MIN_INTERVAL=3秒)→保留 dirty,3.5秒後自動重送一次(跨過節流窗);不重排時機讓下次 scheduleCloudPush 接手
       } catch (e) { }   // 網路失敗(401 已在 authedFetch 內重試):dirty 留著待下次
     }
     function _flushPlayMs() {   // 📊 把「前景」這段時間累加進 s.stats.playMs;分頁隱藏(_playTick=null)時不累加
@@ -1362,6 +1363,11 @@
     async function mailClaim(mailId) {   // → {attach};非 2xx → 丟帶 status 的錯(呼叫端依 409/404/410 分流)
       const r = await authedFetch('/api/mail/claim', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ mailId: mailId }) });
       if (!r.ok) { let body = {}; try { body = await r.json(); } catch (e) { } const err = new Error('mail/claim ' + r.status); err.status = r.status; err.code = body.error; throw err; }
+      return r.json();
+    }
+    async function mailDelete(mailId) {   // → {ok};玩家刪除(隱藏)一封信,廣播信也可各自刪(伺服器寫 mail_deletes 軟刪除);非 2xx → 丟帶 status 的錯
+      const r = await authedFetch('/api/mail/delete', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ mailId: mailId }) });
+      if (!r.ok) { const err = new Error('mail/delete ' + r.status); err.status = r.status; throw err; }
       return r.json();
     }
     const MAIL_GEM_LABEL = { fire: '🔥火晶', water: '💧水晶', thunder: '⚡雷晶', earth: '🪨土晶', wind: '🌪️風晶' };   // 附件寶玉小圖(沿用戰鬥屬性 emoji,信箱獨立顯示不依賴 EL 物件避免耦合)
@@ -2671,7 +2677,7 @@
         this.enemies.forEach(e => {
           if (!e.card || e.dead) return; const x = e.card.x, cy = BATTLE_CY, sz = e.cardH;
           e.card.setPosition(x, cy);
-          e.turnG.setPosition(x - sz / 2 + 12, cy - sz / 2 + 11); if (e.hpGfx) e.hpGfx.setPosition(e.hpx, cy + sz / 2 - 3); e.mark.setPosition(x, cy - sz / 2 - 9); if (e.shadow) e.shadow.setPosition(x, cy + BG_GROUND_OFF); if (e.weakBadge) e.weakBadge.setPosition(x, cy - sz / 2 - 28);   // 弱點徽章跟著視窗變動重新定位
+          e.turnG.setPosition(x - sz / 2 + 12, cy - sz / 2 + 11); if (e.hpGfx) e.hpGfx.setPosition(e.hpx, cy + sz / 2 - 3); e.mark.setPosition(x, cy - sz / 2 - 4); if (e.shadow) e.shadow.setPosition(x, cy + BG_GROUND_OFF); if (e.weakBadge) e.weakBadge.setPosition(x, cy - sz / 2 - 28);   // 弱點徽章跟著視窗變動重新定位
           const fy = e.img ? cy : cy - Math.round(sz * 0.14); if (e.img) e.sprite.setDisplaySize(sz, sz); e.baseScale = e.sprite.scaleX; if (e.bob) e.bob.stop(); e.sprite.setPosition(x, fy); e.restY = fy; e.bob = this.idleAnim(e, fy);
         });
       }
@@ -3297,18 +3303,17 @@
           e.hpW = Math.round(szc * HP_BAR_W); e.hpx = x - e.hpW / 2;   // 血條較窄、置中於敵下緣
           e.hpH = 9; e.hpRatio = Math.max(0, Math.min(1, e.hp / e.max)); e.hpLag = e.hpRatio; e._hpColor = e.boss ? 0xff7a3a : 0xc23c2c;
           e.hpGfx = this.add.graphics().setPosition(e.hpx, cy + szc / 2 - 3); this.drawHpBar(e);   // HP:圓角血條 + 白色圓角外框 + 受傷白拖尾
-          e.mark = this.add.text(x, cy - szc / 2 - 9, '▼', { fontFamily: EMOJIFONT, fontSize: '20px', color: '#ffd24a', fontStyle: 'bold' }).setOrigin(0.5).setStroke('#5a2e00', 5).setVisible(false);   // 目標指標(取代黃框):放大+描邊+跳動(見 updateEnemies)
+          e.mark = this.add.text(x, cy - szc / 2 - 4, '▼', { fontFamily: EMOJIFONT, fontSize: '20px', color: '#ffd24a', fontStyle: 'bold' }).setOrigin(0.5).setStroke('#5a2e00', 5).setVisible(false);   // 目標指標(取代黃框):放大+描邊+跳動(見 updateEnemies);往下約 5px(原 -9)
           if (this.counterTeach) {   // 🩹序章弱點徽章:常駐 affordance(非一次性),疊在 mark 上方一點,顯示「剋牠」的屬性圖示+「弱」字;敵人死亡/重生/換關由 playDeath/enemyEnter/spawnEnemies 生命週期一併處理
             const weakEl = counterOf(e.el);
             if (weakEl) {
               const wy = cy - szc / 2 - 28;
               const wCont = this.add.container(x, wy, []);
-              const wCol = (EL[weakEl] && EL[weakEl].color) != null ? EL[weakEl].color : 0xd23b3b;
-              const wBg = this.add.image(0, 0, _tagPillTex(this, 48, 22, wCol)).setOrigin(0.5);   // 平滑膠囊貼圖(抗鋸齒,取代 Graphics 描邊→無鋸齒);加寬 42→48 讓圖標與+號拉開
+              const wBg = roundRectG(this, 0, 0, 42, 22, 9, (EL[weakEl] && EL[weakEl].color) != null ? EL[weakEl].color : 0xd23b3b, 1, 0xffffff, 2);   // 剋屬色底 + 白邊(=圖2 正向徽章:用這屬性打有加成)
               const wIcon = this.textures.exists('el_' + weakEl)
-                ? this.add.image(-12, 0, 'el_' + weakEl).setDisplaySize(17, 17).setTintFill(0xffffff)   // 白色屬性圖標(SVG tint 白),往左
-                : this.add.text(-12, 0, EL[weakEl].name, { fontFamily: EMOJIFONT, fontSize: '11px', color: '#ffffff', fontStyle: 'bold' }).setOrigin(0.5);   // el_ 沒載到→退回文字(保底)
-              const wTxt = this.add.text(13, -1, '+', { fontFamily: EMOJIFONT, fontSize: '17px', color: '#ffffff', fontStyle: 'bold' }).setOrigin(0.5);   // 「弱」→「+」:用這屬性打=加成;往右拉開,與圖標留間隔
+                ? this.add.image(-10, 0, 'el_' + weakEl).setDisplaySize(18, 18).setTintFill(0xffffff)   // 白色屬性圖標(SVG tint 白)
+                : this.add.text(-10, 0, EL[weakEl].name, { fontFamily: EMOJIFONT, fontSize: '11px', color: '#ffffff', fontStyle: 'bold' }).setOrigin(0.5);   // el_ 沒載到→退回文字(保底)
+              const wTxt = this.add.text(11, -1, '+', { fontFamily: EMOJIFONT, fontSize: '18px', color: '#ffffff', fontStyle: 'bold' }).setOrigin(0.5);   // 「弱」→「+」:用這屬性打=加成
               wCont.add([wBg, wIcon, wTxt]);
               e.weakBadge = wCont;
             }
@@ -7634,7 +7639,13 @@
         const cx = L + w / 2, cy = y + h / 2;
         g.add(roundRectG(this, cx, cy, w, h, 14, m.claimed ? T.surf2 : T.surf, 1, m.claimed ? T.divider : T.gold, m.claimed ? 1 : 2));
         let ty = y + 22;
-        g.add(this.add.text(L + 14, ty, m.title || '(無標題)', { fontFamily: EMOJIFONT, fontSize: FS.body, color: T.ink, fontStyle: 'bold' }).setOrigin(0, 0.5));
+        g.add(this.add.text(L + 14, ty, m.title || '(無標題)', { fontFamily: EMOJIFONT, fontSize: FS.body, color: T.ink, fontStyle: 'bold', wordWrap: { width: w - 60 } }).setOrigin(0, 0.5));   // 標題限寬→不撞右上刪除鈕
+        // 🗑️ 刪除鈕(右上角小圓):任何信都可刪;未領取且有附件→deleteMail 內先 uiConfirm 免手滑丟獎勵
+        const _dx = L + w - 20, _dy = y + 18;
+        g.add(roundRectG(this, _dx, _dy, 27, 27, 13, T.surf2, 1, T.divider, 1.5));
+        g.add(this.add.text(_dx, _dy, '🗑️', { fontFamily: EMOJIFONT, fontSize: '13px' }).setOrigin(0.5));
+        const _dhit = this.add.rectangle(_dx, _dy, 32, 32, 0x000000, 0.001).setInteractive(); g.add(_dhit);
+        _dhit.on('pointerup', () => this.deleteMail(m));
         ty += 28;
         g.add(this.add.text(L + 14, ty, bodyTxt, { fontFamily: EMOJIFONT, fontSize: FS.cap, color: T.ink2, wordWrap: { width: w - 110 }, lineSpacing: 4 }).setOrigin(0, 0));
         ty += 40;
@@ -7679,6 +7690,27 @@
             return;
           }
           this.toast('信箱載入失敗,請檢查連線');   // 網路失敗:不 crash,留著讓玩家重開面板再試
+        });
+      }
+      async deleteMail(m) {   // 刪除(隱藏)一封信:未領取且有附件→先確認(免手滑丟獎勵);伺服器寫 mail_deletes 軟刪除,list 之後就不再帶回
+        const hasAttach = !!mailAttachSummary(m.attach);
+        if (!m.claimed && hasAttach) {
+          const yes = await uiConfirm({ title: '🗑️ 刪除信件', message: '這封信的獎勵還沒領取,\n刪掉就領不到了,確定刪除?', okLabel: '刪除', cancelLabel: '取消' });
+          if (!yes) return;
+        }
+        if (!this._deletingMail) this._deletingMail = new Set();
+        if (this._deletingMail.has(m.id)) return;   // 防連點同一封
+        this._deletingMail.add(m.id);
+        mailDelete(m.id).then(() => {
+          this._deletingMail.delete(m.id);
+          if (this._mailCache) this._mailCache = this._mailCache.filter(x => x.id !== m.id);
+          if (!m.claimed) this._mailUnread = Math.max(0, (this._mailUnread || 1) - 1);   // 刪掉未領信→未讀數同步減
+          if (this._mailG) this.renderMailPanel(this._mailCache, null);
+          this.rebuild();   // 更新頂欄未讀紅點
+        }).catch(err => {
+          this._deletingMail.delete(m.id);
+          if (err && err.status === 404) { if (this._mailCache) this._mailCache = this._mailCache.filter(x => x.id !== m.id); if (this._mailG) this.renderMailPanel(this._mailCache, null); return; }   // 伺服器說不存在→當作已刪,前端移除
+          this.toast('刪除失敗,請檢查連線');
         });
       }
     }
