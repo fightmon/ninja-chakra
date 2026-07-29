@@ -79,7 +79,31 @@ const DIFF_RULES = {
   hell:     { stageDelta:0, swarmAdd:0 },                      // 先不變
 };
 // 單關覆寫逃生口:OVERRIDES['dungeonId:diffKey'] = 完整 stages 陣列 → 完全取代(特例手調用,九成關卡用不到)
-const OVERRIDES = {};
+const OVERRIDES = {
+  // 召喚之塔·初級:第一關改成 5 隻敵(前3後2陣型展示);S2、S3(魔王)沿用 base。塔不在 ELEM_DUNGEONS,stageCounts 對它無效→用覆寫
+  'tower:beginner': [
+    { es: [
+      { el: 'fire',    hp: 800, atk: 120, turns: 2 },
+      { el: 'water',   hp: 800, atk: 120, turns: 2 },
+      { el: 'thunder', hp: 800, atk: 120, turns: 2 },
+      { el: 'earth',   hp: 800, atk: 120, turns: 2 },
+      { el: 'wind',    hp: 800, atk: 120, turns: 2 },
+    ] },
+    ...DUNGEONS.tower.stages.slice(1),
+  ],
+  // 火之火山·初級=哥布林畜力技教學關(把中級的「終結蓄力」機制下放到初級,讓玩家先學打斷)。tier=哥布林星級貼圖(1/2/3星),beh:'finisher'+finStages:2+finPct 直接指定(繞過初級 noSkill),finAnyHit:任何屬性打到牠都能中止(初級寬鬆)。四屬酋長只放火城,魔王(酋長)留給中級↑
+  'fire:beginner': [
+    // S1:2星青年哥布林 ×1,CD式畜力(總CD4→倒數2顯示蓄力1階、1顯示2階、0放招)→教玩家「看CD倒數抓攻擊時機並打斷」
+    { es: [ { el: 'fire', hp: 560, atk: 90, turns: 2, tier: 2, beh: 'finisher', finCD: 4, finStages: 2, finPct: 0.15, finAnyHit: true } ] },
+    // S2:2星青年哥布林 ×2,都會畜力→兩隻同時倒數,得選一隻先斷
+    { es: [ { el: 'fire', hp: 540, atk: 88, turns: 2, tier: 2, beh: 'finisher', finCD: 4, finStages: 2, finPct: 0.15, finAnyHit: true },
+            { el: 'fire', hp: 540, atk: 88, turns: 2, tier: 2, beh: 'finisher', finCD: 4, finStages: 2, finPct: 0.15, finAnyHit: true } ] },
+    // S3:1星哥布林(護衛) + 3星戰士哥布林=魔王(畜力,傷害略高,boss→1.4×放大站後排) + 1星哥布林(護衛)→中間戰士是魔王主威脅
+    { es: [ { el: 'fire', hp: 520, atk: 85, turns: 2, tier: 1 },
+            { el: 'fire', hp: 640, atk: 98, turns: 2, tier: 3, boss: true, beh: 'finisher', finCD: 4, finStages: 2, finPct: 0.18, finAnyHit: true },
+            { el: 'fire', hp: 520, atk: 85, turns: 2, tier: 1 } ] },
+  ],
+};
 
 function _cloneStages(stages){ return stages.map(st=>({...st, es:st.es.map(e=>({...e}))})); }   // 深拷貝,避免改到原始 base
 function _bossIndex(stages){ for(let i=stages.length-1;i>=0;i--) if(stages[i].es.some(e=>e.boss)) return i; return stages.length-1; }
@@ -111,6 +135,8 @@ function resolveStages(dungeon, diffKey){
       st.es=[...mobs, ...bosses];
     });
   }
+  // 🔥火城魔王貼圖分級:入門(baby)=2星青年哥布林、初級=3星戰士(OVERRIDE 內設)、中級↑無 tier→4星酋長→難度越高魔王越大。tier 只影響貼圖,不改數值/sim
+  if(dungeon.id==='fire' && diffKey==='baby') stages.forEach(st=>st.es.forEach(e=>{ if(e.boss && !e.tier) e.tier=2; }));
   return stages;
 }
 
@@ -158,6 +184,7 @@ function spawnStage(dungeonId, diffKey, stageIdx){
     const phases=d.phases||null;
     let beh=null, full=false;
     if(phases){ el=phases[0].el; beh=phases[0].beh; full=true; }                          // 魔王變身:完整版
+    else if(d.beh){ beh=d.beh; full=(d.full===true); }                                    // 🔧OVERRIDE 直接指定行為→繞過嬰兒/初級 noSkill(特例手調用):初級也能掛畜力技等
     else if(A){ full=covered(d); beh=full?A.beh:null; }                                   // 兵種行為:covered(上級魔王/地獄)才開
     else if(myBeh && !noSkill){                                                           // 屬城招:中級起開(嬰兒/初級無)
       if(d.boss){ beh=myBeh; full=true; }                                                 // 魔王 = 完整版
@@ -166,9 +193,10 @@ function spawnStage(dungeonId, diffKey, stageIdx){
     }
     else if(dk==='hell'&&dEl&&!myBeh){ beh='hit'; full=true; }
     const g=behGates(beh, dk, full);
+    if(d.finPct!=null) g.finisher=d.finPct;   // 🔧OVERRIDE 直接指定終結傷害佔 maxHP 比例(初級低傷教學用,蓋掉 behGates 的 0.4/0.6)
     if(g.shield){ const kind=(stageIdx===0)?'combo':'hit'; if(kind==='combo'){g.comboGate=2;g.hitGate=0;}else{g.hitGate=15;g.comboGate=0;} g.shieldKind=kind; }   // 🛡盾型:S1(stageIdx0)=連段2、S2/魔王=HIT15
-    const ival=(g.healAlly>0||(g.eatStored>0&&d.boss)||(g.paralyze>0&&d.boss))?1:turns;   // 💚補師 CD=1;🌀消塊魔王 CD=1;⚡麻痺魔王 CD=1(每手鎖或攻擊);術士 CD=turns(=2)
-    return {el,max:hp,hp:hp,atk:atk,interval:ival,timer:Math.max(2,ival),burn:0,dead:false,boss:!!d.boss,guard:(!d.boss&&stageHasBoss),...g,phases,phaseIdx:0,arch:d.arch||null};   // 每關初始 timer≥2:每關開場至少 2 手才挨第一拳(防上關清空盤面、下關一進場就連挨);interval(之後頻率)不變
+    const ival=(d.finCD>0)?d.finCD:((g.healAlly>0||(g.eatStored>0&&d.boss)||(g.paralyze>0&&d.boss))?1:turns);   // 🔥finCD=CD式畜力技的總CD(蓋過 turns);💚補師 CD=1;🌀消塊魔王 CD=1;⚡麻痺魔王 CD=1;術士 CD=turns(=2)
+    return {el,max:hp,hp:hp,atk:atk,interval:ival,timer:Math.max(2,ival),burn:0,dead:false,boss:!!d.boss,guard:(!d.boss&&stageHasBoss),...g,phases,phaseIdx:0,arch:d.arch||null,tier:d.tier||0,finStages:d.finStages||0,finAnyHit:!!d.finAnyHit,finCD:d.finCD||0};   // 每關初始 timer≥2;tier=哥布林星級貼圖;finStages=蓄力段數;finAnyHit=任何屬性打到即中止;finCD>0=CD式畜力(倒數最後finStages格顯示蓄力球、歸0放招)
   });
 }
 

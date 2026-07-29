@@ -18,16 +18,17 @@ const SHAPES = [
   {w:7,c:[[0,0],[0,1]]},{w:7,c:[[0,0],[1,0]]},
   {w:8,c:[[0,0],[0,1],[0,2]]},{w:8,c:[[0,0],[1,0],[2,0]]},
   {w:5,c:[[0,0],[0,1],[0,2],[0,3]]},{w:5,c:[[0,0],[1,0],[2,0],[3,0]]},
-  {w:3,c:[[0,0],[0,1],[0,2],[0,3],[0,4]]},{w:3,c:[[0,0],[1,0],[2,0],[3,0],[4,0]]},
+  {w:3,c:[[0,0],[0,1],[0,2],[0,3],[0,4]],hard:1},{w:3,c:[[0,0],[1,0],[2,0],[3,0],[4,0]],hard:1},   // 1×5 / 5×1:長條難塞→初級(noHard)排除
   {w:9,c:[[0,0],[0,1],[1,0],[1,1]]},
   {w:6,c:[[0,0],[1,0],[1,1]]},{w:6,c:[[0,0],[0,1],[1,0]]},{w:6,c:[[0,0],[0,1],[1,1]]},{w:6,c:[[0,1],[1,0],[1,1]]},
   {w:6,c:[[0,0],[0,1],[0,2],[1,1]]},{w:6,c:[[0,1],[1,0],[1,1],[1,2]]},{w:6,c:[[0,0],[1,0],[1,1],[2,0]]},{w:6,c:[[0,1],[1,0],[1,1],[2,1]]},
   {w:5,c:[[0,0],[1,0],[2,0],[2,1]]},{w:5,c:[[0,0],[0,1],[0,2],[1,0]]},{w:5,c:[[0,1],[1,1],[2,1],[2,0]]},{w:5,c:[[0,0],[1,0],[1,1],[1,2]]},
   {w:5,c:[[0,1],[0,2],[1,0],[1,1]]},{w:5,c:[[0,0],[1,0],[1,1],[2,1]]},{w:5,c:[[0,0],[0,1],[1,1],[1,2]]},{w:5,c:[[0,1],[1,0],[1,1],[2,0]]},
-  {w:3,c:[[0,1],[1,0],[1,1],[1,2],[2,1]]},
+  {w:3,c:[[0,1],[1,0],[1,1],[1,2],[2,1]],hard:1},   // 十字形:中心難補→初級(noHard)排除
   {w:3,c:[[0,0],[0,1],[0,2],[1,0],[1,1],[1,2]]},{w:3,c:[[0,0],[0,1],[1,0],[1,1],[2,0],[2,1]]},
 ];   // ※ 3×3 九格塊已移除:太肥難放,且 3×3 留給水/風 LV7 工具塊(WILD_SHAPES[7])專用
 const WSUM = SHAPES.reduce((a,s)=>a+s.w,0);
+const WSUM_SOFT = SHAPES.reduce((a,s)=>a+(s.hard?0:s.w),0);   // 排除 hard(1×5/5×1/十字)後的權重和→初級 noHard 用
 const CONFIG = {
   ADV_MULT:1.6, WEAK_MULT:0.7, NORM_MULT:1.0,   // 相剋軟化(原2.0/0.5硬牆→1.6/0.7,讓手控能逆轉小劣勢)
   NEUTRAL_BOX_BASE:40, LINE_BASE:30, LINE_SAME_RATE:0.5,
@@ -94,7 +95,7 @@ function mulberry32(seed){let a=seed>>>0;return function(){a|=0;a=a+0x6D2B79F5|0
 let BRNG=Math.random;   // 預設真隨機;開戰時 startBattleSeed() 換成種子版
 function brnd(n){return Math.floor(BRNG()*n);}
 function startBattleSeed(seed){seed=(seed!=null)?(seed>>>0):((Math.random()*4294967296)>>>0);BRNG=mulberry32(seed);return seed;}   // 回傳實際種子(存起來給回放)
-function pickShape(){let r=brnd(WSUM);for(const s of SHAPES){r-=s.w;if(r<0)return s.c.map(x=>x.slice());}}
+function pickShape(noHard){const sum=noHard?WSUM_SOFT:WSUM;let r=brnd(sum);for(const s of SHAPES){if(noHard&&s.hard)continue;r-=s.w;if(r<0)return s.c.map(x=>x.slice());}return SHAPES[0].c.map(x=>x.slice());}   // noHard(初級)=跳過 1×5/5×1/十字;末尾 fallback 防浮點/篩空
 function boxOf(r,c){return Math.floor(r/3)*3+Math.floor(c/3);}
 function canPlace(board,cells,r,c,kind,allowJunk){
   const inB=cells.every(([dr,dc])=>{const rr=r+dr,cc=c+dc;return rr>=0&&rr<N&&cc>=0&&cc<N;});
