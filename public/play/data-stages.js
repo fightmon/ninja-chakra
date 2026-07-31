@@ -91,17 +91,55 @@ const OVERRIDES = {
     ] },
     ...DUNGEONS.tower.stages.slice(1),
   ],
-  // 火之火山·初級=哥布林畜力技教學關(把中級的「終結蓄力」機制下放到初級,讓玩家先學打斷)。tier=哥布林星級貼圖(1/2/3星),beh:'finisher'+finStages:2+finPct 直接指定(繞過初級 noSkill),finAnyHit:任何屬性打到牠都能中止(初級寬鬆)。四屬酋長只放火城,魔王(酋長)留給中級↑
+  // 火之火山·初級=哥布林畜力技教學關(把中級的「終結蓄力」機制下放到初級,讓玩家先學打斷)。tier=哥布林星級貼圖(1/2/3星),beh:'finisher'+finStages:3(CD4→倒數CD3/2/1顯示蓄力)+finPct 直接指定(繞過初級 noSkill),finAnyHit:任何屬性打到牠都能中止(初級寬鬆)。四屬酋長只放火城,魔王(酋長)留給中級↑
   'fire:beginner': [
     // S1:2星青年哥布林 ×1,CD式畜力(總CD4→倒數2顯示蓄力1階、1顯示2階、0放招)→教玩家「看CD倒數抓攻擊時機並打斷」
-    { es: [ { el: 'fire', hp: 560, atk: 90, turns: 2, tier: 2, beh: 'finisher', finCD: 4, finStages: 2, finPct: 0.15, finAnyHit: true } ] },
+    { es: [ { el: 'fire', hp: 560, atk: 90, turns: 2, tier: 2, beh: 'finisher', finCD: 4, finStages: 3, finPct: 0.15, finAnyHit: true } ] },
     // S2:2星青年哥布林 ×2,都會畜力→兩隻同時倒數,得選一隻先斷
-    { es: [ { el: 'fire', hp: 540, atk: 88, turns: 2, tier: 2, beh: 'finisher', finCD: 4, finStages: 2, finPct: 0.15, finAnyHit: true },
-            { el: 'fire', hp: 540, atk: 88, turns: 2, tier: 2, beh: 'finisher', finCD: 4, finStages: 2, finPct: 0.15, finAnyHit: true } ] },
+    { es: [ { el: 'fire', hp: 540, atk: 88, turns: 2, tier: 2, beh: 'finisher', finCD: 4, finStages: 3, finPct: 0.15, finAnyHit: true },
+            { el: 'fire', hp: 540, atk: 88, turns: 2, tier: 2, beh: 'finisher', finCD: 4, finStages: 3, finPct: 0.15, finAnyHit: true } ] },
     // S3:1星哥布林(護衛) + 3星戰士哥布林=魔王(畜力,傷害略高,boss→1.4×放大站後排) + 1星哥布林(護衛)→中間戰士是魔王主威脅
     { es: [ { el: 'fire', hp: 520, atk: 85, turns: 2, tier: 1 },
-            { el: 'fire', hp: 640, atk: 98, turns: 2, tier: 3, boss: true, beh: 'finisher', finCD: 4, finStages: 2, finPct: 0.18, finAnyHit: true },
+            { el: 'fire', hp: 640, atk: 98, turns: 2, tier: 3, boss: true, beh: 'finisher', finCD: 4, finStages: 3, finPct: 0.18, finAnyHit: true },
             { el: 'fire', hp: 520, atk: 85, turns: 2, tier: 1 } ] },
+  ],
+  // 🦆風城入門=賊鴨教學關:每次攻擊偷走盤面已放的格(peck),沒格可偷→攻擊翻倍。turns:1→baby(dt+2) interval=2(=技能CD2)。tier=賊鴨星級貼圖
+  'wind:baby': [
+    // S1:1星賊鴨 ×1(偷1格)→先認識「偷方塊」
+    { es: [ { el: 'wind', hp: 500, atk: 70, turns: 1, tier: 1, peck: 1 } ] },
+    // S2:1星賊鴨 ×2(各偷1格)
+    { es: [ { el: 'wind', hp: 480, atk: 68, turns: 1, tier: 1, peck: 1 },
+            { el: 'wind', hp: 480, atk: 68, turns: 1, tier: 1, peck: 1 } ] },
+    // S3:1星賊鴨 ×2(護衛,偷1) + 2星賊鴨=魔王(中間,偷2格,boss→吃其他城S3同款陣型:1.4×放大站後、兩側護衛在前)
+    { es: [ { el: 'wind', hp: 460, atk: 66, turns: 1, tier: 1, peck: 1 },
+            { el: 'wind', hp: 620, atk: 76, turns: 1, tier: 2, boss: true, peck: 2 },
+            { el: 'wind', hp: 460, atk: 66, turns: 1, tier: 1, peck: 1 } ] },
+  ],
+  // 🦆風城初級:賊鴨教學升級版——非魔王只偷盤面格,魔王加碼偷拖盤拼圖格(peckTray)。tier=星級貼圖(魔王S3=3星,吃king圖)。turns:2(→CD2)
+  'wind:beginner': [
+    // S1:2星賊鴨 ×1(偷盤面2格)
+    { es: [ { el:'wind', hp:560, atk:90, turns:2, tier:2, peck:2 } ] },
+    // S2:2星賊鴨 ×2
+    { es: [ { el:'wind', hp:540, atk:88, turns:2, tier:2, peck:2 },
+            { el:'wind', hp:540, atk:88, turns:2, tier:2, peck:2 } ] },
+    // S3:1星護衛 ×2 + 3星賊鴨=魔王(中,偷盤面+拖盤共3格)
+    { es: [ { el:'wind', hp:520, atk:85, turns:2, tier:1, peck:1 },
+            { el:'wind', hp:640, atk:98, turns:2, tier:3, boss:true, peck:3, peckTray:true },
+            { el:'wind', hp:520, atk:85, turns:2, tier:1, peck:1 } ] },
+  ],
+  // 🦆風城中級:賊鴨魔王再加碼——4星賊鴨王偷盤面+拖盤 + 額外輪流吃卡上屬塊(stealStored,重用魔女魔王消屬塊機制)。魔王不設tier→用king貼圖。turns:3(→CD2)
+  'wind:normal': [
+    // S1:2星賊鴨 ×2
+    { es: [ { el:'wind', hp:640, atk:100, turns:3, tier:2, peck:2 },
+            { el:'wind', hp:640, atk:100, turns:3, tier:2, peck:2 } ] },
+    // S2:1星 ×2 + 2星(中)
+    { es: [ { el:'wind', hp:600, atk:95, turns:3, tier:1, peck:1 },
+            { el:'wind', hp:660, atk:100, turns:3, tier:2, peck:2 },
+            { el:'wind', hp:600, atk:95, turns:3, tier:1, peck:1 } ] },
+    // S3:1星(左) + 4星賊鴨王=魔王(中,偷盤面+拖盤共3格 + 透明塊詠唱整消) + 補師(右)
+    { es: [ { el:'wind', hp:600, atk:95, turns:3, tier:1, peck:1 },
+            { el:'wind', hp:1900, atk:200, turns:3, boss:true, peck:3, peckTray:true, stealStored:true },
+            { el:'wind', hp:580, atk:90, turns:3, beh:'healAlly' } ] },
   ],
 };
 
@@ -136,7 +174,7 @@ function resolveStages(dungeon, diffKey){
     });
   }
   // 🔥火城魔王貼圖分級:入門(baby)=2星青年哥布林、初級=3星戰士(OVERRIDE 內設)、中級↑無 tier→4星酋長→難度越高魔王越大。tier 只影響貼圖,不改數值/sim
-  if(dungeon.id==='fire' && diffKey==='baby') stages.forEach(st=>st.es.forEach(e=>{ if(e.boss && !e.tier) e.tier=2; }));
+  if(dungeon.id==='fire' && diffKey==='baby') stages.forEach(st=>st.es.forEach(e=>{ if(e.boss){ if(!e.tier) e.tier=2; e.beh='finisher'; e.finCD=4; e.finStages=3; e.finPct=0.12; e.finAnyHit=true; } }));   // 入門魔王=畜力教學:同CD4、倒數CD3/2/1顯示蓄力、低傷、任何攻擊可打斷→讓新手提早習慣畜力技(beh 直接指定→繞過 baby noSkill)
   return stages;
 }
 
@@ -186,7 +224,7 @@ function spawnStage(dungeonId, diffKey, stageIdx){
     if(phases){ el=phases[0].el; beh=phases[0].beh; full=true; }                          // 魔王變身:完整版
     else if(d.beh){ beh=d.beh; full=(d.full===true); }                                    // 🔧OVERRIDE 直接指定行為→繞過嬰兒/初級 noSkill(特例手調用):初級也能掛畜力技等
     else if(A){ full=covered(d); beh=full?A.beh:null; }                                   // 兵種行為:covered(上級魔王/地獄)才開
-    else if(myBeh && !noSkill){                                                           // 屬城招:中級起開(嬰兒/初級無)
+    else if(myBeh && !noSkill && !d.peck){                                               // 屬城招:中級起開(嬰兒/初級無);⚠️d.peck>0(🦆賊鴨系關卡)排除在外,避免自動注入的屬城招(風=eatStored)蓋過賊鴨自己的 peck 派工(endHand 判斷順序 eatStored 排在 peck 前面,兩者都非0會讓 _eatAct 搶走本該給 _peckAct 的手,連帶 interval 算式也會被 eatStored 分支劫走)
       if(d.boss){ beh=myBeh; full=true; }                                                 // 魔王 = 完整版
       else if(covered(d)){ beh=myBeh; full=true; }                                        // 地獄雜兵 = 完整
       else if(!stageHasBoss && idx===specialIdx){ beh=myBeh; full=false; }    // 小關:指定位置的雜兵帶輕鬆版(S1右/S2中)
@@ -195,8 +233,11 @@ function spawnStage(dungeonId, diffKey, stageIdx){
     const g=behGates(beh, dk, full);
     if(d.finPct!=null) g.finisher=d.finPct;   // 🔧OVERRIDE 直接指定終結傷害佔 maxHP 比例(初級低傷教學用,蓋掉 behGates 的 0.4/0.6)
     if(g.shield){ const kind=(stageIdx===0)?'combo':'hit'; if(kind==='combo'){g.comboGate=2;g.hitGate=0;}else{g.hitGate=15;g.comboGate=0;} g.shieldKind=kind; }   // 🛡盾型:S1(stageIdx0)=連段2、S2/魔王=HIT15
-    const ival=(d.finCD>0)?d.finCD:((g.healAlly>0||(g.eatStored>0&&d.boss)||(g.paralyze>0&&d.boss))?1:turns);   // 🔥finCD=CD式畜力技的總CD(蓋過 turns);💚補師 CD=1;🌀消塊魔王 CD=1;⚡麻痺魔王 CD=1;術士 CD=turns(=2)
-    return {el,max:hp,hp:hp,atk:atk,interval:ival,timer:Math.max(2,ival),burn:0,dead:false,boss:!!d.boss,guard:(!d.boss&&stageHasBoss),...g,phases,phaseIdx:0,arch:d.arch||null,tier:d.tier||0,finStages:d.finStages||0,finAnyHit:!!d.finAnyHit,finCD:d.finCD||0};   // 每關初始 timer≥2;tier=哥布林星級貼圖;finStages=蓄力段數;finAnyHit=任何屬性打到即中止;finCD>0=CD式畜力(倒數最後finStages格顯示蓄力球、歸0放招)
+    // 🔥火城畜力技統一 CD式(CD4、倒數CD3/2/1顯示蓄力):中級雜兵(S1右/S2中)+魔王都套;地獄雜兵(full 非魔王)維持原樣。雜兵給2星哥布林貼圖,魔王維持自身貼圖(中級↑=4星酋長、初級=3星戰士)。||=OVERRIDE 明確值優先
+    let tierV=d.tier||0, finCDV=d.finCD||0, finStagesV=d.finStages||0;
+    if(dEl==='fire' && g.finisher>0 && !phases && (!full || d.boss)){ finCDV=finCDV||4; finStagesV=finStagesV||3; if(!d.boss) tierV=tierV||2; }
+    const ival=(finCDV>0)?finCDV:((g.healAlly>0||(g.eatStored>0&&d.boss)||(g.paralyze>0&&d.boss))?1:turns);   // 🔥finCD=CD式畜力技的總CD(蓋過 turns);💚補師 CD=1;🌀消塊魔王 CD=1;⚡麻痺魔王 CD=1;術士 CD=turns(=2)
+    return {el,max:hp,hp:hp,atk:atk,interval:ival,timer:Math.max(2,ival),burn:0,dead:false,boss:!!d.boss,guard:(!d.boss&&stageHasBoss),...g,phases,phaseIdx:0,arch:d.arch||null,tier:tierV,finStages:finStagesV,finAnyHit:!!d.finAnyHit,finCD:finCDV,peck:d.peck||0,peckTray:!!d.peckTray,stealStored:!!d.stealStored};   // 每關初始 timer≥2;tier=星級貼圖;finStages=蓄力段數;finAnyHit=任何屬性打到即中止;finCD>0=CD式畜力;peck>0=🦆賊鴨每次攻擊偷走n個盤面格(沒格→攻擊翻倍);peckTray=連拖盤拼圖格也偷;stealStored=額外輪流吃卡上屬塊(魔女魔王消屬塊機制)
   });
 }
 
