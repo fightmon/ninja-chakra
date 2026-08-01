@@ -121,14 +121,16 @@ function computeClears(board, boxElement, boxCard, enemyEl, ampMult, neutralAtk)
   boxes.forEach(b=>{const br=Math.floor(b/3)*3,bc=(b%3)*3;for(let r=br;r<br+3;r++)for(let c=bc;c<bc+3;c++)cellSet.add(r+'_'+c);});
   const mult=(el)=> el==='neutral'?1 : (EL[el].beats===enemyEl?CONFIG.ADV_MULT : (EL[enemyEl].beats===el?CONFIG.WEAK_MULT:CONFIG.NORM_MULT));
   // 逐格屬性傷害:不論宮清/線清,「每個被清的屬區格」都算該屬攻擊(card.atk × 相剋 × CELL_RATE);中性格每格固定底。cellSet 已去重→不會重複計
+  const isIron=(r,c)=>{const cell=board[r][c];return !!(cell&&cell.el==='iron');};   // 🔩鐵塊:算「填滿」(含它的宮/線能清,filled 已成立因 el!=='junk'),但清除時不計攻擊(0傷害)→減弱玩家攻擊
+  let ironN=0; cellSet.forEach(k=>{const p=k.split('_');if(isIron(+p[0],+p[1]))ironN++;});
   const elemCells={};
-  cellSet.forEach(k=>{const p=k.split('_');const e=boxElement[boxOf(+p[0],+p[1])];if(e)elemCells[e]=(elemCells[e]||0)+1;});   // 各屬區被清格數
-  let total=Math.round(cellSet.size*CONFIG.HIT_BASE), hitWeak=false, parts=[];   // 基礎:每個被清的格(含中性)都算 HIT_BASE → 清越多越強
+  cellSet.forEach(k=>{const p=k.split('_');if(isIron(+p[0],+p[1]))return;const e=boxElement[boxOf(+p[0],+p[1])];if(e)elemCells[e]=(elemCells[e]||0)+1;});   // 各屬區被清格數(排除鐵塊)
+  let total=Math.round((cellSet.size-ironN)*CONFIG.HIT_BASE), hitWeak=false, parts=[];   // 基礎:每個被清的格(排除鐵塊)算 HIT_BASE
   ELEMENT_BOXES.forEach(b=>{const card=boxCard[b], e=boxElement[b]; if(!card||e==null)return; const n=elemCells[e]||0; if(!n)return;
     const d=Math.round(card.atk*mult(e)*ampMult*CONFIG.ELEM_RATE*n); total+=d;   // 屬區格再額外加:n × 卡攻擊 × 相剋 × ELEM_RATE
     if(EL[e].beats===enemyEl)hitWeak=true;
     const br=Math.floor(b/3)*3,bc=(b%3)*3; parts.push({el:e,d,r:br+1,c:bc+1});});
-  if(neutralAtk>0){ const nC=cellSet.size-Object.values(elemCells).reduce((a,b)=>a+b,0);   // 無屬格數=清除總格-屬區格
+  if(neutralAtk>0){ const nC=cellSet.size-ironN-Object.values(elemCells).reduce((a,b)=>a+b,0);   // 無屬格數=清除總格-鐵塊-屬區格
     if(nC>0)total+=Math.round(neutralAtk*CONFIG.NORM_MULT*ampMult*CONFIG.ELEM_RATE*nC); }   // 無屬傷害 = 隊伍最高攻×普通×0.08(=屬·普通公式)
   const fx={};
   ELEMENT_BOXES.forEach(b=>{const card=boxCard[b];if(!card)return;const br=Math.floor(b/3)*3,bc=(b%3)*3;
@@ -138,7 +140,7 @@ function computeClears(board, boxElement, boxCard, enemyEl, ampMult, neutralAtk)
   Object.keys(fx).forEach(e=>{fx[e].level=Math.min(7,Math.floor((elemCells[e]||0)/3))||1;});
   const hits=[];   // 各「有清到的 3×3 宮」=一段攻擊:該宮被清格數 + 傷害(基礎+屬性);Σdmg=total
   for(let b=0;b<9;b++){const br=Math.floor(b/3)*3,bc=(b%3)*3;let cn=0;
-    for(let r=br;r<br+3;r++)for(let c=bc;c<bc+3;c++)if(cellSet.has(r+'_'+c))cn++;
+    for(let r=br;r<br+3;r++)for(let c=bc;c<bc+3;c++)if(cellSet.has(r+'_'+c)&&!isIron(r,c))cn++;   // 排除鐵塊→鐵塊不貢獻該宮攻擊(格仍在 cellSet 被移除)
     if(!cn)continue;
     const el=boxElement[b],card=boxCard[b];let d=cn*CONFIG.HIT_BASE,hel='neutral';
     if(el!=null&&card){d+=Math.round(card.atk*mult(el)*ampMult*CONFIG.ELEM_RATE*cn);hel=el;}

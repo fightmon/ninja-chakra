@@ -141,6 +141,55 @@ const OVERRIDES = {
             { el:'wind', hp:1900, atk:200, turns:3, boss:true, peck:3, peckTray:true, stealStored:true },
             { el:'wind', hp:580, atk:90, turns:3, beh:'healAlly' } ] },
   ],
+  // 🤖雷城=鐵機人:放鐵塊卡位+清了不計攻擊。1星iron1無懲罰(教學)、2星iron1+2倍懲罰、3星連體iron2、4星連體iron3。turns→CD2。S3中間=boss站後
+  'thunder:baby': [
+    // S1:1星鐵機人 ×1(放1格,不懲罰→純認識鐵塊)
+    { es: [ { el:'thunder', hp:500, atk:70, turns:1, tier:1, iron:1 } ] },
+    // S2:1星 ×2
+    { es: [ { el:'thunder', hp:480, atk:68, turns:1, tier:1, iron:1 },
+            { el:'thunder', hp:480, atk:68, turns:1, tier:1, iron:1 } ] },
+    // S3:1星護衛 ×2 + 2星大鐵機=魔王(中,放1格+2倍懲罰)
+    { es: [ { el:'thunder', hp:460, atk:66, turns:1, tier:1, iron:1 },
+            { el:'thunder', hp:620, atk:80, turns:1, tier:2, boss:true, iron:1, ironPunish:true },
+            { el:'thunder', hp:460, atk:66, turns:1, tier:1, iron:1 } ] },
+  ],
+  'thunder:beginner': [
+    // S1:2星大鐵機 ×1(放1格+2倍懲罰)
+    { es: [ { el:'thunder', hp:560, atk:90, turns:2, tier:2, iron:1, ironPunish:true } ] },
+    // S2:2星 ×2
+    { es: [ { el:'thunder', hp:540, atk:88, turns:2, tier:2, iron:1, ironPunish:true },
+            { el:'thunder', hp:540, atk:88, turns:2, tier:2, iron:1, ironPunish:true } ] },
+    // S3:1星護衛 ×2 + 3星邪惡鐵機=魔王(中,連體2格鐵塊)
+    { es: [ { el:'thunder', hp:520, atk:85, turns:2, tier:1, iron:1 },
+            { el:'thunder', hp:640, atk:98, turns:2, tier:3, boss:true, iron:2, ironPunish:true },
+            { el:'thunder', hp:520, atk:85, turns:2, tier:1, iron:1 } ] },
+  ],
+  'thunder:normal': [
+    // S1:2星 ×2
+    { es: [ { el:'thunder', hp:640, atk:100, turns:3, tier:2, iron:1, ironPunish:true },
+            { el:'thunder', hp:640, atk:100, turns:3, tier:2, iron:1, ironPunish:true } ] },
+    // S2:2星 ×2 + 3星(中,連體2格)
+    { es: [ { el:'thunder', hp:640, atk:100, turns:3, tier:2, iron:1, ironPunish:true },
+            { el:'thunder', hp:700, atk:105, turns:3, tier:3, iron:2, ironPunish:true },
+            { el:'thunder', hp:640, atk:100, turns:3, tier:2, iron:1, ironPunish:true } ] },
+    // S3:2星護衛 ×2 + 4星惡鐵王=魔王(中,連體3格)
+    { es: [ { el:'thunder', hp:660, atk:100, turns:3, tier:2, iron:1, ironPunish:true },
+            { el:'thunder', hp:1900, atk:200, turns:3, boss:true, iron:3, ironPunish:true },
+            { el:'thunder', hp:660, atk:100, turns:3, tier:2, iron:1, ironPunish:true } ] },
+  ],
+  'thunder:advanced': [
+    // S1:3星邪惡鐵機 ×2(連體2格,盤面壓力大)
+    { es: [ { el:'thunder', hp:640, atk:100, turns:3, tier:3, iron:2, ironPunish:true },
+            { el:'thunder', hp:640, atk:100, turns:3, tier:3, iron:2, ironPunish:true } ] },
+    // S2:3星 ×2 + 2星 ×1(上級自動混入1隻風屬剋敵)
+    { es: [ { el:'thunder', hp:640, atk:100, turns:3, tier:3, iron:2, ironPunish:true },
+            { el:'thunder', hp:640, atk:100, turns:3, tier:3, iron:2, ironPunish:true },
+            { el:'thunder', hp:600, atk:95, turns:3, tier:2, iron:1, ironPunish:true } ] },
+    // S3:3星護衛 ×2 + 4星惡鐵王=魔王(中,連體3格)
+    { es: [ { el:'thunder', hp:680, atk:100, turns:3, tier:3, iron:2, ironPunish:true },
+            { el:'thunder', hp:1900, atk:200, turns:3, boss:true, iron:3, ironPunish:true },
+            { el:'thunder', hp:680, atk:100, turns:3, tier:3, iron:2, ironPunish:true } ] },
+  ],
 };
 
 function _cloneStages(stages){ return stages.map(st=>({...st, es:st.es.map(e=>({...e}))})); }   // 深拷貝,避免改到原始 base
@@ -224,7 +273,7 @@ function spawnStage(dungeonId, diffKey, stageIdx){
     if(phases){ el=phases[0].el; beh=phases[0].beh; full=true; }                          // 魔王變身:完整版
     else if(d.beh){ beh=d.beh; full=(d.full===true); }                                    // 🔧OVERRIDE 直接指定行為→繞過嬰兒/初級 noSkill(特例手調用):初級也能掛畜力技等
     else if(A){ full=covered(d); beh=full?A.beh:null; }                                   // 兵種行為:covered(上級魔王/地獄)才開
-    else if(myBeh && !noSkill && !d.peck){                                               // 屬城招:中級起開(嬰兒/初級無);⚠️d.peck>0(🦆賊鴨系關卡)排除在外,避免自動注入的屬城招(風=eatStored)蓋過賊鴨自己的 peck 派工(endHand 判斷順序 eatStored 排在 peck 前面,兩者都非0會讓 _eatAct 搶走本該給 _peckAct 的手,連帶 interval 算式也會被 eatStored 分支劫走)
+    else if(myBeh && !noSkill && !d.peck && !d.iron){                                     // 屬城招:中級起開(嬰兒/初級無);⚠️d.peck(🦆賊鴨)、d.iron(🤖鐵機人)排除→避免自動注入的屬城招(風=eatStored/雷=paralyze)蓋過牠們自己的 peck/iron 派工(endHand 判斷順序 eatStored 排在 peck 前面,兩者都非0會讓 _eatAct 搶走本該給 _peckAct 的手,連帶 interval 算式也會被 eatStored 分支劫走)
       if(d.boss){ beh=myBeh; full=true; }                                                 // 魔王 = 完整版
       else if(covered(d)){ beh=myBeh; full=true; }                                        // 地獄雜兵 = 完整
       else if(!stageHasBoss && idx===specialIdx){ beh=myBeh; full=false; }    // 小關:指定位置的雜兵帶輕鬆版(S1右/S2中)
@@ -237,7 +286,7 @@ function spawnStage(dungeonId, diffKey, stageIdx){
     let tierV=d.tier||0, finCDV=d.finCD||0, finStagesV=d.finStages||0;
     if(dEl==='fire' && g.finisher>0 && !phases && (!full || d.boss)){ finCDV=finCDV||4; finStagesV=finStagesV||3; if(!d.boss) tierV=tierV||2; }
     const ival=(finCDV>0)?finCDV:((g.healAlly>0||(g.eatStored>0&&d.boss)||(g.paralyze>0&&d.boss))?1:turns);   // 🔥finCD=CD式畜力技的總CD(蓋過 turns);💚補師 CD=1;🌀消塊魔王 CD=1;⚡麻痺魔王 CD=1;術士 CD=turns(=2)
-    return {el,max:hp,hp:hp,atk:atk,interval:ival,timer:Math.max(2,ival),burn:0,dead:false,boss:!!d.boss,guard:(!d.boss&&stageHasBoss),...g,phases,phaseIdx:0,arch:d.arch||null,tier:tierV,finStages:finStagesV,finAnyHit:!!d.finAnyHit,finCD:finCDV,peck:d.peck||0,peckTray:!!d.peckTray,stealStored:!!d.stealStored};   // 每關初始 timer≥2;tier=星級貼圖;finStages=蓄力段數;finAnyHit=任何屬性打到即中止;finCD>0=CD式畜力;peck>0=🦆賊鴨每次攻擊偷走n個盤面格(沒格→攻擊翻倍);peckTray=連拖盤拼圖格也偷;stealStored=額外輪流吃卡上屬塊(魔女魔王消屬塊機制)
+    return {el,max:hp,hp:hp,atk:atk,interval:ival,timer:Math.max(2,ival),burn:0,dead:false,boss:!!d.boss,guard:(!d.boss&&stageHasBoss),...g,phases,phaseIdx:0,arch:d.arch||null,tier:tierV,finStages:finStagesV,finAnyHit:!!d.finAnyHit,finCD:finCDV,peck:d.peck||0,peckTray:!!d.peckTray,stealStored:!!d.stealStored,iron:d.iron||0,ironPunish:!!d.ironPunish};   // 每關初始 timer≥2;tier=星級貼圖;finStages=蓄力段數;finCD>0=CD式畜力;peck>0=🦆賊鴨偷盤面格;iron>0=🤖鐵機人放n連體鐵塊卡位(避開湊滿宮/線、盤面太緊停放;ironPunish=沒清掉下輪2倍打)
   });
 }
 
