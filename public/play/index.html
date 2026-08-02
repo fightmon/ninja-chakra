@@ -113,7 +113,7 @@
       { emoji: '👺', name: '哥布林', color: '#ff6a4a', cards: { fire: 'c41', water: 'c42', thunder: 'c43', earth: 'c44', wind: 'c45' } },   // 雜牌卡(未標家族,保留 genin 1星;1→2星換青年哥布林圖,2→3星換戰士哥布林圖,見 GHOST_EVO/GHOST_EVO2)
       { emoji: '🧱', name: '妖·牆', color: '#c9a86a', cards: { fire: 'c46', water: 'c47', thunder: 'c48', earth: 'c49', wind: 'c50' } },   // 雜牌卡(未標家族,保留 genin 1星,進化2星換城牆怪圖);土城盾兵/盾王借此圖
       { emoji: '🦆', name: '賊鴨', color: '#b06ad0', cards: { fire: 'c51', water: 'c52', thunder: 'c53', earth: 'c54', wind: 'c55' } },   // 雜牌卡(未標家族,保留 genin 1星;1→2星換大賊鴨圖,2→3星換盜賊鴨圖,見 WITCH_EVO/WITCH_EVO2,原名魔女);風城消卡片塊敵人/魔王借此圖(魔王另借 king_full)
-      { emoji: '💊', name: '妖·藥師', color: '#4fbf8f', cards: { fire: 'c56', water: 'c57', thunder: 'c58', earth: 'c59', wind: 'c60' } },   // 雜牌卡(未標家族,保留 genin 1星,進化2星換大藥師圖,完全鏡射魔女);補血系高rcv中攻;水城補師怪/魔王借此圖
+      { emoji: '🩹', name: '史萊姆', color: '#4fbf8f', cards: { fire: 'c56', water: 'c57', thunder: 'c58', earth: 'c59', wind: 'c60' } },   // 雜牌卡(未標家族,保留 genin 1星;1→2星換護士圖,2→3星換醫生圖,見 YAKUSHI_EVO/YAKUSHI_EVO2;補血系高rcv中攻;原名藥師,2026-08-02 改名史萊姆醫療;水城補師怪/魔王借此圖(魔王另借 king_full)
       { emoji: '💎', name: '寶玉', color: '#8fd0e0', cards: { fire: 'c61', water: 'c62', thunder: 'c63', earth: 'c64', wind: 'c65' } },   // 進化素材(chunin 2★晶精);屬性城掉落、進化消耗;不進 EVO_CARDS
     ];
     const DEX_EL5 = ['fire', 'water', 'thunder', 'earth', 'wind'];
@@ -131,7 +131,7 @@
     ['👺', '妖', '#ff6a4a', 0x2e1a1a, ['c41', 'c42', 'c43', 'c44', 'c45']],
     ['🧱', '妖', '#c9a86a', 0x2a2418, ['c46', 'c47', 'c48', 'c49', 'c50']],
     ['🦆', '妖', '#b06ad0', 0x241a2e, ['c51', 'c52', 'c53', 'c54', 'c55']],
-    ['💊', '妖', '#4fbf8f', 0x18332a, ['c56', 'c57', 'c58', 'c59', 'c60']],
+    ['🩹', '史萊姆', '#4fbf8f', 0x18332a, ['c56', 'c57', 'c58', 'c59', 'c60']],
     ['💎', '寶玉', '#8fd0e0', 0x16313a, ['c61', 'c62', 'c63', 'c64', 'c65']]
     ].forEach(([e, n, c, bg, ids]) => ids.forEach(id => CARD_SPECIES[id] = { e, n, c, bg }));
     // ===== 程序化音效(WebAudio 即時合成,零檔案/零版權/離線)=====
@@ -322,7 +322,7 @@
       if (opt.manage) {
         gpill(CX - 118, H - 52, 110, 52, '⬆️ 強化', tint(elc, 0.3), elc, '#ffffff', FS.cap, () => opt.onFuse && opt.onFuse());   // 屬色漸層(上亮下深,寶可夢式)
         // 進化鈕:滿 LV20 且還能進化 → 金色漸層(可動作);未滿 LV20 / 已達進化上限 / 素材卡 → 灰階。仍可點,點了由 canEvolve 跳原因 toast
-        const _evoCap = EVO2_CARDS[cd.id] ? 2 : (EVO_CARDS[cd.id] ? 1 : EVO_MAX);   // 對齊 canEvolve 的上限判斷(哥布林系 evo2=3星,其餘雜牌系 evo1=2星封頂)
+        const _evoCap = EVO2_CARDS[cd.id] ? 2 : (EVO_CARDS[cd.id] ? 1 : EVO_MAX);   // 對齊 canEvolve 的上限判斷(哥布林/賊鴨/鐵機人/史萊姆醫療系 evo2=3星,其餘雜牌系 evo1=2星封頂)
         const _evoLit = mx && !MATERIAL_IDS.has(cd.id) && getCardEvo(cd.id) < _evoCap;
         gpill(CX, H - 52, 110, 52, '✨ 進化', _evoLit ? 0xffe9a8 : 0xe4e0d8, _evoLit ? 0xd9932a : 0xb8b0a4, _evoLit ? '#4a2c05' : '#8a8378', FS.cap, () => opt.onEvolve && opt.onEvolve());
         pill(CX + 118, H - 52, 110, 52, '✖ 關閉', TK.surf, TK.divider, TK.ink2, FS.cap, () => opt.onClose && opt.onClose());
@@ -494,12 +494,12 @@
       { id: 'c53', name: '雷賊鴨', el: 'thunder', race: 'yokai', rank: 'genin', atk: 125, hp: 95, rcv: 14, attrs: ['thunder'] },
       { id: 'c54', name: '土賊鴨', el: 'earth', race: 'yokai', rank: 'genin', atk: 95, hp: 145, rcv: 14, attrs: ['earth'] },
       { id: 'c55', name: '風賊鴨', el: 'wind', race: 'yokai', rank: 'genin', atk: 115, hp: 105, rcv: 16, attrs: ['wind'] },
-      /* ── 💊 藥師系(雜牌卡,完全鏡射魔女系:不進 CARD_FAMILY/TW_IDS→保留 genin ★1;補血系高rcv,atk比魔女略降,水/土屬更肉更高rcv;1★→2★進化換名換圖「大◯藥師」,見 YAKUSHI_EVO;水城補師怪/魔王借圖)── */
-      { id: 'c56', name: '火藥師', el: 'fire', race: 'yokai', rank: 'genin', atk: 110, hp: 90, rcv: 20, attrs: ['fire'] },
-      { id: 'c57', name: '水藥師', el: 'water', race: 'yokai', rank: 'genin', atk: 65, hp: 150, rcv: 34, attrs: ['water'] },
-      { id: 'c58', name: '雷藥師', el: 'thunder', race: 'yokai', rank: 'genin', atk: 100, hp: 100, rcv: 24, attrs: ['thunder'] },
-      { id: 'c59', name: '土藥師', el: 'earth', race: 'yokai', rank: 'genin', atk: 70, hp: 165, rcv: 26, attrs: ['earth'] },
-      { id: 'c60', name: '風藥師', el: 'wind', race: 'yokai', rank: 'genin', atk: 90, hp: 115, rcv: 26, attrs: ['wind'] },
+      /* ── 🩹 史萊姆醫療系(雜牌卡,原藥師系,2026-08-02 改名:不進 CARD_FAMILY/TW_IDS→保留 genin ★1;補血系高rcv,atk比魔女略降,水/土屬更肉更高rcv;1★→2★→3★三階進化「◯護士/◯醫生」,見 YAKUSHI_EVO/YAKUSHI_EVO2;水城補師怪/魔王借圖;內部 id/物種 key 沿用藥師時期,原名"藥師")── */
+      { id: 'c56', name: '火小護理', el: 'fire', race: 'yokai', rank: 'genin', atk: 110, hp: 90, rcv: 20, attrs: ['fire'] },
+      { id: 'c57', name: '水小護理', el: 'water', race: 'yokai', rank: 'genin', atk: 65, hp: 150, rcv: 34, attrs: ['water'] },
+      { id: 'c58', name: '雷小護理', el: 'thunder', race: 'yokai', rank: 'genin', atk: 100, hp: 100, rcv: 24, attrs: ['thunder'] },
+      { id: 'c59', name: '土小護理', el: 'earth', race: 'yokai', rank: 'genin', atk: 70, hp: 165, rcv: 26, attrs: ['earth'] },
+      { id: 'c60', name: '風小護理', el: 'wind', race: 'yokai', rank: 'genin', atk: 90, hp: 115, rcv: 26, attrs: ['wind'] },
       /* ── 💎 寶玉卡系(純進化素材,2★晶精):進化時消耗 1 張對應屬性寶玉卡;屬性城掉落。
          ⚠️ 數值刻意做成「素材位階」(戰力 42 ≈ 3★ 的 18%),對齊 PAD/神魔的素材設計:不硬鎖上陣,但廢到沒人會放。
          2026-07-15 修:原本 80/260/45(戰力196=3★的85%)且可進化到 evo2(917戰力),等於素材能當戰力卡練,已修正。
@@ -516,14 +516,15 @@
     const GHOST_EVO = { c41: '火青年哥布林', c42: '水青年哥布林', c43: '雷青年哥布林', c44: '土青年哥布林', c45: '風青年哥布林' };
     const WALL_EVO = { c46: '火城牆怪', c47: '水城牆怪', c48: '雷城牆怪', c49: '土城牆怪', c50: '風城牆怪' };   // 牆怪 1★→2★進化換名換圖(鏡像蜘蛛/鬼系):進化階≥1 → 顯示「◯城牆怪」+ <id>_e_ 圖;土城盾王借城牆怪 e_full
     const WITCH_EVO = { c51: '火大賊鴨', c52: '水大賊鴨', c53: '雷大賊鴨', c54: '土大賊鴨', c55: '風大賊鴨' };   // 賊鴨(原魔女)1★→2★進化換名換圖:進化階≥1 → 顯示「◯大賊鴨」+ <id>_e_ 圖;風城魔王借圖見 WITCH_EVO2/king_full
-    const YAKUSHI_EVO = { c56: '大火藥師', c57: '大水藥師', c58: '大雷藥師', c59: '大土藥師', c60: '大風藥師' };   // 藥師 1★→2★進化換名換圖(鏡射魔女):進化階≥1 → 顯示「大◯藥師」+ <id>_e_ 圖;水城魔王借大水藥師 e_full
+    const YAKUSHI_EVO = { c56: '火護士', c57: '水護士', c58: '雷護士', c59: '土護士', c60: '風護士' };   // 史萊姆醫療(原藥師)1★→2★進化換名換圖:進化階≥1 → 顯示「◯護士」+ <id>_e_ 圖;水城魔王借圖見 YAKUSHI_EVO2/king_full
     const EVO_CARDS = Object.assign({}, SPIDER_EVO, GHOST_EVO, WALL_EVO, WITCH_EVO, YAKUSHI_EVO);   // 合併進化雜牌卡名表:凡是「進化換名換圖」共用邏輯(cardArtKey/_loadCardArt/_loadCardThumbs/_ensureFullArt/canEvolve/GACHA_ROSTER/cardName/進化預覽)一律讀這裡,不分蜘蛛/鬼/牆/魔女/藥師
     // 哥布林系(原鬼系)2★→3★再進化名表:進化階(getCardEvo)≥2 → 顯示「◯戰士哥布林」+ <id>_e2_ 圖(3星,2026-07-29 加)。
-    // 目前哥布林系、賊鴨系(原魔女 c51~c55)、鐵機人系(原蜘蛛 c36~c40)支援 evo2;其他雜牌系(牆/藥師)仍維持 1★→2★ 兩形上限。別系要開 evo2 就往 EVO2_CARDS 加。
+    // 目前哥布林系、賊鴨系(原魔女 c51~c55)、鐵機人系(原蜘蛛 c36~c40)、史萊姆醫療系(原藥師 c56~c60)支援 evo2;其餘雜牌系(牆)仍維持 1★→2★ 兩形上限。別系要開 evo2 就往 EVO2_CARDS 加。
     const GHOST_EVO2 = { c41: '火戰士哥布林', c42: '水戰士哥布林', c43: '雷戰士哥布林', c44: '土戰士哥布林', c45: '風戰士哥布林' };
     const WITCH_EVO2 = { c51: '火盜賊鴨', c52: '水盜賊鴨', c53: '雷盜賊鴨', c54: '土盜賊鴨', c55: '風盜賊鴨' };   // 賊鴨(原魔女)2★→3★再進化名表:進化階≥2 → 顯示「◯盜賊鴨」+ <id>_e2_ 圖(3星,2026-07-30 加);魔王另借 king_full(4星「◯盜賊鴨王」非卡片)
     const SPIDER_EVO2 = { c36: '火邪惡鐵機', c37: '水邪惡鐵機', c38: '雷邪惡鐵機', c39: '土邪惡鐵機', c40: '風邪惡鐵機' };   // 鐵機人(原蜘蛛)2★→3★再進化名表:進化階≥2 → 顯示「◯邪惡鐵機」+ <id>_e2_ 圖(3星,2026-07-31 加);魔王另借 king_full(4星「◯惡鐵王」非卡片)
-    const EVO2_CARDS = Object.assign({}, GHOST_EVO2, WITCH_EVO2, SPIDER_EVO2);   // 合併「可進到 evo2(3星)」名表:目前哥布林系、賊鴨系、鐵機人系支援,別的系要開 evo2 往這加
+    const YAKUSHI_EVO2 = { c56: '火醫生', c57: '水醫生', c58: '雷醫生', c59: '土醫生', c60: '風醫生' };   // 史萊姆醫療(原藥師)2★→3★再進化名表:進化階≥2 → 顯示「◯醫生」+ <id>_e2_ 圖(3星,2026-08-02 加);魔王另借 king_full(4星「◯醫學博士」非卡片)
+    const EVO2_CARDS = Object.assign({}, GHOST_EVO2, WITCH_EVO2, SPIDER_EVO2, YAKUSHI_EVO2);   // 合併「可進到 evo2(3星)」名表:目前哥布林系、賊鴨系、鐵機人系、史萊姆醫療系支援,別的系要開 evo2 往這加
     function cardName(id) { const c = ROSTER.find(x => x.id === id) || {}; const t = getCardEvo(id); if (t >= 2 && EVO2_CARDS[id]) return EVO2_CARDS[id]; return (EVO_CARDS[id] && t >= 1) ? EVO_CARDS[id] : c.name; }   // 卡片顯示名字統一入口(evo2 名表優先於 evo1 名表,再 fallback ROSTER.name)
     // CONFIG → battle-core.js
     const KATA = ['一之型', '二之型', '三之型', '四之型', '五之型', '禁術', '奧義'];   // LV1~7(簡單數字,日文漢字通用)
@@ -796,7 +797,7 @@
     const GHOST_ACTIVE = { name: '怨擊', cd: 5, icon: '👊', desc: '對指定 1 敵造成 攻擊力×2 傷害(吃相剋)' };
     const WALL_ACTIVE = { name: '築牆阻擋', cd: 6, icon: '🧱', desc: '全體敵人出手倒數 +1 手' };   // 👹鬼系(c41~c45)共用同一份主動技物件
     const WITCH_ACTIVE = { name: '群鴨亂啄', cd: 6, icon: '🦆', desc: '對全體敵人造成 攻擊力×1.6 傷害(吃相剋)' };   // 🦆賊鴨系(c51~c55,原魔女):全體傷害(區隔🐶群擊×2、👹怨擊單體×2)
-    const YAKUSHI_ACTIVE = { name: '靈藥術式', cd: 6, icon: '💊', desc: '回復全隊 HP 35%' };   // 💊藥師系(c56~c60,鏡射魔女術式但改補血):CD6 比照水屬預設「回春之泉」CD4回30%,CD拉高故回復率略增
+    const YAKUSHI_ACTIVE = { name: '治療凝膠', cd: 6, icon: '🩹', desc: '回復全隊 HP 35%' };   // 🩹史萊姆醫療系(c56~c60,原藥師系,2026-08-02 改名,效果不變):CD6 比照水屬預設「回春之泉」CD4回30%,CD拉高故回復率略增
     const CARD_ACTIVE = {
       c15: { name: '裂空撲殺', cd: 3, icon: '🐆', desc: '總傷≈攻×2:敵單隻→集中、多隻→均分全體,各吃相剋' },
       c22: { name: '群鵲圍攻', cd: 4, icon: '🐦', desc: '全體敵出手延遲 +2 手' },
@@ -1609,7 +1610,7 @@
       const c = ROSTER.find(x => x.id === id), t = getCardEvo(id);
       if (!c) return { ok: false, msg: '卡片資料不存在' };
       if (MATERIAL_IDS.has(id)) return { ok: false, msg: '素材卡不可進化(拿去進化別的卡)' };   // 純素材:不給練成戰力卡
-      // 單一 cap:👺哥布林系、🦆賊鴨系、🤖鐵機人系(原蜘蛛) 1★→2★→3★(cap 2);🧱牆/💊藥師系只有兩形(cap 1);一般卡走 EVO_MAX。與 line 325 _evoCap、後端 evolve.ts evoCap 同一套,別再用 else-if(EVO_CARDS 含哥布林,t=1 會被誤擋)
+      // 單一 cap:👺哥布林系、🦆賊鴨系、🤖鐵機人系(原蜘蛛)、🩹史萊姆醫療系(原藥師) 1★→2★→3★(cap 2);🧱牆系只有兩形(cap 1);一般卡走 EVO_MAX。與 line 325 _evoCap、後端 evolve.ts evoCap 同一套,別再用 else-if(EVO_CARDS 含哥布林,t=1 會被誤擋)
       const evoCap = EVO2_CARDS[id] ? 2 : (EVO_CARDS[id] ? 1 : EVO_MAX);
       if (t >= evoCap) return { ok: false, msg: '已達進化上限' };
       if (getCardLv(id) < MAXLV) return { ok: false, msg: '需先練滿 Lv.' + MAXLV };
@@ -2236,7 +2237,7 @@
         if (this.dungeonId === 'fire') { _loadCardArt(this, ['c41']); if (!this.textures.exists('card_c41_king_full')) this.load.image('card_c41_king_full', 'art/cards/c41_king_full.webp'); }   // 👺 火之火山借哥布林卡透明大圖當敵圖:載 c41哥布林(雜兵)完整大圖;魔王另載專屬 4星哥布林酋長大圖(非玩家卡,只在此當魔王)
         if (this.dungeonId === 'earth') _loadCardArt(this, ['c49']);   // 🧱 土之山岳借牆怪透明大圖當盾兵/盾王圖:載 c49土牆怪(盾兵)+土城牆怪(盾王,_e)完整大圖(比照 fire 分支)
         if (this.dungeonId === 'wind') { _loadCardArt(this, ['c55']); if (!this.textures.exists('card_c55_king_full')) this.load.image('card_c55_king_full', 'art/cards/c55_king_full.webp'); }   // 🦆 風之峽谷借賊鴨(原魔女)透明大圖當消卡片塊敵/魔王圖:載 c55風賊鴨(小兵)完整大圖;魔王另載專屬 4星風賊鴨王大圖(非玩家卡,只在此當魔王,比照 fire 分支)
-        if (this.dungeonId === 'water') _loadCardArt(this, ['c57']);   // 💊 水之深淵借藥師透明大圖當補血怪/魔王圖:載 c57水藥師(補師)+大水藥師(魔王,_e)完整大圖(比照 wind 分支)
+        if (this.dungeonId === 'water') { _loadCardArt(this, ['c57']); if (!this.textures.exists('card_c57_king_full')) this.load.image('card_c57_king_full', 'art/cards/c57_king_full.webp'); }   // 🩹 水之深淵借史萊姆醫療(原藥師)透明大圖當補血怪/魔王圖:載 c57水小護理(補師)完整大圖;魔王另載專屬 4星水醫學博士大圖(非玩家卡,只在此當魔王,比照 thunder 分支)
         ['fire', 'water', 'thunder', 'earth', 'wind'].forEach(el => { if (!this.textures.exists('el_' + el)) this.load.svg('el_' + el, 'art/elements/element_' + el + '.svg', { width: 96, height: 96 }); });   // 元素符號:實心剪影 SVG,疊在盤面方塊正中央(setTintFill 上白),96px 光柵→顯示縮到 ~23px 保脆
         showLoadBar(this);
       }   // ⚠️ 音訊(BGM 3~8MB + 音效)改「非阻塞」載入(見 _startStageAudio):不放阻塞 preload,否則弱網卡關甚至開不了
@@ -2283,7 +2284,10 @@
           if (e.boss && this.textures.exists('card_c55_e_full')) return 'card_c55_e_full';
           if (e.eatStored > 0 && this.textures.exists('card_c55_full')) return 'card_c55_full';
         }
-        if (this.dungeonId === 'water') {   // 💊 水之深淵=藥師:魔王→大水藥師(e_full)、補血怪(healAlly)→水藥師(c57)
+        if (this.dungeonId === 'water') {   // 🩹 水之深淵=史萊姆醫療城(原藥師):tier 星級圖優先(1星→c57、2星→_e、3星→_e2);無 tier 的魔王才用 4星醫學博士
+          const gk = e.tier === 3 ? 'card_c57_e2_full' : e.tier === 2 ? 'card_c57_e_full' : e.tier === 1 ? 'card_c57_full' : null;
+          if (gk && this.textures.exists(gk)) return gk;
+          if (e.boss && this.textures.exists('card_c57_king_full')) return 'card_c57_king_full';
           if (e.boss && this.textures.exists('card_c57_e_full')) return 'card_c57_e_full';
           if (e.healAlly > 0 && this.textures.exists('card_c57_full')) return 'card_c57_full';
         }
@@ -3940,7 +3944,7 @@
           });
           return;
         }
-        if (cid === 'c56' || cid === 'c57' || cid === 'c58' || cid === 'c59' || cid === 'c60') {   // 💊藥師系 靈藥術式:回復全隊 HP 35%,CD6(照抄 fireActive() case 'water' 預設「回春之泉」的 this.playerHP 回血寫法,只把回復率從 30% 調到 35% 對齊較高 CD;不動傷害/延遲類邏輯,不影響其他技能)
+        if (cid === 'c56' || cid === 'c57' || cid === 'c58' || cid === 'c59' || cid === 'c60') {   // 🩹史萊姆醫療系 治療凝膠(原藥師系靈藥術式,2026-08-02 改名):回復全隊 HP 35%,CD6(照抄 fireActive() case 'water' 預設「回春之泉」的 this.playerHP 回血寫法,只把回復率從 30% 調到 35% 對齊較高 CD;不動傷害/延遲類邏輯,不影響其他技能)
           const col = EL[card.el] ? EL[card.el].color : 0x4fbf8f, h = Math.round(this.maxHP * 0.35);
           this.chargeAt(ox, oy, col, 380);
           this.time.delayedCall(380, () => {
@@ -4173,15 +4177,15 @@
         this.tweens.add({ targets: sp, y: ry - 12, scaleX: sc * 1.12, scaleY: sc * 1.12, duration: 230, ease: 'Quad.out', yoyo: true, onComplete: () => { if (!e.dead) this.refreshBob(e); } });
       }
       _medicAct(e) {   // 補師出手:雜兵雙模式(滿血攻/受損補);魔王=攻擊(+受損補20%);小兵全滅→詠唱復活(下手成、可被剋屬打斷、共2次額度、成功後力竭CD2)
-        const anyDmg = this.enemies.some(x => !x.dead && x.hp > 0 && x.hp < x.max);
-        if (!e.boss) { if (anyDmg) this._enemyHeal(e); else this.enemyAttack(e); e.timer = e.interval; return; }
+        const anyLow = this.enemies.some(x => x !== e && !x.dead && x.hp > 0 && x.hp < x.max * 0.5);   // 🩹史萊姆:隊友(非自己)血<½才補(比「任何受損」更反應式→給玩家集火窗口)
+        if (!e.boss) { if (anyLow) this._enemyHeal(e); else this.enemyAttack(e); e.timer = e.interval; return; }
         // 🌊水魔王=詠唱制:一手只做一件事(不再邊打邊補),補血/復活都不攻擊、都可被土(剋水)打斷
         if (this._reviveCast && this._reviveCast.boss === e) { if (--this._reviveCast.readyIn <= 0) this._fireRevive(); e.timer = e.interval; return; }   // 復活詠唱中(不攻擊)→ 2CD,readyIn 歸0才完成
         if (this._healCast && this._healCast.boss === e) { if (--this._healCast.readyIn <= 0) this._fireHeal(e); e.timer = e.interval; return; }   // 補血詠唱中(不攻擊)→ 1CD,下手完成
         const others = this.enemies.filter(x => x !== e);
         if (e._reviveCharges == null) e._reviveCharges = 2;
         if (others.length > 0 && others.every(x => x.dead || x.hp <= 0) && e._reviveCharges > 0) { e._reviveCharges--; this._buildReviveCast(e); this._reviveCast.readyIn = 2; e.timer = e.interval; return; }   // 小兵全滅→起手詠唱復活(2CD,共2次額度,不攻擊)
-        if (anyDmg) { this._buildHealCast(e); e.timer = e.interval; return; }   // 有人受損→起手詠唱補血(1CD,不攻擊)→ 下手完成
+        if (anyLow) { this._buildHealCast(e); e.timer = e.interval; return; }   // 有人受損→起手詠唱補血(1CD,不攻擊)→ 下手完成
         this.enemyAttack(e); e.timer = e.interval;   // 都不需要→攻擊
       }
       _enemyHeal(medic) {   // 補師補血:詠唱+粉紅集氣→全體活著友軍冒愛心+回血(照抄實驗室 demoLabMedic)
@@ -8117,7 +8121,7 @@
             const ak = isEvo2 ? ('card_' + id + '_e2_thumb') : isEvo ? ('card_' + id + '_e_thumb') : (force === 'base' ? (CARD_ART[id] ? 'card_' + id + '_thumb' : null) : cardArtKey(cd.id, 'thumb'));
             const nm = isEvo2 ? (EVO2_CARDS[id] || cardName(cd.id)) : isEvo ? (EVO_CARDS[id] || cardName(cd.id)) : (force === 'base' ? cd.name : cardName(cd.id));
             if (ak && this.textures.exists(ak)) A(this.add.image(x, yy, ak).setDisplaySize(sz, sz).setOrigin(0.5)); else txt(x, yy - 2, nm, FS.micro, '#1a1208', 0.5, true);
-            txt(x, yy + sz / 2 - 10, 'Lv' + getCardLv(cd.id), FS.micro, '#ffffff', 0.5, true).setStroke('#000000', 3.5);
+            const _st = force === 'base' ? 1 : force === 'evo' ? 2 : force === 'evo2' ? 3 : cardStars(cd.id); txt(x, yy + sz / 2 - 9, '★'.repeat(Math.max(1, Math.min(4, _st))), FS.micro, '#ffe08a', 0.5, true).setStroke('#4a2e00', 3.5);   // 🆕星級(取代 LV):base=1★/evo=2★/evo2=3★;一般卡=rank+evo
             hit.on('pointerup', () => { if (this.dragMoved < 12) this.showDetail(cd); });
           } else {
             A(roundRectG(this, x, yy, sz, sz, 12, T.surf2, 1, T.divider, 1.5));
@@ -8135,19 +8139,11 @@
           y += 28; const sz = 52, gx = 66, x0 = CX - 2 * gx;
           DEX_EL5.forEach((el, i) => drawCell(x0 + i * gx, y + sz / 2, sz, tm.cards ? tm.cards[el] : null, isEvoSp ? 'base' : null));
           y += sz + 20;
-          if (isEvoSp) {   // 進化型另起一列(進化過才解鎖)
-            const haveEvo = DEX_EL5.filter(el => getCardEvo(tm.cards[el]) >= 1).length;
-            txt(52, y, '↳ 進化型', FS.micro, tm.color, 0, true);
-            txt(W - 28, y, haveEvo + '/5', FS.micro, T.ink3, 1);
-            y += 22;
+          if (isEvoSp) {   // 進化型(2星)另起一列——標題字拿掉,靠格上星級區分
             DEX_EL5.forEach((el, i) => drawCell(x0 + i * gx, y + sz / 2, sz, tm.cards[el], 'evo'));
             y += sz + 20;
           }
-          if (isEvo2Sp) {   // 👺哥布林系 3星型再起一列(evo2 才解鎖)
-            const haveEvo2 = DEX_EL5.filter(el => getCardEvo(tm.cards[el]) >= 2).length;
-            txt(52, y, '↳ 3星型', FS.micro, tm.color, 0, true);
-            txt(W - 28, y, haveEvo2 + '/5', FS.micro, T.ink3, 1);
-            y += 22;
+          if (isEvo2Sp) {   // 3星型再起一列——標題字拿掉,靠格上星級區分
             DEX_EL5.forEach((el, i) => drawCell(x0 + i * gx, y + sz / 2, sz, tm.cards[el], 'evo2'));
             y += sz + 20;
           }

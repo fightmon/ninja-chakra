@@ -190,6 +190,47 @@ const OVERRIDES = {
             { el:'thunder', hp:1900, atk:200, turns:3, boss:true, iron:3, ironPunish:true },
             { el:'thunder', hp:680, atk:100, turns:3, tier:3, iron:2, ironPunish:true } ] },
   ],
+  // 🩹水城=史萊姆醫療隊:全員都會補(隊友<½→補,補量依星級 1星¼/2星⅓/3星+½),CD2→逼玩家集火秒殺(用土剋屬爆一隻,趁CD空檔)。4星博士=補+復活(2次)。3隻關前2後1(中間站後)
+  'water:baby': [
+    { es: [ { el:'water', hp:520, atk:78, turns:2, tier:1, beh:'healAlly', healPct:0.25, healCD:2 },
+            { el:'water', hp:520, atk:78, turns:2, tier:1, beh:'healAlly', healPct:0.25, healCD:2 } ] },
+    { es: [ { el:'water', hp:500, atk:76, turns:2, tier:1, beh:'healAlly', healPct:0.25, healCD:2 },
+            { el:'water', hp:500, atk:76, turns:2, tier:1, beh:'healAlly', healPct:0.25, healCD:2 },
+            { el:'water', hp:500, atk:76, turns:2, tier:1, beh:'healAlly', healPct:0.25, healCD:2 } ] },
+    { es: [ { el:'water', hp:500, atk:76, turns:2, tier:1, beh:'healAlly', healPct:0.25, healCD:2 },
+            { el:'water', hp:600, atk:85, turns:2, tier:2, beh:'healAlly', healPct:0.33, healCD:2 },
+            { el:'water', hp:500, atk:76, turns:2, tier:1, beh:'healAlly', healPct:0.25, healCD:2 } ] },
+  ],
+  'water:beginner': [
+    { es: [ { el:'water', hp:560, atk:88, turns:2, tier:2, beh:'healAlly', healPct:0.33, healCD:2 },
+            { el:'water', hp:560, atk:88, turns:2, tier:2, beh:'healAlly', healPct:0.33, healCD:2 } ] },
+    { es: [ { el:'water', hp:540, atk:85, turns:2, tier:1, beh:'healAlly', healPct:0.25, healCD:2 },
+            { el:'water', hp:600, atk:90, turns:2, tier:2, beh:'healAlly', healPct:0.33, healCD:2 },
+            { el:'water', hp:540, atk:85, turns:2, tier:1, beh:'healAlly', healPct:0.25, healCD:2 } ] },
+    { es: [ { el:'water', hp:540, atk:85, turns:2, tier:1, beh:'healAlly', healPct:0.25, healCD:2 },
+            { el:'water', hp:680, atk:98, turns:2, tier:3, beh:'healAlly', healPct:0.5, healCD:2 },
+            { el:'water', hp:540, atk:85, turns:2, tier:1, beh:'healAlly', healPct:0.25, healCD:2 } ] },
+  ],
+  'water:normal': [
+    { es: [ { el:'water', hp:640, atk:100, turns:2, tier:2, beh:'healAlly', healPct:0.33, healCD:2 },
+            { el:'water', hp:640, atk:100, turns:2, tier:2, beh:'healAlly', healPct:0.33, healCD:2 } ] },
+    { es: [ { el:'water', hp:640, atk:100, turns:2, tier:2, beh:'healAlly', healPct:0.33, healCD:2 },
+            { el:'water', hp:720, atk:108, turns:2, tier:3, beh:'healAlly', healPct:0.5, healCD:2 },
+            { el:'water', hp:640, atk:100, turns:2, tier:2, beh:'healAlly', healPct:0.33, healCD:2 } ] },
+    { es: [ { el:'water', hp:640, atk:100, turns:2, tier:2, beh:'healAlly', healPct:0.33, healCD:2 },
+            { el:'water', hp:1900, atk:190, turns:2, boss:true, beh:'healAlly', healPct:0.5, healCD:2 },
+            { el:'water', hp:640, atk:100, turns:2, tier:2, beh:'healAlly', healPct:0.33, healCD:2 } ] },
+  ],
+  'water:advanced': [
+    { es: [ { el:'water', hp:760, atk:115, turns:2, tier:3, beh:'healAlly', healPct:0.5, healCD:2 },
+            { el:'water', hp:760, atk:115, turns:2, tier:3, beh:'healAlly', healPct:0.5, healCD:2 } ] },
+    { es: [ { el:'water', hp:760, atk:115, turns:2, tier:3, beh:'healAlly', healPct:0.5, healCD:2 },
+            { el:'water', hp:760, atk:115, turns:2, tier:3, beh:'healAlly', healPct:0.5, healCD:2 },
+            { el:'water', hp:700, atk:110, turns:2, tier:2, beh:'healAlly', healPct:0.33, healCD:2 } ] },
+    { es: [ { el:'water', hp:760, atk:115, turns:2, tier:3, beh:'healAlly', healPct:0.5, healCD:2 },
+            { el:'water', hp:2100, atk:200, turns:2, boss:true, beh:'healAlly', healPct:0.5, healCD:2 },
+            { el:'water', hp:760, atk:115, turns:2, tier:3, beh:'healAlly', healPct:0.5, healCD:2 } ] },
+  ],
 };
 
 function _cloneStages(stages){ return stages.map(st=>({...st, es:st.es.map(e=>({...e}))})); }   // 深拷貝,避免改到原始 base
@@ -281,11 +322,12 @@ function spawnStage(dungeonId, diffKey, stageIdx){
     else if(dk==='hell'&&dEl&&!myBeh){ beh='hit'; full=true; }
     const g=behGates(beh, dk, full);
     if(d.finPct!=null) g.finisher=d.finPct;   // 🔧OVERRIDE 直接指定終結傷害佔 maxHP 比例(初級低傷教學用,蓋掉 behGates 的 0.4/0.6)
+    if(d.healPct!=null) g.healAlly=d.healPct;   // 🩹史萊姆:補血量佔隊友 maxHP 比例(1星0.25/2星0.33/3星+0.5),蓋掉 behGates 預設
     if(g.shield){ const kind=(stageIdx===0)?'combo':'hit'; if(kind==='combo'){g.comboGate=2;g.hitGate=0;}else{g.hitGate=15;g.comboGate=0;} g.shieldKind=kind; }   // 🛡盾型:S1(stageIdx0)=連段2、S2/魔王=HIT15
     // 🔥火城畜力技統一 CD式(CD4、倒數CD3/2/1顯示蓄力):中級雜兵(S1右/S2中)+魔王都套;地獄雜兵(full 非魔王)維持原樣。雜兵給2星哥布林貼圖,魔王維持自身貼圖(中級↑=4星酋長、初級=3星戰士)。||=OVERRIDE 明確值優先
     let tierV=d.tier||0, finCDV=d.finCD||0, finStagesV=d.finStages||0;
     if(dEl==='fire' && g.finisher>0 && !phases && (!full || d.boss)){ finCDV=finCDV||4; finStagesV=finStagesV||3; if(!d.boss) tierV=tierV||2; }
-    const ival=(finCDV>0)?finCDV:((g.healAlly>0||(g.eatStored>0&&d.boss)||(g.paralyze>0&&d.boss))?1:turns);   // 🔥finCD=CD式畜力技的總CD(蓋過 turns);💚補師 CD=1;🌀消塊魔王 CD=1;⚡麻痺魔王 CD=1;術士 CD=turns(=2)
+    const ival=(finCDV>0)?finCDV:(d.healCD>0)?d.healCD:((g.healAlly>0||(g.eatStored>0&&d.boss)||(g.paralyze>0&&d.boss))?1:turns);   // 🩹healCD=史萊姆補血CD(=2,蓋過補師預設CD1)   // 🔥finCD=CD式畜力技的總CD(蓋過 turns);💚補師 CD=1;🌀消塊魔王 CD=1;⚡麻痺魔王 CD=1;術士 CD=turns(=2)
     return {el,max:hp,hp:hp,atk:atk,interval:ival,timer:Math.max(2,ival),burn:0,dead:false,boss:!!d.boss,guard:(!d.boss&&stageHasBoss),...g,phases,phaseIdx:0,arch:d.arch||null,tier:tierV,finStages:finStagesV,finAnyHit:!!d.finAnyHit,finCD:finCDV,peck:d.peck||0,peckTray:!!d.peckTray,stealStored:!!d.stealStored,iron:d.iron||0,ironPunish:!!d.ironPunish};   // 每關初始 timer≥2;tier=星級貼圖;finStages=蓄力段數;finCD>0=CD式畜力;peck>0=🦆賊鴨偷盤面格;iron>0=🤖鐵機人放n連體鐵塊卡位(避開湊滿宮/線、盤面太緊停放;ironPunish=沒清掉下輪2倍打)
   });
 }
