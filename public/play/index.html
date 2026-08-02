@@ -2258,6 +2258,7 @@
         else {
           const _els = new Set(); const _nSt = (this.stagesEff || []).length; for (let _si = 0; _si < _nSt; _si++) { if (this.stagesEff[_si] && this.stagesEff[_si].bonus) continue; const _rawSi = (this._bonusStagePos && _si >= this._bonusStagePos) ? _si - 1 : _si; try { spawnStage(this.dungeonId, this.diff.key, _rawSi).forEach(e => { _els.add(e.el); if (e.phases) e.phases.forEach(ph => _els.add(ph.el)); }); } catch (_e) { } }   // 只載本關屬性:用 spawnStage 產「真敵人」收集元素(涵蓋上級↑懲罰屬 pun + 魔王階段變身),與 spawnEnemies 完全對齊→動態屬不再漏載變 emoji;原無腦全載 50 檔~5.2MB 大砍;🆕bonus 槽跳過+其後索引 -1 校正(比照 spawnEnemies 的 _si 換算,避免漏載真正 S3+ 的屬性)
           _els.forEach(el => { if (MONSTER_IMG[el] && !this.textures.exists('mon_' + el)) this.load.image('mon_' + el, MONSTER_IMG[el]); _CLS.forEach(c => { const k = c + '_' + el; if (ENEMY_IMG[k] && !this.textures.exists(k)) this.load.image(k, ENEMY_IMG[k]); }); });
+          if (!['fire', 'water', 'thunder', 'earth', 'wind'].includes(this.dungeonId)) { const _BLK = { fire: 'c66', water: 'c67', thunder: 'c68', earth: 'c69', wind: 'c70' }; _els.forEach(el => { if (_BLK[el]) _loadCardArt(this, [_BLK[el]]); }); }   // 🆕2026-08-03 非五城地城(序章/塔等)一般雜兵改用方塊怪卡圖→預載本關元素的方塊怪(含 _e/_e2 進化圖,見 enemyTexKey 通用 fallback)
         }
         _loadCardArt(this, (this.presetTeam || []).map(c => c && c.id));   // 只載「出戰 5 張」卡圖(不再一次載全部 40 張)
         if (this._bonus && this._bonus.length) _loadCardArt(this, [...this._bonus, 'c66', 'c67', 'c68', 'c69', 'c70']);   // 🆕2026-08-02 bonus 關:補載本場獎勵卡(金屬/金錢)+ 5 張方塊怪填充卡圖(base 圖即可,見 spawnBonusEnemies);enemyTexKey 靠 e.cardId 找 card_<id>_full,沒預載到就退回 EL['neutral'].face 💰 emoji(不會崩,但畫面會醜)
@@ -2334,6 +2335,12 @@
           const adv = (dk !== 'baby' && dk !== 'beginner');
           if (adv && this.textures.exists('guard_' + el)) return 'guard_' + el;
         }   // 中級(normal)以上雜兵(含魔王關護衛)→m003
+        const _blk = { fire: 'c66', water: 'c67', thunder: 'c68', earth: 'c69', wind: 'c70' }[el];   // 🆕2026-08-03 一般雜兵(非五城/非 bonus)改用方塊怪卡圖:tier 1/2/3 → 方塊怪/方塊獸/方塊王;取代舊 grunt_/mon_/emoji(需 preload 已補載,見上方 _BLK)
+        if (_blk) {
+          const bk = e.tier === 3 ? 'card_' + _blk + '_e2_full' : e.tier === 2 ? 'card_' + _blk + '_e_full' : 'card_' + _blk + '_full';
+          if (this.textures.exists(bk)) return bk;
+          if (this.textures.exists('card_' + _blk + '_full')) return 'card_' + _blk + '_full';
+        }
         if (this.textures.exists('grunt_' + el)) return 'grunt_' + el;
         if (this.textures.exists('mon_' + el)) return 'mon_' + el;
         return null;
