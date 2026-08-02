@@ -79,7 +79,7 @@
     /* ===== 純邏輯(N/EL/SHAPES/CONFIG/computeClears/種子亂數 等戰鬥核心已抽到 battle-core.js,瀏覽器當共用全域)===== */
     const KEYS = ['fire', 'wind', 'thunder', 'earth', 'water'];
     const MONSTER_IMG = { water: 'art/monsters/slime_water.webp', fire: 'art/monsters/slime_fire.webp', thunder: 'art/monsters/slime_thunder.webp', earth: 'art/monsters/slime_earth.webp', wind: 'art/monsters/slime_wind.webp' };   // 舊五屬史萊姆(fallback);無對應則用 emoji 臉。圖檔放 001_website/art/monsters/(webp)
-    const CARD_ART = { c03: 1, c06: 1, c19: 1, c10: 1, c12: 1, c02: 1, c05: 1, c08: 1, c09: 1, c11: 1, c13: 1, c16: 1, c20: 1, c23: 1, c27: 1, c15: 1, c18: 1, c22: 1, c26: 1, c30: 1, c31: 1, c32: 1, c33: 1, c34: 1, c35: 1, c14: 1, c17: 1, c21: 1, c24: 1, c28: 1, c01: 1, c04: 1, c07: 1, c25: 1, c29: 1, c36: 1, c37: 1, c38: 1, c39: 1, c40: 1, c41: 1, c42: 1, c43: 1, c44: 1, c45: 1, c46: 1, c47: 1, c48: 1, c49: 1, c50: 1, c51: 1, c52: 1, c53: 1, c54: 1, c55: 1, c56: 1, c57: 1, c58: 1, c59: 1, c60: 1, c61: 1, c62: 1, c63: 1, c64: 1, c65: 1 };   // 有角色圖的卡:犬/貓/鼠/台灣/兔/魚(c14,17,21,24,28)/鳥(c01,04,07,25,29)/妖·蜘蛛(c36-c40,1→2星換_e圖)/妖·鬼(c41-c45,1→2星換_e圖),各火水雷土風 → art/cards/<id>_thumb.webp+_full.webp
+    const CARD_ART = { c03: 1, c06: 1, c19: 1, c10: 1, c12: 1, c02: 1, c05: 1, c08: 1, c09: 1, c11: 1, c13: 1, c16: 1, c20: 1, c23: 1, c27: 1, c15: 1, c18: 1, c22: 1, c26: 1, c30: 1, c31: 1, c32: 1, c33: 1, c34: 1, c35: 1, c14: 1, c17: 1, c21: 1, c24: 1, c28: 1, c01: 1, c04: 1, c07: 1, c25: 1, c29: 1, c36: 1, c37: 1, c38: 1, c39: 1, c40: 1, c41: 1, c42: 1, c43: 1, c44: 1, c45: 1, c46: 1, c47: 1, c48: 1, c49: 1, c50: 1, c51: 1, c52: 1, c53: 1, c54: 1, c55: 1, c56: 1, c57: 1, c58: 1, c59: 1, c60: 1, c61: 1, c62: 1, c63: 1, c64: 1, c65: 1, c66: 1, c67: 1, c68: 1, c69: 1, c70: 1, c71: 1, c72: 1, c73: 1, c74: 1, c75: 1, c76: 1 };   // 有角色圖的卡:犬/貓/鼠/台灣/兔/魚(c14,17,21,24,28)/鳥(c01,04,07,25,29)/妖·蜘蛛(c36-c40,1→2星換_e圖)/妖·鬼(c41-c45,1→2星換_e圖),各火水雷土風 → art/cards/<id>_thumb.webp+_full.webp;2026-08-02 加方塊怪(c66-c70,支援_e/_e2)+金屬/金錢(c71-c76,無_e/_e2,只有 base full/thumb)
     function cardArtKey(id, size) { if (!id) return null; const t = getCardEvo(id); if (EVO2_CARDS[id] && t >= 2) return 'card_' + id + '_e2_' + size; if (EVO_CARDS[id] && t >= 1) return 'card_' + id + '_e_' + size; return CARD_ART[id] ? ('card_' + id + '_' + size) : null; }   // 回傳 texture key(thumb/full),無圖回 null→退回 emoji;進化雜牌卡 evo≥2(EVO2_CARDS)→<id>_e2_<size>,evo≥1→<id>_e_<size>
     function _loadCardArt(scene, ids) { (ids || []).forEach(id => { if (!id || !CARD_ART[id]) return;['thumb', 'full'].forEach(s => { const k = 'card_' + id + '_' + s; if (!scene.textures.exists(k)) scene.load.image(k, 'art/cards/' + id + '_' + s + '.webp'); }); if (EVO_CARDS[id]) { ['thumb', 'full'].forEach(s => { const k = 'card_' + id + '_e_' + s; if (!scene.textures.exists(k)) scene.load.image(k, 'art/cards/' + id + '_e_' + s + '.webp'); }); } if (EVO2_CARDS[id]) { ['thumb', 'full'].forEach(s => { const k = 'card_' + id + '_e2_' + s; if (!scene.textures.exists(k)) scene.load.image(k, 'art/cards/' + id + '_e2_' + s + '.webp'); }); } }); }   // 按需載卡圖(戰鬥/大廳只載出戰隊);繪製端皆有 textures.exists 保護→沒載到退回 emoji;進化雜牌卡額外多載 _e 進化圖(兩形都要有),支援 evo2(EVO2_CARDS)再多載 _e2 三形
     function _loadAllCardArt(scene) { _loadCardArt(scene, Object.keys(CARD_ART)); }   // 卡冊/編隊/合成/圖鑑=看全部卡→進場才載全部
@@ -111,13 +111,14 @@
       { emoji: '🇹🇼', name: '台灣特有種', color: '#8fe0a8', cards: { fire: 'c15', water: 'c18', thunder: 'c22', earth: 'c26', wind: 'c30' } },
       { emoji: '🤖', name: '鐵機人', color: '#b79bff', cards: { fire: 'c36', water: 'c37', thunder: 'c38', earth: 'c39', wind: 'c40' } },   // 雜牌卡(未標家族,保留 genin 1星;1→2星換大鐵機圖,2→3星換邪惡鐵機圖,見 SPIDER_EVO/SPIDER_EVO2,原名蜘蛛,2026-07-31 改名鐵機人)
       { emoji: '👺', name: '哥布林', color: '#ff6a4a', cards: { fire: 'c41', water: 'c42', thunder: 'c43', earth: 'c44', wind: 'c45' } },   // 雜牌卡(未標家族,保留 genin 1星;1→2星換青年哥布林圖,2→3星換戰士哥布林圖,見 GHOST_EVO/GHOST_EVO2)
-      { emoji: '🧱', name: '妖·牆', color: '#c9a86a', cards: { fire: 'c46', water: 'c47', thunder: 'c48', earth: 'c49', wind: 'c50' } },   // 雜牌卡(未標家族,保留 genin 1星,進化2星換城牆怪圖);土城盾兵/盾王借此圖
+      { emoji: '🧱', name: '牆怪', color: '#c9a86a', cards: { fire: 'c46', water: 'c47', thunder: 'c48', earth: 'c49', wind: 'c50' } },   // 雜牌卡(未標家族,保留 genin 1星;1→2星換石牆圖,2→3星換鐵牆圖,見 WALL_EVO/WALL_EVO2,2026-08-02 開 evo2);土城盾兵/盾王借此圖
       { emoji: '🦆', name: '賊鴨', color: '#b06ad0', cards: { fire: 'c51', water: 'c52', thunder: 'c53', earth: 'c54', wind: 'c55' } },   // 雜牌卡(未標家族,保留 genin 1星;1→2星換大賊鴨圖,2→3星換盜賊鴨圖,見 WITCH_EVO/WITCH_EVO2,原名魔女);風城消卡片塊敵人/魔王借此圖(魔王另借 king_full)
       { emoji: '🩹', name: '史萊姆', color: '#4fbf8f', cards: { fire: 'c56', water: 'c57', thunder: 'c58', earth: 'c59', wind: 'c60' } },   // 雜牌卡(未標家族,保留 genin 1星;1→2星換護士圖,2→3星換醫生圖,見 YAKUSHI_EVO/YAKUSHI_EVO2;補血系高rcv中攻;原名藥師,2026-08-02 改名史萊姆醫療;水城補師怪/魔王借此圖(魔王另借 king_full)
       { emoji: '💎', name: '寶玉', color: '#8fd0e0', cards: { fire: 'c61', water: 'c62', thunder: 'c63', earth: 'c64', wind: 'c65' } },   // 進化素材(chunin 2★晶精);屬性城掉落、進化消耗;不進 EVO_CARDS
+      { emoji: '🟦', name: '方塊怪', color: '#6aa0d0', cards: { fire: 'c66', water: 'c67', thunder: 'c68', earth: 'c69', wind: 'c70' } },   // 雜牌卡(未標家族,保留 genin 1星;1→2星換方塊獸圖,2→3星換方塊王圖,見 BLOCK_EVO/BLOCK_EVO2,2026-08-02 加);bonus 關雜兵/魔王借此圖
     ];
     const DEX_EL5 = ['fire', 'water', 'thunder', 'earth', 'wind'];
-    const DEX_ASSIGNED = new Set(['c03', 'c06', 'c19', 'c10', 'c12', 'c02', 'c05', 'c08', 'c09', 'c11', 'c13', 'c16', 'c20', 'c23', 'c27', 'c15', 'c18', 'c22', 'c26', 'c30', 'c14', 'c17', 'c21', 'c24', 'c28', 'c31', 'c32', 'c33', 'c34', 'c35', 'c01', 'c04', 'c07', 'c25', 'c29', 'c36', 'c37', 'c38', 'c39', 'c40', 'c41', 'c42', 'c43', 'c44', 'c45', 'c46', 'c47', 'c48', 'c49', 'c50', 'c51', 'c52', 'c53', 'c54', 'c55', 'c56', 'c57', 'c58', 'c59', 'c60', 'c61', 'c62', 'c63', 'c64', 'c65']);   // 已歸物種隊(犬/貓/鳥/鼠/魚/兔/台灣/妖蜘蛛/妖鬼/妖牆/妖魔女/妖藥師)的卡 → 不重複進「未歸隊」
+    const DEX_ASSIGNED = new Set(['c03', 'c06', 'c19', 'c10', 'c12', 'c02', 'c05', 'c08', 'c09', 'c11', 'c13', 'c16', 'c20', 'c23', 'c27', 'c15', 'c18', 'c22', 'c26', 'c30', 'c14', 'c17', 'c21', 'c24', 'c28', 'c31', 'c32', 'c33', 'c34', 'c35', 'c01', 'c04', 'c07', 'c25', 'c29', 'c36', 'c37', 'c38', 'c39', 'c40', 'c41', 'c42', 'c43', 'c44', 'c45', 'c46', 'c47', 'c48', 'c49', 'c50', 'c51', 'c52', 'c53', 'c54', 'c55', 'c56', 'c57', 'c58', 'c59', 'c60', 'c61', 'c62', 'c63', 'c64', 'c65', 'c66', 'c67', 'c68', 'c69', 'c70']);   // 已歸物種隊(犬/貓/鳥/鼠/魚/兔/台灣/妖蜘蛛/妖鬼/妖牆/妖魔女/妖藥師/妖方塊怪)的卡 → 不重複進「未歸隊」;⚠️ 金屬/金錢(c71~c76)刻意不加入→落在圖鑑「未歸隊」區(不進 SPECIES_TEAMS/CARD_SPECIES,依交辦規格)
     // 物種「種族」顯示(覆蓋詳細頁的人類/妖怪/靈獸;只改顯示,不動底層 race)→ 已歸隊的卡顯示其物種
     const CARD_SPECIES = {};
     [['🐱', '貓', '#8fd16a', 0x1d3a1f, ['c02', 'c05', 'c08', 'c09', 'c11']],
@@ -129,10 +130,11 @@
     ['🐦', '鳥', '#c79bff', 0x231a26, ['c01', 'c04', 'c07', 'c25', 'c29']],
     ['🤖', '鐵機人', '#b79bff', 0x241a2e, ['c36', 'c37', 'c38', 'c39', 'c40']],
     ['👺', '妖', '#ff6a4a', 0x2e1a1a, ['c41', 'c42', 'c43', 'c44', 'c45']],
-    ['🧱', '妖', '#c9a86a', 0x2a2418, ['c46', 'c47', 'c48', 'c49', 'c50']],
+    ['🧱', '牆怪', '#c9a86a', 0x2a2418, ['c46', 'c47', 'c48', 'c49', 'c50']],
     ['🦆', '妖', '#b06ad0', 0x241a2e, ['c51', 'c52', 'c53', 'c54', 'c55']],
     ['🩹', '史萊姆', '#4fbf8f', 0x18332a, ['c56', 'c57', 'c58', 'c59', 'c60']],
-    ['💎', '寶玉', '#8fd0e0', 0x16313a, ['c61', 'c62', 'c63', 'c64', 'c65']]
+    ['💎', '寶玉', '#8fd0e0', 0x16313a, ['c61', 'c62', 'c63', 'c64', 'c65']],
+    ['🟦', '方塊怪', '#6aa0d0', 0x1a2733, ['c66', 'c67', 'c68', 'c69', 'c70']]
     ].forEach(([e, n, c, bg, ids]) => ids.forEach(id => CARD_SPECIES[id] = { e, n, c, bg }));
     // ===== 程序化音效(WebAudio 即時合成,零檔案/零版權/離線)=====
     const SFX = (() => {
@@ -322,7 +324,7 @@
       if (opt.manage) {
         gpill(CX - 118, H - 52, 110, 52, '⬆️ 強化', tint(elc, 0.3), elc, '#ffffff', FS.cap, () => opt.onFuse && opt.onFuse());   // 屬色漸層(上亮下深,寶可夢式)
         // 進化鈕:滿 LV20 且還能進化 → 金色漸層(可動作);未滿 LV20 / 已達進化上限 / 素材卡 → 灰階。仍可點,點了由 canEvolve 跳原因 toast
-        const _evoCap = EVO2_CARDS[cd.id] ? 2 : (EVO_CARDS[cd.id] ? 1 : EVO_MAX);   // 對齊 canEvolve 的上限判斷(哥布林/賊鴨/鐵機人/史萊姆醫療系 evo2=3星,其餘雜牌系 evo1=2星封頂)
+        const _evoCap = EVO2_CARDS[cd.id] ? 2 : (EVO_CARDS[cd.id] ? 1 : EVO_MAX);   // 對齊 canEvolve 的上限判斷(哥布林/賊鴨/鐵機人/史萊姆醫療/牆怪系 evo2=3星,其餘雜牌系 evo1=2星封頂)
         const _evoLit = mx && !MATERIAL_IDS.has(cd.id) && getCardEvo(cd.id) < _evoCap;
         gpill(CX, H - 52, 110, 52, '✨ 進化', _evoLit ? 0xffe9a8 : 0xe4e0d8, _evoLit ? 0xd9932a : 0xb8b0a4, _evoLit ? '#4a2c05' : '#8a8378', FS.cap, () => opt.onEvolve && opt.onEvolve());
         pill(CX + 118, H - 52, 110, 52, '✖ 關閉', TK.surf, TK.divider, TK.ink2, FS.cap, () => opt.onClose && opt.onClose());
@@ -482,12 +484,12 @@
       { id: 'c43', name: '雷哥布林', el: 'thunder', race: 'yokai', rank: 'genin', atk: 120, hp: 90, rcv: 13, attrs: ['thunder'] },
       { id: 'c44', name: '土哥布林', el: 'earth', race: 'yokai', rank: 'genin', atk: 85, hp: 145, rcv: 13, attrs: ['earth'] },
       { id: 'c45', name: '風哥布林', el: 'wind', race: 'yokai', rank: 'genin', atk: 105, hp: 100, rcv: 15, attrs: ['wind'] },
-      /* ── 🧱 牆怪系(雜牌卡,鏡像蜘蛛/鬼系:不進 CARD_FAMILY/TW_IDS→保留 genin ★1;防禦系高血低攻;1★→2★進化換名換圖「◯城牆怪」,見 WALL_EVO;土城盾兵/盾王借圖)── */
-      { id: 'c46', name: '火牆怪', el: 'fire', race: 'yokai', rank: 'genin', atk: 105, hp: 135, rcv: 8, attrs: ['fire'] },
-      { id: 'c47', name: '水牆怪', el: 'water', race: 'yokai', rank: 'genin', atk: 55, hp: 165, rcv: 20, attrs: ['water'] },
-      { id: 'c48', name: '雷牆怪', el: 'thunder', race: 'yokai', rank: 'genin', atk: 95, hp: 140, rcv: 12, attrs: ['thunder'] },
-      { id: 'c49', name: '土牆怪', el: 'earth', race: 'yokai', rank: 'genin', atk: 70, hp: 185, rcv: 12, attrs: ['earth'] },
-      { id: 'c50', name: '風牆怪', el: 'wind', race: 'yokai', rank: 'genin', atk: 85, hp: 150, rcv: 14, attrs: ['wind'] },
+      /* ── 🧱 牆怪系(雜牌卡,鏡像蜘蛛/鬼/賊鴨/史萊姆醫療系:不進 CARD_FAMILY/TW_IDS→保留 genin ★1;防禦系高血低攻;1★→2★→3★三階進化「◯石牆/◯鐵牆」,見 WALL_EVO/WALL_EVO2;土城盾兵/盾王借圖,2026-08-02 開 evo2)── */
+      { id: 'c46', name: '火磚牆', el: 'fire', race: 'yokai', rank: 'genin', atk: 105, hp: 135, rcv: 8, attrs: ['fire'] },
+      { id: 'c47', name: '水磚牆', el: 'water', race: 'yokai', rank: 'genin', atk: 55, hp: 165, rcv: 20, attrs: ['water'] },
+      { id: 'c48', name: '雷磚牆', el: 'thunder', race: 'yokai', rank: 'genin', atk: 95, hp: 140, rcv: 12, attrs: ['thunder'] },
+      { id: 'c49', name: '土磚牆', el: 'earth', race: 'yokai', rank: 'genin', atk: 70, hp: 185, rcv: 12, attrs: ['earth'] },
+      { id: 'c50', name: '風磚牆', el: 'wind', race: 'yokai', rank: 'genin', atk: 85, hp: 150, rcv: 14, attrs: ['wind'] },
       /* ── 🦆 賊鴨系(雜牌卡,鏡像蜘蛛/鬼/牆系:不進 CARD_FAMILY/TW_IDS→保留 genin ★1;魔法攻擊系高攻中血;1★→2★→3★三階進化,見 WITCH_EVO/WITCH_EVO2;風城消卡片塊敵人/魔王借圖;內部 id/物種 key 沿用魔女時期,原名"魔女",2026-07-30 改名賊鴨)── */
       { id: 'c51', name: '火賊鴨', el: 'fire', race: 'yokai', rank: 'genin', atk: 135, hp: 85, rcv: 10, attrs: ['fire'] },
       { id: 'c52', name: '水賊鴨', el: 'water', race: 'yokai', rank: 'genin', atk: 90, hp: 130, rcv: 22, attrs: ['water'] },
@@ -509,22 +511,42 @@
       { id: 'c63', name: '雷晶精', el: 'thunder', race: 'spirit', rank: 'chunin', atk: 20, hp: 120, rcv: 5, attrs: ['thunder'] },
       { id: 'c64', name: '土晶精', el: 'earth', race: 'spirit', rank: 'chunin', atk: 20, hp: 120, rcv: 5, attrs: ['earth'] },
       { id: 'c65', name: '風晶精', el: 'wind', race: 'spirit', rank: 'chunin', atk: 20, hp: 120, rcv: 5, attrs: ['wind'] },
+      /* ── 🟦 方塊怪系(雜牌卡,可進化,鏡射蜘蛛/鬼/牆/賊鴨/史萊姆系):不進 CARD_FAMILY/TW_IDS→保留 genin ★1;
+         低三圍(仿蜘蛛系但更弱,方塊怪定位=最基礎雜兵);1★→2★→3★三階進化「◯方塊獸/◯方塊王」,見 BLOCK_EVO/BLOCK_EVO2;
+         bonus 關(2026-08-02 新增)雜兵/魔王借圖(見 enemyTexKey 的 e.cardId 泛用分支) ── */
+      { id: 'c66', name: '火方塊怪', el: 'fire', race: 'yokai', rank: 'genin', atk: 28, hp: 110, rcv: 5, attrs: ['fire'] },
+      { id: 'c67', name: '水方塊怪', el: 'water', race: 'yokai', rank: 'genin', atk: 28, hp: 110, rcv: 5, attrs: ['water'] },
+      { id: 'c68', name: '雷方塊怪', el: 'thunder', race: 'yokai', rank: 'genin', atk: 28, hp: 110, rcv: 5, attrs: ['thunder'] },
+      { id: 'c69', name: '土方塊怪', el: 'earth', race: 'yokai', rank: 'genin', atk: 28, hp: 110, rcv: 5, attrs: ['earth'] },
+      { id: 'c70', name: '風方塊怪', el: 'wind', race: 'yokai', rank: 'genin', atk: 28, hp: 110, rcv: 5, attrs: ['wind'] },
+      /* ── 🔩💰 金屬/金錢系(純素材,不進化、不進 SPECIES_TEAMS/CARD_SPECIES/DEX_ASSIGNED,落在圖鑑「未歸隊」區):
+         el:'neutral'(見 battle-core.js EL.neutral,新增於本次任務,五屬 UI 一律灰階顯示);race:'spirit';
+         垃圾三圍(純素材不下場);金屬→餵卡覆寫平值經驗(見 METAL_FEED),金錢→分解覆寫高額金幣(見 MONEY_SELL,dissolve.ts) ── */
+      { id: 'c71', name: '小金屬', el: 'neutral', race: 'spirit', rank: 'genin', atk: 1, hp: 100, rcv: 1, attrs: [] },
+      { id: 'c72', name: '大金屬', el: 'neutral', race: 'spirit', rank: 'chunin', atk: 1, hp: 100, rcv: 1, attrs: [] },
+      { id: 'c73', name: '金屬王', el: 'neutral', race: 'spirit', rank: 'jonin', atk: 1, hp: 100, rcv: 1, attrs: [] },
+      { id: 'c74', name: '小金錢', el: 'neutral', race: 'spirit', rank: 'genin', atk: 1, hp: 100, rcv: 1, attrs: [] },
+      { id: 'c75', name: '大金錢', el: 'neutral', race: 'spirit', rank: 'chunin', atk: 1, hp: 100, rcv: 1, attrs: [] },
+      { id: 'c76', name: '金錢王', el: 'neutral', race: 'spirit', rank: 'jonin', atk: 1, hp: 100, rcv: 1, attrs: [] },
     ];
     // 鐵機人系(原蜘蛛)1★→2★進化換名換圖表:進化階(getCardEvo)≥1 → 顯示「◯大鐵機」+ <id>_e_ 圖;2★→3★再進化見 SPIDER_EVO2
     const SPIDER_EVO = { c36: '火大鐵機', c37: '水大鐵機', c38: '雷大鐵機', c39: '土大鐵機', c40: '風大鐵機' };
     // 鬼系(現已改名哥布林系)1★→2★進化換名換圖表:進化階(getCardEvo)≥1 → 顯示「◯青年哥布林」+ <id>_e_ 圖
     const GHOST_EVO = { c41: '火青年哥布林', c42: '水青年哥布林', c43: '雷青年哥布林', c44: '土青年哥布林', c45: '風青年哥布林' };
-    const WALL_EVO = { c46: '火城牆怪', c47: '水城牆怪', c48: '雷城牆怪', c49: '土城牆怪', c50: '風城牆怪' };   // 牆怪 1★→2★進化換名換圖(鏡像蜘蛛/鬼系):進化階≥1 → 顯示「◯城牆怪」+ <id>_e_ 圖;土城盾王借城牆怪 e_full
+    const WALL_EVO = { c46: '火石牆', c47: '水石牆', c48: '雷石牆', c49: '土石牆', c50: '風石牆' };   // 牆怪 1★→2★進化換名換圖(鏡像蜘蛛/鬼系):進化階≥1 → 顯示「◯石牆」+ <id>_e_ 圖;土城盾王借石牆 e_full;2★→3★再進化見 WALL_EVO2
     const WITCH_EVO = { c51: '火大賊鴨', c52: '水大賊鴨', c53: '雷大賊鴨', c54: '土大賊鴨', c55: '風大賊鴨' };   // 賊鴨(原魔女)1★→2★進化換名換圖:進化階≥1 → 顯示「◯大賊鴨」+ <id>_e_ 圖;風城魔王借圖見 WITCH_EVO2/king_full
     const YAKUSHI_EVO = { c56: '火護士', c57: '水護士', c58: '雷護士', c59: '土護士', c60: '風護士' };   // 史萊姆醫療(原藥師)1★→2★進化換名換圖:進化階≥1 → 顯示「◯護士」+ <id>_e_ 圖;水城魔王借圖見 YAKUSHI_EVO2/king_full
-    const EVO_CARDS = Object.assign({}, SPIDER_EVO, GHOST_EVO, WALL_EVO, WITCH_EVO, YAKUSHI_EVO);   // 合併進化雜牌卡名表:凡是「進化換名換圖」共用邏輯(cardArtKey/_loadCardArt/_loadCardThumbs/_ensureFullArt/canEvolve/GACHA_ROSTER/cardName/進化預覽)一律讀這裡,不分蜘蛛/鬼/牆/魔女/藥師
+    const BLOCK_EVO = { c66: '火方塊獸', c67: '水方塊獸', c68: '雷方塊獸', c69: '土方塊獸', c70: '風方塊獸' };   // 方塊怪系 1★→2★進化換名換圖:進化階≥1 → 顯示「◯方塊獸」+ <id>_e_ 圖(2026-08-02 加);bonus 關雜兵/魔王借圖
+    const EVO_CARDS = Object.assign({}, SPIDER_EVO, GHOST_EVO, WALL_EVO, WITCH_EVO, YAKUSHI_EVO, BLOCK_EVO);   // 合併進化雜牌卡名表:凡是「進化換名換圖」共用邏輯(cardArtKey/_loadCardArt/_loadCardThumbs/_ensureFullArt/canEvolve/GACHA_ROSTER/cardName/進化預覽)一律讀這裡,不分蜘蛛/鬼/牆/魔女/藥師/方塊怪
     // 哥布林系(原鬼系)2★→3★再進化名表:進化階(getCardEvo)≥2 → 顯示「◯戰士哥布林」+ <id>_e2_ 圖(3星,2026-07-29 加)。
-    // 目前哥布林系、賊鴨系(原魔女 c51~c55)、鐵機人系(原蜘蛛 c36~c40)、史萊姆醫療系(原藥師 c56~c60)支援 evo2;其餘雜牌系(牆)仍維持 1★→2★ 兩形上限。別系要開 evo2 就往 EVO2_CARDS 加。
+    // 目前哥布林系、賊鴨系(原魔女 c51~c55)、鐵機人系(原蜘蛛 c36~c40)、史萊姆醫療系(原藥師 c56~c60)、牆怪系(c46~c50)支援 evo2;別系要開 evo2 就往 EVO2_CARDS 加。
     const GHOST_EVO2 = { c41: '火戰士哥布林', c42: '水戰士哥布林', c43: '雷戰士哥布林', c44: '土戰士哥布林', c45: '風戰士哥布林' };
     const WITCH_EVO2 = { c51: '火盜賊鴨', c52: '水盜賊鴨', c53: '雷盜賊鴨', c54: '土盜賊鴨', c55: '風盜賊鴨' };   // 賊鴨(原魔女)2★→3★再進化名表:進化階≥2 → 顯示「◯盜賊鴨」+ <id>_e2_ 圖(3星,2026-07-30 加);魔王另借 king_full(4星「◯盜賊鴨王」非卡片)
     const SPIDER_EVO2 = { c36: '火邪惡鐵機', c37: '水邪惡鐵機', c38: '雷邪惡鐵機', c39: '土邪惡鐵機', c40: '風邪惡鐵機' };   // 鐵機人(原蜘蛛)2★→3★再進化名表:進化階≥2 → 顯示「◯邪惡鐵機」+ <id>_e2_ 圖(3星,2026-07-31 加);魔王另借 king_full(4星「◯惡鐵王」非卡片)
     const YAKUSHI_EVO2 = { c56: '火醫生', c57: '水醫生', c58: '雷醫生', c59: '土醫生', c60: '風醫生' };   // 史萊姆醫療(原藥師)2★→3★再進化名表:進化階≥2 → 顯示「◯醫生」+ <id>_e2_ 圖(3星,2026-08-02 加);魔王另借 king_full(4星「◯醫學博士」非卡片)
-    const EVO2_CARDS = Object.assign({}, GHOST_EVO2, WITCH_EVO2, SPIDER_EVO2, YAKUSHI_EVO2);   // 合併「可進到 evo2(3星)」名表:目前哥布林系、賊鴨系、鐵機人系、史萊姆醫療系支援,別的系要開 evo2 往這加
+    const WALL_EVO2 = { c46: '火鐵牆', c47: '水鐵牆', c48: '雷鐵牆', c49: '土鐵牆', c50: '風鐵牆' };   // 牆怪 2★→3★再進化名表:進化階≥2 → 顯示「◯鐵牆」+ <id>_e2_ 圖(3星,2026-08-02 加);魔王另借 king_full(4星「◯城牆王」非卡片)
+    const BLOCK_EVO2 = { c66: '火方塊王', c67: '水方塊王', c68: '雷方塊王', c69: '土方塊王', c70: '風方塊王' };   // 方塊怪系 2★→3★再進化名表:進化階≥2 → 顯示「◯方塊王」+ <id>_e2_ 圖(3星,2026-08-02 加)
+    const EVO2_CARDS = Object.assign({}, GHOST_EVO2, WITCH_EVO2, SPIDER_EVO2, YAKUSHI_EVO2, WALL_EVO2, BLOCK_EVO2);   // 合併「可進到 evo2(3星)」名表:目前哥布林系、賊鴨系、鐵機人系、史萊姆醫療系、牆怪系、方塊怪系支援,別的系要開 evo2 往這加
     function cardName(id) { const c = ROSTER.find(x => x.id === id) || {}; const t = getCardEvo(id); if (t >= 2 && EVO2_CARDS[id]) return EVO2_CARDS[id]; return (EVO_CARDS[id] && t >= 1) ? EVO_CARDS[id] : c.name; }   // 卡片顯示名字統一入口(evo2 名表優先於 evo1 名表,再 fallback ROSTER.name)
     // CONFIG → battle-core.js
     const KATA = ['一之型', '二之型', '三之型', '四之型', '五之型', '禁術', '奧義'];   // LV1~7(簡單數字,日文漢字通用)
@@ -1345,7 +1367,7 @@
     function cardsFetch() { authedFetch('/api/cards').then(r => r.ok ? r.json() : null).then(d => { if (d) syncCards(d); }).catch(() => { }); }   // 🔐 fire-and-forget 拉收藏(離線/失敗靜默,沿用本地快取);開場/切帳/找回後強制校正用
     async function _sendRunComplete(item) {   // 🔐 送出單筆通關(POST /api/run/complete,idem 靠 runId);成功→syncWallet(coins/stones/gem_*)+從 pendingRuns 佇列移除,回 {ok:true,drops};冪等重放 drops 會是空陣列;失敗/離線→回 null(呼叫端自行決定要不要保留佇列等下次)
       let r;
-      try { r = await authedFetch('/api/run/complete', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ dungeonId: item.dungeonId, diff: item.diff, runId: item.runId, name: item.name || getMeta().name }) }); }
+      try { r = await authedFetch('/api/run/complete', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ dungeonId: item.dungeonId, diff: item.diff, runId: item.runId, name: item.name || getMeta().name, bonusKilled: item.bonusKilled || [] }) }); }   // 🆕2026-08-02 bonusKilled 隨行帶給伺服器(見 _grantRun 組 item);離線佇列裡的舊 item 沒這欄→||[] 保底
       catch (e) { return null; }   // 網路失敗:保留該筆,下次再試
       if (r.ok) {
         const d = await r.json(); syncWallet(d); if (d.gems) syncGems(d.gems);
@@ -1535,7 +1557,9 @@
     }
     const FEED_EXP = { genin: 60, chunin: 150, jonin: 400, kage: 900 };   // 各稀有度素材"基礎值"(per-instance level 後:實際經驗還要加上素材自己已投入的經驗,見 fodderFeedExp)
     const FEED_RETURN_RATIO = 1.0;   // 素材吃回自己已投入經驗的比例(1.0=全額吐回,練過的素材餵下去不虧,同龍族);數值與後端 _lib/gamedata.ts FEED_RETURN_RATIO 一致
-    function fodderFeedExp(rank, level, sameEl) {   // 🆕 per-instance level:素材給的經驗看素材自己幾級(不再只看稀有度)。accInvested=素材已投入總經驗=25×(lv-1)×lv(封閉式,等價 expToNext(1..lv-1)累加);exp=round(base+accInvested×0.6)×(同屬?1.5:1)。公式須與後端 _lib/cards.ts cardFeedExp 一致
+    const METAL_FEED = { c71: 3000, c72: 10000, c73: 40000 };   // 🔩 金屬系餵卡經驗覆寫(2026-08-02 加):無屬→無同屬加成,平值直接回,不套 level/sameEl。鏡射後端 _lib/gamedata.ts METAL_FEED,cardFeedExp 同一份數值
+    function fodderFeedExp(id, rank, level, sameEl) {   // 🆕 per-instance level:素材給的經驗看素材自己幾級(不再只看稀有度)。accInvested=素材已投入總經驗=25×(lv-1)×lv(封閉式,等價 expToNext(1..lv-1)累加);exp=round(base+accInvested×0.6)×(同屬?1.5:1)。公式須與後端 _lib/cards.ts cardFeedExp 一致。⚠️2026-08-02 加 id 參數:金屬系(METAL_FEED)覆寫,先查覆寫再走一般公式
+      if (id && METAL_FEED[id] != null) return METAL_FEED[id];
       const lv = (level || 1) < 1 ? 1 : (level || 1);
       const base = FEED_EXP[rank] || FEED_EXP.genin;
       const accInvested = 25 * (lv - 1) * lv;
@@ -1566,7 +1590,7 @@
       if (!t) return { fromLv: lv, toLv: lv, exp: e, need: expToNext(lv), gained: 0, cost: 0, willMax: false, ups: 0, eaten: 0 };   // 目標卡不在卡表→空預覽,不崩
       (us || []).forEach(u => {
         const c = s.cards.find(x => x.u === u); if (!c) return; const f = ROSTER.find(r => r.id === c.id); if (!f) return;
-        gained += fodderFeedExp(f.rank, c.lv, f.el === t.el); eaten++;
+        gained += fodderFeedExp(f.id, f.rank, c.lv, f.el === t.el); eaten++;
       });
       let l = lv; e += gained;
       while (l < MAXLV && e >= expToNext(l)) { e -= expToNext(l); l++; }
@@ -1598,7 +1622,7 @@
     const EVO_MAX = 2, EVO_MULT = [1, 1.6, 2.4];
     function evoReq(tier) { return { gems: 3 + tier * 3, coins: 1000 + tier * 2000 }; }   // gems 欄位進化已不用(改吃寶玉卡),coins 仍用
     const JEWEL_OF = { fire: 'c61', water: 'c62', thunder: 'c63', earth: 'c64', wind: 'c65' };   // 進化素材:各屬「寶玉卡」(取代舊寶玉貨幣;伺服器 evolve 會消耗 1 張對應屬性寶玉卡)
-    const MATERIAL_IDS = new Set(Object.values(JEWEL_OF));   // 純素材卡:不可進化(素材自己能練成戰力卡就本末倒置了;且火晶精要吃火晶精=吃自己)。伺服器 evolve.ts 也擋一次
+    const MATERIAL_IDS = new Set([...Object.values(JEWEL_OF), 'c71', 'c72', 'c73', 'c74', 'c75', 'c76']);   // 純素材卡:不可進化(素材自己能練成戰力卡就本末倒置了;且火晶精要吃火晶精=吃自己)。伺服器 evolve.ts 也擋一次。⚠️2026-08-02 判斷追加:金屬/金錢(c71-c76)依交辦「不進化」比照寶玉卡納入,鏡射後端 _lib/gamedata.ts MATERIAL_IDS(此為推測性延伸,交辦原文未逐字提及此常數,見回報)
     function jewelName(el) { const c = ROSTER.find(x => x.id === JEWEL_OF[el]); return c ? c.name : (EL[el] ? EL[el].name : el) + '晶精'; }
     function ownedCardCount(id) { return loadSave().cards.filter(c => c.id === id).length; }   // 背包中某卡種的個體張數
     function getCardEvo(id) { return loadSave().cardEvo[id] || 0; }
@@ -1610,7 +1634,7 @@
       const c = ROSTER.find(x => x.id === id), t = getCardEvo(id);
       if (!c) return { ok: false, msg: '卡片資料不存在' };
       if (MATERIAL_IDS.has(id)) return { ok: false, msg: '素材卡不可進化(拿去進化別的卡)' };   // 純素材:不給練成戰力卡
-      // 單一 cap:👺哥布林系、🦆賊鴨系、🤖鐵機人系(原蜘蛛)、🩹史萊姆醫療系(原藥師) 1★→2★→3★(cap 2);🧱牆系只有兩形(cap 1);一般卡走 EVO_MAX。與 line 325 _evoCap、後端 evolve.ts evoCap 同一套,別再用 else-if(EVO_CARDS 含哥布林,t=1 會被誤擋)
+      // 單一 cap:👺哥布林系、🦆賊鴨系、🤖鐵機人系(原蜘蛛)、🩹史萊姆醫療系(原藥師)、🧱牆怪系 1★→2★→3★(cap 2);一般卡走 EVO_MAX。與 line 325 _evoCap、後端 evolve.ts evoCap 同一套,別再用 else-if(EVO_CARDS 含哥布林,t=1 會被誤擋)
       const evoCap = EVO2_CARDS[id] ? 2 : (EVO_CARDS[id] ? 1 : EVO_MAX);
       if (t >= evoCap) return { ok: false, msg: '已達進化上限' };
       if (getCardLv(id) < MAXLV) return { ok: false, msg: '需先練滿 Lv.' + MAXLV };
@@ -2215,8 +2239,14 @@
         this.lesson = (data && data.lessonId && LESSONS[data.lessonId]) ? { id: data.lessonId, i: -1, free: false } : null;   // 序章練習課程:平行 this.tut 的獨立旗標,兩者同時只有一個非 null
         this.counterTeach = this.dungeonId === 'prologue' && this.diff && this.diff.key === 'baby' && !this.tut && !this.lesson;   // 🩹序章剋屬提醒:只在序章真戰鬥(baby、非腳本教學/課程)生效→敵人頭上常駐弱點徽章 + 一次性文字提示
         this.serverRunId = (data && data.serverRunId) || null;   // 🔐 戰鬥真實性:票券改由 HomeScene.startBattle 在進場前先領(run/start 當閘,見該函式),這裡只接收;全清時 _grantRun 優先用它送 run/complete(時間閘+一次性);拿不到(離線/失敗/教學/實驗室本就不領票)→退回本地 runId 走離線 fallback
+        this._bonus = (data && data.bonus) || null; this._bonusKilled = [];   // 🆕2026-08-02 bonus 關:伺服器 run/start 回應擲骰出的獎勵卡id陣列(金屬c71-73/金錢c74-76)或 null;_bonusKilled 收集本場實際打死的獎勵卡id,回報 run/complete
         this.dive = (data && data.dive) || null;   // 🎬從大廳俯衝進來的元素色(有值才播進場淡入+關卡橫幅)
         this.stagesEff = resolveStages(this.dungeon, this.diff.key);   // (b) 依難度解析「有效關卡結構」(規則+覆寫);slice1 規則=0 → 與 base 全等
+        this._bonusStagePos = 0;   // 🆕 bonus 關插入位置(this.stage 的值,0=不插);插在 S2 之後→S1,S2,[BONUS],S3...
+        if (this._bonus && this._bonus.length && !this.tut && !this.lesson && !this.enemyLab && this.stagesEff.length >= 3) {
+          this.stagesEff.splice(2, 0, { bonus: true });
+          this._bonusStagePos = 3;
+        }
         this.battleSeed = startBattleSeed((data && data.seed) != null ? data.seed : null);
         this._runStatsKey = (this.tut || this.hitLab || this.enemyLab) ? null : (this.dungeonId + '|' + ((this.diff && this.diff.key) || 'normal'));   // 📊 出擊開始:記錄本場統計 key(教學/實驗室不記);全清/戰敗於 _grantRun/gameOver 累加
         this._runStartMs = Date.now();
@@ -2226,16 +2256,17 @@
         const _CLS = ['grunt', 'grunt2', 'guard', 'caster', 'healer', 'shield', 'boss_baby', 'boss_beg', 'boss_nrm'];
         if (this.enemyLab) { for (const el in MONSTER_IMG) if (!this.textures.exists('mon_' + el)) this.load.image('mon_' + el, MONSTER_IMG[el]); for (const k in ENEMY_IMG) if (!this.textures.exists(k)) this.load.image(k, ENEMY_IMG[k]); }   // 敵技實驗室=全載
         else {
-          const _els = new Set(); const _nSt = (this.stagesEff || []).length; for (let _si = 0; _si < _nSt; _si++) { try { spawnStage(this.dungeonId, this.diff.key, _si).forEach(e => { _els.add(e.el); if (e.phases) e.phases.forEach(ph => _els.add(ph.el)); }); } catch (_e) { } }   // 只載本關屬性:用 spawnStage 產「真敵人」收集元素(涵蓋上級↑懲罰屬 pun + 魔王階段變身),與 spawnEnemies 完全對齊→動態屬不再漏載變 emoji;原無腦全載 50 檔~5.2MB 大砍
+          const _els = new Set(); const _nSt = (this.stagesEff || []).length; for (let _si = 0; _si < _nSt; _si++) { if (this.stagesEff[_si] && this.stagesEff[_si].bonus) continue; const _rawSi = (this._bonusStagePos && _si >= this._bonusStagePos) ? _si - 1 : _si; try { spawnStage(this.dungeonId, this.diff.key, _rawSi).forEach(e => { _els.add(e.el); if (e.phases) e.phases.forEach(ph => _els.add(ph.el)); }); } catch (_e) { } }   // 只載本關屬性:用 spawnStage 產「真敵人」收集元素(涵蓋上級↑懲罰屬 pun + 魔王階段變身),與 spawnEnemies 完全對齊→動態屬不再漏載變 emoji;原無腦全載 50 檔~5.2MB 大砍;🆕bonus 槽跳過+其後索引 -1 校正(比照 spawnEnemies 的 _si 換算,避免漏載真正 S3+ 的屬性)
           _els.forEach(el => { if (MONSTER_IMG[el] && !this.textures.exists('mon_' + el)) this.load.image('mon_' + el, MONSTER_IMG[el]); _CLS.forEach(c => { const k = c + '_' + el; if (ENEMY_IMG[k] && !this.textures.exists(k)) this.load.image(k, ENEMY_IMG[k]); }); });
         }
         _loadCardArt(this, (this.presetTeam || []).map(c => c && c.id));   // 只載「出戰 5 張」卡圖(不再一次載全部 40 張)
+        if (this._bonus && this._bonus.length) _loadCardArt(this, [...this._bonus, 'c66', 'c67', 'c68', 'c69', 'c70']);   // 🆕2026-08-02 bonus 關:補載本場獎勵卡(金屬/金錢)+ 5 張方塊怪填充卡圖(base 圖即可,見 spawnBonusEnemies);enemyTexKey 靠 e.cardId 找 card_<id>_full,沒預載到就退回 EL['neutral'].face 💰 emoji(不會崩,但畫面會醜)
         if (this.counterTeach) _loadElSvgs(this);   // 🩹序章弱點徽章要用元素 SVG icon(el_<el>)
         { const d = this.dungeonId, b = DUNGEON_BG[d]; if (b) { if (!this.textures.exists('bg_' + d + '_back')) this.load.image('bg_' + d + '_back', b.back); if (!this.textures.exists('bg_' + d + '_front')) this.load.image('bg_' + d + '_front', b.front); } }   // 只載「當前這關」背景(不再一次載全部地城)
         if (this.dungeonId === 'tower') TOWER_MID.forEach(c => { if (!this.textures.exists(c.key)) this.load.image(c.key, c.src); });   // 塔中景元素方塊→只在打塔時載
         if (this.dungeonId === 'thunder') { _loadCardArt(this, ['c38']); if (!this.textures.exists('card_c38_king_full')) this.load.image('card_c38_king_full', 'art/cards/c38_king_full.webp'); }   // 🤖 雷之高原借鐵機人(原蜘蛛)透明大圖當敵圖:載 c38雷鐵機人(雜兵)完整大圖;魔王另載專屬 4星雷惡鐵王大圖(非玩家卡,只在此當魔王,比照 wind 分支)
         if (this.dungeonId === 'fire') { _loadCardArt(this, ['c41']); if (!this.textures.exists('card_c41_king_full')) this.load.image('card_c41_king_full', 'art/cards/c41_king_full.webp'); }   // 👺 火之火山借哥布林卡透明大圖當敵圖:載 c41哥布林(雜兵)完整大圖;魔王另載專屬 4星哥布林酋長大圖(非玩家卡,只在此當魔王)
-        if (this.dungeonId === 'earth') _loadCardArt(this, ['c49']);   // 🧱 土之山岳借牆怪透明大圖當盾兵/盾王圖:載 c49土牆怪(盾兵)+土城牆怪(盾王,_e)完整大圖(比照 fire 分支)
+        if (this.dungeonId === 'earth') { _loadCardArt(this, ['c49']); if (!this.textures.exists('card_c49_king_full')) this.load.image('card_c49_king_full', 'art/cards/c49_king_full.webp'); }   // 🧱 土之山岳借牆怪透明大圖當盾兵/盾王圖:載 c49土磚牆(盾兵)完整大圖;魔王另載專屬 4星土城牆王大圖(非玩家卡,只在此當魔王,比照 thunder/water 分支)
         if (this.dungeonId === 'wind') { _loadCardArt(this, ['c55']); if (!this.textures.exists('card_c55_king_full')) this.load.image('card_c55_king_full', 'art/cards/c55_king_full.webp'); }   // 🦆 風之峽谷借賊鴨(原魔女)透明大圖當消卡片塊敵/魔王圖:載 c55風賊鴨(小兵)完整大圖;魔王另載專屬 4星風賊鴨王大圖(非玩家卡,只在此當魔王,比照 fire 分支)
         if (this.dungeonId === 'water') { _loadCardArt(this, ['c57']); if (!this.textures.exists('card_c57_king_full')) this.load.image('card_c57_king_full', 'art/cards/c57_king_full.webp'); }   // 🩹 水之深淵借史萊姆醫療(原藥師)透明大圖當補血怪/魔王圖:載 c57水小護理(補師)完整大圖;魔王另載專屬 4星水醫學博士大圖(非玩家卡,只在此當魔王,比照 thunder 分支)
         ['fire', 'water', 'thunder', 'earth', 'wind'].forEach(el => { if (!this.textures.exists('el_' + el)) this.load.svg('el_' + el, 'art/elements/element_' + el + '.svg', { width: 96, height: 96 }); });   // 元素符號:實心剪影 SVG,疊在盤面方塊正中央(setTintFill 上白),96px 光柵→顯示縮到 ~23px 保脆
@@ -2257,6 +2288,7 @@
       }
       // 依「是否魔王×難度×元素」挑敵圖:魔王 baby→m002、beginner→m003、normal及以上→m004(最兇);雜兵 嬰兒/初級→grunt(m001)、中級以上→grunt2(m002 強化版);都沒有再退回舊史萊姆/emoji
       enemyTexKey(e) {
+        if (e.cardId) { const ck = 'card_' + e.cardId + '_full'; if (this.textures.exists(ck)) return ck; }   // 🆕2026-08-02 泛用分支:敵人物件指定 cardId(bonus 關金屬/金錢/方塊怪等)→直接用該卡 full 圖,優先於下面各城專屬邏輯;沒載到才落到下面舊邏輯
         const el = e.el; let dk = (this.diff && this.diff.key) || 'normal';
         if (this.dungeonId === 'prologue') dk = 'baby';   // 序章=新手村:挑圖固定當嬰兒級(只換外觀,不動數值)→ 魔王 boss_baby(m002)+雜兵 grunt(m001),不出 m003 以上兇怪
         if (this.dungeonId === 'thunder') {   // 🤖 雷之高原=鐵機人城(原蜘蛛巢):tier 星級圖優先(1星→c38、2星→_e、3星→_e2);無 tier 的魔王才用 4星惡鐵王
@@ -2273,7 +2305,10 @@
           if (e.boss && this.textures.exists('card_c41_e_full')) return 'card_c41_e_full';
           if (!e.boss && this.textures.exists('card_c41_full')) return 'card_c41_full';
         }
-        if (this.dungeonId === 'earth') {   // 🧱 土之山岳=牆怪:盾王→土城牆怪(e_full)、盾兵→土牆怪(借 c49);只換有盾的敵人(e.shield),非盾雜兵維持 grunt 圖
+        if (this.dungeonId === 'earth') {   // 🧱 土之山岳=牆怪城:tier 星級圖優先(1星→c49、2星→_e、3星→_e2);無 tier 的魔王才用 4星城牆王;shield fallback 保留給非 tier 舊敵人
+          const gk = e.tier === 3 ? 'card_c49_e2_full' : e.tier === 2 ? 'card_c49_e_full' : e.tier === 1 ? 'card_c49_full' : null;
+          if (gk && this.textures.exists(gk)) return gk;
+          if (e.boss && this.textures.exists('card_c49_king_full')) return 'card_c49_king_full';
           if (e.boss && this.textures.exists('card_c49_e_full')) return 'card_c49_e_full';
           if (e.shield && this.textures.exists('card_c49_full')) return 'card_c49_full';
         }
@@ -3315,7 +3350,9 @@
       spawnEnemies() {
         if (this.enemyG) this.enemyG.destroy();
         this.enemyG = this.add.container(0, 0).setDepth(DEPTH.enemy);   // 敵方整層在「我方卡」之下、背景之上
-        this.enemies = this.enemyLab ? this.labBossEnemies() : (this.tut ? this.tutEnemies() : this.lesson ? this.lessonEnemies() : spawnStage(this.dungeonId, this.diff.key, this.stage - 1));   // 敵技實驗室=魔王陣型(王中+2小兵);headless 生敵 → data-stages.spawnStage(場景與 sim 共用同一份 model 數學);教學=固定 3 火敵;練習課程=固定單敵
+        const _bonusHere = this._bonusStagePos && this.stage === this._bonusStagePos;   // 🆕2026-08-02 bonus 關(插在 S2 之後):自建陣容,不吃 spawnStage
+        const _spawnSi = (this._bonusStagePos && this.stage > this._bonusStagePos) ? this.stage - 2 : this.stage - 1;   // bonus 槽會讓後面各關的 stagesEff index 多 1→真正 spawnStage(無 bonus 概念)要扣回來,才對得到真正 S3 的資料
+        this.enemies = this.enemyLab ? this.labBossEnemies() : (this.tut ? this.tutEnemies() : this.lesson ? this.lessonEnemies() : _bonusHere ? this.spawnBonusEnemies() : spawnStage(this.dungeonId, this.diff.key, _spawnSi));   // 敵技實驗室=魔王陣型(王中+2小兵);headless 生敵 → data-stages.spawnStage(場景與 sim 共用同一份 model 數學);教學=固定 3 火敵;練習課程=固定單敵;bonus=前後方塊怪夾中間金屬/金錢獎勵怪
         this._soloBoss = this.enemies.length === 1 && !!(this.enemies[0] && this.enemies[0].boss);   // 🐲 單魔王關(全關只有一隻魔王,如上級)→ fitEnemySprite 用獨立比例/位置/影子;生成時鎖定,雜兵死光/變身也不誤判
         if (this.lead && this.lead.type === 'enemyDelay') this.enemies.forEach(e => { e.timer = (e.timer || e.interval || 5) + this.lead.v; });   // 🐦藍鵲隊長:每關開場全敵延遲 +v(一次性,不改 interval)
         if (this.lead && this.lead.type === 'counterDelay' && this.lead.el) { const tEl = EL[this.lead.el] && EL[this.lead.el].beats; if (tEl) this.enemies.forEach(e => { if (e.el === tEl) e.timer = (e.timer || e.interval || 5) + this.lead.v; }); }   // 🐦鳥·控敵先制:開局「被本屬相剋」的敵 CD+v
@@ -3378,7 +3415,7 @@
           else if (e.dot) { gt = '🔥 灼燒'; gc = '#ffb09a'; } else if (e.regen) { gt = '💚 回血'; gc = '#9ae0a8'; } else if (e.paralyze) { gt = '🕸️ 蜘蛛網'; gc = '#d8d8e0'; } else if (e.healAlly) { gt = '💚 補師'; gc = '#9ae0a8'; } else if (e.eatStored > 0) { gt = '💨 消屬塊'; gc = '#dcffb0'; } else if (e.junk) { gt = '🔒 封鎖'; gc = '#c4a8e0'; }
           if (gt) { e.gateTx = this.add.text(x, cy + szc / 2 + 9, gt, { fontFamily: EMOJIFONT, fontSize: '10px', color: gc, fontStyle: 'bold', stroke: '#0a1420', strokeThickness: 3 }).setOrigin(0.5); }
         });
-        if (!this.enemyLab) this.enemies.forEach(e => { if (e.shield && !e.dead && e.sprite) { e.shieldUp = true; this._buildATField(e, e.shieldKind || 'hit'); } });   // 🛡盾兵/盾王:進場即帶盾罩(AT力場;實驗室不自動掛,靠demo鈕)
+        if (!this.enemyLab) this.enemies.forEach(e => { if (e.shield && !e.dead && e.sprite) { e.shieldUp = true; e._hitGate0 = e.hitGate || 0; e._comboGate0 = e.comboGate || 0; this._buildATField(e, e.shieldKind || 'hit'); } });   // 🛡盾兵/盾王:進場即帶盾罩;存原門檻(重建還原用,破盾會清成0)
         this.enemies.forEach(e => { if (e.shadow) this.enemyG.add(e.shadow); });   // 影は全 sprite の背面(先に add)
         // 敵方同層 z 序:敵中 > 敵左 > 敵右(越靠中央畫越上;同距時左>右)。依此由後往前加入容器
         const zorder = FIVE ? [3, 4, 0, 2, 1] : THREE ? [1, 0, 2] : this.enemies.map((e, i) => i).sort((a, b) => {   // 前2後1:中間(1)先加畫在底(站後排被半遮)、兩側(0左/2右)後加;前3後2同理;平排則靠中央者最上
@@ -3408,6 +3445,35 @@
         }
         this.enemies.forEach((e, i) => this.enemyEnter(e, i * 120));   // 自遠方逼近入場(交錯)
         this.target = 0;
+      }
+      // 🆕2026-08-02 bonus 關陣容:前2後1(=THREE 版型,後排中央=獎勵怪)。欄位比照 spawnStage 回傳結構補滿(缺的補 0/false),避免其餘敵人邏輯讀到 undefined
+      spawnBonusEnemies() {
+        const bc = (this._bonus && this._bonus[0]) || null;
+        const HP_BY_CARD = { c71: 4500, c74: 4500, c72: 9000, c75: 9000, c73: 16000, c76: 16000 };   // 小/大/王(金屬c71-73、金錢c74-76)
+        const rewardMon = {
+          el: 'neutral', cardId: bc, max: HP_BY_CARD[bc] || 9000, hp: HP_BY_CARD[bc] || 9000, atk: 80, interval: 2, timer: 2,
+          burn: 0, dead: false, boss: false, guard: false, flee: true,
+          hitGate: 0, comboGate: 0, dot: 0, regen: 0, paralyze: 0, healAlly: 0, junk: 0,
+          finisher: 0, finCD: 0, finStages: 0, finAnyHit: false, eatStored: 0,
+          shield: 0, shieldKind: null, shieldRandom: false,
+          phases: null, phaseIdx: 0, arch: null, tier: 0,
+          peck: 0, peckTray: false, stealStored: false, iron: 0, ironPunish: false,
+        };
+        const BLOCK_CARD_OF_EL = { fire: 'c66', water: 'c67', thunder: 'c68', earth: 'c69', wind: 'c70' };
+        const BLOCK_ELS = ['fire', 'water', 'thunder', 'earth', 'wind'];
+        const mkFiller = () => {
+          const el = BLOCK_ELS[Math.floor(Math.random() * BLOCK_ELS.length)], tier = 1 + Math.floor(Math.random() * 3);   // tier 隨機 1/2/3(僅紀錄;顯示簡化一律 base 圖,見 enemyTexKey cardId 分支)
+          return {
+            el, cardId: BLOCK_CARD_OF_EL[el], max: 600, hp: 600, atk: 70, interval: 2, timer: 2,
+            burn: 0, dead: false, boss: false, guard: false, flee: false,
+            hitGate: 0, comboGate: 0, dot: 0, regen: 0, paralyze: 0, healAlly: 0, junk: 0,
+            finisher: 0, finCD: 0, finStages: 0, finAnyHit: false, eatStored: 0,
+            shield: 0, shieldKind: null, shieldRandom: false,
+            phases: null, phaseIdx: 0, arch: null, tier,
+            peck: 0, peckTray: false, stealStored: false, iron: 0, ironPunish: false,
+          };
+        };
+        return [mkFiller(), rewardMon, mkFiller()];   // 前2後1排版(THREE 版型):索引1=後排中央→獎勵怪站中間後排
       }
       refill() {
         const easy = (this.lesson && this.lesson.free) || this.dungeonId === 'prologue' || (this.diff && this.diff.baby);   // 新手友善區:序章 + 所有城「入門(baby)」+ 課程自由清宮段 → 拖盤只出 4 種好解矩形(橫1×3/直3×1/2×3/3×2),不會抽到難塞的怪形狀,新手好補宮過關
@@ -4287,11 +4353,14 @@
         else { this._reopenShield(e); e.timer = (e.boss ? 2 : e.interval); }
       }
       _reopenShield(e) {
-        if (e.dead || !e.sprite || e.labShield) return; if (e.shieldKind === 'hit') e.hitGate = 15; else e.comboGate = 2; e.shieldUp = true;   // 重開同款盾(集氣→成形)
+        if (e.dead || !e.sprite || e.labShield) return;
+        if (e.shieldRandom) { if (Math.random() < 0.5) { e.shieldKind = 'hit'; e.hitGate = 15; e.comboGate = 0; } else { e.shieldKind = 'combo'; e.comboGate = 3; e.hitGate = 0; } }   // 4星城牆王:每次重建隨機 HIT15/COMBO3
+        else { e.hitGate = e._hitGate0 || 0; e.comboGate = e._comboGate0 || 0; }   // 還原該敵原本門檻(1星HIT12/2星C2/3星HIT15;破盾時被清成0)
+        e._rebuilding = false; e.shieldUp = true;   // 重開同款盾(集氣→成形)
         this._eneCast(e); this.chargeAt(e.sprite.x, e.sprite.y, e.shieldKind === 'hit' ? 0xff6a52 : 0x46d18a, 320); this.labSnd && this.labSnd('s_clear15', 0.45);
         this.time.delayedCall(320, () => { if (e.dead || e.labShield) return; this._buildATField(e, e.shieldKind || 'hit'); });
       }
-      _breakEnemyShield(e) { this._breakATField(e); e.shieldUp = false; e.timer = (e.boss ? 2 : 1); if (e.gateTx) e.gateTx.setVisible(false); }   // 破盾→無盾;魔王留1手空窗、雜兵 CD+1 快速重開盾
+      _breakEnemyShield(e) { this._breakATField(e); e.shieldUp = false; e._rebuilding = true; e.timer = 2; if (e.gateTx) e.gateTx.setVisible(false); }   // 破盾→無盾+進入重建;CD2 詠唱重建(全星級,頭上倒數當 telegraph);期間可被雷(剋土)清宮中止→重設倒數(見 resolve)
       _shieldNearMiss(e, txt) {
         if (!e.sprite) return; const ADD = Phaser.BlendModes.ADD, x = e.sprite.x, y = e.sprite.y, sh = e.labShield;   // 近失:盾漣漪一下 + 「差N」約1.8秒慢淡(不一閃即消)
         if (sh) { const rg = this.add.graphics().setDepth(DEPTH.fx).setBlendMode(ADD); rg.lineStyle(3, sh._col || 0xffffff, 0.9); rg.strokePoints(this._hexPts(sh._R || 30), true); rg.x = x; rg.y = y; this.tweens.add({ targets: rg, scaleX: 1.32, scaleY: 1.32, alpha: 0, duration: 420, ease: 'Quad.out', onComplete: () => rg.destroy() }); this.labSnd && this.labSnd('s_block', 0.45); }
@@ -5097,7 +5166,7 @@
           if (this.resultOpen) { this.locked = false; return; }   // 期間已開結算/勝敗畫面→不再推進
           try {
             this._shieldHandActive = false; this._shieldBreakShown = false; this._lockedStore = {}; this._clearAllLockBadges();   // 🐻本手護盾旗標重置(首擋→轉true→全手擋);🌀封卡旗標每敵回合開始清+清殘留🔒徽章(魔王設→套用到玩家下一手)
-            this.enemies.forEach(e => { if (e.dead || e.hp <= 0) return; if ((e.sealed || 0) > 0) { e.sealed--; return; } if (e._finInterrupted) { e._finInterrupted = false; return; } if (e.finCD > 0) { e.timer--; const FS = e.finStages || 2; if (e.timer <= 0) { e._charging = false; this._launchFinisher(e); } else if (e.timer <= FS) { e._charging = true; this._showEnemyOrb(e, e.timer === 1 ? 3 : Math.min(2, FS - e.timer + 1)); } else { e._charging = false; } this.animTurnGlass(e); return; } if (e._charging) { this.enemyFinisher(e); this.animTurnGlass(e); return; } e.timer--; if (e.timer <= 0) { if (e.finisher > 0) this.enemyFinisher(e); else if (e.healAlly > 0) { this._medicAct(e); } else if (e.eatStored > 0) { this._eatAct(e); } else if (e.shield) { this._shieldAct(e); } else if (e.paralyze > 0) { this._paralyzeAct(e); } else if (e.peck > 0) { this._peckAct(e); } else if (e.iron > 0) { this._ironAct(e); } else { this.enemyAttack(e); e.timer = e.interval; } } this.animTurnGlass(e); });   // ⚡麻痺:e.timer 歸0→_paralyzeAct(頭上CD與發動一致);魔王有鎖改攻擊   // 敵出手;補師=雙模式/魔王補師=攻擊+補+復活(_medicAct);★被打斷終結技的敵→跳過;蓄力中每手推進一階;封印=凍結
+            this.enemies.forEach(e => { if (e.dead || e.hp <= 0) return; if ((e.sealed || 0) > 0) { e.sealed--; return; } if (e._finInterrupted) { e._finInterrupted = false; return; } if (e.finCD > 0) { e.timer--; const FS = e.finStages || 2; if (e.timer <= 0) { e._charging = false; this._launchFinisher(e); } else if (e.timer <= FS) { e._charging = true; this._showEnemyOrb(e, e.timer === 1 ? 3 : Math.min(2, FS - e.timer + 1)); } else { e._charging = false; } this.animTurnGlass(e); return; } if (e._charging) { this.enemyFinisher(e); this.animTurnGlass(e); return; } e.timer--; if (e.timer <= 0) { if (e.flee) { this._fleeAct(e); } else if (e.finisher > 0) this.enemyFinisher(e); else if (e.healAlly > 0) { this._medicAct(e); } else if (e.eatStored > 0) { this._eatAct(e); } else if (e.shield) { this._shieldAct(e); } else if (e.paralyze > 0) { this._paralyzeAct(e); } else if (e.peck > 0) { this._peckAct(e); } else if (e.iron > 0) { this._ironAct(e); } else { this.enemyAttack(e); e.timer = e.interval; } } if (!e.dead) this.animTurnGlass(e); });   // ⚡麻痺:e.timer 歸0→_paralyzeAct(頭上CD與發動一致);魔王有鎖改攻擊   // 敵出手;補師=雙模式/魔王補師=攻擊+補+復活(_medicAct);★被打斷終結技的敵→跳過;蓄力中每手推進一階;封印=凍結
             const dotRate = Math.max(0, ...this.enemies.filter(e => !e.dead && e.hp > 0 && !(e.sealed > 0)).map(e => e.dot || 0));   // 🔥火關灼燒光環:有灼燒敵活著→每手扣玩家血(取最大率、不疊加);★封印中不灼燒
             if (dotRate > 0) { const dd = Math.max(1, Math.round(this.maxHP * dotRate)); this.playerHP = Math.max(0, this.playerHP - dd); this.floatText(CX, PHP_Y - 16, '🔥灼燒 -' + dd, '#ff7a4a'); this.animPlayerHP(false); if (this.playerHP <= 0) this.gameOver('灼燒焚身'); }
             this.enemies.forEach(e => { if (!e.dead && e.hp > 0 && !(e.sealed > 0) && e.regen > 0) { const hh = Math.max(1, Math.round(e.max * e.regen)); e.hp = Math.min(e.max, e.hp + hh); if (e.sprite) this.floatText(e.sprite.x, e.sprite.y - 24, '💚+' + hh, '#74e09a'); } });   // 💚水關自我回血:每隻回血敵每手回自身血(致死 hp≤0 不回→不會復活);★封印中不自療
@@ -5504,7 +5573,8 @@
         if (data.cells.length >= 15) { const _bl = this.add.circle(CX, BOARD_CY, W * 0.72, 0xfff0c4, 0.24).setBlendMode(Phaser.BlendModes.ADD).setDepth(DEPTH.fx); this.tweens.add({ targets: _bl, scale: 1.5, alpha: 0, duration: 440, ease: 'Quad.out', onComplete: () => _bl.destroy() }); }   // 💥 大消除(≥15 HIT):柔和金色泛光(camera postFX.addBloom 這版不生效→用 ADD 柔光模擬,更穩)
         {
           const atkEls = Object.keys(data.fx || {});   // 相剋打弱點→該敵出手延後一手:AoE(15HIT↑)對「每隻被剋的敵人」都生效,單體只判鎖定目標
-          victims.forEach(en => { if (en.dead || !en._finOrb) return; if (en.finAnyHit || atkEls.some(e => EL[e] && EL[e].beats === en.el)) { en._charging = false; en._finStage = 0; en.timer = Math.max(1, en.interval || 3); en._finBreakPending = true; en._finInterrupted = true; } });   // 🩹蓄力中止=須「實際打到蓄力那隻怪」:單體=牠得是鎖定目標、AoE(15HIT↑)=全體都打到。中止條件:一般需剋屬(同5361蛛網/5363延後出手),但 finAnyHit(初級哥布林)=任何屬性打到即斷。只清宮沒打到牠→不中止。此刻同步取消終結+標記本手 endHand 跳過,視覺打斷交給彈著/安全網
+          victims.forEach(en => { if (en.dead || !en._finOrb) return; if (en.finAnyHit || atkEls.some(e => EL[e] && EL[e].beats === en.el)) { en._charging = false; en._finStage = 0; en.timer = Math.max(1, en.interval || 3); en._finBreakPending = true; en._finInterrupted = true; } });   // 🩹蓄力中止=須「實際打到蓄力那隻怪」
+          victims.forEach(en => { if (en.dead || !en._rebuilding) return; if (atkEls.some(el => EL[el] && EL[el].beats === en.el)) { en.timer = Math.max(en.timer || 0, 2); if (en.sprite) this.floatText(en.sprite.x, en.sprite.y - 30, '🛡 重建中止!', '#8fd8ff'); } });   // 🧱雷(剋土)實際打到重建中的牆→重設重建倒數(延長輸出空窗):單體=牠得是鎖定目標、AoE(15HIT↑)=全體都打到。中止條件:一般需剋屬(同5361蛛網/5363延後出手),但 finAnyHit(初級哥布林)=任何屬性打到即斷。只清宮沒打到牠→不中止。此刻同步取消終結+標記本手 endHand 跳過,視覺打斷交給彈著/安全網
           if (this.paraLock && this.paraLock.e && !this.paraLock.e.dead && victims.includes(this.paraLock.e) && atkEls.some(el => EL[el] && EL[el].beats === this.paraLock.e.el)) this._interruptPara(this.paraLock.e);   // 🕸️蛛網解鎖=須「實際打到施法蜘蛛」:單體=牠得是鎖定目標、AoE(15HIT↑)=全體都打到;且清的屬性剋牠(風剋雷)才算。只清剋屬宮但沒打到牠→不解
           this.enemies.forEach(en => { if (en.paralyze > 0 && !en.dead && atkEls.some(el => EL[el] && EL[el].beats === en.el)) en._paraHit = true; });   // ⚡只有風(剋雷)打中麻痺敵→標記本手打斷施法(_paralyzeAct 跳過鎖);無屬等其他屬性不算
           victims.forEach(en => { if (en.dead || en._finOrb) return; if (atkEls.some(e => EL[e] && EL[e].beats === en.el)) en.timer += 1; });
@@ -5864,10 +5934,27 @@
           return;
         }
         e.dead = true; if (e.bob) { e.bob.stop(); e.bob = null; } if (e.knockTw) { e.knockTw.stop(); e.knockTw = null; }   // ★ bob 在受擊擊退時會被設 null,務必判空(否則每次擊殺都丟例外→鎖死)
+        if (e.cardId && e.flee) { this._bonusKilled.push(e.cardId); }   // 🆕2026-08-02 bonus 關獎勵怪(flee 旗標識別)被玩家真正打死→記進 _bonusKilled,回報 run/complete;逃跑移除走 _fleeAct,不經過這裡→不會誤記
         const last = this.aliveCount() === 0, isFinal = last && this.stage >= this.stagesEff.length;
         if (isFinal) { this._finalEnemy = e; this.stageClear(); return; }   // 最後一關最後一擊:由 finalBlow 演特寫鏡頭+飛出(不在此 playDeath)
         this.playDeath(e);   // 敗陣演出:被打飛(後上)+縮小+旋轉+淡出 → 化成光芒
         if (last) this.stageClear(); else { this.targetEnemy(); this.updateEnemies(); }
+      }
+      // 🆕2026-08-02 bonus 關獎勵怪逃跑機制(e.flee=true 才會被派工到此):累計輪到牠出手的次數,第3手起擲跑率遞增;跑掉=淡出移除(比照 killEnemy 視覺,但不給獎勵/不記 _bonusKilled);沒跑掉=照常攻擊
+      _fleeAct(e) {
+        e._fleeTurns = (e._fleeTurns || 0) + 1;
+        const rate = { 3: 0.3, 4: 0.55, 5: 0.8 }[e._fleeTurns];
+        const fleeChance = e._fleeTurns >= 3 ? (rate != null ? rate : 1) : 0;   // 未滿3手:0(不跑);3/4/5手:0.3/0.55/0.8;≥6手:100%必跑
+        if (fleeChance > 0 && Math.random() < fleeChance) {
+          if (e.sprite) this.floatText(e.sprite.x, e.sprite.y - 24, '🏃 逃走了!', '#cfd6de');
+          if (e.dead) return;   // 防重入(理論上不會,dead 敵已被 forEach 頂部 return 擋掉)
+          e.dead = true; if (e.bob) { e.bob.stop(); e.bob = null; } if (e.knockTw) { e.knockTw.stop(); e.knockTw = null; }
+          const last = this.aliveCount() === 0;   // bonus 關永遠不是全城最後一關(插在 S2/S3 之間)→不會誤觸 isFinal/finalBlow 特寫路徑
+          this.playDeath(e);
+          if (last) this.stageClear(); else { this.targetEnemy(); this.updateEnemies(); }
+          return;
+        }
+        this.enemyAttack(e); e.timer = e.interval;
       }
       // 最後一擊:鏡頭推近最後一隻怪特寫 → 蓄勢一下 → 白閃+飛出 → 拉回 → 久一點才進結果
       finalBlow(e) {
@@ -5967,7 +6054,7 @@
       _grantRun() {
         if (this._runGranted) return; this._runGranted = true;   // 🏆全清結算:整趟累積的 EXP 一次入帳(只有全清才呼叫→中途放棄/戰敗自然全沒收);🔐 卡片掉落/寶玉/金幣改由伺服器 run/complete 回應決定(見下),不再前端算
         // 🔐 等級/經驗改伺服器權威:通關 exp/升級/上限+補滿由 run/complete 決定,前端不再本地 addRewards 遞增(擋竄改);升級慶祝改由回應 leveledUp 觸發(見 _sendRunComplete().then)。金幣/掉卡入帳同樣走伺服器,displayed runCoins/runExp 照舊只是本場顯示。
-        const item = { dungeonId: this.dungeon.id, diff: (this.diff && this.diff.key) || 'normal', runId: this.serverRunId || ('r' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8)), name: getMeta().name };   // name=記錄保持者名字→run/complete 破全服最速榜時一起存(排行顯示是誰)   // 🔐 優先用開戰領到的伺服器票券(含'.',run/complete 走時間閘+一次性);拿不到→本地 runId 走離線 fallback(限流)
+        const item = { dungeonId: this.dungeon.id, diff: (this.diff && this.diff.key) || 'normal', runId: this.serverRunId || ('r' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8)), name: getMeta().name, bonusKilled: this._bonusKilled || [] };   // name=記錄保持者名字→run/complete 破全服最速榜時一起存(排行顯示是誰)   // 🔐 優先用開戰領到的伺服器票券(含'.',run/complete 走時間閘+一次性);拿不到→本地 runId 走離線 fallback(限流);🆕2026-08-02 bonusKilled=本場實際打死的獎勵怪卡id陣列,伺服器取「這個∩票券簽的」發獎勵
         this.runDrops = []; this._runDropsPending = true;   // showResult 顯示「連線後發放」暫態,直到下面拿到結果或確認離線
         mutSave(s => {
           const q = (s.pendingRuns = s.pendingRuns || []);
@@ -7289,7 +7376,7 @@
           if (goClean) { this.go('collection'); return; }
         }
         if (this._startBusy) return; this._startBusy = true;
-        let serverRunId = null;
+        let serverRunId = null, serverBonus = null;
         try {
           const r = await authedFetch('/api/run/start', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ dungeonId: id, diff: df.key }) });
           if (r && r.status === 402) {   // 伺服器判定體力不足(可能剛好被別的裝置/分頁花掉):不進戰鬥,用伺服器回的 nextRegenSec 顯示還要多久回1點
@@ -7304,22 +7391,22 @@
             this.toast(body400 && body400.error === 'diff_locked' ? '尚未解鎖此難度,先破前一難度' : '尚未解鎖此關卡');
             this.rebuild(); return;
           }
-          if (r && r.ok) { const d2 = await r.json(); serverRunId = (d2 && d2.runId) || null; if (d2) syncWallet(d2); }
+          if (r && r.ok) { const d2 = await r.json(); serverRunId = (d2 && d2.runId) || null; serverBonus = (d2 && d2.bonus && d2.bonus.cards) || null; if (d2) syncWallet(d2); }
           // else:其他非預期狀態(非 200/402/400)→ 比照離線放行,不卡玩家(serverRunId 留 null,走本地 runId fallback)
         } catch (e) { }   // 🔐 網路失敗/離線 → 照舊進戰鬥,不扣伺服器體力(維持離線可玩!既有殘留:離線這次不算錢)
         this._startBusy = false;
         const dc = (this.tab === 'dungeon') ? DIVE_COLOR[id] : null;   // 只從地圖進、且該城有轉場色→播出擊轉場
-        if (dc) { this._diveToBattle(id, df, tm, serverRunId); return; }
-        this.scene.manager.start('game', { team: tm, dungeonId: id, diff: df.key, serverRunId: serverRunId }); this.scene.manager.stop('home');
+        if (dc) { this._diveToBattle(id, df, tm, serverRunId, serverBonus); return; }
+        this.scene.manager.start('game', { team: tm, dungeonId: id, diff: df.key, serverRunId: serverRunId, bonus: serverBonus }); this.scene.manager.stop('home');
       }
-      _diveToBattle(id, df, tm, serverRunId) {   // 🎬(a)溫和鏡頭俯衝潛入 + 暗霧 0→100% → 切關(慢、幅度小,不暈)
+      _diveToBattle(id, df, tm, serverRunId, serverBonus) {   // 🎬(a)溫和鏡頭俯衝潛入 + 暗霧 0→100% → 切關(慢、幅度小,不暈)
         if (this._diving) return; this._diving = true;
         const isle = MAP_ISLES.find(i => i.id === id), S = this._mapS || (W / 1080);
         const dw = isle ? isle.w * S : 0, dh = isle ? isle.h * S : 0, _p = isle ? this._mapXY(isle, dw, dh) : { sx: CX, sy: Math.round(H / 2) }, ix = _p.sx, iy = _p.sy;   // 用 _mapXY 算島螢幕中心→支援 left/right/bottom 錨點(thunder/water 沒 ax,直接 isle.ax 會 NaN 崩掉)
         const cam = this.cameras.main;
         cam.pan(ix, iy, 900, 'Sine.easeInOut'); cam.zoomTo(1.6, 900, 'Sine.easeInOut');   // 溫和俯衝(慢、小幅,不暈)⚠️相機效果只認完整ease寫法,不可用'Sine.inOut'簡寫(會undefined→每幀崩潰)
         const mist = this.add.rectangle(ix, iy, W * 3, H * 3, 0x1b1620, 1).setAlpha(0).setDepth(5000);   // 暗霧(fillAlpha=1實色+物件alpha=0起,tween物件alpha 0→1才看得到漸入;大到蓋滿縮放後畫面)
-        this.tweens.add({ targets: mist, alpha: 1, duration: 840, ease: 'Sine.in', onComplete: () => { this.scene.manager.start('game', { team: tm, dungeonId: id, diff: df.key, dive: true, serverRunId: serverRunId }); this.scene.manager.stop('home'); } });
+        this.tweens.add({ targets: mist, alpha: 1, duration: 840, ease: 'Sine.in', onComplete: () => { this.scene.manager.start('game', { team: tm, dungeonId: id, diff: df.key, dive: true, serverRunId: serverRunId, bonus: serverBonus }); this.scene.manager.stop('home'); } });
       }
       _demoBodyBg(cTop, cBot) {   // 🎨 demo 深色 body 底,精準鏡射 007_UI_demo --page:radial-gradient(ellipse 100% 70% at 50% 40%, #5e5954 0%,#383030 52%,#261e1a 100%)。canvas 橢圓徑向漸層(scale y 把圓壓成橢圓;同 tutGrad canvas 做法)
         const bh = Math.max(1, Math.round(cBot - cTop)), key = 'demoBg2_' + bh + '_' + H;
@@ -8006,7 +8093,7 @@
           cardImgOn(this, cx, cy, cw - 4, c.id, 'thumb');   // 素材狗圖
           this.txt(cx, cy - 15, cardName(c.id), '10px', '#1a1208', 0.5, true);
           this.txt(cx, cy + 3, 'Lv' + (it.lv || 1), '9px', '#3a2c12', 0.5);   // 🆕 per-instance level:顯示這張素材個體自己的等級(不是型別最強)
-          this.txt(cx, cy + 19, '+' + fodderFeedExp(c.rank, it.lv, same) + 'exp' + (same ? '(同屬)' : ''), '9px', same ? '#7a3000' : '#3a2c12', 0.5);   // 🆕 每張顯示自己會給多少經驗(依自己 lv 算,同屬×1.5)
+          this.txt(cx, cy + 19, '+' + fodderFeedExp(c.id, c.rank, it.lv, same) + 'exp' + (same ? '(同屬)' : ''), '9px', same ? '#7a3000' : '#3a2c12', 0.5);   // 🆕 每張顯示自己會給多少經驗(依自己 lv 算,同屬×1.5)
           if (on) { this.L(roundRectG(this, cx + cw / 2 - 12, cy - cw / 2 + 12, 20, 20, 6, T.ok, 1, T.surf, 2)); this.txt(cx + cw / 2 - 12, cy - cw / 2 + 12, String(oi + 1), '13px', '#ffffff', 0.5, true); }
           const hit = this.rect(cx, cy, cw, cw, 0x000000, 0.001).setInteractive(); tapBind(this, hit, () => this.toggleSel(u));   // 命中區(透明方形覆蓋整格;圓角只是視覺)
         });   // 選取序號角標

@@ -10,6 +10,7 @@ const EL = {
   earth:  {name:'土', color:0xc8803a, dark:0x43331f, beats:'water',   face:'🗿', fx:'🪨'},
   water:  {name:'水', color:0x3a9be8, dark:0x1f3447, beats:'fire',    face:'🐙', fx:'💧'},
   junk:   {name:'封', color:0x35323a, dark:0x1c1a20, beats:'',        face:'⬛', fx:'🔒'},   // 詛咒塊:敵人塞的封鎖塊(填滿不能放、清線才除)
+  neutral:{name:'素', color:0xb8a888, dark:0x33291a, beats:'',        face:'💰', fx:'✨'},   // 2026-08-02 加:無屬素材卡(c71~c76 金屬/金錢)用,不進 KEYS(不上盤)、UI 灰階顯示;純為防止 EL[c.el] 在卡冊/餵卡/分解畫面查無屬性崩頁(index.html 多處 EL[cd.el].color)
 };
 const ELEMENT_BOXES = [0,2,4,6,8];
 const NEUTRAL_FILL = 0xc8a06a, NEUTRAL_DARK = 0x2c2114;
