@@ -80,7 +80,7 @@
     const KEYS = ['fire', 'wind', 'thunder', 'earth', 'water'];
     const MONSTER_IMG = { water: 'art/monsters/slime_water.webp', fire: 'art/monsters/slime_fire.webp', thunder: 'art/monsters/slime_thunder.webp', earth: 'art/monsters/slime_earth.webp', wind: 'art/monsters/slime_wind.webp' };   // 舊五屬史萊姆(fallback);無對應則用 emoji 臉。圖檔放 001_website/art/monsters/(webp)
     const CARD_ART = { c03: 1, c06: 1, c19: 1, c10: 1, c12: 1, c02: 1, c05: 1, c08: 1, c09: 1, c11: 1, c13: 1, c16: 1, c20: 1, c23: 1, c27: 1, c15: 1, c18: 1, c22: 1, c26: 1, c30: 1, c31: 1, c32: 1, c33: 1, c34: 1, c35: 1, c14: 1, c17: 1, c21: 1, c24: 1, c28: 1, c01: 1, c04: 1, c07: 1, c25: 1, c29: 1, c36: 1, c37: 1, c38: 1, c39: 1, c40: 1, c41: 1, c42: 1, c43: 1, c44: 1, c45: 1, c46: 1, c47: 1, c48: 1, c49: 1, c50: 1, c51: 1, c52: 1, c53: 1, c54: 1, c55: 1, c56: 1, c57: 1, c58: 1, c59: 1, c60: 1, c61: 1, c62: 1, c63: 1, c64: 1, c65: 1, c66: 1, c67: 1, c68: 1, c69: 1, c70: 1, c71: 1, c72: 1, c73: 1, c74: 1, c75: 1, c76: 1 };   // 有角色圖的卡:犬/貓/鼠/台灣/兔/魚(c14,17,21,24,28)/鳥(c01,04,07,25,29)/妖·蜘蛛(c36-c40,1→2星換_e圖)/妖·鬼(c41-c45,1→2星換_e圖),各火水雷土風 → art/cards/<id>_thumb.webp+_full.webp;2026-08-02 加方塊怪(c66-c70,支援_e/_e2)+金屬/金錢(c71-c76,無_e/_e2,只有 base full/thumb)
-    function cardArtKey(id, size) { if (!id) return null; const t = getCardEvo(id); if (EVO2_CARDS[id] && t >= 2) return 'card_' + id + '_e2_' + size; if (EVO_CARDS[id] && t >= 1) return 'card_' + id + '_e_' + size; return CARD_ART[id] ? ('card_' + id + '_' + size) : null; }   // 回傳 texture key(thumb/full),無圖回 null→退回 emoji;進化雜牌卡 evo≥2(EVO2_CARDS)→<id>_e2_<size>,evo≥1→<id>_e_<size>
+    function cardArtKey(id, size, ovEvo) { if (!id) return null; const t = getCardEvo(id, ovEvo); if (EVO2_CARDS[id] && t >= 2) return 'card_' + id + '_e2_' + size; if (EVO_CARDS[id] && t >= 1) return 'card_' + id + '_e_' + size; return CARD_ART[id] ? ('card_' + id + '_' + size) : null; }   // 回傳 texture key(thumb/full),無圖回 null→退回 emoji;進化雜牌卡 evo≥2(EVO2_CARDS)→<id>_e2_<size>,evo≥1→<id>_e_<size>
     function _loadCardArt(scene, ids) { (ids || []).forEach(id => { if (!id || !CARD_ART[id]) return;['thumb', 'full'].forEach(s => { const k = 'card_' + id + '_' + s; if (!scene.textures.exists(k)) scene.load.image(k, 'art/cards/' + id + '_' + s + '.webp'); }); if (EVO_CARDS[id]) { ['thumb', 'full'].forEach(s => { const k = 'card_' + id + '_e_' + s; if (!scene.textures.exists(k)) scene.load.image(k, 'art/cards/' + id + '_e_' + s + '.webp'); }); } if (EVO2_CARDS[id]) { ['thumb', 'full'].forEach(s => { const k = 'card_' + id + '_e2_' + s; if (!scene.textures.exists(k)) scene.load.image(k, 'art/cards/' + id + '_e2_' + s + '.webp'); }); } }); }   // 按需載卡圖(戰鬥/大廳只載出戰隊);繪製端皆有 textures.exists 保護→沒載到退回 emoji;進化雜牌卡額外多載 _e 進化圖(兩形都要有),支援 evo2(EVO2_CARDS)再多載 _e2 三形
     function _loadAllCardArt(scene) { _loadCardArt(scene, Object.keys(CARD_ART)); }   // 卡冊/編隊/合成/圖鑑=看全部卡→進場才載全部
     function _loadCardThumbs(scene, ids) { (ids || []).forEach(id => { if (!id || !CARD_ART[id]) return; const k = 'card_' + id + '_thumb'; if (!scene.textures.exists(k)) scene.load.image(k, 'art/cards/' + id + '_thumb.webp'); if (EVO_CARDS[id]) { const ek = 'card_' + id + '_e_thumb'; if (!scene.textures.exists(ek)) scene.load.image(ek, 'art/cards/' + id + '_e_thumb.webp'); } if (EVO2_CARDS[id]) { const ek2 = 'card_' + id + '_e2_thumb'; if (!scene.textures.exists(ek2)) scene.load.image(ek2, 'art/cards/' + id + '_e2_thumb.webp'); } }); }   // 只載縮圖(格子用;大圖等開詳情才補);進化雜牌卡額外多載 _e_thumb(卡冊/合成/圖鑑格子才有進化縮圖),evo2(EVO2_CARDS)再多載 _e2_thumb
@@ -547,7 +547,7 @@
     const WALL_EVO2 = { c46: '火鐵牆', c47: '水鐵牆', c48: '雷鐵牆', c49: '土鐵牆', c50: '風鐵牆' };   // 牆怪 2★→3★再進化名表:進化階≥2 → 顯示「◯鐵牆」+ <id>_e2_ 圖(3星,2026-08-02 加);魔王另借 king_full(4星「◯城牆王」非卡片)
     const BLOCK_EVO2 = { c66: '火方塊王', c67: '水方塊王', c68: '雷方塊王', c69: '土方塊王', c70: '風方塊王' };   // 方塊怪系 2★→3★再進化名表:進化階≥2 → 顯示「◯方塊王」+ <id>_e2_ 圖(3星,2026-08-02 加)
     const EVO2_CARDS = Object.assign({}, GHOST_EVO2, WITCH_EVO2, SPIDER_EVO2, YAKUSHI_EVO2, WALL_EVO2, BLOCK_EVO2);   // 合併「可進到 evo2(3星)」名表:目前哥布林系、賊鴨系、鐵機人系、史萊姆醫療系、牆怪系、方塊怪系支援,別的系要開 evo2 往這加
-    function cardName(id) { const c = ROSTER.find(x => x.id === id) || {}; const t = getCardEvo(id); if (t >= 2 && EVO2_CARDS[id]) return EVO2_CARDS[id]; return (EVO_CARDS[id] && t >= 1) ? EVO_CARDS[id] : c.name; }   // 卡片顯示名字統一入口(evo2 名表優先於 evo1 名表,再 fallback ROSTER.name)
+    function cardName(id, ovEvo) { const c = ROSTER.find(x => x.id === id) || {}; const t = getCardEvo(id, ovEvo); if (t >= 2 && EVO2_CARDS[id]) return EVO2_CARDS[id]; return (EVO_CARDS[id] && t >= 1) ? EVO_CARDS[id] : c.name; }   // 卡片顯示名字統一入口(evo2 名表優先於 evo1 名表,再 fallback ROSTER.name)
     // CONFIG → battle-core.js
     const KATA = ['一之型', '二之型', '三之型', '四之型', '五之型', '禁術', '奧義'];   // LV1~7(簡單數字,日文漢字通用)
     const JUTSU = {
@@ -989,6 +989,12 @@
       }
       return { u: best.u, lv: best.lv || 1, exp: best.exp || 0, evo: best.evo || 0 };
     }
+    // 🆕個體制隊伍解析:隊伍格存「個體 uid(k開頭)」;舊存檔存「卡種 id」→解析成該卡種最強個體(相容)
+    function instOf(u) { if (!u) return null; return loadSave().cards.find(c => c.u === u) || null; }   // uid→個體 {u,id,lv,exp,evo}
+    function resolveTeamEntry(e) { if (!e) return null; if (typeof e === 'string' && e[0] === 'k') return instOf(e); const b = bestInstanceOf(e); return b ? Object.assign({ id: e }, b) : null; }
+    function loadTeamInsts() { return (loadTeam() || []).map(resolveTeamEntry).filter(Boolean); }   // 目前隊的個體物件
+    function loadTeamIds() { return loadTeamInsts().map(i => i.id); }   // 目前隊的卡種 id(給載圖/地圖等 by-id 用途)
+    function loadTeamUids() { return loadTeamInsts().map(i => i.u); }   // 目前隊的個體 uid(給卡冊「使用中」標記)
     /* 背包(個體制):每張卡一格;上限=基礎50 + 帳號等級(前10級每級+6、之後+3) + 魔法石加購(每顆+8) */
     function boxCount() { return loadSave().cards.length; }
     function boxCap(s) { s = s || loadSave(); const r = s.meta.rank || 1; return 50 + Math.min(Math.max(r - 1, 0), 9) * 10 + Math.max(0, r - 10) * 5 + (s.meta.boxBuy || 0) * 5; }   // 全 5 的倍數:基礎50 + 前10級每級+10(早期快) + 之後每級+5 + 魔法石每顆+5
@@ -1530,13 +1536,13 @@
     /* 養成:卡片等級/經驗(PAD式吃卡強化,同屬×1.5經驗) */
     const MAXLV = 20, FEED_COST = 100;
     function expToNext(lv) { return 50 * lv; }
-    function getCardLv(id) { const c = loadSave().cardLv[id]; return c ? c.lv : 1; }
+    function getCardLv(id, ovLv) { if (ovLv != null) return ovLv; const c = loadSave().cardLv[id]; return c ? c.lv : 1; }   // ovLv 傳入=用個體自己的等級(個體制);不傳=per-type 最強快取
     function getCardExp(id) { const c = loadSave().cardLv[id]; return c ? c.exp : 0; }
-    function _statMul(id) { return EVO_MULT[getCardEvo(id)] * (1 + (getCardLv(id) - 1) * 0.05); }   // 進化×等級 共用成長倍率
-    function cardAtk(id) { const base = (ROSTER.find(c => c.id === id) || {}).atk || 0; return Math.round(base * _statMul(id)); }
-    function cardHp(id) { const base = (ROSTER.find(c => c.id === id) || {}).hp || 0; return Math.round(base * _statMul(id)); }
-    function cardRcv(id) { const base = (ROSTER.find(c => c.id === id) || {}).rcv || 0; return Math.round(base * _statMul(id)); }
-    function leveledTeam(ids) { return ids.map(id => { const c = ROSTER.find(x => x.id === id); return c ? Object.assign({}, c, { atk: cardAtk(id), hp: cardHp(id), rcv: cardRcv(id), lv: getCardLv(id) }) : null; }).filter(Boolean); }
+    function _statMul(id, ovLv, ovEvo) { return EVO_MULT[getCardEvo(id, ovEvo)] * (1 + (getCardLv(id, ovLv) - 1) * 0.05); }   // 進化×等級 共用成長倍率;ovLv/ovEvo 傳入=個體制
+    function cardAtk(id, ovLv, ovEvo) { const base = (ROSTER.find(c => c.id === id) || {}).atk || 0; return Math.round(base * _statMul(id, ovLv, ovEvo)); }
+    function cardHp(id, ovLv, ovEvo) { const base = (ROSTER.find(c => c.id === id) || {}).hp || 0; return Math.round(base * _statMul(id, ovLv, ovEvo)); }
+    function cardRcv(id, ovLv, ovEvo) { const base = (ROSTER.find(c => c.id === id) || {}).rcv || 0; return Math.round(base * _statMul(id, ovLv, ovEvo)); }
+    function leveledTeam(entries) { return (entries || []).map(e => { const inst = resolveTeamEntry(e); if (!inst) return null; const c = ROSTER.find(x => x.id === inst.id); return c ? Object.assign({}, c, { u: inst.u, atk: cardAtk(inst.id, inst.lv, inst.evo), hp: cardHp(inst.id, inst.lv, inst.evo), rcv: cardRcv(inst.id, inst.lv, inst.evo), lv: inst.lv, evo: inst.evo }) : null; }).filter(Boolean); }   // 🆕個體制:entries=隊伍格(uid 或舊卡種id)→解析成個體,用個體 lv/evo 算戰力
     function feedFodder(targetId, fodderId) {
       let res = { ok: false, msg: '' };
       mutSave(s => {
@@ -1625,8 +1631,8 @@
     const MATERIAL_IDS = new Set([...Object.values(JEWEL_OF), 'c71', 'c72', 'c73', 'c74', 'c75', 'c76']);   // 純素材卡:不可進化(素材自己能練成戰力卡就本末倒置了;且火晶精要吃火晶精=吃自己)。伺服器 evolve.ts 也擋一次。⚠️2026-08-02 判斷追加:金屬/金錢(c71-c76)依交辦「不進化」比照寶玉卡納入,鏡射後端 _lib/gamedata.ts MATERIAL_IDS(此為推測性延伸,交辦原文未逐字提及此常數,見回報)
     function jewelName(el) { const c = ROSTER.find(x => x.id === JEWEL_OF[el]); return c ? c.name : (EL[el] ? EL[el].name : el) + '晶精'; }
     function ownedCardCount(id) { return loadSave().cards.filter(c => c.id === id).length; }   // 背包中某卡種的個體張數
-    function getCardEvo(id) { return loadSave().cardEvo[id] || 0; }
-    function cardStars(id) { const c = ROSTER.find(x => x.id === id) || {}; return Math.min(6, ({ genin: 1, chunin: 2, jonin: 3, kage: 4 }[c.rank] || 1) + getCardEvo(id)); }
+    function getCardEvo(id, ovEvo) { if (ovEvo != null) return ovEvo; return loadSave().cardEvo[id] || 0; }   // ovEvo 傳入=用個體自己的進化階(個體制)
+    function cardStars(id, ovEvo) { const c = ROSTER.find(x => x.id === id) || {}; return Math.min(6, ({ genin: 1, chunin: 2, jonin: 3, kage: 4 }[c.rank] || 1) + getCardEvo(id, ovEvo)); }
     function starStr(id) { return '★'.repeat(cardStars(id)); }
     function getGems(el) { return loadSave().gems[el] || 0; }
     function addGem(el, n) { mutSave(s => { s.gems[el] = (s.gems[el] || 0) + (n || 1); }); }
@@ -1759,7 +1765,7 @@
     /* ===== 出戰編隊 ===== */
     class TeamScene extends Phaser.Scene {
       constructor() { super('team'); }
-      preload() { _loadAllCardThumbs(this); _loadCardArt(this, loadTeam()); _loadElSvgs(this); showLoadBar(this); }   // 編隊:全部縮圖(bench)+當前隊大圖(宮格)+元素SVG(徽章/篩選);切隊時 loadTeamSlots 再補
+      preload() { _loadAllCardThumbs(this); _loadCardArt(this, loadTeamIds()); _loadElSvgs(this); showLoadBar(this); }   // 編隊:全部縮圖(bench)+當前隊大圖(宮格)+元素SVG(徽章/篩選);切隊時 loadTeamSlots 再補
       create(data) {
         this.tutTeam = !!(data && data.tutorial);   // 從教學完成進來 → 顯示編隊教學
         this.tutTeamArmed = false;   // 重置脈動狀態(避免上次殘留)
@@ -1899,8 +1905,8 @@
           const cd = ROSTER.find(c => c.id === inst.id);
           const tint = (T.elTint[cd.el] != null ? T.elTint[cd.el] : T.surf2);
           const bg = roundRectG(this, 0, 0, CS2, CS2, 13, tint, 1, T.divider, 1.5);   // 圓角淡屬色底(同卡冊)
-          const dk = cardArtKey(cd.id, 'thumb'), dimg = (dk && this.textures.exists(dk)) ? this.add.image(0, 0, dk).setDisplaySize(CS2 - 6, CS2 - 6).setOrigin(0.5) : null;
-          const nm = dimg ? null : this.add.text(0, -4, cardName(cd.id), { fontFamily: EMOJIFONT, fontSize: '13px', color: T.ink, fontStyle: 'bold' }).setOrigin(0.5);
+          const dk = cardArtKey(cd.id, 'thumb', inst.evo), dimg = (dk && this.textures.exists(dk)) ? this.add.image(0, 0, dk).setDisplaySize(CS2 - 6, CS2 - 6).setOrigin(0.5) : null;   // 🆕個體制:這張個體自己的進化圖
+          const nm = dimg ? null : this.add.text(0, -4, cardName(cd.id, inst.evo), { fontFamily: EMOJIFONT, fontSize: '13px', color: T.ink, fontStyle: 'bold' }).setOrigin(0.5);
           const kids = [bg]; if (dimg) kids.push(dimg); if (nm) kids.push(nm);
           if (EL[cd.el]) {
             const bx = -CS2 / 2 + 13, by = -CS2 / 2 + 12;   // 左上圓角屬性徽章(demo .mini .elbadge:屬色底+白框+白 icon)
@@ -1908,7 +1914,7 @@
             kids.push(bBg, bIc);
           }
           kids.push(roundRectG(this, 0, CS2 / 2 - 12, 42, 18, 9, 0x12161a, 0.72, null, 0));   // Lv 深色圓角底條(放大)
-          kids.push(this.add.text(0, CS2 / 2 - 12, 'Lv' + getCardLv(cd.id), { fontFamily: EMOJIFONT, fontSize: '13px', color: '#ffffff', fontStyle: 'bold' }).setOrigin(0.5).setResolution(3));   // 高倍率算文字→不糊
+          kids.push(this.add.text(0, CS2 / 2 - 12, 'Lv' + (inst.lv || 1), { fontFamily: EMOJIFONT, fontSize: '13px', color: '#ffffff', fontStyle: 'bold' }).setOrigin(0.5).setResolution(3));   // 🆕個體制:這張個體自己的等級(高倍率→不糊)
           const checkRing = roundRectG(this, 0, 0, CS2, CS2, 13, null, 0, 0x35a866, 2.5).setVisible(false);   // 已入隊標記(取代原本 alpha 變暗):綠框 + 右上 ✓
           const checkDot = this.add.circle(CS2 / 2 - 8, -CS2 / 2 + 8, 8, 0x35a866).setVisible(false);
           const checkTxt = this.add.text(CS2 / 2 - 8, -CS2 / 2 + 8, '✓', { fontFamily: EMOJIFONT, fontSize: '11px', color: '#ffffff', fontStyle: 'bold' }).setOrigin(0.5).setVisible(false);
@@ -2065,12 +2071,12 @@
         if (this.filterEl) list = list.filter(c => c._cd.el === this.filterEl);
         const byEl = (a, b) => ord[a._cd.el] - ord[b._cd.el];   // 次要排序:屬性序
         const cmp = {
-          el: (a, b) => byEl(a, b) || (getCardLv(b._cd.id) - getCardLv(a._cd.id)),
+          el: (a, b) => byEl(a, b) || ((b._inst.lv || 1) - (a._inst.lv || 1)),
           species: (a, b) => (_spOrd(a._cd.id) - _spOrd(b._cd.id)) || byEl(a, b),   // 種族序用現成 _spOrd(SPECIES_ORDER 序號;⚠️CARD_SPECIES[id] 是物件不能 localeCompare,曾把有卡帳號的編成頁炸空)
-          lv: (a, b) => (getCardLv(b._cd.id) - getCardLv(a._cd.id)) || byEl(a, b),
-          pwr: (a, b) => (cardAtk(b._cd.id) - cardAtk(a._cd.id)) || byEl(a, b),
-          hp: (a, b) => (cardHp(b._cd.id) - cardHp(a._cd.id)) || byEl(a, b),
-          rcv: (a, b) => (cardRcv(b._cd.id) - cardRcv(a._cd.id)) || byEl(a, b)
+          lv: (a, b) => ((b._inst.lv || 1) - (a._inst.lv || 1)) || byEl(a, b),
+          pwr: (a, b) => (cardAtk(b._cd.id, b._inst.lv, b._inst.evo) - cardAtk(a._cd.id, a._inst.lv, a._inst.evo)) || byEl(a, b),
+          hp: (a, b) => (cardHp(b._cd.id, b._inst.lv, b._inst.evo) - cardHp(a._cd.id, a._inst.lv, a._inst.evo)) || byEl(a, b),
+          rcv: (a, b) => (cardRcv(b._cd.id, b._inst.lv, b._inst.evo) - cardRcv(a._cd.id, a._inst.lv, a._inst.evo)) || byEl(a, b)
         };
         // 統一 tiebreaker(同卡冊):任何排序下「相同卡(id)一定相鄰」、同 id 內 LV 高的在前,最後依個體 uid 穩定收尾
         Object.keys(cmp).forEach(k => { const f = cmp[k]; cmp[k] = (a, b) => f(a, b) || _byIdLv(a._cd.id, b._cd.id) || (((a._inst && a._inst.u) || 0) - ((b._inst && b._inst.u) || 0)); });
@@ -2084,7 +2090,7 @@
       switchTeamBy(dir) { this.slideTeam(dir); }
       slideTeam(dir) {
         if (this._sliding) return; this._sliding = true;
-        saveTeamAt(getTeamIdx(), this.slots.map(s => s.cardId || null));   // 切走前自動存當前隊(保留槽位:存 5 格含 null→半隊時隊長 idx2 不位移,2026-08-03)
+        saveTeamAt(getTeamIdx(), this.slots.map(s => s.uid || null));   // 切走前自動存當前隊(保留槽位:存 5 格含 null→半隊時隊長 idx2 不位移,2026-08-03)
         this.tweens.killTweensOf(this.formG);
         this.tweens.add({
           targets: this.formG, x: -dir * W, duration: 190, ease: 'Quad.in', onComplete: () => {   // 舊隊往移動方向滑出
@@ -2095,10 +2101,11 @@
         });   // 新隊滑入(換 hero 圖感)
       }
       loadTeamSlots() {
-        const _miss = (loadTeam() || []).filter(Boolean).filter(id => cardArtKey(id, 'full') && !this.textures.exists(cardArtKey(id, 'full')));   // 切隊補當前隊大圖(宮格用;preload 只載了進場時那隊)
+        const _ids = loadTeamIds();   // 隊伍格(uid/舊id)→解析成卡種 id(補大圖用)
+        const _miss = _ids.filter(id => cardArtKey(id, 'full') && !this.textures.exists(cardArtKey(id, 'full')));   // 切隊補當前隊大圖(宮格用;preload 只載了進場時那隊)
         if (_miss.length) { _miss.forEach(id => this.load.image('card_' + id + '_full', 'art/cards/' + id + '_full.webp')); this.load.once('complete', () => this.loadTeamSlots()); try { this.load.start(); } catch (e) { } }   // 載好重載(先顯示名字→無縫換圖)
-        this.slots.forEach(s => this.clearSlot(s));   // 清空 → 載入目前選中隊(逐個體找未用的)
-        (loadTeam() || []).forEach((id, i) => { if (!this.slots[i]) return; const cd = ROSTER.find(c => c.id === id); if (!cd) return; const inst = this.instances.find(x => x.id === id && !this.cardUsed[x.u]); if (inst) this.assign(this.slots[i], inst, cd); });
+        this.slots.forEach(s => this.clearSlot(s));   // 清空 → 載入目前選中隊(🆕個體制:uid→指定那張;舊卡種id→任一未用個體)
+        (loadTeam() || []).forEach((e, i) => { if (!this.slots[i] || !e) return; const inst = (typeof e === 'string' && e[0] === 'k') ? this.instances.find(x => x.u === e && !this.cardUsed[x.u]) : this.instances.find(x => x.id === e && !this.cardUsed[x.u]); if (!inst) return; const cd = ROSTER.find(c => c.id === inst.id); if (!cd) return; this.assign(this.slots[i], inst, cd); });
         this.updateStats();
       }
       updateSwitcher() {   // 隊名文字(換隊/改名觸發);左右箭頭與 ✎ 位置固定,不隨隊名長度重排
@@ -2106,7 +2113,7 @@
       }
       updateStats() {   // 統計 PWR/HP/RCV(三圍加總,只算已放入的宮位) + 隊長技效果(demo tc-stats/tc-lead)
         let pwr = 0, hp = 0, rcv = 0;
-        this.slots.forEach(s => { if (s.cardId) { pwr += cardAtk(s.cardId); hp += cardHp(s.cardId); rcv += cardRcv(s.cardId); } });
+        this.slots.forEach(s => { if (s.cardId) { pwr += cardAtk(s.cardId, s.lv, s.evo); hp += cardHp(s.cardId, s.lv, s.evo); rcv += cardRcv(s.cardId, s.lv, s.evo); } });   // 🆕個體制:用該格個體的 lv/evo 算
         if (this.statPwr) this.statPwr.setText(pwr.toLocaleString());
         if (this.statHp) this.statHp.setText(hp.toLocaleString());
         if (this.statRcv) this.statRcv.setText(rcv.toLocaleString());
@@ -2114,7 +2121,7 @@
         if (this.leadTxt) this.leadTxt.setText(ls ? ('👑 隊長技 · ' + ls.desc) : '👑 隊長技 · —');
       }
       async doRename() { const i = getTeamIdx(), v = await uiPrompt({ title: '隊伍名稱', message: '最多 6 字,留空=隊' + (i + 1), value: teamCustomName(i), maxLen: 6 }); if (v != null) { renameTeam(i, v); this.updateSwitcher(); } }
-      confirm() { saveTeamAt(getTeamIdx(), this.slots.map(s => s.cardId || null)); this.scene.manager.start('home', this.tutTeam ? { tab: 'dungeon' } : undefined); this.scene.manager.stop('team'); }   // 存當前隊 + 回大廳(未滿也可離開,出戰時再擋);🗺️ 教學編隊完成→強制落在地圖(dungeon)分頁(否則沿用 persisted 的 gacha tab,看不到序章島指引)
+      confirm() { saveTeamAt(getTeamIdx(), this.slots.map(s => s.uid || null)); this.scene.manager.start('home', this.tutTeam ? { tab: 'dungeon' } : undefined); this.scene.manager.stop('team'); }   // 存當前隊 + 回大廳(未滿也可離開,出戰時再擋);🗺️ 教學編隊完成→強制落在地圖(dungeon)分頁(否則沿用 persisted 的 gacha tab,看不到序章島指引)
       tutTeamCoach() {   // 編隊教學說明卡:對齊全站教學風格(白 _softPanelTex 面板 + 18px ink 字 + 綠圓角 CTA),量測自適應高度
         this._setDomUI(false);   // 教學也是 canvas modal→同樣蓋不住 DOM UI,先藏
         const g = this.add.container(0, 0).setDepth(200); this._coachG = g;   // 🩹 記旗標→場景層 pointerdown 讀它擋輸入,避免按鈕點擊穿透到底下卡片(見 input.on('pointerdown'))
@@ -2153,12 +2160,12 @@
       }   // 被篩掉/視窗外的卡不可點(遮罩只裁畫面、不裁輸入)
       tapCard(inst, cd) { if (this.cardUsed[inst.u]) return; const ORDER = [2, 0, 1, 3, 4]; const slot = ORDER.map(i => this.slots[i]).find(s => !s.el); if (slot) this.assign(slot, inst, cd); }   // 填位順序:第1張→中央(隊長 idx2)、2左上、3右上、4左下、5右下(2026-08-03 改;隊長仍固定 idx2,勿動)
       assign(slot, inst, cd) {
-        slot.el = cd.el; slot.cardId = cd.id; slot.uid = inst.u;
+        slot.el = cd.el; slot.cardId = cd.id; slot.uid = inst.u; slot.lv = inst.lv || 1; slot.evo = inst.evo || 0;   // 🆕個體制:記住這一張個體的 lv/evo(顯示/戰力/存檔用)
         slot.draw(cd.el); slot.plus.setVisible(false);
-        const dk = cardArtKey(cd.id, 'full'), hasArt = !!(dk && this.textures.exists(dk));   // 陣型用 _01 大圖(3:2 橫式,填滿格子)
+        const dk = cardArtKey(cd.id, 'full', slot.evo), hasArt = !!(dk && this.textures.exists(dk));   // 陣型用 _01 大圖(3:2 橫式,填滿格子);個體進化階決定用哪張圖
         if (hasArt) { if (!slot.img) { slot.img = this.add.image(slot.x, slot.y, dk); slot.cont.add(slot.img); } else slot.img.setTexture(dk); this._fitSlotImg(slot); }
         else { if (slot.img) slot.img.setVisible(false); if (dk) { _loadCardArt(this, [cd.id]); this.load.once('complete', () => this._refreshSlotArt()); try { this.load.start(); } catch (e) { } } }   // 🖼️ full 大圖還沒載(bench 只載縮圖、預載只載原隊)→補載,載好自動換上圖(修「加入佈陣顯示金卡+卡名缺圖」)
-        slot.nameTxt.setText(cardName(cd.id)).setVisible(!hasArt);
+        slot.nameTxt.setText(cardName(cd.id, slot.evo)).setVisible(!hasArt);
         if (slot.crown) slot.cont.bringToTop(slot.crown);   // 圖層蓋過去→大圖不能蓋掉皇冠
         this.rebuildSlotOverlay(slot, cd);   // 重繪右上屬性徽章 + 左下 Lv 膠囊
         this.cardUsed[inst.u] = true; const card = this.cards.find(c => c._inst.u === inst.u);
@@ -2169,7 +2176,7 @@
       _refreshSlotArt() {   // 🖼️ full 大圖補載完成→把還在顯示卡名的已填宮位換成圖(徽章/Lv 重繪疊上、皇冠置頂;順序比照 assign)
         this.slots.forEach(slot => {
           if (!slot.cardId || (slot.img && slot.img.visible)) return;
-          const dk = cardArtKey(slot.cardId, 'full');
+          const dk = cardArtKey(slot.cardId, 'full', slot.evo);
           if (!dk || !this.textures.exists(dk)) return;
           if (!slot.img) { slot.img = this.add.image(slot.x, slot.y, dk); slot.cont.add(slot.img); } else slot.img.setTexture(dk);
           this._fitSlotImg(slot);
@@ -2193,7 +2200,7 @@
       clearSlot(slot) {
         if (!slot.el) return; this.cardUsed[slot.uid] = false;
         const card = this.cards.find(c => c._inst.u === slot.uid); if (card) card.setCheck(false);
-        slot.el = null; slot.cardId = null; slot.uid = null; slot.draw(null); slot.plus.setVisible(true); slot.nameTxt.setVisible(false);
+        slot.el = null; slot.cardId = null; slot.uid = null; slot.lv = null; slot.evo = null; slot.draw(null); slot.plus.setVisible(true); slot.nameTxt.setVisible(false);
         if (slot.img) slot.img.setVisible(false);
         this.rebuildSlotOverlay(slot, null);
         this.updateStats(); this.refreshStart();
@@ -2205,20 +2212,21 @@
         this._carry = { src, cd: src.cd, moved: 0, x0: p.x, y0: p.y, target: null, _hlSlot: null, _hl: null };
         this._setDomUI(false);   // 排序列/確定鈕是 DOM overlay(永遠壓過 canvas)→抓取期間先藏,浮卡(canvas depth400)才會在最上層;放開時還原(見 _endCarry)
         if (src.type === 'slot' && src.slot.img) src.slot.img.setAlpha(0.35);   // 來源宮位卡淡出→示意「提起中」
-        this._carry.ghost = this._buildCarryGhost(src.cd);
+        const _gi = src.type === 'pool' ? src.inst : src.slot;   // 🆕個體制:浮卡顯示這張個體自己的等級/進化
+        this._carry.ghost = this._buildCarryGhost(src.cd, _gi && _gi.lv, _gi && _gi.evo);
         this._updateCarry(p);
       }
-      _buildCarryGhost(cd) {
+      _buildCarryGhost(cd, ovLv, ovEvo) {
         const g = this.add.container(0, 0).setDepth(400);
         const W2 = 104, artH = 64, PADT = 8, GAP = 20, PADB = 12, panelH = PADT + artH + GAP + 30 + PADB;   // GAP=卡圖底部與文字資訊區的間隔;30=名稱+數值兩行
         g.add(roundRectG(this, 0, 0, W2 + 16, panelH, 13, 0x12161a, 0.95, (EL[cd.el] ? EL[cd.el].color : 0xf4b73c), 2));
-        const dk = cardArtKey(cd.id, 'full'), dk2 = cardArtKey(cd.id, 'thumb');
+        const dk = cardArtKey(cd.id, 'full', ovEvo), dk2 = cardArtKey(cd.id, 'thumb', ovEvo);
         const key = (dk && this.textures.exists(dk)) ? dk : ((dk2 && this.textures.exists(dk2)) ? dk2 : null);
         const top = -panelH / 2, artCY = top + PADT + artH / 2, txtY = top + PADT + artH + GAP;   // 文字資訊區頂端=卡圖底 + GAP 間隔
         if (key) { const im = this.add.image(0, artCY, key); const nW = im.width, nH = im.height, sc = Math.max(W2 / nW, artH / nH); im.setScale(sc); im.setCrop((nW - W2 / sc) / 2, (nH - artH / sc) / 2, W2 / sc, artH / sc); g.add(im); }
-        else g.add(this.add.text(0, artCY, cardName(cd.id), { fontFamily: EMOJIFONT, fontSize: '13px', color: '#fff', fontStyle: 'bold' }).setOrigin(0.5));
-        g.add(this.add.text(0, txtY, cardName(cd.id) + ' Lv' + getCardLv(cd.id), { fontFamily: EMOJIFONT, fontSize: '12px', color: '#ffffff', fontStyle: 'bold' }).setOrigin(0.5, 0).setResolution(3));
-        g.add(this.add.text(0, txtY + 17, '⚔' + cardAtk(cd.id) + '  ♥' + cardHp(cd.id) + '  ✚' + cardRcv(cd.id), { fontFamily: EMOJIFONT, fontSize: '11px', color: '#ffe08a', fontStyle: 'bold' }).setOrigin(0.5, 0).setResolution(3));
+        else g.add(this.add.text(0, artCY, cardName(cd.id, ovEvo), { fontFamily: EMOJIFONT, fontSize: '13px', color: '#fff', fontStyle: 'bold' }).setOrigin(0.5));
+        g.add(this.add.text(0, txtY, cardName(cd.id, ovEvo) + ' Lv' + getCardLv(cd.id, ovLv), { fontFamily: EMOJIFONT, fontSize: '12px', color: '#ffffff', fontStyle: 'bold' }).setOrigin(0.5, 0).setResolution(3));
+        g.add(this.add.text(0, txtY + 17, '⚔' + cardAtk(cd.id, ovLv, ovEvo) + '  ♥' + cardHp(cd.id, ovLv, ovEvo) + '  ✚' + cardRcv(cd.id, ovLv, ovEvo), { fontFamily: EMOJIFONT, fontSize: '11px', color: '#ffe08a', fontStyle: 'bold' }).setOrigin(0.5, 0).setResolution(3));
         return g;
       }
       _updateCarry(p) {
@@ -2279,7 +2287,7 @@
         }
         const lw = 46, lx = outerRight ? (x + w / 2 - lw / 2 - 3) : (x - w / 2 + lw / 2 + 3), ly = y + h / 2 - 11;   // Lv 膠囊:外側下角,放大
         const lBg = roundRectG(this, lx, ly, lw, 18, 9, 0x12161a, 0.72, null, 0);
-        const lTxt = this.add.text(lx, ly, 'Lv.' + getCardLv(cd.id), { fontFamily: EMOJIFONT, fontSize: '13px', color: '#ffffff', fontStyle: 'bold' }).setOrigin(0.5).setResolution(3);   // resolution 3=高倍率算文字貼圖→畫布放大也不糊
+        const lTxt = this.add.text(lx, ly, 'Lv.' + getCardLv(cd.id, slot.lv), { fontFamily: EMOJIFONT, fontSize: '13px', color: '#ffffff', fontStyle: 'bold' }).setOrigin(0.5).setResolution(3);   // 🆕個體制:該格個體等級   // resolution 3=高倍率算文字貼圖→畫布放大也不糊
         slot.cont.add(lBg); slot.cont.add(lTxt); slot._ov.push(lBg, lTxt);
       }
       _setDomUI(on) { [this.sortDom, this.confirmDom].forEach(d => { if (d && d.node) d.setVisible(on); }); }   // 排序列/確定鈕是 DOM overlay,永遠浮在 canvas 上→canvas 內 modal(詳情/教學)蓋不住,開 modal 時整組隱藏
@@ -6868,7 +6876,7 @@
         });
         // (收集進度/寶玉那行已移除;排序/篩選列=DOM overlay(y≈100),見 buildDomBar;擴充鈕在標題列=demo 版面)
         // 個體清單:每張卡各佔一格(不疊×N),套元素篩選 + 排序
-        let list = cards.map((c, i) => { const r = ROSTER.find(x => x.id === c.id) || { id: c.id, name: '???', el: 'junk', rank: 'genin', atk: 0, hp: 0, rcv: 0, _ghost: true }; return Object.assign({ _i: i, u: c.u }, r); });   // 卡表已移除的 id→替身卡(EL.junk 可渲染),仍可在分解模式回收,不再 EL[undefined] 崩整頁
+        let list = cards.map((c, i) => { const r = ROSTER.find(x => x.id === c.id) || { id: c.id, name: '???', el: 'junk', rank: 'genin', atk: 0, hp: 0, rcv: 0, _ghost: true }; return Object.assign({ _i: i, u: c.u, _lv: c.lv || 1, _evo: c.evo || 0 }, r); });   // 🆕個體制:帶入這張個體的 lv/evo(顯示/美術用)   // 卡表已移除的 id→替身卡(EL.junk 可渲染),仍可在分解模式回收,不再 EL[undefined] 崩整頁
         if (this.filterEl) list = list.filter(c => c.el === this.filterEl);
         list = list.sort(SORT_MODES[this.sortMode].fn);
         if (!this.filterEl) { const empties = Math.max(0, cap - list.length); for (let e = 0; e < empties; e++)list.push(null); }   // 全屬視圖:卡片後補「空欄」到上限→看得到還剩幾格
@@ -6881,18 +6889,18 @@
         this._pages = pages;
         if (!list.length) this.txt(CX, 300, '(沒有符合條件的卡)', '15px', '#b5aa9a', 0.5);   // 深色頁→亮字
         const _realL = this.layer, gridG = this.gridG = this.add.container(0, 0); this.layer.add(gridG); this.layer = gridG;   // 卡格暫導入可滑動 gridG(畫完還原)
-        const RAD = 13, USE = 0xeaa419, teamIds = new Set(loadTeam());   // 使用中=目前出戰隊的 5 張卡→有金框+「出戰」角標(避免誤分解自己在用的卡)
+        const RAD = 13, USE = 0xeaa419, teamUids = new Set(loadTeamUids());   // 🆕個體制:使用中=隊上「那幾張個體 uid」→只有被放進隊的那張才金框+「出戰」(同角色其他張不算)
         pageList.forEach((cd, k) => {
           const cx = x0 + (k % cols) * gx, cy = y0 + Math.floor(k / cols) * gy;
           if (!cd) { this.L(roundRectG(this, cx, cy, cw, cw, RAD, T.surf2, 1, T.divider, 1.5)); return; }   // 空欄:淺色圓角框
-          const inUse = teamIds.has(cd.id), isKage = cd.rank === 'kage';
+          const inUse = teamUids.has(cd.u), isKage = cd.rank === 'kage';
           const bgKey = cd.el !== 'junk' && _elGradCardTex(this, cd.el, cw, RAD);   // 元素漸層卡底(透明去背角色疊上→有漸層背景)
           if (bgKey) this.L(this.add.image(cx, cy, bgKey).setDisplaySize(cw + 4, cw + 4).setOrigin(0.5));
           else this.L(roundRectG(this, cx, cy, cw, cw, RAD, T.surf2, 1, T.divider, 1.5));   // junk/無屬→純色底
           const onSel = this.selMode && this.dsel && this.dsel.has(cd.u);
-          const ak = cardArtKey(cd.id, 'thumb');   // 角色圖疊漸層底上(cw-6:角色 62px 比原 58 大 4px,漸層當背景框、3px 內縮避免圓角外露)
+          const ak = cardArtKey(cd.id, 'thumb', cd._evo);   // 🆕個體制:這張個體自己的進化圖(角色圖疊漸層底上)
           if (ak && this.textures.exists(ak)) this.L(this.add.image(cx, cy, ak).setDisplaySize(cw - 6, cw - 6).setOrigin(0.5));
-          else this.txt(cx, cy - 2, cardName(cd.id), '11px', '#ffffff', 0.5, true);
+          else this.txt(cx, cy - 2, cardName(cd.id, cd._evo), '11px', '#ffffff', 0.5, true);
           if (isKage || inUse) this.L(roundRectG(this, cx, cy, cw, cw, RAD, null, 0, inUse ? USE : T.gold, 2.5));   // 使用中/★4→金框疊上(蓋過元素邊框)
           // 左上屬性徽章(demo .mini .elbadge:元素色底+白框+白 icon,共用 UI kit)
           if (cd.el !== 'junk' && EL[cd.el]) {
@@ -6900,7 +6908,7 @@
             this.L(bBg); this.L(bIc);
           }
           // Lv 膠囊(demo .mini .lvpill:左下、深底、純數字)
-          const lvS = String(getCardLv(cd.id)), lw2 = 14 + lvS.length * 8, lx2 = cx - cw / 2 + lw2 / 2 + 3, ly = cy + cw / 2 - 12;
+          const lvS = String(cd._lv || 1), lw2 = 14 + lvS.length * 8, lx2 = cx - cw / 2 + lw2 / 2 + 3, ly = cy + cw / 2 - 12;   // 🆕個體制:這張個體自己的等級
           this.L(roundRectG(this, lx2, ly, lw2, 18, 8, 0x12161a, 0.72, null, 0));
           this.L(this.add.text(lx2, ly, lvS, { fontFamily: EMOJIFONT, fontSize: '13px', color: '#ffffff', fontStyle: 'bold' }).setOrigin(0.5).setResolution(3));   // 13px+高解析→不糊
           // 使用中(在隊)角標:右上「出戰」金 pill(demo .mini .battle)
@@ -6983,7 +6991,7 @@
     class HomeScene extends Phaser.Scene {
       constructor() { super('home'); }
       init(d) { this.tab = (d && d.tab) || this.tab || 'dungeon'; }
-      preload() { _loadCardArt(this, loadTeam()); MAP_KEYS.forEach(k => { if (!this.textures.exists(k)) this.load.image(k, 'art/map/' + k + '.webp'); }); UI_ICONS.forEach(([key, file]) => { if (!this.textures.exists(key)) this.load.image(key, 'art/ui/' + file + '.webp'); }); showLoadBar(this); }   // 大廳:當前隊卡圖 + 世界地圖素材 + UI 圖示;bgm_home 非阻塞→大廳秒開
+      preload() { _loadCardArt(this, loadTeamIds()); MAP_KEYS.forEach(k => { if (!this.textures.exists(k)) this.load.image(k, 'art/map/' + k + '.webp'); }); UI_ICONS.forEach(([key, file]) => { if (!this.textures.exists(key)) this.load.image(key, 'art/ui/' + file + '.webp'); }); showLoadBar(this); }   // 大廳:當前隊卡圖 + 世界地圖素材 + UI 圖示;bgm_home 非阻塞→大廳秒開
       create() {
         this.add.rectangle(CX, H / 2, W, H, 0x160f18);
         this._diving = false; try { this.cameras.main.resetFX(); } catch (e) { }   // 🎬回大廳:重置出擊轉場鎖(否則第二次進火城被擋)+ 清相機殘留淡出
@@ -7134,7 +7142,7 @@
       topBar() {
         const m = getMeta(), T = UI();
         this.rect(CX, 42, W, 84, T.surf); this.rect(CX, 84, W, 1.5, T.divider);   // 白底資源列(84 高,2 排) + 底部細線
-        const _l = loadTeam().map(id => ROSTER.find(c => c.id === id)).filter(Boolean)[0];
+        const _l = loadTeamIds().map(id => ROSTER.find(c => c.id === id)).filter(Boolean)[0];
         // 🎨 資源顯示(照 demo .coin:美術圖示 16px + 數字,右緣對齊 xR,無灰底)
         const resR = (xR, y, iconKey, numStr, col) => {
           const t = this.add.text(xR, y, numStr, { fontFamily: EMOJIFONT, fontSize: FS.cap, color: col || T.ink, fontStyle: 'bold' }).setOrigin(1, 0.5);
@@ -7337,7 +7345,7 @@
         id = id || 'prologue';
         if (id === 'prologue') { this.showLessonPicker(); return; }   // 序章=練習課程 picker:借用狗狗隊、免體力、免自身編隊檢查、恆可進(擺在隊伍/解鎖閘門之前)
         if (!isDungeonUnlocked(id)) { this.toast('尚未解鎖'); return; }
-        const tm = leveledTeam(loadTeam().filter(x => isOwned(x)));
+        const tm = leveledTeam(loadTeam().filter(Boolean));   // 🆕個體制:隊伍格(uid/舊id)→leveledTeam 內部解析成個體並用個體 lv/evo 算戰力
         if (tm.length !== 5) { this.toast('隊伍不齊,先去編隊'); this.go('team'); return; }
         this.showDiffPicker(id);
       }
@@ -7447,7 +7455,7 @@
         this.time.delayedCall(320, () => { ready = true; });
       }
       async startBattle(id, df) {   // 🔐 出擊前先向伺服器領票(run/start 當閘):線上→伺服器判定解鎖/體力並扣款,拿回真正 stamina + 簽章 runId;離線/伺服器異常→照舊放行(不可卡死玩家,見下)
-        const tm = leveledTeam(loadTeam().filter(x => isOwned(x)));   // 帶升級後 atk
+        const tm = leveledTeam(loadTeam().filter(Boolean));   // 🆕個體制:隊伍格(uid/舊id)→leveledTeam 內部解析成個體並用個體 lv/evo 算戰力   // 帶升級後 atk
         if (tm.length !== 5) { this.toast('隊伍不齊,先去編隊'); this.go('team'); return; }
         const cost = this.diffCost(id, df), m = getMeta();
         if (m.stamina < cost) { this.toast('體力不足!去商店回復'); this.rebuild(); return; }   // 本地快速預檢(全額,與伺服器算式一致):明顯不夠就不必打 API
@@ -8109,7 +8117,7 @@
     class FuseScene extends Phaser.Scene {
       constructor() { super('fuse'); }
       preload() { _loadAllCardThumbs(this); showLoadBar(this); }   // 合成:縮圖即可(不開全圖詳情)
-      init(d) { this.target = (d && d.target) || this.target || loadTeam().filter(Boolean)[0]; this.mode = 'feed'; if (this.feedPage == null) this.feedPage = 0; this.sel = []; }   // sel=已選素材個體 u 陣列(進場清空)
+      init(d) { this.target = (d && d.target) || this.target || loadTeamIds()[0]; this.mode = 'feed'; if (this.feedPage == null) this.feedPage = 0; this.sel = []; }   // 強化對象預設=隊伍第一張的卡種 id(個體制:loadTeamIds 解析)   // sel=已選素材個體 u 陣列(進場清空)
       create() {
         this.add.rectangle(CX, H / 2, W, H, UI().page); this.rebuild();
         bindGridSwipe(this, 210, H - 92, 'feedPage');   // 素材格區拖曳換頁(慣性滑動)
