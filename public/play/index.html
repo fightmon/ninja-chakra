@@ -2210,15 +2210,15 @@
       }
       _buildCarryGhost(cd) {
         const g = this.add.container(0, 0).setDepth(400);
-        const W2 = 100, artH = 66, panelH = 104;
-        g.add(roundRectG(this, 0, 0, W2 + 12, panelH, 12, 0x12161a, 0.94, (EL[cd.el] ? EL[cd.el].color : 0xf4b73c), 2));
+        const W2 = 104, artH = 64, PADT = 8, GAP = 20, PADB = 12, panelH = PADT + artH + GAP + 30 + PADB;   // GAP=卡圖底部與文字資訊區的間隔;30=名稱+數值兩行
+        g.add(roundRectG(this, 0, 0, W2 + 16, panelH, 13, 0x12161a, 0.95, (EL[cd.el] ? EL[cd.el].color : 0xf4b73c), 2));
         const dk = cardArtKey(cd.id, 'full'), dk2 = cardArtKey(cd.id, 'thumb');
         const key = (dk && this.textures.exists(dk)) ? dk : ((dk2 && this.textures.exists(dk2)) ? dk2 : null);
-        const artCY = -panelH / 2 + 6 + artH / 2;
+        const top = -panelH / 2, artCY = top + PADT + artH / 2, txtY = top + PADT + artH + GAP;   // 文字資訊區頂端=卡圖底 + GAP 間隔
         if (key) { const im = this.add.image(0, artCY, key); const nW = im.width, nH = im.height, sc = Math.max(W2 / nW, artH / nH); im.setScale(sc); im.setCrop((nW - W2 / sc) / 2, (nH - artH / sc) / 2, W2 / sc, artH / sc); g.add(im); }
         else g.add(this.add.text(0, artCY, cardName(cd.id), { fontFamily: EMOJIFONT, fontSize: '13px', color: '#fff', fontStyle: 'bold' }).setOrigin(0.5));
-        g.add(this.add.text(0, artCY + artH / 2 + 12, cardName(cd.id) + ' Lv' + getCardLv(cd.id), { fontFamily: EMOJIFONT, fontSize: '12px', color: '#ffffff', fontStyle: 'bold' }).setOrigin(0.5).setResolution(3));
-        g.add(this.add.text(0, artCY + artH / 2 + 28, '⚔' + cardAtk(cd.id) + '  ♥' + cardHp(cd.id) + '  ✚' + cardRcv(cd.id), { fontFamily: EMOJIFONT, fontSize: '11px', color: '#ffe08a', fontStyle: 'bold' }).setOrigin(0.5).setResolution(3));
+        g.add(this.add.text(0, txtY, cardName(cd.id) + ' Lv' + getCardLv(cd.id), { fontFamily: EMOJIFONT, fontSize: '12px', color: '#ffffff', fontStyle: 'bold' }).setOrigin(0.5, 0).setResolution(3));
+        g.add(this.add.text(0, txtY + 17, '⚔' + cardAtk(cd.id) + '  ♥' + cardHp(cd.id) + '  ✚' + cardRcv(cd.id), { fontFamily: EMOJIFONT, fontSize: '11px', color: '#ffe08a', fontStyle: 'bold' }).setOrigin(0.5, 0).setResolution(3));
         return g;
       }
       _updateCarry(p) {
