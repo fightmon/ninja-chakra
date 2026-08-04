@@ -1930,22 +1930,28 @@
             this._tapX = p.x; this._tapY = p.y; this._lpFired = false; this._tapHit = this.cardAt(p.x, p.y);   // 用座標命中按到的卡(不靠逐物件事件)
             if (this._tapHit) {
               const c = this._tapHit; this.tweens.killTweensOf(c); c.setScale(1); this.tweens.add({ targets: c, scaleX: 1.16, scaleY: 1.16, duration: 440, ease: 'Sine.out' });
-              if (this._lpTimer) this._lpTimer.remove(); this._lpTimer = this.time.delayedCall(450, () => { const ap = this.input.activePointer; if (this._tapHit === c && Math.hypot(ap.x - this._tapX, ap.y - this._tapY) < 12) { this._lpFired = true; this.tweens.killTweensOf(c); c.setScale(1); this.showCardDetail(c._cd); } });
+              if (this._lpTimer) this._lpTimer.remove(); this._lpTimer = this.time.delayedCall(300, () => { const ap = this.input.activePointer; if (this._tapHit === c && Math.hypot(ap.x - this._tapX, ap.y - this._tapY) < 12) { this._lpFired = true; this.tweens.killTweensOf(c); c.setScale(1); this._beginCarry({ type: 'pool', card: c, inst: c._inst, cd: c._cd }, ap); } });   // 久按300ms→浮起抓取(拖到格子放置/原地放開看能力,見 _beginCarry)
             }
-          }   // 久按→詳細
-          if (p.y < this.headBot) { this._hsDown = true; this._hsx = p.x; this._hsy = p.y; this._headDragging = false; this._slotHit = this.slotAt(p.x, p.y); }
+          }   // 久按→浮起抓取
+          if (p.y < this.headBot) {
+            this._hsDown = true; this._hsx = p.x; this._hsy = p.y; this._headDragging = false; this._slotHit = this.slotAt(p.x, p.y);
+            if (this._slotHit && this._slotHit.cardId) { const sl = this._slotHit; if (this._slpTimer) this._slpTimer.remove(); this._slpTimer = this.time.delayedCall(300, () => { const ap = this.input.activePointer; if (this._slotHit === sl && !this._headDragging && !this._carry && Math.hypot(ap.x - this._hsx, ap.y - (this._hsy || ap.y)) < 12) { const cd = ROSTER.find(c => c.id === sl.cardId); if (cd) this._beginCarry({ type: 'slot', slot: sl, cd }, ap); } }); }   // 久按已放的宮位卡→浮起,拖到別格互換
+          }
         });
         this.input.on('pointermove', (p) => {
+          if (this._carry) { this._updateCarry(p); return; }   // 抓取中:移動只驅動浮卡+高亮落點,不捲動/不切隊
           if (this._down && p.isDown) {
             const dy = p.y - this._lastY; this._lastY = p.y; this._moved += Math.abs(dy); this.scrollBy(-dy); this._vy = this._vy * 0.4 + dy * 0.6;   // 記錄甩動速度(平滑)→放開後做慣性
             if (this._tapHit && Math.hypot(p.x - this._tapX, p.y - this._tapY) > 12) { const c = this._tapHit; this.tweens.killTweensOf(c); this.tweens.add({ targets: c, scaleX: 1, scaleY: 1, duration: 100 }); this._tapHit = null; if (this._lpTimer) { this._lpTimer.remove(); this._lpTimer = null; } }
           }   // 手指移動>12px=拖曳→取消點擊與久按
           if (this._hsDown && p.isDown && !this._sliding) {
-            const dx = p.x - this._hsx; if (Math.abs(dx) > 8) this._headDragging = true;
+            const dx = p.x - this._hsx; if (Math.abs(dx) > 8) { this._headDragging = true; if (this._slpTimer) { this._slpTimer.remove(); this._slpTimer = null; } }   // 橫拖=切隊→取消宮位久按
             if (this._headDragging) { this.tweens.killTweensOf(this.formG); this.formG.x = dx * 0.78; }
           }
         });
         this.input.on('pointerup', (p) => {
+          if (this._slpTimer) { this._slpTimer.remove(); this._slpTimer = null; }
+          if (this._carry) { this._endCarry(p); this._down = false; this._tapHit = null; this._lpFired = false; this._hsDown = false; this._headDragging = false; this._slotHit = null; if (this._lpTimer) { this._lpTimer.remove(); this._lpTimer = null; } return; }   // 抓取放開:放置/互換/看能力,其餘手勢略過
           this._down = false; if (this._lpTimer) { this._lpTimer.remove(); this._lpTimer = null; }
           if (this._tapHit) {
             const c = this._tapHit; this.tweens.killTweensOf(c); this.tweens.add({ targets: c, scaleX: 1, scaleY: 1, duration: 120 });
@@ -2191,6 +2197,64 @@
         if (slot.img) slot.img.setVisible(false);
         this.rebuildSlotOverlay(slot, null);
         this.updateStats(); this.refreshStart();
+      }
+      // ===== 久按浮起→拖放 佈陣(卡池→宮位放置 / 宮位↔宮位互換;2026-08-03) =====
+      _beginCarry(src, p) {
+        this._down = false; if (this._lpTimer) { this._lpTimer.remove(); this._lpTimer = null; }
+        if (this._headDragging) { this._headDragging = false; this.tweens.killTweensOf(this.formG); this.tweens.add({ targets: this.formG, x: 0, duration: 140 }); }
+        this._carry = { src, cd: src.cd, moved: 0, x0: p.x, y0: p.y, target: null, _hlSlot: null, _hl: null };
+        if (src.type === 'slot' && src.slot.img) src.slot.img.setAlpha(0.35);   // 來源宮位卡淡出→示意「提起中」
+        this._carry.ghost = this._buildCarryGhost(src.cd);
+        this._updateCarry(p);
+      }
+      _buildCarryGhost(cd) {
+        const g = this.add.container(0, 0).setDepth(400);
+        const W2 = 100, artH = 66, panelH = 104;
+        g.add(roundRectG(this, 0, 0, W2 + 12, panelH, 12, 0x12161a, 0.94, (EL[cd.el] ? EL[cd.el].color : 0xf4b73c), 2));
+        const dk = cardArtKey(cd.id, 'full'), dk2 = cardArtKey(cd.id, 'thumb');
+        const key = (dk && this.textures.exists(dk)) ? dk : ((dk2 && this.textures.exists(dk2)) ? dk2 : null);
+        const artCY = -panelH / 2 + 6 + artH / 2;
+        if (key) { const im = this.add.image(0, artCY, key); const nW = im.width, nH = im.height, sc = Math.max(W2 / nW, artH / nH); im.setScale(sc); im.setCrop((nW - W2 / sc) / 2, (nH - artH / sc) / 2, W2 / sc, artH / sc); g.add(im); }
+        else g.add(this.add.text(0, artCY, cardName(cd.id), { fontFamily: EMOJIFONT, fontSize: '13px', color: '#fff', fontStyle: 'bold' }).setOrigin(0.5));
+        g.add(this.add.text(0, artCY + artH / 2 + 12, cardName(cd.id) + ' Lv' + getCardLv(cd.id), { fontFamily: EMOJIFONT, fontSize: '12px', color: '#ffffff', fontStyle: 'bold' }).setOrigin(0.5).setResolution(3));
+        g.add(this.add.text(0, artCY + artH / 2 + 28, '⚔' + cardAtk(cd.id) + '  ♥' + cardHp(cd.id) + '  ✚' + cardRcv(cd.id), { fontFamily: EMOJIFONT, fontSize: '11px', color: '#ffe08a', fontStyle: 'bold' }).setOrigin(0.5).setResolution(3));
+        return g;
+      }
+      _updateCarry(p) {
+        const c = this._carry; if (!c) return;
+        c.moved = Math.max(c.moved, Math.hypot(p.x - c.x0, p.y - c.y0));
+        if (c.ghost) c.ghost.setPosition(p.x, p.y - 82);   // 浮卡在手指上方,不被指頭遮住
+        let sl = this.slotAt(p.x, p.y);
+        if (sl && c.src.type === 'slot' && sl === c.src.slot) sl = null;   // 拖回自己那格=不算落點
+        if (sl !== c._hlSlot) {
+          if (c._hl) { c._hl.destroy(); c._hl = null; }
+          c._hlSlot = sl; c.target = sl;
+          if (sl) { c._hl = this.add.graphics().setDepth(390); c._hl.lineStyle(3, 0xffe08a, 1); c._hl.strokeRoundedRect(sl.x + this.formG.x - sl.w / 2 - 3, sl.y - sl.h / 2 - 3, sl.w + 6, sl.h + 6, 12); }
+        }
+      }
+      _endCarry(p) {
+        const c = this._carry; this._carry = null; if (!c) return;
+        if (c._hl) c._hl.destroy();
+        if (c.ghost) c.ghost.destroy();
+        if (c.src.type === 'slot' && c.src.slot.img) c.src.slot.img.setAlpha(1);
+        if (c.target) {
+          if (c.src.type === 'pool') this._placeInstIntoSlot(c.src.inst, c.cd, c.target);
+          else this._swapSlots(c.src.slot, c.target);
+        } else if (c.moved < 16) { this.showCardDetail(c.cd); }   // 原地放開=看能力(沿用久按開詳情)
+      }
+      _placeInstIntoSlot(inst, cd, slot) {   // 卡池卡→宮位:目標有卡先退回、該卡已在別格先清(移動),再放入
+        if (this.cardUsed[inst.u]) { const cur = this.slots.find(s => s.uid === inst.u); if (cur === slot) return; if (cur) this.clearSlot(cur); }
+        if (slot.cardId) this.clearSlot(slot);
+        this.assign(slot, inst, cd);
+      }
+      _swapSlots(a, b) {   // 兩宮位互換(b 可為空=把 a 移到 b)
+        if (a === b) return;
+        const A = a.uid ? { inst: this.instances.find(x => x.u === a.uid), cd: ROSTER.find(c => c.id === a.cardId) } : null;
+        const B = b.uid ? { inst: this.instances.find(x => x.u === b.uid), cd: ROSTER.find(c => c.id === b.cardId) } : null;
+        if (a.cardId) this.clearSlot(a);
+        if (b.cardId) this.clearSlot(b);
+        if (A && A.inst && A.cd) this.assign(b, A.inst, A.cd);
+        if (B && B.inst && B.cd) this.assign(a, B.inst, B.cd);
       }
       _elBadge(cx, cy, el) { return _elBadgeParts(this, cx, cy, el); }   // → 全域 UI kit _elBadgeParts(卡冊共用)
       rebuildSlotOverlay(slot, cd) {   // 右上元素徽章 + 左下 Lv 膠囊(隨指派卡片重繪,先銷毀舊的避免殘留)
