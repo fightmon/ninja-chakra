@@ -8143,18 +8143,23 @@
         const t = ROSTER.find(c => c.id === this.target);
         if (!t) { this.btn(CX, 200, 220, 48, '選擇強化對象', () => { this.mode = 'pick'; this.rebuild(); }, { col: UI().gold, stroke: UI().gold, color: UI().onAccent, fs: FS.sub, bold: true }); this.back(); return; }
         const sel = this.sel || [];
-        const lv = getCardLv(this.target), atk = cardAtk(this.target), exp = getCardExp(this.target), need = expToNext(lv), mx = lv >= MAXLV;
+        const lv = getCardLv(this.target), exp = getCardExp(this.target), need = expToNext(lv), mx = lv >= MAXLV;
         const pv = (sel.length && !mx) ? previewFeed(this.target, sel) : null;   // 選了素材→即時預覽結果
-        // 對象卡 + 經驗條
-        this.L(roundRectG(this, CX, 118, 360, 84, 14, EL[t.el].color, 1, T.gold, 2));
-        cardImgOn(this, 356, 118, 72, t.id, 'thumb');   // 對象卡狗圖(右側)
-        this.txt(40, 98, t.name + '  Lv.' + (pv ? pv.toLv : lv) + (mx ? ' MAX' : (pv && pv.ups > 0 ? '  ↑' + pv.ups : '')), '16px', T.ink, 0, true);
-        this.txt(40, 120, EL[t.el].name + '·' + RANKSTAR[t.rank] + '  ⚔️atk ' + atk, '13px', T.ink2, 0);
-        const bw = 304, ratio = mx ? 1 : (pv ? Math.min(1, pv.exp / pv.need) : Math.min(1, exp / need));
-        this.L(roundRectG(this, 40 + bw / 2, 144, bw, 13, 6.5, T.surf2, 1, null, 0));
-        if (ratio > 0) this.L(roundRectG(this, 40 + (bw * ratio) / 2, 144, bw * ratio, 13, 6.5, T.ok, 1, null, 0));
-        this.txt(40 + bw, 144, mx ? 'MAX' : (pv ? ('+' + pv.gained + ' exp') : (exp + '/' + need)), '13px', pv ? '#163f0a' : '#10303f', 1, true);
-        this.btn(CX, 188, 150, 32, '🔄 換強化對象', () => { this.mode = 'pick'; this.sel = []; this.rebuild(); }, { color: UI().ink, fs: FS.cap });   // 🧹拿掉上方灰字說明
+        const atk = cardAtk(this.target), hp = cardHp(this.target), rcv = cardRcv(this.target);   // 現在三圍(per-type 最強個體)
+        const nAtk = pv ? cardAtk(this.target, pv.toLv) : atk, nHp = pv ? cardHp(this.target, pv.toLv) : hp, nRcv = pv ? cardRcv(this.target, pv.toLv) : rcv;   // 餵完後三圍(用預覽 toLv)
+        // 對象卡(元素底色):白字+深描邊→任何屬色都看得清(修「火/★/atk 被底色吃掉」)
+        this.L(roundRectG(this, CX, 122, 360, 96, 14, EL[t.el].color, 1, T.gold, 2));
+        cardImgOn(this, 356, 108, 66, t.id, 'thumb');   // 對象卡狗圖(右上)
+        const ct = (x, y, s, size, col, ox) => this.L(this.add.text(x, y, s, { fontFamily: EMOJIFONT, fontSize: Math.max(13, size || 14) + 'px', color: col || '#ffffff', fontStyle: 'bold' }).setOrigin(ox == null ? 0 : ox, 0.5).setStroke('#1a1208', 4).setResolution(2));
+        ct(40, 92, t.name + '  Lv.' + (pv ? pv.toLv : lv) + (mx ? ' MAX' : (pv && pv.ups > 0 ? '  ↑' + pv.ups : '')), 16, '#ffffff', 0);
+        ct(40, 112, EL[t.el].name + ' · ' + RANKSTAR[t.rank], 13, '#ffe08a', 0);   // 屬性+星:亮金,清楚
+        const _d = (cur, nw) => '' + cur + (pv && nw > cur ? '→' + nw : '');   // 選了素材→顯示 before→after
+        ct(40, 132, '⚔' + _d(atk, nAtk) + '   ♥' + _d(hp, nHp) + '   ✚' + _d(rcv, nRcv), 13, pv ? '#9dffbe' : '#ffffff', 0);   // 三圍(升值時整行轉亮綠)
+        const bw = 268, ratio = mx ? 1 : (pv ? Math.min(1, pv.exp / pv.need) : Math.min(1, exp / need));
+        this.L(roundRectG(this, 40 + bw / 2, 154, bw, 12, 6, 0x000000, 0.32, null, 0));
+        if (ratio > 0) this.L(roundRectG(this, 40 + (bw * ratio) / 2, 154, bw * ratio, 12, 6, T.ok, 1, null, 0));
+        ct(40 + bw, 154, mx ? 'MAX' : (pv ? ('+' + pv.gained + ' exp') : (exp + '/' + need)), 12, '#ffffff', 1);
+        this.btn(CX, 194, 150, 32, '🔄 換強化對象', () => { this.mode = 'pick'; this.sel = []; this.rebuild(); }, { color: UI().ink, fs: FS.cap });   // 🧹拿掉上方灰字說明
         this.txt(CX - 12, 222, '點素材選取(可多選,最多 5)', '13px', '#9a8a6a', 0.5);
         if (sel.length) this.btn(W - 46, 222, 64, 26, '清空', () => { this.sel = []; this.rebuild(); }, { color: UI().ink2, fs: FS.micro });
         // 素材格(toggle 選取;每種留「最強個體」1 張保護;同屬優先排序)
