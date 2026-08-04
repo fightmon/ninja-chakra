@@ -8130,7 +8130,7 @@
       draw() {
         const T = UI();
         this.txt(CX, 34, '⬆️ 強化合成', FS.title, T.ink, 0.5, true);
-        this.txt(CX, 60, '💰 ' + getMeta().coins + ' · 同屬×1.5 · 每張 ' + FEED_COST + '金', '13px', '#ffe08a', 0.5);
+        this.txt(CX, 60, '💰 ' + getMeta().coins + ' · 同屬×1.5 · 每張 ' + FEED_COST + '金', '13px', '#8a6414', 0.5);   // 深金色→米色底可讀(原 #ffe08a 淺黃看不到)
         if (this.mode === 'pick') return this.drawPick();
         const t = ROSTER.find(c => c.id === this.target);
         if (!t) { this.btn(CX, 200, 220, 48, '選擇強化對象', () => { this.mode = 'pick'; this.rebuild(); }, { col: UI().gold, stroke: UI().gold, color: UI().onAccent, fs: FS.sub, bold: true }); this.back(); return; }
@@ -8146,10 +8146,9 @@
         this.L(roundRectG(this, 40 + bw / 2, 144, bw, 13, 6.5, T.surf2, 1, null, 0));
         if (ratio > 0) this.L(roundRectG(this, 40 + (bw * ratio) / 2, 144, bw * ratio, 13, 6.5, T.ok, 1, null, 0));
         this.txt(40 + bw, 144, mx ? 'MAX' : (pv ? ('+' + pv.gained + ' exp') : (exp + '/' + need)), '13px', pv ? '#163f0a' : '#10303f', 1, true);
-        this.txt(CX, 162, '（強化你目前最強的那張）', '11px', T.ink3, 0.5);   // 🆕 per-instance level:target 底層固定=該卡種最強個體,提醒玩家強化的是哪一張
-        this.btn(CX, 186, 150, 32, '🔄 換強化對象', () => { this.mode = 'pick'; this.sel = []; this.rebuild(); }, { color: UI().ink, fs: FS.cap });
-        this.txt(CX - 12, 216, '點素材選取(可多選,最多 5)', '13px', '#9a8a6a', 0.5);
-        if (sel.length) this.btn(W - 46, 216, 64, 26, '清空', () => { this.sel = []; this.rebuild(); }, { color: UI().ink2, fs: FS.micro });
+        this.btn(CX, 188, 150, 32, '🔄 換強化對象', () => { this.mode = 'pick'; this.sel = []; this.rebuild(); }, { color: UI().ink, fs: FS.cap });   // 🧹拿掉上方灰字說明
+        this.txt(CX - 12, 222, '點素材選取(可多選,最多 5)', '13px', '#9a8a6a', 0.5);
+        if (sel.length) this.btn(W - 46, 222, 64, 26, '清空', () => { this.sel = []; this.rebuild(); }, { color: UI().ink2, fs: FS.micro });
         // 素材格(toggle 選取;每種留「最強個體」1 張保護;同屬優先排序)
         const cards = loadSave().cards, byType = {}; cards.forEach(c => { (byType[c.id] = byType[c.id] || []).push(c); });
         let feedList = [];
@@ -8160,7 +8159,7 @@
           arr.forEach(c => { if (c.u !== protectU) feedList.push({ cd, u: c.u, lv: c.lv || 1 }); });
         });
         feedList.sort((a, b) => ((b.cd.el === t.el ? 1 : 0) - (a.cd.el === t.el ? 1 : 0)) || a.cd.id.localeCompare(b.cd.id));
-        const cols = 5, cw = 58, gx = 74, gy = 64, x0 = CX - 2 * gx, y0 = 250;
+        const cols = 5, cw = 58, gx = 74, gy = 64, x0 = CX - 2 * gx, y0 = 272;   // 素材格下移→與上方「點素材選取」標籤拉開,不再疊到卡片
         const rowsFit = Math.max(3, Math.floor((H - 96 - 30 - y0) / gy)), perPage = cols * rowsFit;   // 自適應排數(一般手機高度約 5 排)
         const pages = Math.max(1, Math.ceil(feedList.length / perPage)); this._pages = pages;
         if (this.feedPage >= pages) this.feedPage = pages - 1; if (this.feedPage < 0) this.feedPage = 0;
@@ -8171,8 +8170,9 @@
           const c = it.cd, u = it.u, cx = x0 + (k % cols) * gx, cy = y0 + Math.floor(k / cols) * gy, same = c.el === t.el, oi = sel.indexOf(u), on = oi >= 0;
           this.L(roundRectG(this, cx, cy, cw, cw, 12, EL[c.el].color, 1, (on || same) ? T.gold : T.divider, on ? 4 : 2));
           cardImgOn(this, cx, cy, cw - 4, c.id, 'thumb');   // 素材狗圖
-          this.txt(cx, cy - 15, cardName(c.id), '10px', '#1a1208', 0.5, true);
-          this.txt(cx, cy + 3, 'Lv' + (it.lv || 1), '9px', '#3a2c12', 0.5);   // per-instance level:素材自己的等級;🧹2026-08-03 拿掉逐張經驗預覽(龍族拼圖式:總經驗看上方選取後 +X exp,同屬靠金框表示)→格子清爽
+          this.L(this.add.text(cx, cy - cw / 2 + 9, '★'.repeat(Math.max(1, Math.min(6, cardStars(c.id)))), { fontFamily: EMOJIFONT, fontSize: '11px', color: '#ffd257', fontStyle: 'bold' }).setOrigin(0.5).setResolution(3).setStroke('#4a2e00', 3));   // 🧹卡名改星級(頂,金字描邊)
+          this.L(roundRectG(this, cx, cy + cw / 2 - 10, 38, 15, 7.5, 0x12161a, 0.7, null, 0));
+          this.L(this.add.text(cx, cy + cw / 2 - 10, 'Lv' + (it.lv || 1), { fontFamily: EMOJIFONT, fontSize: '11px', color: '#ffffff', fontStyle: 'bold' }).setOrigin(0.5).setResolution(3));   // per-instance 等級(底,深膠囊白字);繞過 this.txt 的 15px 下限→小卡格才不擠
           if (on) { this.L(roundRectG(this, cx + cw / 2 - 12, cy - cw / 2 + 12, 20, 20, 6, T.ok, 1, T.surf, 2)); this.txt(cx + cw / 2 - 12, cy - cw / 2 + 12, String(oi + 1), '13px', '#ffffff', 0.5, true); }
           const hit = this.rect(cx, cy, cw, cw, 0x000000, 0.001).setInteractive(); tapBind(this, hit, () => this.toggleSel(u));   // 命中區(透明方形覆蓋整格;圓角只是視覺)
         });   // 選取序號角標
