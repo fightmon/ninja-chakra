@@ -2078,7 +2078,7 @@
       switchTeamBy(dir) { this.slideTeam(dir); }
       slideTeam(dir) {
         if (this._sliding) return; this._sliding = true;
-        saveTeamAt(getTeamIdx(), this.slots.map(s => s.cardId).filter(Boolean));   // 切走前自動存當前隊
+        saveTeamAt(getTeamIdx(), this.slots.map(s => s.cardId || null));   // 切走前自動存當前隊(保留槽位:存 5 格含 null→半隊時隊長 idx2 不位移,2026-08-03)
         this.tweens.killTweensOf(this.formG);
         this.tweens.add({
           targets: this.formG, x: -dir * W, duration: 190, ease: 'Quad.in', onComplete: () => {   // 舊隊往移動方向滑出
@@ -2108,7 +2108,7 @@
         if (this.leadTxt) this.leadTxt.setText(ls ? ('👑 隊長技 · ' + ls.desc) : '👑 隊長技 · —');
       }
       async doRename() { const i = getTeamIdx(), v = await uiPrompt({ title: '隊伍名稱', message: '最多 6 字,留空=隊' + (i + 1), value: teamCustomName(i), maxLen: 6 }); if (v != null) { renameTeam(i, v); this.updateSwitcher(); } }
-      confirm() { saveTeamAt(getTeamIdx(), this.slots.map(s => s.cardId).filter(Boolean)); this.scene.manager.start('home', this.tutTeam ? { tab: 'dungeon' } : undefined); this.scene.manager.stop('team'); }   // 存當前隊 + 回大廳(未滿也可離開,出戰時再擋);🗺️ 教學編隊完成→強制落在地圖(dungeon)分頁(否則沿用 persisted 的 gacha tab,看不到序章島指引)
+      confirm() { saveTeamAt(getTeamIdx(), this.slots.map(s => s.cardId || null)); this.scene.manager.start('home', this.tutTeam ? { tab: 'dungeon' } : undefined); this.scene.manager.stop('team'); }   // 存當前隊 + 回大廳(未滿也可離開,出戰時再擋);🗺️ 教學編隊完成→強制落在地圖(dungeon)分頁(否則沿用 persisted 的 gacha tab,看不到序章島指引)
       tutTeamCoach() {   // 編隊教學說明卡:對齊全站教學風格(白 _softPanelTex 面板 + 18px ink 字 + 綠圓角 CTA),量測自適應高度
         this._setDomUI(false);   // 教學也是 canvas modal→同樣蓋不住 DOM UI,先藏
         const g = this.add.container(0, 0).setDepth(200); this._coachG = g;   // 🩹 記旗標→場景層 pointerdown 讀它擋輸入,避免按鈕點擊穿透到底下卡片(見 input.on('pointerdown'))
@@ -2145,7 +2145,7 @@
         }
         this.cards.forEach(c => { if (!c.visible) { if (c.input) c.input.enabled = false; return; } const sy = c.y - this.scroll; if (c.input) c.input.enabled = (sy > this.vpTop - 30 && sy < this.vpBot + 30); });
       }   // 被篩掉/視窗外的卡不可點(遮罩只裁畫面、不裁輸入)
-      tapCard(inst, cd) { if (this.cardUsed[inst.u]) return; const slot = this.slots.find(s => !s.el); if (slot) this.assign(slot, inst, cd); }
+      tapCard(inst, cd) { if (this.cardUsed[inst.u]) return; const ORDER = [2, 0, 1, 3, 4]; const slot = ORDER.map(i => this.slots[i]).find(s => !s.el); if (slot) this.assign(slot, inst, cd); }   // 填位順序:第1張→中央(隊長 idx2)、2左上、3右上、4左下、5右下(2026-08-03 改;隊長仍固定 idx2,勿動)
       assign(slot, inst, cd) {
         slot.el = cd.el; slot.cardId = cd.id; slot.uid = inst.u;
         slot.draw(cd.el); slot.plus.setVisible(false);
@@ -8036,7 +8036,7 @@
     class FuseScene extends Phaser.Scene {
       constructor() { super('fuse'); }
       preload() { _loadAllCardThumbs(this); showLoadBar(this); }   // 合成:縮圖即可(不開全圖詳情)
-      init(d) { this.target = (d && d.target) || this.target || loadTeam()[0]; this.mode = 'feed'; if (this.feedPage == null) this.feedPage = 0; this.sel = []; }   // sel=已選素材個體 u 陣列(進場清空)
+      init(d) { this.target = (d && d.target) || this.target || loadTeam().filter(Boolean)[0]; this.mode = 'feed'; if (this.feedPage == null) this.feedPage = 0; this.sel = []; }   // sel=已選素材個體 u 陣列(進場清空)
       create() {
         this.add.rectangle(CX, H / 2, W, H, UI().page); this.rebuild();
         bindGridSwipe(this, 210, H - 92, 'feedPage');   // 素材格區拖曳換頁(慣性滑動)
