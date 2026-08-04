@@ -2229,13 +2229,19 @@
         if (sl && c.src.type === 'slot' && sl === c.src.slot) sl = null;   // 拖回自己那格=不算落點
         if (sl !== c._hlSlot) {
           if (c._hl) { c._hl.destroy(); c._hl = null; }
+          if (this.leaderG) this.formG.bringToTop(this.leaderG);   // 還原:隊長層恆在最上
           c._hlSlot = sl; c.target = sl;
-          if (sl) { c._hl = this.add.graphics().setDepth(390); c._hl.lineStyle(3, 0xffe08a, 1); c._hl.strokeRoundedRect(sl.x + this.formG.x - sl.w / 2 - 3, sl.y - sl.h / 2 - 3, sl.w + 6, sl.h + 6, 12); }
+          if (sl) {
+            c._hl = this.add.graphics(); c._hl.lineStyle(3, 0xffe08a, 1); c._hl.strokeRoundedRect(sl.x - sl.w / 2 - 3, sl.y - sl.h / 2 - 3, sl.w + 6, sl.h + 6, 12);
+            this.formG.add(c._hl);   // 高亮框放進佈陣層(不再 scene depth390)→z-index 在隊長之下
+            if (!sl.leader && this.leaderG) this.formG.bringToTop(this.leaderG);   // 落點非隊長格→隊長卡蓋過高亮框;隊長格則保留框在最上(否則被隊長卡遮住看不到)
+          }
         }
       }
       _endCarry(p) {
         const c = this._carry; this._carry = null; if (!c) return;
         if (c._hl) c._hl.destroy();
+        if (this.leaderG) this.formG.bringToTop(this.leaderG);   // 還原:隊長層恆在最上
         if (c.ghost) c.ghost.destroy();
         if (c.src.type === 'slot' && c.src.slot.img) c.src.slot.img.setAlpha(1);
         if (c.target) {
