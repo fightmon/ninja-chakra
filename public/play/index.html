@@ -2203,6 +2203,7 @@
         this._down = false; if (this._lpTimer) { this._lpTimer.remove(); this._lpTimer = null; }
         if (this._headDragging) { this._headDragging = false; this.tweens.killTweensOf(this.formG); this.tweens.add({ targets: this.formG, x: 0, duration: 140 }); }
         this._carry = { src, cd: src.cd, moved: 0, x0: p.x, y0: p.y, target: null, _hlSlot: null, _hl: null };
+        this._setDomUI(false);   // 排序列/確定鈕是 DOM overlay(永遠壓過 canvas)→抓取期間先藏,浮卡(canvas depth400)才會在最上層;放開時還原(見 _endCarry)
         if (src.type === 'slot' && src.slot.img) src.slot.img.setAlpha(0.35);   // 來源宮位卡淡出→示意「提起中」
         this._carry.ghost = this._buildCarryGhost(src.cd);
         this._updateCarry(p);
@@ -2240,7 +2241,9 @@
         if (c.target) {
           if (c.src.type === 'pool') this._placeInstIntoSlot(c.src.inst, c.cd, c.target);
           else this._swapSlots(c.src.slot, c.target);
-        } else if (c.moved < 16) { this.showCardDetail(c.cd); }   // 原地放開=看能力(沿用久按開詳情)
+          this._setDomUI(true);   // 放置/互換完→還原 DOM UI
+        } else if (c.moved < 16) { this.showCardDetail(c.cd); }   // 原地放開=看能力(showCardDetail 內含 _setDomUI(false)+關閉還原,故此路不自行還原)
+        else { this._setDomUI(true); }   // 拖到空白放開=取消→還原 DOM UI
       }
       _placeInstIntoSlot(inst, cd, slot) {   // 卡池卡→宮位:目標有卡先退回、該卡已在別格先清(移動),再放入
         if (this.cardUsed[inst.u]) { const cur = this.slots.find(s => s.uid === inst.u); if (cur === slot) return; if (cur) this.clearSlot(cur); }
