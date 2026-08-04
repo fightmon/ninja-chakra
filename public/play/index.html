@@ -8172,8 +8172,7 @@
           this.L(roundRectG(this, cx, cy, cw, cw, 12, EL[c.el].color, 1, (on || same) ? T.gold : T.divider, on ? 4 : 2));
           cardImgOn(this, cx, cy, cw - 4, c.id, 'thumb');   // 素材狗圖
           this.txt(cx, cy - 15, cardName(c.id), '10px', '#1a1208', 0.5, true);
-          this.txt(cx, cy + 3, 'Lv' + (it.lv || 1), '9px', '#3a2c12', 0.5);   // 🆕 per-instance level:顯示這張素材個體自己的等級(不是型別最強)
-          this.txt(cx, cy + 19, '+' + fodderFeedExp(c.id, c.rank, it.lv, same) + 'exp' + (same ? '(同屬)' : ''), '9px', same ? '#7a3000' : '#3a2c12', 0.5);   // 🆕 每張顯示自己會給多少經驗(依自己 lv 算,同屬×1.5)
+          this.txt(cx, cy + 3, 'Lv' + (it.lv || 1), '9px', '#3a2c12', 0.5);   // per-instance level:素材自己的等級;🧹2026-08-03 拿掉逐張經驗預覽(龍族拼圖式:總經驗看上方選取後 +X exp,同屬靠金框表示)→格子清爽
           if (on) { this.L(roundRectG(this, cx + cw / 2 - 12, cy - cw / 2 + 12, 20, 20, 6, T.ok, 1, T.surf, 2)); this.txt(cx + cw / 2 - 12, cy - cw / 2 + 12, String(oi + 1), '13px', '#ffffff', 0.5, true); }
           const hit = this.rect(cx, cy, cw, cw, 0x000000, 0.001).setInteractive(); tapBind(this, hit, () => this.toggleSel(u));   // 命中區(透明方形覆蓋整格;圓角只是視覺)
         });   // 選取序號角標
