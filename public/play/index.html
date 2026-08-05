@@ -6199,7 +6199,7 @@
         if (!e.glass || !e.turnG) return;
         const tgt = (Math.round(e.glass.angle / 180) + 1) * 180;   // 對齊到下一個 180°(翻半圈)→ 只在直立↔翻面切換,不會側躺像扯鈴
         this.tweens.killTweensOf(e.glass); this.tweens.add({ targets: e.glass, angle: tgt, duration: 340, ease: 'Cubic.out' });
-        const restY = BATTLE_CY - e.cardH / 2 + 11; this.tweens.killTweensOf(e.turnG); e.turnG.setY(restY);
+        const restY = e.cy - e.cardH / 2 + 11; this.tweens.killTweensOf(e.turnG); e.turnG.setY(restY);   // 🐛修:休止位置用各自 e.cy(非固定 BATTLE_CY)→CD 跳動後回到「自己那排」,前3後2/前2後1的後排CD才會在上面(原本全落回同一排)
         this.tweens.add({ targets: e.turnG, y: restY - 7, duration: 170, yoyo: true, ease: 'Quad.out' });   // 跳一下落回
       }
       updateBars() {
