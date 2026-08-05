@@ -2443,7 +2443,7 @@
           const off = solo ? -0.15 : (e.boss ? -0.2 : -0.07), mul = solo ? 1.7 : (e.boss ? 1.2 : 1.1);   // Y偏移(負=上)/放大倍率;單魔王的 -0.15、1.7 是暫定值,你到時再調
           const scl = szc * mul / (e.sprite.height || 1);
           e.sprite.setScale(scl); e.sprite.y = e.cy + szc * off; e.baseScale = scl;
-          if (e.shadow) e.shadow.y = e.cy + BG_GROUND_OFF + szc * (solo ? -0.15 : (e.boss ? -0.1 : 0));   // 🕸️影子偏移(負=上):單魔王 -0.15 / 一般魔王 -0.1 / 小兵 0(固定地面)
+          if (e.shadow) e.shadow.y = e.cy + BG_GROUND_OFF + szc * (solo ? -0.15 : (e.boss ? -0.1 : (e._five ? -0.1 : 0)));   // 🕸️影子偏移(負=上):單魔王 -0.15 / 一般魔王 -0.1 / 前3後2雜兵 -0.1 / 一般小兵 0(固定地面)
           return;
         }
         const p = this.enemyFitParams(e);
@@ -3464,8 +3464,8 @@
           e.cardW = szc; e.cardH = szc;
           e.card = this.add.rectangle(x, cy, szc, szc, 0x000000, 0).setInteractive();   // 無底色:透明矩形只當點擊區
           e.card.on('pointerdown', () => this.selectTarget(i));
-          e.cy = cy;
-          e.shadow = this.add.ellipse(x, cy + BG_GROUND_OFF, Math.round(szc * (e.boss ? 0.82 : 0.6)), Math.round(szc * 0.16), 0x000000, 0.4);   // 各自腳下陰影(魔王較寬)
+          e.cy = cy; e._five = FIVE;   // FIVE=前3後2陣型(塔初級S1)→影子微上移貼齊縮小的腳
+          e.shadow = this.add.ellipse(x, cy + BG_GROUND_OFF + (FIVE ? Math.round(szc * -0.1) : 0), Math.round(szc * (e.boss ? 0.82 : 0.6)), Math.round(szc * 0.16), 0x000000, 0.4);   // 各自腳下陰影(魔王較寬;前3後2略上移)
           const tk = this.enemyTexKey(e);
           if (tk) {   // 有怪物圖→以實體高度統一體型 + 對齊腳底;否則用 emoji 臉
             e.sprite = this.add.image(x, cy, tk).setOrigin(0.5).setInteractive(); e.img = true; this.fitEnemySprite(e);
