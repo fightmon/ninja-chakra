@@ -4337,7 +4337,7 @@
         if (this._reviveCast && this._reviveCast.boss === e) { if (--this._reviveCast.readyIn <= 0) this._fireRevive(); e.timer = e.interval; return; }   // 復活詠唱中(不攻擊)→ 2CD,readyIn 歸0才完成
         if (this._healCast && this._healCast.boss === e) { if (--this._healCast.readyIn <= 0) this._fireHeal(e); e.timer = e.interval; return; }   // 補血詠唱中(不攻擊)→ 1CD,下手完成
         const others = this.enemies.filter(x => x !== e);
-        if (e._reviveCharges == null) e._reviveCharges = 2;
+        if (e._reviveCharges == null) e._reviveCharges = (e.reviveMax != null ? e.reviveMax : 2);   // 🆕復活次數資料驅動(spawnStage 帶 reviveMax,預設2;水超級=1/地獄=2)
         if (others.length > 0 && others.every(x => x.dead || x.hp <= 0) && e._reviveCharges > 0) { e._reviveCharges--; this._buildReviveCast(e); this._reviveCast.readyIn = 2; e.timer = e.interval; return; }   // 小兵全滅→起手詠唱復活(2CD,共2次額度,不攻擊)
         if (anyLow) { this._buildHealCast(e); e.timer = e.interval; return; }   // 有人受損→起手詠唱補血(1CD,不攻擊)→ 下手完成
         this.enemyAttack(e); e.timer = e.interval;   // 都不需要→攻擊

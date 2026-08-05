@@ -270,6 +270,117 @@ const OVERRIDES = {
             { el:'earth', hp:2500, atk:195, turns:2, boss:true, beh:'shield', shieldRandom:true },
             { el:'earth', hp:920, atk:122, turns:2, tier:3, beh:'shield', shieldKind:'hit', hitGate:15 } ] },
   ],
+  // ========== 超級/地獄:招牌機制頂配(hp/atk 再吃 df.hp 1.65/2.4、dt-1 更快)。設計:加機制強度不加血牆;超級拆輔助輪、地獄多頭+全員機制 ==========
+  // 🔥火·超級:蓄力更快(finCD3)、finAnyHit關(只剩水剋屬能中止)、雜兵也蓄力。攻擊大幅拉高→弱隊撐不住(sim:原atk太軟連STARTER都輾過)
+  'fire:super': [
+    { es: [ { el:'fire', hp:820, atk:172, turns:2, tier:3, beh:'finisher', finCD:3, finStages:3, finPct:0.30 },
+            { el:'fire', hp:820, atk:172, turns:2, tier:3, beh:'finisher', finCD:3, finStages:3, finPct:0.30 } ] },
+    { es: [ { el:'fire', hp:800, atk:168, turns:2, tier:3, beh:'finisher', finCD:3, finStages:3, finPct:0.30 },
+            { el:'fire', hp:800, atk:168, turns:2, tier:3, beh:'finisher', finCD:3, finStages:3, finPct:0.30 },
+            { el:'fire', hp:800, atk:168, turns:2, tier:3, beh:'finisher', finCD:3, finStages:3, finPct:0.30 } ] },
+    { es: [ { el:'fire', hp:820, atk:172, turns:2, tier:3, beh:'finisher', finCD:3, finStages:3, finPct:0.28 },
+            { el:'fire', hp:2600, atk:300, turns:2, boss:true, beh:'finisher', finCD:3, finStages:3, finPct:0.38 },
+            { el:'fire', hp:820, atk:172, turns:2, tier:3, beh:'finisher', finCD:3, finStages:3, finPct:0.28 } ] },
+  ],
+  // 🔥火·地獄:多頭蓄力全開、傷害再↑、finAnyHit關
+  'fire:hell': [
+    { es: [ { el:'fire', hp:900, atk:226, turns:2, tier:3, beh:'finisher', finCD:3, finStages:3, finPct:0.38 },
+            { el:'fire', hp:900, atk:226, turns:2, tier:3, beh:'finisher', finCD:3, finStages:3, finPct:0.38 } ] },
+    { es: [ { el:'fire', hp:880, atk:222, turns:2, tier:3, beh:'finisher', finCD:3, finStages:3, finPct:0.38 },
+            { el:'fire', hp:880, atk:222, turns:2, tier:3, beh:'finisher', finCD:3, finStages:3, finPct:0.38 },
+            { el:'fire', hp:880, atk:222, turns:2, tier:3, beh:'finisher', finCD:3, finStages:3, finPct:0.38 } ] },
+    { es: [ { el:'fire', hp:900, atk:226, turns:2, tier:3, beh:'finisher', finCD:3, finStages:3, finPct:0.34 },
+            { el:'fire', hp:2800, atk:378, turns:2, boss:true, beh:'finisher', finCD:3, finStages:3, finPct:0.52 },
+            { el:'fire', hp:900, atk:226, turns:2, tier:3, beh:'finisher', finCD:3, finStages:3, finPct:0.34 } ] },
+  ],
+  // 🤖雷·超級:鐵塊更大(雜兵iron2、王iron3)、全員2倍懲罰。攻擊拉高。turns4→放置間隔2(避免灌爆盤)
+  'thunder:super': [
+    { es: [ { el:'thunder', hp:800, atk:172, turns:4, tier:3, iron:2, ironPunish:true },
+            { el:'thunder', hp:800, atk:172, turns:4, tier:3, iron:2, ironPunish:true } ] },
+    { es: [ { el:'thunder', hp:800, atk:172, turns:4, tier:3, iron:2, ironPunish:true },
+            { el:'thunder', hp:860, atk:176, turns:4, tier:3, iron:3, ironPunish:true },
+            { el:'thunder', hp:800, atk:172, turns:4, tier:3, iron:2, ironPunish:true } ] },
+    { es: [ { el:'thunder', hp:820, atk:174, turns:4, tier:3, iron:2, ironPunish:true },
+            { el:'thunder', hp:2600, atk:300, turns:4, boss:true, iron:3, ironPunish:true },
+            { el:'thunder', hp:820, atk:174, turns:4, tier:3, iron:2, ironPunish:true } ] },
+  ],
+  // 🤖雷·地獄:雜兵iron3、王iron4(L型大塊),全員懲罰,攻擊再↑
+  'thunder:hell': [
+    { es: [ { el:'thunder', hp:880, atk:196, turns:4, tier:3, iron:3, ironPunish:true },
+            { el:'thunder', hp:880, atk:196, turns:4, tier:3, iron:3, ironPunish:true } ] },
+    { es: [ { el:'thunder', hp:880, atk:196, turns:4, tier:3, iron:3, ironPunish:true },
+            { el:'thunder', hp:920, atk:200, turns:4, tier:3, iron:3, ironPunish:true },
+            { el:'thunder', hp:880, atk:196, turns:4, tier:3, iron:3, ironPunish:true } ] },
+    { es: [ { el:'thunder', hp:900, atk:198, turns:4, tier:3, iron:3, ironPunish:true },
+            { el:'thunder', hp:2800, atk:330, turns:4, boss:true, iron:4, ironPunish:true },
+            { el:'thunder', hp:900, atk:198, turns:4, tier:3, iron:3, ironPunish:true } ] },
+  ],
+  // 🦆風·超級:雜兵偷3格、王偷盤面+拖盤+吃屬塊。攻擊拉高。turns4→偷取間隔2
+  'wind:super': [
+    { es: [ { el:'wind', hp:800, atk:172, turns:4, tier:3, peck:3 },
+            { el:'wind', hp:800, atk:172, turns:4, tier:3, peck:3 } ] },
+    { es: [ { el:'wind', hp:800, atk:172, turns:4, tier:3, peck:3 },
+            { el:'wind', hp:860, atk:176, turns:4, tier:3, peck:3, peckTray:true },
+            { el:'wind', hp:800, atk:172, turns:4, tier:3, peck:3 } ] },
+    { es: [ { el:'wind', hp:820, atk:174, turns:4, tier:3, peck:2 },
+            { el:'wind', hp:2600, atk:300, turns:4, boss:true, peck:3, peckTray:true, stealStored:true },
+            { el:'wind', hp:820, atk:174, turns:4, tier:3, peck:2 } ] },
+  ],
+  // 🦆風·地獄:雜兵偷3+拖盤,王偷4+吃屬塊,右側補師混隊。攻擊再↑
+  'wind:hell': [
+    { es: [ { el:'wind', hp:880, atk:196, turns:4, tier:3, peck:3, peckTray:true },
+            { el:'wind', hp:880, atk:196, turns:4, tier:3, peck:3, peckTray:true } ] },
+    { es: [ { el:'wind', hp:880, atk:196, turns:4, tier:3, peck:3, peckTray:true },
+            { el:'wind', hp:920, atk:200, turns:4, tier:3, peck:4, peckTray:true },
+            { el:'wind', hp:880, atk:196, turns:4, tier:3, peck:3, peckTray:true } ] },
+    { es: [ { el:'wind', hp:900, atk:198, turns:4, tier:3, peck:3, peckTray:true },
+            { el:'wind', hp:2800, atk:330, turns:4, boss:true, peck:4, peckTray:true, stealStored:true },
+            { el:'wind', hp:820, atk:150, turns:3, beh:'healAlly', healPct:0.35, healCD:2 } ] },
+  ],
+  // 🧱土·超級:雜兵門檻升 HIT18(大清才破)、王隨機盾(HIT15/COMBO3 每次重建換)
+  'earth:super': [
+    { es: [ { el:'earth', hp:980, atk:128, turns:2, tier:3, beh:'shield', shieldKind:'hit', hitGate:18 },
+            { el:'earth', hp:980, atk:128, turns:2, tier:3, beh:'shield', shieldKind:'hit', hitGate:18 } ] },
+    { es: [ { el:'earth', hp:980, atk:128, turns:2, tier:3, beh:'shield', shieldKind:'hit', hitGate:18 },
+            { el:'earth', hp:900, atk:120, turns:2, tier:3, beh:'shield', shieldKind:'combo', comboGate:3 },
+            { el:'earth', hp:980, atk:128, turns:2, tier:3, beh:'shield', shieldKind:'hit', hitGate:18 } ] },
+    { es: [ { el:'earth', hp:980, atk:128, turns:2, tier:3, beh:'shield', shieldKind:'hit', hitGate:18 },
+            { el:'earth', hp:2600, atk:200, turns:2, boss:true, beh:'shield', shieldRandom:true },
+            { el:'earth', hp:980, atk:128, turns:2, tier:3, beh:'shield', shieldKind:'hit', hitGate:18 } ] },
+  ],
+  // 🧱土·地獄:全員隨機盾(每次重建盾型隨機,難預判),王高血隨機盾
+  'earth:hell': [
+    { es: [ { el:'earth', hp:1040, atk:136, turns:2, tier:3, beh:'shield', shieldRandom:true },
+            { el:'earth', hp:1040, atk:136, turns:2, tier:3, beh:'shield', shieldRandom:true } ] },
+    { es: [ { el:'earth', hp:1040, atk:136, turns:2, tier:3, beh:'shield', shieldRandom:true },
+            { el:'earth', hp:1040, atk:136, turns:2, tier:3, beh:'shield', shieldRandom:true },
+            { el:'earth', hp:1040, atk:136, turns:2, tier:3, beh:'shield', shieldRandom:true } ] },
+    { es: [ { el:'earth', hp:1040, atk:136, turns:2, tier:3, beh:'shield', shieldRandom:true },
+            { el:'earth', hp:2800, atk:210, turns:2, boss:true, beh:'shield', shieldRandom:true },
+            { el:'earth', hp:1040, atk:136, turns:2, tier:3, beh:'shield', shieldRandom:true } ] },
+  ],
+  // 🩹水·超級:超級只有魔王自動補(covered=boss)→做「攻擊手+1補師+會補會復活的王」,先清補師再爆王的DPS check。攻擊拉高
+  'water:super': [
+    { es: [ { el:'water', hp:820, atk:170, turns:2, tier:3 },
+            { el:'water', hp:880, atk:130, turns:2, tier:3, beh:'healAlly', healPct:0.33, healCD:2 } ] },
+    { es: [ { el:'water', hp:820, atk:170, turns:2, tier:3 },
+            { el:'water', hp:880, atk:130, turns:2, tier:3, beh:'healAlly', healPct:0.33, healCD:2 },
+            { el:'water', hp:820, atk:170, turns:2, tier:3 } ] },
+    { es: [ { el:'water', hp:820, atk:170, turns:2, tier:3, beh:'healAlly', healPct:0.33, healCD:2 },
+            { el:'water', hp:2300, atk:270, turns:2, boss:true, beh:'healAlly', healPct:0.40, healCD:2, reviveMax:1 },
+            { el:'water', hp:820, atk:170, turns:2, tier:3 } ] },
+  ],
+  // 🩹水·地獄:地獄全員自動補(covered=all)→補量從0.55砍到0.28、王血砍低,不然對AI是無限牆(sim原本只5~33%)。王仍復活
+  'water:hell': [
+    { es: [ { el:'water', hp:900, atk:185, turns:2, tier:3, beh:'healAlly', healPct:0.28, healCD:2 },
+            { el:'water', hp:900, atk:185, turns:2, tier:3, beh:'healAlly', healPct:0.28, healCD:2 } ] },
+    { es: [ { el:'water', hp:900, atk:185, turns:2, tier:3, beh:'healAlly', healPct:0.28, healCD:2 },
+            { el:'water', hp:940, atk:190, turns:2, tier:3, beh:'healAlly', healPct:0.28, healCD:2 },
+            { el:'water', hp:900, atk:185, turns:2, tier:3, beh:'healAlly', healPct:0.28, healCD:2 } ] },
+    { es: [ { el:'water', hp:900, atk:185, turns:2, tier:3, beh:'healAlly', healPct:0.28, healCD:2 },
+            { el:'water', hp:2200, atk:290, turns:2, boss:true, beh:'healAlly', healPct:0.32, healCD:2, reviveMax:2 },
+            { el:'water', hp:900, atk:185, turns:2, tier:3, beh:'healAlly', healPct:0.28, healCD:2 } ] },
+  ],
 };
 
 function _cloneStages(stages){ return stages.map(st=>({...st, es:st.es.map(e=>({...e}))})); }   // 深拷貝,避免改到原始 base
@@ -371,7 +482,7 @@ function spawnStage(dungeonId, diffKey, stageIdx){
     let tierV=d.tier||0, finCDV=d.finCD||0, finStagesV=d.finStages||0;
     if(dEl==='fire' && g.finisher>0 && !phases && (!full || d.boss)){ finCDV=finCDV||4; finStagesV=finStagesV||3; if(!d.boss) tierV=tierV||2; }
     const ival=(finCDV>0)?finCDV:(d.healCD>0)?d.healCD:((g.healAlly>0||(g.eatStored>0&&d.boss)||(g.paralyze>0&&d.boss))?1:turns);   // 🩹healCD=史萊姆補血CD(=2,蓋過補師預設CD1)   // 🔥finCD=CD式畜力技的總CD(蓋過 turns);💚補師 CD=1;🌀消塊魔王 CD=1;⚡麻痺魔王 CD=1;術士 CD=turns(=2)
-    return {el,max:hp,hp:hp,atk:atk,interval:ival,timer:Math.max(2,ival),burn:0,dead:false,boss:!!d.boss,guard:(!d.boss&&stageHasBoss),...g,phases,phaseIdx:0,arch:d.arch||null,tier:tierV,finStages:finStagesV,finAnyHit:!!d.finAnyHit,finCD:finCDV,peck:d.peck||0,peckTray:!!d.peckTray,stealStored:!!d.stealStored,iron:d.iron||0,ironPunish:!!d.ironPunish};   // 每關初始 timer≥2;tier=星級貼圖;finStages=蓄力段數;finCD>0=CD式畜力;peck>0=🦆賊鴨偷盤面格;iron>0=🤖鐵機人放n連體鐵塊卡位(避開湊滿宮/線、盤面太緊停放;ironPunish=沒清掉下輪2倍打)
+    return {el,max:hp,hp:hp,atk:atk,interval:ival,timer:Math.max(2,ival),burn:0,dead:false,boss:!!d.boss,guard:(!d.boss&&stageHasBoss),...g,phases,phaseIdx:0,arch:d.arch||null,tier:tierV,finStages:finStagesV,finAnyHit:!!d.finAnyHit,finCD:finCDV,peck:d.peck||0,peckTray:!!d.peckTray,stealStored:!!d.stealStored,iron:d.iron||0,ironPunish:!!d.ironPunish,reviveMax:(d.reviveMax!=null?d.reviveMax:2)};   // 每關初始 timer≥2;tier=星級貼圖;finStages=蓄力段數;finCD>0=CD式畜力;peck>0=🦆賊鴨偷盤面格;iron>0=🤖鐵機人放n連體鐵塊卡位(避開湊滿宮/線、盤面太緊停放;ironPunish=沒清掉下輪2倍打)
   });
 }
 
@@ -393,7 +504,7 @@ function medicBossTurn(state, e){   // 🌊水魔王詠唱制(與遊戲端 _medi
   const E=state.enemies, others=E.filter(x=>x!==e);
   if(e._reviveIn>0){ if(--e._reviveIn<=0)others.forEach(m=>{ if(m.dead||m.hp<=0){m.dead=false;m.hp=m.max;} }); return; }   // 復活詠唱中(不攻擊)→ 2CD,歸0才復活小兵回滿
   if(e._healIn>0){ if(--e._healIn<=0){ const r=e.healAlly||0.2; E.forEach(a=>{ if(!a.dead&&a.hp>0)a.hp=Math.min(a.max,a.hp+Math.max(1,Math.round(a.max*r))); }); } return; }   // 補血詠唱中(不攻擊)→ 1CD,下手回全體
-  if(e._reviveCharges==null)e._reviveCharges=2;
+  if(e._reviveCharges==null)e._reviveCharges=(e.reviveMax!=null?e.reviveMax:2);   // 🆕復活次數改資料驅動(spawnStage 帶 reviveMax,預設2)
   if(others.length>0 && others.every(x=>x.dead||x.hp<=0) && e._reviveCharges>0){ e._reviveCharges--; e._reviveIn=2; return; }   // 小兵全滅→起手詠唱復活(2CD,共2次,不攻擊)
   if(E.some(x=>!x.dead&&x.hp>0&&x.hp<x.max)){ e._healIn=1; return; }   // 有人受損→起手詠唱補血(1CD,不攻擊)
   state.playerHP=Math.max(0,state.playerHP-e.atk);   // 都不需要→攻擊
