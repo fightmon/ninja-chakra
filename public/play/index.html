@@ -6023,11 +6023,19 @@
           return;
         }
         e.dead = true; if (e.bob) { e.bob.stop(); e.bob = null; } if (e.knockTw) { e.knockTw.stop(); e.knockTw = null; }   // ★ bob 在受擊擊退時會被設 null,務必判空(否則每次擊殺都丟例外→鎖死)
+        this._clearEnemyIron(e);   // 🔩鐵機人被打倒→清掉牠放的鐵塊(逐隻歸屬,不動別隻的;玩家已清的略過)→不再賴到下一關
         if (e.cardId && e.flee) { this._bonusKilled.push(e.cardId); }   // 🆕2026-08-02 bonus 關獎勵怪(flee 旗標識別)被玩家真正打死→記進 _bonusKilled,回報 run/complete;逃跑移除走 _fleeAct,不經過這裡→不會誤記
         const last = this.aliveCount() === 0, isFinal = last && this.stage >= this.stagesEff.length;
         if (isFinal) { this._finalEnemy = e; this.stageClear(); return; }   // 最後一關最後一擊:由 finalBlow 演特寫鏡頭+飛出(不在此 playDeath)
         this.playDeath(e);   // 敗陣演出:被打飛(後上)+縮小+旋轉+淡出 → 化成光芒
         if (last) this.stageClear(); else { this.targetEnemy(); this.updateEnemies(); }
+      }
+      _clearEnemyIron(e) {   // 🔩鐵機人死亡→移除牠放的鐵塊(只清「還是 iron」的格,玩家已清掉的略過);逐隻歸屬,別隻的鐵塊不受影響
+        if (!e || !e._ironCells || !e._ironCells.length) return;
+        let any = false;
+        e._ironCells.forEach(rc => { const r = rc[0], c = rc[1], cell = (this.board[r] && this.board[r][c]); if (cell && cell.el === 'iron') { this.board[r][c] = null; any = true; this._junkShatter && this._junkShatter(BX0 + c * CS + RECT / 2, BY0 + r * CS + RECT / 2, 0x9aa8bd, 'break'); } });
+        e._ironCells = null;
+        if (any) { this.labSnd && this.labSnd('s_block', 0.5); this.refreshBoard(); }   // 有清到→金屬碎裂音 + 重繪盤面
       }
       // 🆕2026-08-02 bonus 關獎勵怪逃跑機制(e.flee=true 才會被派工到此):累計輪到牠出手的次數,第3手起擲跑率遞增;跑掉=淡出移除(比照 killEnemy 視覺,但不給獎勵/不記 _bonusKilled);沒跑掉=照常攻擊
       _fleeAct(e) {
