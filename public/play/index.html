@@ -2337,7 +2337,8 @@
         const _CLS = ['grunt', 'grunt2', 'guard', 'caster', 'healer', 'shield', 'boss_baby', 'boss_beg', 'boss_nrm'];
         if (this.enemyLab) { for (const el in MONSTER_IMG) if (!this.textures.exists('mon_' + el)) this.load.image('mon_' + el, MONSTER_IMG[el]); for (const k in ENEMY_IMG) if (!this.textures.exists(k)) this.load.image(k, ENEMY_IMG[k]); }   // 敵技實驗室=全載
         else {
-          const _els = new Set(); const _nSt = (this.stagesEff || []).length; for (let _si = 0; _si < _nSt; _si++) { if (this.stagesEff[_si] && this.stagesEff[_si].bonus) continue; const _rawSi = (this._bonusStagePos && _si >= this._bonusStagePos) ? _si - 1 : _si; try { spawnStage(this.dungeonId, this.diff.key, _rawSi).forEach(e => { _els.add(e.el); if (e.phases) e.phases.forEach(ph => _els.add(ph.el)); }); } catch (_e) { } }   // 只載本關屬性:用 spawnStage 產「真敵人」收集元素(涵蓋上級↑懲罰屬 pun + 魔王階段變身),與 spawnEnemies 完全對齊→動態屬不再漏載變 emoji;原無腦全載 50 檔~5.2MB 大砍;🆕bonus 槽跳過+其後索引 -1 校正(比照 spawnEnemies 的 _si 換算,避免漏載真正 S3+ 的屬性)
+          const _els = new Set(), _cids = new Set(); const _nSt = (this.stagesEff || []).length; for (let _si = 0; _si < _nSt; _si++) { if (this.stagesEff[_si] && this.stagesEff[_si].bonus) continue; const _rawSi = (this._bonusStagePos && _si >= this._bonusStagePos) ? _si - 1 : _si; try { spawnStage(this.dungeonId, this.diff.key, _rawSi).forEach(e => { _els.add(e.el); if (e.cardId) _cids.add(e.cardId); if (e.phases) e.phases.forEach(ph => _els.add(ph.el)); }); } catch (_e) { } }
+          _cids.forEach(id => _loadCardArt(this, [id]));   // 🆕載本關敵人指定的 cardId(風城跨屬護衛補師c57/哥布林c41/方塊怪c70 等,_loadCardArt 含 _e/_e2 進化圖)   // 只載本關屬性:用 spawnStage 產「真敵人」收集元素(涵蓋上級↑懲罰屬 pun + 魔王階段變身),與 spawnEnemies 完全對齊→動態屬不再漏載變 emoji;原無腦全載 50 檔~5.2MB 大砍;🆕bonus 槽跳過+其後索引 -1 校正(比照 spawnEnemies 的 _si 換算,避免漏載真正 S3+ 的屬性)
           _els.forEach(el => { if (MONSTER_IMG[el] && !this.textures.exists('mon_' + el)) this.load.image('mon_' + el, MONSTER_IMG[el]); _CLS.forEach(c => { const k = c + '_' + el; if (ENEMY_IMG[k] && !this.textures.exists(k)) this.load.image(k, ENEMY_IMG[k]); }); });
           if (!['fire', 'water', 'thunder', 'earth', 'wind'].includes(this.dungeonId)) { const _BLK = { fire: 'c66', water: 'c67', thunder: 'c68', earth: 'c69', wind: 'c70' }; _els.forEach(el => { if (_BLK[el]) _loadCardArt(this, [_BLK[el]]); }); }   // 🆕2026-08-03 非五城地城(序章/塔等)一般雜兵改用方塊怪卡圖→預載本關元素的方塊怪(含 _e/_e2 進化圖,見 enemyTexKey 通用 fallback)
         }
@@ -2370,7 +2371,7 @@
       }
       // 依「是否魔王×難度×元素」挑敵圖:魔王 baby→m002、beginner→m003、normal及以上→m004(最兇);雜兵 嬰兒/初級→grunt(m001)、中級以上→grunt2(m002 強化版);都沒有再退回舊史萊姆/emoji
       enemyTexKey(e) {
-        if (e.cardId) { const ck = 'card_' + e.cardId + '_full'; if (this.textures.exists(ck)) return ck; }   // 🆕2026-08-02 泛用分支:敵人物件指定 cardId(bonus 關金屬/金錢/方塊怪等)→直接用該卡 full 圖,優先於下面各城專屬邏輯;沒載到才落到下面舊邏輯
+        if (e.cardId) { const _sf = e.tier === 3 ? '_e2' : e.tier === 2 ? '_e' : ''; let ck = 'card_' + e.cardId + _sf + '_full'; if (this.textures.exists(ck)) return ck; ck = 'card_' + e.cardId + '_full'; if (this.textures.exists(ck)) return ck; }   // 🆕泛用分支:敵人指定 cardId(bonus金屬/金錢/方塊怪、風城跨屬護衛補師/哥布林等)→用該卡圖,並依 tier 出進化圖(2★_e/3★_e2),沒有進化圖退回 base;優先於各城專屬邏輯
         const el = e.el; let dk = (this.diff && this.diff.key) || 'normal';
         if (this.dungeonId === 'prologue') dk = 'baby';   // 序章=新手村:挑圖固定當嬰兒級(只換外觀,不動數值)→ 魔王 boss_baby(m002)+雜兵 grunt(m001),不出 m003 以上兇怪
         if (this.dungeonId === 'thunder') {   // 🤖 雷之高原=鐵機人城(原蜘蛛巢):tier 星級圖優先(1星→c38、2星→_e、3星→_e2);無 tier 的魔王才用 4星惡鐵王

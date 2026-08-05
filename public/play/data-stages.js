@@ -103,43 +103,45 @@ const OVERRIDES = {
             { el: 'fire', hp: 640, atk: 98, turns: 2, tier: 3, boss: true, beh: 'finisher', finCD: 4, finStages: 3, finPct: 0.18, finAnyHit: true },
             { el: 'fire', hp: 520, atk: 85, turns: 2, tier: 1 } ] },
   ],
-  // 🦆風城入門=賊鴨教學關:每次攻擊偷走盤面已放的格(peck),沒格可偷→攻擊翻倍。turns:1→baby(dt+2) interval=2(=技能CD2)。tier=賊鴨星級貼圖
+  // 🦆風城=賊鴨:偷盤面已放的格,沒得偷→攻擊翻倍。★偷取量+CD 依星級固定(1★偷1/CD3、2★偷1/CD2、3★偷2/CD3、4★偷2/CD2);peck:1=賊鴨標記(實際量/CD 由星級推導,見 spawnStage;boss 無 tier=4★王)。魔王附加 peckTray(叼拖盤)/stealStored(吞屬塊)。中級↑跨屬護衛(方塊怪填充/補師/哥布林)靠 cardId 出對應貼圖,王關 noPun=關自動剋屬混搭避免多冒一隻
   'wind:baby': [
-    // S1:1星賊鴨 ×1(偷1格)→先認識「偷方塊」
-    { es: [ { el: 'wind', hp: 500, atk: 70, turns: 1, tier: 1, peck: 1 } ] },
-    // S2:1星賊鴨 ×2(各偷1格)
-    { es: [ { el: 'wind', hp: 480, atk: 68, turns: 1, tier: 1, peck: 1 },
-            { el: 'wind', hp: 480, atk: 68, turns: 1, tier: 1, peck: 1 } ] },
-    // S3:1星賊鴨 ×2(護衛,偷1) + 2星賊鴨=魔王(中間,偷2格,boss→吃其他城S3同款陣型:1.4×放大站後、兩側護衛在前)
-    { es: [ { el: 'wind', hp: 460, atk: 66, turns: 1, tier: 1, peck: 1 },
-            { el: 'wind', hp: 620, atk: 76, turns: 1, tier: 2, boss: true, peck: 2 },
-            { el: 'wind', hp: 460, atk: 66, turns: 1, tier: 1, peck: 1 } ] },
+    { es: [ { el:'wind', hp:500, atk:70, turns:2, tier:1, peck:1 } ] },
+    { es: [ { el:'wind', hp:480, atk:68, turns:2, tier:1, peck:1 },
+            { el:'wind', hp:480, atk:68, turns:2, tier:1, peck:1 } ] },
+    { es: [ { el:'wind', hp:460, atk:66, turns:2, tier:1, peck:1 },
+            { el:'wind', hp:620, atk:80, turns:2, tier:2, boss:true, peck:1 },
+            { el:'wind', hp:460, atk:66, turns:2, tier:1, peck:1 } ] },
   ],
-  // 🦆風城初級:賊鴨教學升級版——非魔王只偷盤面格,魔王加碼偷拖盤拼圖格(peckTray)。tier=星級貼圖(魔王S3=3星,吃king圖)。turns:2(→CD2)
+  // 初級:王 3★＋叼盤
   'wind:beginner': [
-    // S1:2星賊鴨 ×1(偷盤面2格)
-    { es: [ { el:'wind', hp:560, atk:90, turns:2, tier:2, peck:2 } ] },
-    // S2:2星賊鴨 ×2
-    { es: [ { el:'wind', hp:540, atk:88, turns:2, tier:2, peck:2 },
-            { el:'wind', hp:540, atk:88, turns:2, tier:2, peck:2 } ] },
-    // S3:1星護衛 ×2 + 3星賊鴨=魔王(中,偷盤面+拖盤共3格)
+    { es: [ { el:'wind', hp:560, atk:90, turns:2, tier:2, peck:1 } ] },
+    { es: [ { el:'wind', hp:540, atk:88, turns:2, tier:2, peck:1 },
+            { el:'wind', hp:540, atk:88, turns:2, tier:2, peck:1 } ] },
     { es: [ { el:'wind', hp:520, atk:85, turns:2, tier:1, peck:1 },
-            { el:'wind', hp:640, atk:98, turns:2, tier:3, boss:true, peck:3, peckTray:true },
+            { el:'wind', hp:660, atk:100, turns:2, tier:3, boss:true, peck:1, peckTray:true },
             { el:'wind', hp:520, atk:85, turns:2, tier:1, peck:1 } ] },
   ],
-  // 🦆風城中級:賊鴨魔王再加碼——4星賊鴨王偷盤面+拖盤 + 額外輪流吃卡上屬塊(stealStored,重用魔女魔王消屬塊機制)。魔王不設tier→用king貼圖。turns:3(→CD2)
+  // 中級:王 4★＋叼盤＋吞屬塊;右側2★方塊怪(填充,無機制)、左側1★賊鴨
   'wind:normal': [
-    // S1:2星賊鴨 ×2
-    { es: [ { el:'wind', hp:640, atk:100, turns:3, tier:2, peck:2 },
-            { el:'wind', hp:640, atk:100, turns:3, tier:2, peck:2 } ] },
-    // S2:1星 ×2 + 2星(中)
-    { es: [ { el:'wind', hp:600, atk:95, turns:3, tier:1, peck:1 },
-            { el:'wind', hp:660, atk:100, turns:3, tier:2, peck:2 },
-            { el:'wind', hp:600, atk:95, turns:3, tier:1, peck:1 } ] },
-    // S3:1星(左) + 4星賊鴨王=魔王(中,偷盤面+拖盤共3格 + 透明塊詠唱整消) + 補師(右)
-    { es: [ { el:'wind', hp:600, atk:95, turns:3, tier:1, peck:1 },
-            { el:'wind', hp:1900, atk:200, turns:3, boss:true, peck:3, peckTray:true, stealStored:true },
-            { el:'wind', hp:580, atk:90, turns:3, beh:'healAlly' } ] },
+    { es: [ { el:'wind', hp:640, atk:100, turns:2, tier:2, peck:1 },
+            { el:'wind', hp:640, atk:100, turns:2, tier:2, peck:1 } ] },
+    { es: [ { el:'wind', hp:600, atk:95, turns:2, tier:1, peck:1 },
+            { el:'wind', hp:660, atk:100, turns:2, tier:2, peck:1 },
+            { el:'wind', hp:600, atk:95, turns:2, tier:1, peck:1 } ] },
+    { noPun:true, es: [ { el:'wind', hp:600, atk:95, turns:2, tier:1, peck:1 },
+            { el:'wind', hp:1900, atk:200, turns:2, boss:true, peck:1, peckTray:true, stealStored:true },
+            { el:'wind', hp:700, atk:100, turns:3, tier:2, cardId:'c70' } ] },
+  ],
+  // 上級:王 4★＋叼盤＋吞屬塊;右側2★方塊怪、左側2★賊鴨(補上級洞,不再退化成消屬塊)
+  'wind:advanced': [
+    { es: [ { el:'wind', hp:760, atk:118, turns:2, tier:3, peck:1 },
+            { el:'wind', hp:760, atk:118, turns:2, tier:3, peck:1 } ] },
+    { es: [ { el:'wind', hp:720, atk:112, turns:2, tier:2, peck:1 },
+            { el:'wind', hp:760, atk:118, turns:2, tier:3, peck:1 },
+            { el:'wind', hp:720, atk:112, turns:2, tier:2, peck:1 } ] },
+    { noPun:true, es: [ { el:'wind', hp:760, atk:115, turns:2, tier:2, peck:1 },
+            { el:'wind', hp:2100, atk:205, turns:2, boss:true, peck:1, peckTray:true, stealStored:true },
+            { el:'wind', hp:800, atk:118, turns:3, tier:2, cardId:'c70' } ] },
   ],
   // 🤖雷城=鐵機人:放鐵塊卡位+清了不計攻擊。1星iron1無懲罰(教學)、2星iron1+2倍懲罰、3星連體iron2、4星連體iron3。turns→CD2。S3中間=boss站後
   'thunder:baby': [
@@ -315,27 +317,27 @@ const OVERRIDES = {
             { el:'thunder', hp:2800, atk:330, turns:4, boss:true, iron:4, ironPunish:true },
             { el:'thunder', hp:900, atk:198, turns:4, tier:3, iron:3, ironPunish:true } ] },
   ],
-  // 🦆風·超級:雜兵偷3格、王偷盤面+拖盤+吃屬塊。攻擊拉高。turns4→偷取間隔2
+  // 🦆風·超級:雜兵3★(偷2/CD3)、王4★＋叼盤＋吞屬塊;右側2★補師(水,逼你先爆補師/秒王)、左側2★賊鴨。noPun 關自動剋屬
   'wind:super': [
-    { es: [ { el:'wind', hp:800, atk:172, turns:4, tier:3, peck:3 },
-            { el:'wind', hp:800, atk:172, turns:4, tier:3, peck:3 } ] },
-    { es: [ { el:'wind', hp:800, atk:172, turns:4, tier:3, peck:3 },
-            { el:'wind', hp:860, atk:176, turns:4, tier:3, peck:3, peckTray:true },
-            { el:'wind', hp:800, atk:172, turns:4, tier:3, peck:3 } ] },
-    { es: [ { el:'wind', hp:820, atk:174, turns:4, tier:3, peck:2 },
-            { el:'wind', hp:2600, atk:300, turns:4, boss:true, peck:3, peckTray:true, stealStored:true },
-            { el:'wind', hp:820, atk:174, turns:4, tier:3, peck:2 } ] },
+    { es: [ { el:'wind', hp:800, atk:230, turns:2, tier:3, peck:1 },
+            { el:'wind', hp:800, atk:230, turns:2, tier:3, peck:1 } ] },
+    { es: [ { el:'wind', hp:800, atk:230, turns:2, tier:3, peck:1 },
+            { el:'wind', hp:800, atk:230, turns:2, tier:3, peck:1 },
+            { el:'wind', hp:800, atk:230, turns:2, tier:3, peck:1 } ] },
+    { noPun:true, es: [ { el:'wind', hp:800, atk:230, turns:2, tier:2, peck:1 },
+            { el:'wind', hp:2600, atk:370, turns:2, boss:true, peck:1, peckTray:true, stealStored:true },
+            { el:'water', hp:860, atk:175, turns:2, tier:2, cardId:'c57', beh:'healAlly', healPct:0.33, healCD:2 } ] },
   ],
-  // 🦆風·地獄:雜兵偷3+拖盤,王偷4+吃屬塊,右側補師混隊。攻擊再↑
+  // 🦆風·地獄:雜兵3★、王4★＋叼盤＋吞屬塊;右側2★補師(水)、左側2★哥布林(火·蓄力→水打斷)。偷塊+補血+蓄力三機制同台。noPun
   'wind:hell': [
-    { es: [ { el:'wind', hp:880, atk:196, turns:4, tier:3, peck:3, peckTray:true },
-            { el:'wind', hp:880, atk:196, turns:4, tier:3, peck:3, peckTray:true } ] },
-    { es: [ { el:'wind', hp:880, atk:196, turns:4, tier:3, peck:3, peckTray:true },
-            { el:'wind', hp:920, atk:200, turns:4, tier:3, peck:4, peckTray:true },
-            { el:'wind', hp:880, atk:196, turns:4, tier:3, peck:3, peckTray:true } ] },
-    { es: [ { el:'wind', hp:900, atk:198, turns:4, tier:3, peck:3, peckTray:true },
-            { el:'wind', hp:2800, atk:330, turns:4, boss:true, peck:4, peckTray:true, stealStored:true },
-            { el:'wind', hp:820, atk:150, turns:3, beh:'healAlly', healPct:0.35, healCD:2 } ] },
+    { es: [ { el:'wind', hp:900, atk:270, turns:2, tier:3, peck:1 },
+            { el:'wind', hp:900, atk:270, turns:2, tier:3, peck:1 } ] },
+    { es: [ { el:'wind', hp:900, atk:270, turns:2, tier:3, peck:1 },
+            { el:'wind', hp:900, atk:270, turns:2, tier:3, peck:1 },
+            { el:'wind', hp:900, atk:270, turns:2, tier:3, peck:1 } ] },
+    { noPun:true, es: [ { el:'fire', hp:900, atk:270, turns:2, tier:2, cardId:'c41', beh:'finisher', finCD:3, finStages:3, finPct:0.28 },
+            { el:'wind', hp:2800, atk:420, turns:2, boss:true, peck:1, peckTray:true, stealStored:true },
+            { el:'water', hp:940, atk:195, turns:2, tier:2, cardId:'c57', beh:'healAlly', healPct:0.35, healCD:2 } ] },
   ],
   // 🧱土·超級:雜兵門檻升 HIT18(大清才破)、王隨機盾(HIT15/COMBO3 每次重建換)
   'earth:super': [
@@ -446,8 +448,8 @@ function behGates(beh, dk, full){
 function spawnStage(dungeonId, diffKey, stageIdx){
   const dungeon=DUNGEONS[dungeonId]; if(!dungeon) return [];
   const df=DIFFS_BY[diffKey]||DIFFS_BY.normal;
-  const defs=resolveStages(dungeon, diffKey)[stageIdx].es;
-  let pun=null; if(df.counter&&dungeon.el){const C=counterOf(dungeon.el); pun=counterOf(C);} let punished=false;   // 反制混搭:上級↑元素關塞一隻懲罰屬
+  const _stg=resolveStages(dungeon, diffKey)[stageIdx], defs=_stg.es;
+  let pun=null; if(df.counter&&dungeon.el&&!_stg.noPun){const C=counterOf(dungeon.el); pun=counterOf(C);} let punished=false;   // 反制混搭:上級↑元素關塞一隻懲罰屬;⚠️_stg.noPun=該關已手動指定跨屬護衛(如風城王關)→關掉自動混搭,免得多冒一隻/元素打架
   const dk=df.key, dEl=dungeon.el, SIG={fire:'finisher',water:'healAlly',thunder:'paralyze',earth:'shield',wind:'eatStored'}, myBeh=SIG[dEl];   // 五屬城中級招定案(火終結/水補師/雷麻痺/土護盾/風消屬塊)
   const covered=(d)=>{ if(dk==='advanced'||dk==='super')return !!d.boss; if(dk==='hell')return true; return false; };   // 上級/超級僅魔王(完整版),地獄全敵。中級的梯度另在下方 beh 指派處理
   const noSkill=(dk==='baby'||dk==='beginner');   // 嬰兒/初級:純數值,無技
@@ -481,8 +483,11 @@ function spawnStage(dungeonId, diffKey, stageIdx){
     // 🔥火城畜力技統一 CD式(CD4、倒數CD3/2/1顯示蓄力):中級雜兵(S1右/S2中)+魔王都套;地獄雜兵(full 非魔王)維持原樣。雜兵給2星哥布林貼圖,魔王維持自身貼圖(中級↑=4星酋長、初級=3星戰士)。||=OVERRIDE 明確值優先
     let tierV=d.tier||0, finCDV=d.finCD||0, finStagesV=d.finStages||0;
     if(dEl==='fire' && g.finisher>0 && !phases && (!full || d.boss)){ finCDV=finCDV||4; finStagesV=finStagesV||3; if(!d.boss) tierV=tierV||2; }
-    const ival=(finCDV>0)?finCDV:(d.healCD>0)?d.healCD:((g.healAlly>0||(g.eatStored>0&&d.boss)||(g.paralyze>0&&d.boss))?1:turns);   // 🩹healCD=史萊姆補血CD(=2,蓋過補師預設CD1)   // 🔥finCD=CD式畜力技的總CD(蓋過 turns);💚補師 CD=1;🌀消塊魔王 CD=1;⚡麻痺魔王 CD=1;術士 CD=turns(=2)
-    return {el,max:hp,hp:hp,atk:atk,interval:ival,timer:Math.max(2,ival),burn:0,dead:false,boss:!!d.boss,guard:(!d.boss&&stageHasBoss),...g,phases,phaseIdx:0,arch:d.arch||null,tier:tierV,finStages:finStagesV,finAnyHit:!!d.finAnyHit,finCD:finCDV,peck:d.peck||0,peckTray:!!d.peckTray,stealStored:!!d.stealStored,iron:d.iron||0,ironPunish:!!d.ironPunish,reviveMax:(d.reviveMax!=null?d.reviveMax:2)};   // 每關初始 timer≥2;tier=星級貼圖;finStages=蓄力段數;finCD>0=CD式畜力;peck>0=🦆賊鴨偷盤面格;iron>0=🤖鐵機人放n連體鐵塊卡位(避開湊滿宮/線、盤面太緊停放;ironPunish=沒清掉下輪2倍打)
+    // 🦆賊鴨:偷取量+CD 依星級固定(1★偷1/CD3、2★偷1/CD2、3★偷2/CD3、4★偷2/CD2;boss=4星)。d.peck>0=標記為賊鴨,實際量/CD 由星級推導(不看 d.peck 的值)
+    let peckN=d.peck||0, peckCD=0;
+    if(d.peck>0){ const st=d.boss?(tierV||4):(tierV||1); const P=({1:[1,3],2:[1,2],3:[2,3],4:[2,2]})[st]||[1,2]; peckN=P[0]; peckCD=P[1]; }   // boss 有 tier 用 tier(入門2★/初級3★),沒 tier=4★賊鴨王
+    const ival=(finCDV>0)?finCDV:(peckCD>0)?peckCD:(d.healCD>0)?d.healCD:((g.healAlly>0||(g.eatStored>0&&d.boss)||(g.paralyze>0&&d.boss))?1:turns);   // 🦆peckCD=賊鴨星級CD(蓋過 turns)   // 🩹healCD=史萊姆補血CD(=2,蓋過補師預設CD1)   // 🔥finCD=CD式畜力技的總CD(蓋過 turns);💚補師 CD=1;🌀消塊魔王 CD=1;⚡麻痺魔王 CD=1;術士 CD=turns(=2)
+    return {el,max:hp,hp:hp,atk:atk,interval:ival,timer:Math.max(2,ival),burn:0,dead:false,boss:!!d.boss,guard:(!d.boss&&stageHasBoss),...g,phases,phaseIdx:0,arch:d.arch||null,tier:tierV,finStages:finStagesV,finAnyHit:!!d.finAnyHit,finCD:finCDV,cardId:(d.cardId||null),peck:peckN,peckTray:!!d.peckTray,stealStored:!!d.stealStored,iron:d.iron||0,ironPunish:!!d.ironPunish,reviveMax:(d.reviveMax!=null?d.reviveMax:2)};   // 每關初始 timer≥2;tier=星級貼圖;finStages=蓄力段數;finCD>0=CD式畜力;peck>0=🦆賊鴨偷盤面格;iron>0=🤖鐵機人放n連體鐵塊卡位(避開湊滿宮/線、盤面太緊停放;ironPunish=沒清掉下輪2倍打)
   });
 }
 
