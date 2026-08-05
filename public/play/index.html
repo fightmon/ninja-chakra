@@ -991,7 +991,7 @@
     }
     // 🆕個體制隊伍解析:隊伍格存「個體 uid(k開頭)」;舊存檔存「卡種 id」→解析成該卡種最強個體(相容)
     function instOf(u) { if (!u) return null; return loadSave().cards.find(c => c.u === u) || null; }   // uid→個體 {u,id,lv,exp,evo}
-    function resolveTeamEntry(e) { if (!e) return null; if (typeof e === 'string' && e[0] === 'k') return instOf(e); const b = bestInstanceOf(e); return b ? Object.assign({ id: e }, b) : null; }
+    function resolveTeamEntry(e) { if (e == null) return null; const inst = instOf(e); if (inst) return inst; const b = bestInstanceOf(e); return b ? Object.assign({ id: e }, b) : null; }   // 🐛2026-08-03修:用「查得到就是個體」判斷,不靠 k 前綴(伺服器 uid 非 k 開頭,原判斷會把 uid 當卡種id→隊伍解析成空)
     function loadTeamInsts() { return (loadTeam() || []).map(resolveTeamEntry).filter(Boolean); }   // 目前隊的個體物件
     function loadTeamIds() { return loadTeamInsts().map(i => i.id); }   // 目前隊的卡種 id(給載圖/地圖等 by-id 用途)
     function loadTeamUids() { return loadTeamInsts().map(i => i.u); }   // 目前隊的個體 uid(給卡冊「使用中」標記)
@@ -2105,7 +2105,7 @@
         const _miss = _ids.filter(id => cardArtKey(id, 'full') && !this.textures.exists(cardArtKey(id, 'full')));   // 切隊補當前隊大圖(宮格用;preload 只載了進場時那隊)
         if (_miss.length) { _miss.forEach(id => this.load.image('card_' + id + '_full', 'art/cards/' + id + '_full.webp')); this.load.once('complete', () => this.loadTeamSlots()); try { this.load.start(); } catch (e) { } }   // 載好重載(先顯示名字→無縫換圖)
         this.slots.forEach(s => this.clearSlot(s));   // 清空 → 載入目前選中隊(🆕個體制:uid→指定那張;舊卡種id→任一未用個體)
-        (loadTeam() || []).forEach((e, i) => { if (!this.slots[i] || !e) return; const inst = (typeof e === 'string' && e[0] === 'k') ? this.instances.find(x => x.u === e && !this.cardUsed[x.u]) : this.instances.find(x => x.id === e && !this.cardUsed[x.u]); if (!inst) return; const cd = ROSTER.find(c => c.id === inst.id); if (!cd) return; this.assign(this.slots[i], inst, cd); });
+        (loadTeam() || []).forEach((e, i) => { if (!this.slots[i] || e == null) return; const inst = this.instances.find(x => x.u === e && !this.cardUsed[x.u]) || this.instances.find(x => x.id === e && !this.cardUsed[x.u]); if (!inst) return; const cd = ROSTER.find(c => c.id === inst.id); if (!cd) return; this.assign(this.slots[i], inst, cd); });   // 🐛2026-08-03修:先用 uid 找該張個體,找不到才當舊卡種id找未用個體(不靠 k 前綴,伺服器 uid 非 k 開頭)
         this.updateStats();
       }
       updateSwitcher() {   // 隊名文字(換隊/改名觸發);左右箭頭與 ✎ 位置固定,不隨隊名長度重排
