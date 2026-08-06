@@ -587,7 +587,7 @@
       const vh = (el && el.clientHeight) ? el.clientHeight : ((typeof window !== 'undefined' && window.innerHeight) ? window.innerHeight : 844);
       H = Math.max(640, Math.min(1400, Math.round(W * vh / vw)));   // 涵蓋約 1.52~3.33 的長寬比
       TRAY_Y = H - 46; BY0 = TRAY_Y - 52 - 9 * CS; CARDS_Y = BY0 - 50; PHP_Y = BY0 - 16; INFO_Y = BY0 - 2;   // 板面/托盤盡量往下、卡列貼緊板面 → 上方戰鬥區留多一點
-      BG_H = BY0 + 22; BATTLE_CY = Math.round((CARDS_Y - 29) / 2);   // 背景延伸到盤面上緣+22;敵人置中於 nav(26) 與主動技鈕(CARDS_Y-55) 之間
+      BG_H = BY0 + 22; BATTLE_CY = Math.max(Math.round((CARDS_Y - 29) / 2), CARDS_Y - 134);   // 背景延伸到盤面上緣+22;敵人:矮螢幕置中於 nav(26)~主動技鈕、高螢幕改「錨在牌列上方134px」→多出的高度變頭頂天空而非腳下空地,腳→牌列空隙跨裝置一致(交叉點≈桌機SE)。整組場景(敵+台面+粒子)同源下移,相對關係不變
       BOARD_CY = BY0 + Math.round(9 * CS / 2);   // 盤面正中央(9×9 格的中心)→ 暴擊/連擊/combo等操控盤面的特效字都以此置中
     }
     recomputeLayout();
