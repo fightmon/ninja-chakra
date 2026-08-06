@@ -3438,9 +3438,11 @@
         ] : null;
         this.enemies.forEach((e, i) => {
           const lay = (fiveLay && fiveLay[i]) || (threeLay && threeLay[i]);
-          const x = lay ? Math.round(lay.x) : (this.enemyLab ? [Math.round(W * 0.16), CX, Math.round(W * 0.84)][i] : Math.round(CX + ((20 + slot * (i + 0.5)) - CX) * ENEMY_SPREAD)), cy = lay ? Math.round(BATTLE_CY + lay.dy) : BATTLE_CY;   // 前3後2:各自 x/y;實驗室固定三點;否則單排往中央集中
+          const x = lay ? Math.round(lay.x) : (this.enemyLab ? [Math.round(W * 0.16), CX, Math.round(W * 0.84)][i] : Math.round(CX + ((20 + slot * (i + 0.5)) - CX) * ENEMY_SPREAD));   // 前3後2:各自 x;實驗室固定三點;否則單排往中央集中
+          let cy = lay ? Math.round(BATTLE_CY + lay.dy) : BATTLE_CY;
           let szc = FIVE ? Math.max(50, Math.min(96, Math.round((CARDS_Y - 81) * 0.58))) : THREE ? Math.max(50, Math.min(slot - 8, 108, Math.round((CARDS_Y - 81) * 0.78))) : Math.max(50, Math.min(slot - 8, 126, Math.round((CARDS_Y - 81) * 0.92)));   // 前3後2/前2後1:縮小讓前後排塞得下+不擋卡;否則原尺寸(取寬/高空檔較小者)
           if (this.enemyLab && e.boss) szc = Math.round(szc * 1.2);   // 實驗室魔王較大
+          if (THREE && e.boss) cy += Math.round(szc * 0.14);   // 🐉前2後1魔王整組下移(圖/影/血條/標一起、腳底維持貼影):0.1×szc 讓地線對齊風城超級S2雜兵、再+0.04 就是「再下來一點」。魔王放大1.2×→off上抬看似太高,靠此把整體降回而非動共用的 threeLay dy
           e.cardW = szc; e.cardH = szc;
           e.card = this.add.rectangle(x, cy, szc, szc, 0x000000, 0).setInteractive();   // 無底色:透明矩形只當點擊區
           e.card.on('pointerdown', () => this.selectTarget(i));
