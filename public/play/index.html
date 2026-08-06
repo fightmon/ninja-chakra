@@ -3462,7 +3462,7 @@
           e.turnG.add([e.glass, e.turnTx]);
           e.hpW = Math.round(szc * HP_BAR_W); e.hpx = x - e.hpW / 2;   // 血條較窄、置中於敵下緣
           e.hpH = 9; e.hpRatio = Math.max(0, Math.min(1, e.hp / e.max)); e.hpLag = e.hpRatio; e._hpColor = (EL[e.el] && EL[e.el].color != null) ? EL[e.el].color : (e.boss ? 0xff7a3a : 0xc23c2c);   // 血條=敵屬性色(與 bossTransform 換屬一致)
-          e.hpGfx = this.add.graphics().setPosition(e.hpx, cy + szc / 2 - 3); this.drawHpBar(e);   // HP:圓角血條(屬色) + 白色圓角外框 + 受傷白拖尾
+          e.hpGfx = this.add.graphics().setPosition(e.hpx, cy + (e.boss ? Math.round(szc * 0.40) : szc / 2) - 3); this.drawHpBar(e);   // HP:圓角血條(屬色)+白框+白拖尾。魔王影子被上抬到0.32szc→血條若仍0.5szc會掉腳下方一截;改0.40szc(影子下0.08,同雜兵比例)貼回魔王腳邊
           e.mark = this.add.text(x, cy - szc / 2 - 4, '▼', { fontFamily: EMOJIFONT, fontSize: '20px', color: '#ffd24a', fontStyle: 'bold' }).setOrigin(0.5).setStroke('#5a2e00', 5).setVisible(false);   // 目標指標(取代黃框):放大+描邊+跳動(見 updateEnemies);往下約 5px(原 -9)
           if (this.counterTeach) {   // 🩹序章弱點徽章:常駐 affordance(非一次性),疊在 mark 上方一點,顯示「剋牠」的屬性圖示+「弱」字;敵人死亡/重生/換關由 playDeath/enemyEnter/spawnEnemies 生命週期一併處理
             const weakEl = counterOf(e.el);
