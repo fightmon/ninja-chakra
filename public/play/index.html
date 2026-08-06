@@ -3433,7 +3433,7 @@
         ] : null;
         const BW3 = W - 2 * BX0, threeLay = THREE ? [
           { x: BX0 + BW3 * 0.20, dy: Math.round(_rszc * 0.148) },   // 0 左·前;係數=原16/cap108→szc頂時=原值
-          { x: CX, dy: Math.round(_rszc * -0.167) },                // 1 中·後(魔王);係數=原-18/cap108→回到你調好的高度
+          { x: CX, dy: Math.round(_rszc * -0.14) },                 // 1 中·後(魔王);dy-0.14→貼圖中心總係數-0.34≈塔S1後排同高(放大倍率仍1.2)
           { x: BX0 + BW3 * 0.80, dy: Math.round(_rszc * 0.148) },   // 2 右·前
         ] : null;
         this.enemies.forEach((e, i) => {
