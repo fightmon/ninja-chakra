@@ -3424,15 +3424,17 @@
         if (this.lead && this.lead.type === 'counterDelay' && this.lead.el) { const tEl = EL[this.lead.el] && EL[this.lead.el].beats; if (tEl) this.enemies.forEach(e => { if (e.el === tEl) e.timer = (e.timer || e.interval || 5) + this.lead.v; }); }   // 🐦鳥·控敵先制:開局「被本屬相剋」的敵 CD+v
         const n = this.enemies.length, slot = 380 / n;
         const FIVE = n === 5 && !this.enemyLab;   // 🎯 5 隻→前3後2陣型(像魔王關站法:3隻站前排、2隻站後排空隙);實驗室固定三點不套
-        const BW5 = W - 2 * BX0, fiveLay = FIVE ? [
-          { x: BX0 + BW5 * 0.18, dy: 18 }, { x: CX, dy: 18 }, { x: BX0 + BW5 * 0.82, dy: 18 },   // 索引0,1,2=前排左/中/右(較低、較前);對稱以 CX 為中心
-          { x: BX0 + BW5 * 0.34, dy: -30 }, { x: BX0 + BW5 * 0.66, dy: -30 },                      // 索引3,4=後排左/右(較高、站前排空隙、被前排半遮);0.34/0.66 對稱且拉開
-        ] : null;
         const THREE = n === 3 && !this.enemyLab && !this.tut && !this.lesson;   // 🎯 3隻→前2後1(像魔王關:兩側站前、中間站後排被半遮);實驗室/教學/課程固定站法不套
+        // 🔧陣型前後排 dy 改「隨體型 szc 縮放」(原固定px→大小螢幕站位不一致、手機魔王偏高):算一次參考體型(與下方 szc 同式,不含實驗室魔王×1.2),dy=szc×係數(以 szc≈90 為基準=原值),整個陣型等比縮放→各螢幕站位一致
+        const _rszc = FIVE ? Math.max(50, Math.min(96, Math.round((CARDS_Y - 81) * 0.58))) : THREE ? Math.max(50, Math.min(slot - 8, 108, Math.round((CARDS_Y - 81) * 0.78))) : Math.max(50, Math.min(slot - 8, 126, Math.round((CARDS_Y - 81) * 0.92)));
+        const BW5 = W - 2 * BX0, fiveLay = FIVE ? [
+          { x: BX0 + BW5 * 0.18, dy: Math.round(_rszc * 0.2) }, { x: CX, dy: Math.round(_rszc * 0.2) }, { x: BX0 + BW5 * 0.82, dy: Math.round(_rszc * 0.2) },   // 索引0,1,2=前排左/中/右(較低、較前);對稱以 CX 為中心
+          { x: BX0 + BW5 * 0.34, dy: Math.round(_rszc * -0.33) }, { x: BX0 + BW5 * 0.66, dy: Math.round(_rszc * -0.33) },                      // 索引3,4=後排左/右(較高、站前排空隙、被前排半遮)
+        ] : null;
         const BW3 = W - 2 * BX0, threeLay = THREE ? [
-          { x: BX0 + BW3 * 0.20, dy: 16 },   // 0 左·前(往前壓低)
-          { x: CX, dy: -18 },                // 1 中·後(較高、站後排、z-order 被兩側半遮)
-          { x: BX0 + BW3 * 0.80, dy: 16 },   // 2 右·前
+          { x: BX0 + BW3 * 0.20, dy: Math.round(_rszc * 0.18) },   // 0 左·前(往前壓低)
+          { x: CX, dy: Math.round(_rszc * -0.2) },                 // 1 中·後(魔王,較高、站後排、被兩側半遮)
+          { x: BX0 + BW3 * 0.80, dy: Math.round(_rszc * 0.18) },   // 2 右·前
         ] : null;
         this.enemies.forEach((e, i) => {
           const lay = (fiveLay && fiveLay[i]) || (threeLay && threeLay[i]);
