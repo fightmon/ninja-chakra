@@ -2341,6 +2341,7 @@
           _cids.forEach(id => _loadCardArt(this, [id]));   // 🆕載本關敵人指定的 cardId(風城跨屬護衛補師c57/哥布林c41/方塊怪c70 等,_loadCardArt 含 _e/_e2 進化圖)   // 只載本關屬性:用 spawnStage 產「真敵人」收集元素(涵蓋上級↑懲罰屬 pun + 魔王階段變身),與 spawnEnemies 完全對齊→動態屬不再漏載變 emoji;原無腦全載 50 檔~5.2MB 大砍;🆕bonus 槽跳過+其後索引 -1 校正(比照 spawnEnemies 的 _si 換算,避免漏載真正 S3+ 的屬性)
           _els.forEach(el => { if (MONSTER_IMG[el] && !this.textures.exists('mon_' + el)) this.load.image('mon_' + el, MONSTER_IMG[el]); _CLS.forEach(c => { const k = c + '_' + el; if (ENEMY_IMG[k] && !this.textures.exists(k)) this.load.image(k, ENEMY_IMG[k]); }); });
           if (!['fire', 'water', 'thunder', 'earth', 'wind'].includes(this.dungeonId)) { const _BLK = { fire: 'c66', water: 'c67', thunder: 'c68', earth: 'c69', wind: 'c70' }; _els.forEach(el => { if (_BLK[el]) _loadCardArt(this, [_BLK[el]]); }); }   // 🆕2026-08-03 非五城地城(序章/塔等)一般雜兵改用方塊怪卡圖→預載本關元素的方塊怪(含 _e/_e2 進化圖,見 enemyTexKey 通用 fallback)
+          else { const _sb = { thunder: 36, fire: 41, earth: 46, wind: 51, water: 56 }[this.dungeonId], _ei = { fire: 0, water: 1, thunder: 2, earth: 3, wind: 4 }; _els.forEach(el => { if (_ei[el] != null) _loadCardArt(this, ['c' + (_sb + _ei[el])]); }); }   // 🎨2026 五城:載本關「每個出現屬性」的招牌卡(含被自動剋屬混搭換屬的那隻)→顏色對得上血條,不再顯示錯色
         }
         _loadCardArt(this, (this.presetTeam || []).map(c => c && c.id));   // 只載「出戰 5 張」卡圖(不再一次載全部 40 張)
         if (this._bonus && this._bonus.length) _loadCardArt(this, [...this._bonus, 'c66', 'c67', 'c68', 'c69', 'c70']);   // 🆕2026-08-02 bonus 關:補載本場獎勵卡(金屬/金錢)+ 5 張方塊怪填充卡圖(base 圖即可,見 spawnBonusEnemies);enemyTexKey 靠 e.cardId 找 card_<id>_full,沒預載到就退回 EL['neutral'].face 💰 emoji(不會崩,但畫面會醜)
@@ -2374,40 +2375,16 @@
         if (e.cardId) { const _sf = e.tier === 3 ? '_e2' : e.tier === 2 ? '_e' : ''; let ck = 'card_' + e.cardId + _sf + '_full'; if (this.textures.exists(ck)) return ck; ck = 'card_' + e.cardId + '_full'; if (this.textures.exists(ck)) return ck; }   // 🆕泛用分支:敵人指定 cardId(bonus金屬/金錢/方塊怪、風城跨屬護衛補師/哥布林等)→用該卡圖,並依 tier 出進化圖(2★_e/3★_e2),沒有進化圖退回 base;優先於各城專屬邏輯
         const el = e.el; let dk = (this.diff && this.diff.key) || 'normal';
         if (this.dungeonId === 'prologue') dk = 'baby';   // 序章=新手村:挑圖固定當嬰兒級(只換外觀,不動數值)→ 魔王 boss_baby(m002)+雜兵 grunt(m001),不出 m003 以上兇怪
-        if (this.dungeonId === 'thunder') {   // 🤖 雷之高原=鐵機人城(原蜘蛛巢):tier 星級圖優先(1星→c38、2星→_e、3星→_e2);無 tier 的魔王才用 4星惡鐵王
-          const gk = e.tier === 3 ? 'card_c38_e2_full' : e.tier === 2 ? 'card_c38_e_full' : e.tier === 1 ? 'card_c38_full' : null;
+        if (['thunder', 'fire', 'earth', 'wind', 'water'].indexOf(this.dungeonId) >= 0) {   // 🎨五城招牌物種:依「敵人實際屬性」選對應屬的卡(火/水/雷/土/風各一張)→顏色對得上血條(被自動剋屬混搭換屬的敵人不再顯示錯色);魔王不換屬→固定 king
+          const _base = { thunder: 36, fire: 41, earth: 46, wind: 51, water: 56 }[this.dungeonId];   // 各城物種5屬卡起始號(火+0/水+1/雷+2/土+3/風+4)
+          const _king = { thunder: 'c38', fire: 'c41', earth: 'c49', wind: 'c55', water: 'c57' }[this.dungeonId];   // 魔王 king 圖(魔王不換屬,固定)
+          const _eli = { fire: 0, water: 1, thunder: 2, earth: 3, wind: 4 }[el];
+          const cn = 'card_c' + (_base + (_eli != null ? _eli : 0));   // 依敵人屬性取該屬招牌卡
+          const gk = e.tier === 3 ? cn + '_e2_full' : e.tier === 2 ? cn + '_e_full' : e.tier === 1 ? cn + '_full' : null;
           if (gk && this.textures.exists(gk)) return gk;
-          if (e.boss && this.textures.exists('card_c38_king_full')) return 'card_c38_king_full';
-          if (e.boss && this.textures.exists('card_c38_e_full')) return 'card_c38_e_full';
-          if ((e.paralyze > 0 || e.arch === 'caster') && this.textures.exists('card_c38_full')) return 'card_c38_full';
-        }
-        if (this.dungeonId === 'fire') {   // 👺 火之火山=哥布林窟:tier 星級圖優先(1星→c41、2星→_e、3星→_e2;3星魔王仍顯示戰士圖);無 tier 的魔王才用 4星酋長
-          const gk = e.tier === 3 ? 'card_c41_e2_full' : e.tier === 2 ? 'card_c41_e_full' : e.tier === 1 ? 'card_c41_full' : null;
-          if (gk && this.textures.exists(gk)) return gk;
-          if (e.boss && this.textures.exists('card_c41_king_full')) return 'card_c41_king_full';
-          if (e.boss && this.textures.exists('card_c41_e_full')) return 'card_c41_e_full';
-          if (!e.boss && this.textures.exists('card_c41_full')) return 'card_c41_full';
-        }
-        if (this.dungeonId === 'earth') {   // 🧱 土之山岳=牆怪城:tier 星級圖優先(1星→c49、2星→_e、3星→_e2);無 tier 的魔王才用 4星城牆王;shield fallback 保留給非 tier 舊敵人
-          const gk = e.tier === 3 ? 'card_c49_e2_full' : e.tier === 2 ? 'card_c49_e_full' : e.tier === 1 ? 'card_c49_full' : null;
-          if (gk && this.textures.exists(gk)) return gk;
-          if (e.boss && this.textures.exists('card_c49_king_full')) return 'card_c49_king_full';
-          if (e.boss && this.textures.exists('card_c49_e_full')) return 'card_c49_e_full';
-          if (e.shield && this.textures.exists('card_c49_full')) return 'card_c49_full';
-        }
-        if (this.dungeonId === 'wind') {   // 🦆 風之峽谷=賊鴨窟(原魔女):tier 星級圖優先(1星→c55、2星→_e、3星→_e2);無 tier 的魔王才用 4星賊鴨王
-          const gk = e.tier === 3 ? 'card_c55_e2_full' : e.tier === 2 ? 'card_c55_e_full' : e.tier === 1 ? 'card_c55_full' : null;
-          if (gk && this.textures.exists(gk)) return gk;
-          if (e.boss && this.textures.exists('card_c55_king_full')) return 'card_c55_king_full';
-          if (e.boss && this.textures.exists('card_c55_e_full')) return 'card_c55_e_full';
-          if (e.eatStored > 0 && this.textures.exists('card_c55_full')) return 'card_c55_full';
-        }
-        if (this.dungeonId === 'water') {   // 🩹 水之深淵=史萊姆醫療城(原藥師):tier 星級圖優先(1星→c57、2星→_e、3星→_e2);無 tier 的魔王才用 4星醫學博士
-          const gk = e.tier === 3 ? 'card_c57_e2_full' : e.tier === 2 ? 'card_c57_e_full' : e.tier === 1 ? 'card_c57_full' : null;
-          if (gk && this.textures.exists(gk)) return gk;
-          if (e.boss && this.textures.exists('card_c57_king_full')) return 'card_c57_king_full';
-          if (e.boss && this.textures.exists('card_c57_e_full')) return 'card_c57_e_full';
-          if (e.healAlly > 0 && this.textures.exists('card_c57_full')) return 'card_c57_full';
+          if (e.boss && this.textures.exists('card_' + _king + '_king_full')) return 'card_' + _king + '_king_full';
+          if (e.boss && this.textures.exists(cn + '_e_full')) return cn + '_e_full';
+          if (this.textures.exists(cn + '_full')) return cn + '_full';   // 無 tier 的雜兵(補師/術士/盾/消塊等)→該屬 base 圖
         }
         if (e.boss) { const tier = dk === 'baby' ? 'baby' : (dk === 'beginner' ? 'beg' : 'nrm'); const k = 'boss_' + tier + '_' + el; if (this.textures.exists(k)) return k; }
         else {
