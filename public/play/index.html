@@ -2418,7 +2418,7 @@
         if (!e.img || !e.sprite) return;
         if (e.sprite.texture.key.indexOf('card_') === 0) {   // 🕷️ 借透明橫式大圖(完整蜘蛛/鬼)當敵圖:等比縮放「不裁」、置中;三檔各自獨立→單魔王(this._soloBoss)/一般魔王/小兵
           const szc = e.cardW, solo = e.boss && this._soloBoss;   // 單魔王=全關只有這一隻魔王(生成時鎖定);比例/位置/影子皆獨立,不與中級魔王共用
-          const off = solo ? -0.15 : (e.boss ? -0.2 : -0.07), mul = solo ? 1.7 : (e.boss ? 1.2 : 1.1);   // Y偏移(負=上)/放大倍率;單魔王的 -0.15、1.7 是暫定值,你到時再調
+          const off = solo ? -0.15 : (e.boss ? -0.29 : -0.14), mul = solo ? 1.7 : (e.boss ? 1.4 : 1.25);   // Y偏移(負=上)/放大倍率;放大同時 off 加大讓腳底維持貼影子(腳底比例 fb≈0.44:off=地線−mul×0.44,魔王地線0.32/雜兵0.42)。魔王1.4比雜兵1.25再大;單魔王的 -0.15、1.7 是暫定值,你到時再調
           const scl = szc * mul / (e.sprite.height || 1);
           e.sprite.setScale(scl); e.sprite.y = e.cy + szc * off; e.baseScale = scl;
           if (e.shadow) e.shadow.y = e.cy + szc * (0.42 + (solo ? -0.15 : (e.boss ? -0.1 : (e._five ? -0.1 : 0))));   // 🕸️影子偏移改「隨敵人大小 szc 縮放」(原固定 46px→大小螢幕腳底對不齊):基準 0.42(szc≈110 時≈原46);單魔王 -0.15 / 一般魔王 -0.1 / 前3後2雜兵 -0.1
