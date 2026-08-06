@@ -300,7 +300,7 @@ const OVERRIDES = {
     { es: [ { el:'thunder', hp:800, atk:172, turns:4, tier:3, iron:2, ironPunish:true },
             { el:'thunder', hp:800, atk:172, turns:4, tier:3, iron:2, ironPunish:true } ] },
     { es: [ { el:'thunder', hp:800, atk:172, turns:4, tier:3, iron:2, ironPunish:true },
-            { el:'thunder', hp:860, atk:176, turns:4, tier:3, iron:3, ironPunish:true },
+            { el:'thunder', hp:800, atk:172, turns:4, tier:3, iron:2, ironPunish:true },
             { el:'thunder', hp:800, atk:172, turns:4, tier:3, iron:2, ironPunish:true } ] },
     { es: [ { el:'thunder', hp:820, atk:174, turns:4, tier:3, iron:2, ironPunish:true },
             { el:'thunder', hp:2600, atk:300, turns:4, boss:true, iron:3, ironPunish:true },
