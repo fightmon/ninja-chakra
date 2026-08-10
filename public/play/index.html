@@ -6081,7 +6081,7 @@
           if (e._labDying) return; e._labDying = true;
           e.dead = true; if (e.bob) { e.bob.stop(); e.bob = null; } if (e.knockTw) { e.knockTw.stop(); e.knockTw = null; }
           this.playDeath(e);
-          this.time.delayedCall(950, () => {
+          this.time.delayedCall(2000, () => {   // 打飛演出加長到 ~2s→重生延後,免中途被重置
             e.dead = false; e._labDying = false; e.hp = e.max; e.dispHp = null; if (e.hpTw) { e.hpTw.stop(); e.hpTw = null; }
             const sp = e.sprite; sp.setVisible(true); sp.clearTint && sp.clearTint();
             [e.turnG, e.hpGfx, e.shadow, e.weakBadge].forEach(o => { if (o) o.setVisible(true); }); if (e.card) e.card.setInteractive();
@@ -6142,9 +6142,12 @@
         if (e.card) e.card.disableInteractive();
         [e.turnG, e.hpGfx, e.mark, e.shadow, e.weakBadge].forEach(o => { if (o) this.tweens.add({ targets: o, alpha: 0, duration: 200, onComplete: () => { o.setVisible(false); o.setAlpha(1); } }); });
         this.tweens.killTweensOf(sp); sp.clearTint && sp.clearTint();
+        const from = e._hitFromX, TH = 14;   // 打飛方向:攻擊起點在左→往右飛+順時針(dir+1),在右→往左飛+逆時針(dir-1);同欄(近垂直)或無起點(天雷/DoT/風清宮)→隨機
+        const dir = (from != null && Math.abs(from - x0) >= TH) ? (from < x0 ? 1 : -1) : (Math.random() < 0.5 ? 1 : -1);
+        e._hitFromX = null;
         this.tweens.add({
-          targets: sp, y: y0 - 72, x: x0 + (x0 < CX ? -22 : 22), scaleX: bs * 0.12, scaleY: bs * 0.12, angle: 220, alpha: 0.15, duration: 560, ease: 'Quad.in',
-          onComplete: () => { this.deathLight(x0, y0 - 64, e.el); sp.setVisible(false); }
+          targets: sp, y: y0 - 100, x: x0 + dir * 52, scaleX: bs * 0.12, scaleY: bs * 0.12, angle: dir * 360, alpha: 0.15, duration: 1500, ease: 'Quad.in',
+          onComplete: () => { this.deathLight(sp.x, sp.y, e.el); sp.setVisible(false); }
         });
       }
       deathLight(x, y, el) {
@@ -6422,6 +6425,7 @@
       }
       // 能量彈:沿弧線飛 + 逐段描出的弧線軌跡線(亮白核 + 屬色光暈,像子機/追蹤彈)
       chakraBolt(ox, oy, tx, ty, color, tgt, dmg, pw, hot) {
+        if (tgt) tgt._hitFromX = ox;   // 記錄攻擊起點x→死亡打飛方向用(起點在左=往右飛+順時針,反之逆時針);playDeath 讀取
         pw = pw || 1; hot = hot || 0xffffff; const ADD = Phaser.BlendModes.ADD, a = { x: ox, y: oy }, b = { x: tx, y: ty }, bs = 1 + (pw - 1) * 0.4;   // bs:彈體/軌跡隨 HIT 變粗大;hot=高光色(預設白)
         const ctrl = this.chakraArc(a, b, (Math.random() < 0.5 ? 1 : -1) * (55 + Math.random() * 45));
         const glow = this.add.circle(ox, oy, 22 * bs, color, 0.85).setBlendMode(ADD).setDepth(DEPTH.proj);   // 屬色光暈:加大加濃→屬色壓過白核
