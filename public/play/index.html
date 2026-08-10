@@ -3966,7 +3966,7 @@
             const dmg = Math.round(atk * 3 * (EL.fire.beats === tgt.el ? CONFIG.ADV_MULT : ((EL[tgt.el] && EL[tgt.el].beats === 'fire') ? CONFIG.WEAK_MULT : CONFIG.NORM_MULT)));   // 火相剋:打風×1.6、打水×0.7、其餘×1.0
             this.chargeFire(ox, oy, col, 420);
             this.time.delayedCall(this.chargeClimaxMs('fire'), () => {   // 攻擊發動=火苗爆開瞬間
-              this.labSnd(['s_fire1', 's_fire2', 's_fire3'][Math.floor(Math.random() * 3)], 0.6); this.chakraBolt(ox, oy, tgt.sprite.x, tgt.sprite.y, col, tgt, dmg, 3, hot);   // 火主動技發射(隨機)
+              this.labSnd(['s_fire1', 's_fire2', 's_fire3'][Math.floor(Math.random() * 3)], 0.6); this.boltLaunchFx('fire', ox, oy, tgt.sprite.x, tgt.sprite.y); this.chakraBolt(ox, oy, tgt.sprite.x, tgt.sprite.y, col, tgt, dmg, 3, hot);   // 火主動技發射(隨機)
               this.cameras.main.shake(240, 0.009);
               this.time.delayedCall(360, () => {
                 this.labSnd('s_hit_fire', 0.75); tgt.hp = Math.max(0, tgt.hp - dmg);
@@ -4020,7 +4020,7 @@
           const tgt = this.targetEnemy(); if (!tgt) return; const dmg = Math.round(atk * relM(tgt.el));
           this.chargeEl(el, ox, oy, 280);
           for (let k = 0; k < 3; k++)this.time.delayedCall(this.chargeClimaxMs(el) + k * 170, () => {
-            if (tgt.dead) return; this.labSnd('s_hit_' + el, 0.7); this.chakraBolt(ox, oy, tgt.sprite.x, tgt.sprite.y, col, tgt, dmg, 2, hot); this.cameras.main.shake(110, 0.005);
+            if (tgt.dead) return; this.labSnd('s_hit_' + el, 0.7); if (k === 0) this.boltLaunchFx(el, ox, oy, tgt.sprite.x, tgt.sprite.y); this.chakraBolt(ox, oy, tgt.sprite.x, tgt.sprite.y, col, tgt, dmg, 2, hot); this.cameras.main.shake(110, 0.005);
             this.time.delayedCall(300, () => { tgt.hp = Math.max(0, tgt.hp - dmg); if (tgt.hp > 0) this._activeCounter(tgt, el); this.updateEnemies(); if (tgt.hp <= 0) this.killEnemy(tgt); });
           });
           return;
@@ -4029,7 +4029,7 @@
           const alive = this.enemies.filter(e => !e.dead && e.hp > 0); if (!alive.length) return;
           this.chargeEl(el, ox, oy, 340);
           this.time.delayedCall(this.chargeClimaxMs(el), () => {
-            this.cameras.main.shake(240, 0.009); this.labSnd('s_hit_' + el, 0.7);
+            this.cameras.main.shake(240, 0.009); this.labSnd('s_hit_' + el, 0.7); if (alive[0] && alive[0].sprite) this.boltLaunchFx(el, ox, oy, alive[0].sprite.x, alive[0].sprite.y);
             alive.forEach((e, k) => {
               if (e.dead) return; const dmg = Math.round(atk * 2 * relM(e.el)); this.chakraBolt(ox, oy, e.sprite.x, e.sprite.y, col, e, dmg, 2, hot);
               this.time.delayedCall(360 + k * 40, () => { e.hp = Math.max(0, e.hp - dmg); if (e.hp > 0) this._activeCounter(e, el); this.updateEnemies(); if (e.hp <= 0) this.killEnemy(e); });
@@ -4099,7 +4099,7 @@
           const per = atk * 2 / alive.length;
           this.chargeEl('fire', ox, oy, 360);
           this.time.delayedCall(this.chargeClimaxMs('fire'), () => {
-            this.labSnd(['s_fire1', 's_fire2', 's_fire3'][Math.floor(Math.random() * 3)], 0.62); this.cameras.main.shake(220, 0.008);
+            this.labSnd(['s_fire1', 's_fire2', 's_fire3'][Math.floor(Math.random() * 3)], 0.62); this.cameras.main.shake(220, 0.008); if (alive[0] && alive[0].sprite) this.boltLaunchFx('fire', ox, oy, alive[0].sprite.x, alive[0].sprite.y);
             alive.forEach((e, k) => {
               if (e.dead) return;
               const m = (EL.fire.beats === e.el) ? CONFIG.ADV_MULT : ((EL[e.el] && EL[e.el].beats === 'fire') ? CONFIG.WEAK_MULT : CONFIG.NORM_MULT), dmg = Math.round(per * m);
@@ -4160,7 +4160,7 @@
           const dmg = Math.round(atk * 2 * relM(tgt.el));
           this.chargeEl(card.el, ox, oy, 380);
           this.time.delayedCall(this.chargeClimaxMs(card.el), () => {
-            this.labSnd('s_hit_' + card.el, 0.72); this.chakraBolt(ox, oy, tgt.sprite.x, tgt.sprite.y, col, tgt, dmg, 2, hot);
+            this.labSnd('s_hit_' + card.el, 0.72); this.boltLaunchFx(card.el, ox, oy, tgt.sprite.x, tgt.sprite.y); this.chakraBolt(ox, oy, tgt.sprite.x, tgt.sprite.y, col, tgt, dmg, 2, hot);
             this.cameras.main.shake(220, 0.008);
             this.time.delayedCall(360, () => {
               tgt.hp = Math.max(0, tgt.hp - dmg); if (tgt.hp > 0) this._activeCounter(tgt, card.el);
@@ -4185,7 +4185,7 @@
           const relM = (tel) => (EL[card.el].beats === tel) ? CONFIG.ADV_MULT : ((EL[tel] && EL[tel].beats === card.el) ? CONFIG.WEAK_MULT : CONFIG.NORM_MULT);
           this.chargeEl(card.el, ox, oy, 360);
           this.time.delayedCall(this.chargeClimaxMs(card.el), () => {
-            this.cameras.main.shake(240, 0.009); this.labSnd('s_hit_' + card.el, 0.7);
+            this.cameras.main.shake(240, 0.009); this.labSnd('s_hit_' + card.el, 0.7); if (alive[0] && alive[0].sprite) this.boltLaunchFx(card.el, ox, oy, alive[0].sprite.x, alive[0].sprite.y);
             alive.forEach((en, k) => {
               if (en.dead) return; const dmg = Math.round(atk * 1.6 * relM(en.el)); this.chakraBolt(ox, oy, en.sprite.x, en.sprite.y, col, en, dmg, 2, hot);
               this.time.delayedCall(360 + k * 40, () => { en.hp = Math.max(0, en.hp - dmg); if (en.hp > 0) this._activeCounter(en, card.el); this.updateEnemies(); if (en.hp <= 0) this.killEnemy(en); });
