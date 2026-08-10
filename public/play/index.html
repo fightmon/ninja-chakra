@@ -3792,6 +3792,17 @@
         const ADD = Phaser.BlendModes.ADD, D = DEPTH.proj, g = this.add.graphics().setDepth(D).setBlendMode(ADD), st = { a: 0 }, arms = 3;
         this.tweens.add({ targets: st, a: Math.PI * 4, duration: dur, ease: 'Sine.inOut', onUpdate: () => { g.clear(); for (let k = 0; k < arms; k++) { const base = st.a + k * (Math.PI * 2 / arms); g.lineStyle(3, col, 0.55); g.beginPath(); for (let t = 0; t <= 1.0001; t += 0.12) { const ang = base + t * 2.4, r = 8 + t * 26, px = x + Math.cos(ang) * r, py = y + Math.sin(ang) * r; if (t === 0) g.moveTo(px, py); else g.lineTo(px, py); } g.strokePath(); } }, onComplete: () => { this.tweens.add({ targets: g, alpha: 0, duration: 160, onComplete: () => g.destroy() }); } });   // 3支螺旋臂繞轉兩圈
       }
+      chargeEl(el, x, y, dur) {   // 主動技①集氣分派:依屬性播各自集氣(family/台灣卡的①集氣共用此分派,②效果各自保留);不明屬性退回舊共用 chargeAt
+        const col = (EL[el] && EL[el].color != null) ? EL[el].color : 0xffffff;
+        switch (el) {
+          case 'fire': return this.chargeFire(x, y, col, dur);
+          case 'water': return this.chargeWater(x, y, col, dur);
+          case 'thunder': return this.chargeThunder(x, y, col, dur);
+          case 'earth': return this.chargeEarth(x, y, col, dur);
+          case 'wind': return this.chargeWind(x, y, col, dur);
+          default: return this.chargeAt(x, y, col, dur);
+        }
+      }
       flyBall(ox, oy, tx, ty, color, ctrl, dur, onArrive) {
         const ADD = Phaser.BlendModes.ADD, a = { x: ox, y: oy }, b = { x: tx, y: ty };   // 能量球沿二次貝茲飛(亮核+屬暈+逐段軌跡線),到點 onArrive
         const glow = this.add.circle(ox, oy, 13, color, 0.6).setBlendMode(ADD).setDepth(DEPTH.proj);
@@ -3932,7 +3943,7 @@
         const relM = (tel) => (EL[el].beats === tel) ? CONFIG.ADV_MULT : ((EL[tel] && EL[tel].beats === el) ? CONFIG.WEAK_MULT : CONFIG.NORM_MULT);
         if (fam === 'cat') {   // 🐱疾風連擊:單體 攻×1 連打 3 下(吃相剋)
           const tgt = this.targetEnemy(); if (!tgt) return; const dmg = Math.round(atk * relM(tgt.el));
-          this.chargeAt(ox, oy, col, 280, hot);
+          this.chargeEl(el, ox, oy, 280);
           for (let k = 0; k < 3; k++)this.time.delayedCall(280 + k * 170, () => {
             if (tgt.dead) return; this.labSnd('s_hit_' + el, 0.7); this.chakraBolt(ox, oy, tgt.sprite.x, tgt.sprite.y, col, tgt, dmg, 2, hot); this.cameras.main.shake(110, 0.005);
             this.time.delayedCall(300, () => { tgt.hp = Math.max(0, tgt.hp - dmg); if (tgt.hp > 0) this._activeCounter(tgt, el); this.updateEnemies(); if (tgt.hp <= 0) this.killEnemy(tgt); });
@@ -3941,7 +3952,7 @@
         }
         if (fam === 'dog') {   // 🐶群擊:全體敵 攻×2(吃相剋)
           const alive = this.enemies.filter(e => !e.dead && e.hp > 0); if (!alive.length) return;
-          this.chargeAt(ox, oy, col, 340, hot);
+          this.chargeEl(el, ox, oy, 340);
           this.time.delayedCall(340, () => {
             this.cameras.main.shake(240, 0.009); this.labSnd('s_hit_' + el, 0.7);
             alive.forEach((e, k) => {
@@ -3952,7 +3963,7 @@
           return;
         }
         if (fam === 'bird') {   // 🐦亂鳴:只對「剋屬」的敵人→CD+2(出手延遲 +2,與隊長技同語意,不永久疊 interval)
-          this.chargeAt(ox, oy, col, 360);
+          this.chargeEl(el, ox, oy, 360);
           this.time.delayedCall(360, () => {
             this.cameras.main.shake(200, 0.005); this.labSnd('s_boom', 0.55); let any = false;
             this.enemies.forEach(e => { if (!e.dead && EL[card.el] && EL[card.el].beats === e.el) { any = true; e.timer += 2; if (e.sprite) this.floatText(e.sprite.x, e.sprite.y - 24, '剋屬 CD+2', '#f4da52'); } });
@@ -3962,7 +3973,7 @@
         }
         if (fam === 'rat') {   // 🐭鼠潮:方塊從上方「掉落填補」該屬性宮的空缺(連鐵塊一起砸穿)→ 大 HIT;中性表現(掉方塊,不綁角色,未來換角也通用)
           const b = ELEMENT_BOXES[i], br = Math.floor(b / 3) * 3, bc = (b % 3) * 3, ADD = Phaser.BlendModes.ADD, cenB = this.cellCenter(br + 1, bc + 1), boxSz = 2 * CS + RECT;
-          this.chargeAt(ox, oy, col, 300);
+          this.chargeEl(el, ox, oy, 300);
           this.time.delayedCall(300, () => {
             this.labSnd('s_pick', 0.6);
             const fills = []; for (let r = br; r < br + 3; r++)for (let c = bc; c < bc + 3; c++) { const cur = this.board[r][c]; if (!cur || cur.el === 'junk') fills.push([r, c, !!(cur && cur.el === 'junk')]); }   // 空格 + 鐵塊都要填(鐵塊會被砸穿)
@@ -3991,7 +4002,7 @@
         }
         if (fam === 'fish') {   // 🐟活水:之後 6 手內,清「該屬宮」也按格數回血
           this._fishHeal = { el: el, turns: 6 };
-          this.chargeAt(ox, oy, col, 300);
+          this.chargeEl(el, ox, oy, 300);
           const au = this.add.circle(ox, oy, 16, col, 0.5).setBlendMode(Phaser.BlendModes.ADD).setDepth(DEPTH.proj); this.tweens.add({ targets: au, scale: 2.8, alpha: 0, duration: 560, onComplete: () => au.destroy() });
           this.floatText(CX, PHP_Y - 30, '🐟 活水!' + EL[el].n + '宮清除回血 6 手', '#7fe0ff');
           return;
@@ -4000,7 +4011,7 @@
           this._huajing = { turns: 1, saved: { ...this.boxElement } };
           ELEMENT_BOXES.forEach(b => { if (this.boxElement[b] != null) this.boxElement[b] = el; });
           this.renderTeam(); this.refreshBoard();
-          this.chargeAt(ox, oy, col, 300);
+          this.chargeEl(el, ox, oy, 300);
           this.cameras.main.shake(220, 0.008);
           this.tonFloat('★ 化境 · 全盤化' + EL[el].n, '#e89ab0');
           return;
@@ -4011,7 +4022,7 @@
           const col = EL.fire.color, hot = shadeColor(col, 0.55);
           const alive = this.enemies.filter(e => !e.dead && e.hp > 0); if (!alive.length) return;
           const per = atk * 2 / alive.length;
-          this.chargeAt(ox, oy, col, 360, hot);
+          this.chargeEl('fire', ox, oy, 360);
           this.time.delayedCall(360, () => {
             this.labSnd(['s_fire1', 's_fire2', 's_fire3'][Math.floor(Math.random() * 3)], 0.62); this.cameras.main.shake(220, 0.008);
             alive.forEach((e, k) => {
@@ -4029,7 +4040,7 @@
         }
         if (cid === 'c22') {   // 🐦藍鵲 群鵲圍攻:全體敵出手延遲 +2,CD4
           const col = EL.thunder.color;
-          this.chargeAt(ox, oy, col, 360);
+          this.chargeEl('thunder', ox, oy, 360);
           this.time.delayedCall(360, () => {
             this.cameras.main.shake(200, 0.005);
             this.enemies.forEach((e, k) => { if (!e.dead) { e.timer += 2; this.time.delayedCall(k * 80, () => { this.labSnd('s_boom', 0.55); this.lightningStrike(e); }); if (e.sprite) this.floatText(e.sprite.x, e.sprite.y - 24, '延+2', '#f4da52'); } });
@@ -4039,7 +4050,7 @@
         }
         if (cid === 'c18') {   // 🐟鮭魚 溯流之癒:本手清除按格數額外回血(在 resolve 內結算,單次上限~55%maxHP)
           const col = EL.water.color; this._salmonHeal = true; this._salmonHealed = 0;
-          this.chargeAt(ox, oy, col, 300);
+          this.chargeEl('water', ox, oy, 300);
           const au = this.add.circle(ox, oy, 16, col, 0.5).setBlendMode(Phaser.BlendModes.ADD).setDepth(DEPTH.proj); this.tweens.add({ targets: au, scale: 2.8, alpha: 0, duration: 560, onComplete: () => au.destroy() });
           this.floatText(CX, PHP_Y - 30, '🐟 溯流之癒!這手清除回血', '#7fe0ff');
           return;
@@ -4059,7 +4070,7 @@
         if (cid === 'c36' || cid === 'c37' || cid === 'c38' || cid === 'c39' || cid === 'c40') {   // 🤖鐵機人系(原蜘蛛) 電磁絞鎖:鎖定單敵,出手延遲 +1,CD4(比照 fire/c22 的 targetEnemy() 單體鎖定寫法)
           const tgt = this.targetEnemy(); if (!tgt) return;
           const col = EL[card.el] ? EL[card.el].color : 0xb79bff;
-          this.chargeAt(ox, oy, col, 300);
+          this.chargeEl(card.el, ox, oy, 300);
           this.time.delayedCall(300, () => {
             this.labSnd('s_boom', 0.5); tgt.timer += 1;
             if (tgt.sprite) this.floatText(tgt.sprite.x, tgt.sprite.y - 24, '纏+1', '#b79bff');
@@ -4072,7 +4083,7 @@
           const col = EL[card.el] ? EL[card.el].color : 0xff6a4a, hot = shadeColor(col, 0.55);
           const relM = (tel) => (EL[card.el].beats === tel) ? CONFIG.ADV_MULT : ((EL[tel] && EL[tel].beats === card.el) ? CONFIG.WEAK_MULT : CONFIG.NORM_MULT);
           const dmg = Math.round(atk * 2 * relM(tgt.el));
-          this.chargeAt(ox, oy, col, 380, hot);
+          this.chargeEl(card.el, ox, oy, 380);
           this.time.delayedCall(380, () => {
             this.labSnd('s_hit_' + card.el, 0.72); this.chakraBolt(ox, oy, tgt.sprite.x, tgt.sprite.y, col, tgt, dmg, 2, hot);
             this.cameras.main.shake(220, 0.008);
@@ -4085,7 +4096,7 @@
         }
         if (cid === 'c46' || cid === 'c47' || cid === 'c48' || cid === 'c49' || cid === 'c50') {   // 🧱牆怪系 築牆阻擋:全體敵人出手延遲 +1,CD6(比照蜘蛛單體延遲改為全體;防禦系買時間,無傷害)
           const col = EL[card.el] ? EL[card.el].color : 0xc9a86a;
-          this.chargeAt(ox, oy, col, 320);
+          this.chargeEl(card.el, ox, oy, 320);
           this.time.delayedCall(320, () => {
             this.labSnd('s_boom', 0.5);
             this.enemies.forEach(en => { if (en && !en.dead) { en.timer += 1; if (en.sprite) this.floatText(en.sprite.x, en.sprite.y - 24, '牆+1', '#c9b892'); } });
@@ -4097,7 +4108,7 @@
           const alive = this.enemies.filter(en => !en.dead && en.hp > 0); if (!alive.length) return;
           const col = EL[card.el] ? EL[card.el].color : 0xb06ad0, hot = shadeColor(col, 0.55);
           const relM = (tel) => (EL[card.el].beats === tel) ? CONFIG.ADV_MULT : ((EL[tel] && EL[tel].beats === card.el) ? CONFIG.WEAK_MULT : CONFIG.NORM_MULT);
-          this.chargeAt(ox, oy, col, 360, hot);
+          this.chargeEl(card.el, ox, oy, 360);
           this.time.delayedCall(360, () => {
             this.cameras.main.shake(240, 0.009); this.labSnd('s_hit_' + card.el, 0.7);
             alive.forEach((en, k) => {
@@ -4109,7 +4120,7 @@
         }
         if (cid === 'c56' || cid === 'c57' || cid === 'c58' || cid === 'c59' || cid === 'c60') {   // 🩹史萊姆醫療系 治療凝膠(原藥師系靈藥術式,2026-08-02 改名):回復全隊 HP 35%,CD6(照抄 fireActive() case 'water' 預設「回春之泉」的 this.playerHP 回血寫法,只把回復率從 30% 調到 35% 對齊較高 CD;不動傷害/延遲類邏輯,不影響其他技能)
           const col = EL[card.el] ? EL[card.el].color : 0x4fbf8f, h = Math.round(this.maxHP * 0.35);
-          this.chargeAt(ox, oy, col, 380);
+          this.chargeEl(card.el, ox, oy, 380);
           this.time.delayedCall(380, () => {
             this.labSnd('s_heal', 0.7); this.playerHP = Math.min(this.maxHP, this.playerHP + h);
             this.floatText(CX, PHP_Y - 22, '癒+' + h, '#74e09a'); this.animPlayerHP(true);
@@ -4121,7 +4132,7 @@
       // 重力掉落(東西沉底→依宮上色→同化閃光→湊滿自動清)→ 預留給「貓隊·土貓 c09 椿」;台灣黑熊已改 3×3 巨塊,暫無呼叫者
       _quakeGravity(ox, oy) {
         const ecol = EL.earth.color;
-        this.chargeAt(ox, oy, ecol, 300); this.tonFloat('★ 重力', '#d49a4a');
+        this.chargeEl('earth', ox, oy, 300); this.tonFloat('★ 重力', '#d49a4a');
         this.time.delayedCall(300, () => {
           this.labSnd('s_earth_skill', 0.7); this.cameras.main.shake(280, 0.01);
           const newB = this.board.map(row => row.map(() => null)), moves = [];
