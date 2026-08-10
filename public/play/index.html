@@ -6172,10 +6172,8 @@
         const from = e._hitFromX, TH = 14;   // 打飛方向:攻擊起點在左→往右飛+順時針(dir+1),在右→往左飛+逆時針(dir-1);同欄(近垂直)或無起點(天雷/DoT/風清宮)→隨機
         const dir = (from != null && Math.abs(from - x0) >= TH) ? (from < x0 ? 1 : -1) : (Math.random() < 0.5 ? 1 : -1);
         e._hitFromX = null;
-        this.tweens.add({
-          targets: sp, y: y0 - 100, x: x0 + dir * 52, scaleX: bs * 0.12, scaleY: bs * 0.12, angle: dir * 360, alpha: 0.15, duration: 1500, ease: 'Quad.in',
-          onComplete: () => { this.deathLight(sp.x, sp.y, e.el); sp.setVisible(false); }
-        });
+        this.tweens.add({ targets: sp, y: y0 - 100, x: x0 + dir * 52, angle: dir * 360, duration: 460, ease: 'Quad.out' });   // 打飛:位置+旋轉「快速」射出(短,Quad.out快出)
+        this.tweens.add({ targets: sp, scaleX: bs * 0.12, scaleY: bs * 0.12, alpha: 0.12, duration: 1400, ease: 'Quad.in', onComplete: () => { this.deathLight(sp.x, sp.y, e.el); sp.setVisible(false); } });   // 消失:縮小+淡出「慢」(飛出後慢慢才不見)
       }
       deathLight(x, y, el) {
         const ADD = Phaser.BlendModes.ADD;
