@@ -3935,6 +3935,17 @@
         const colHex = '#' + EL[card.el].color.toString(16).padStart(6, '0');
         this.tonFloat('★ ' + a.name, colHex);
         const cardObj = this.boxCard[ELEMENT_BOXES[i]], atk = cardObj ? cardObj.atk : 200, ox = card.rect.x, oy = card.rect.y;
+        if (this.hitLab) {   // 🧪實驗室:只演「該屬集氣→發動時射一發該屬彈命中敵人」看發動節奏順不順,不跑實際效果(回血/重生/家族技);五屬統一一發彈、純視覺不扣血
+          this.chargeEl(card.el, ox, oy, 400);
+          const _bt = this.targetEnemy() || this.enemies.find(e => !e.dead);
+          this.time.delayedCall(this.chargeClimaxMs(card.el), () => {
+            if (!_bt || !_bt.sprite || _bt.dead) return;
+            const _bc = (EL[card.el] && EL[card.el].color != null) ? EL[card.el].color : 0xffffff, _bh = shadeColor(_bc, 0.5);
+            this.chakraBolt(ox, oy, _bt.sprite.x, _bt.sprite.y, _bc, _bt, 0, 2, _bh); this.cameras.main.shake(120, 0.005); this.labSnd && this.labSnd('s_hit_' + card.el, 0.6);
+          });
+          this.charge = this.teamCards.map((c, k) => { const aa = activeSkill(c.el, this.presetTeam && this.presetTeam[k] && this.presetTeam[k].id); return aa ? aa.cd : 0; });
+          this.updateAll(); this.renderCharges(); return;
+        }
         if (cid && CARD_ACTIVE[cid]) { this._taiwanActive(cid, i, ox, oy, atk, card); }   // 台灣各卡專屬
         else if (cid && CARD_FAMILY[cid]) { this._familyActive(CARD_FAMILY[cid], i, ox, oy, atk, card); }   // 家族扛(貓/犬/鳥/鼠/魚)
         else switch (card.el) {
