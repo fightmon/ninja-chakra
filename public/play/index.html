@@ -3810,8 +3810,9 @@
         this.time.addEvent({ delay: 28, repeat: Math.max(2, Math.floor((conv - 100) / 28)) - 1, callback: () => { for (let j = 0; j < 2; j++) { const sx = x - 34 + Math.random() * 68, st = this.add.rectangle(sx, base, 6 + Math.random() * 4, 6 + Math.random() * 4, col, 0.95).setStrokeStyle(1, 0xffffff, 0.3).setDepth(D); this.tweens.add({ targets: st, y: y - 22 - Math.random() * 10, duration: 260, ease: 'Quad.out', onComplete: () => { this.tweens.add({ targets: st, x: x, y: y, scale: 0.4, alpha: 0.5, duration: 220, ease: 'Quad.in', onComplete: () => st.destroy() }); } }); } } });   // ①小石頭從地平面升起(升更高)→集中到中心
         this.time.delayedCall(conv, () => {   // ②中心成形大塊→往下砸(砸點=卡中心 y)
           const big = this.add.rectangle(x, y - 34, 28, 28, col, 1).setStrokeStyle(3, 0xffffff, 0.5).setDepth(D).setScale(0.4); this.tweens.add({ targets: big, scaleX: 1, scaleY: 1, duration: 130, ease: 'Back.out', onComplete: () => {
-            this.tweens.add({ targets: big, y: y, duration: 140, ease: 'Quad.in', onComplete: () => {   // 往下砸到卡中心
+            this.tweens.add({ targets: big, y: y, duration: 140, ease: 'Quad.in', onComplete: () => {   // 往下砸到卡中心→碎石爆開(攻擊發動在此)
               this.cameras.main.shake(160, 0.008);
+              for (let k = 0; k < 12; k++) { const a = -Math.PI + Math.random() * Math.PI, sp = 34 + Math.random() * 42, frag = this.add.rectangle(x, y, 5 + Math.random() * 5, 5 + Math.random() * 5, col, 1).setStrokeStyle(1.5, 0xffffff, 0.4).setDepth(D); this.tweens.add({ targets: frag, x: x + Math.cos(a) * sp, y: y + Math.sin(a) * sp * 0.7 + 12, angle: Math.random() * 360, alpha: 0, scale: 0.3, duration: 420 + Math.random() * 200, ease: 'Quad.out', onComplete: () => frag.destroy() }); }   // 碎石爆開:12片小石往外上方飛散
               const ring = this.add.circle(x, y + 4, 16, dust, 0).setStrokeStyle(6, shadeColor(col, 0.2), 0.9).setBlendMode(ADD).setDepth(D); this.tweens.add({ targets: ring, scaleX: 5.0, scaleY: 1.2, alpha: 0, duration: 580, ease: 'Quad.out', onComplete: () => ring.destroy() });
               for (let w = 0; w < 5; w++) this.time.delayedCall(w * 90, () => { for (let j = 0; j < 5; j++) { const dir = j < 2 ? -1 : (j < 4 ? 1 : 0), du = this.add.circle(x, y + 4, 6 + Math.random() * 6, dust, 0.72).setBlendMode(ADD).setDepth(D - 1); this.tweens.add({ targets: du, x: x + dir * (32 + Math.random() * 46), y: y - 2 - Math.random() * 26, alpha: 0, scale: 3.4, duration: 660, ease: 'Quad.out', onComplete: () => du.destroy() }); } });   // ③塵土往兩側強噴(5波、更久)
               this.tweens.add({ targets: big, alpha: 0, duration: 240, delay: 160, onComplete: () => big.destroy() });
@@ -3819,16 +3820,19 @@
           } });
         });
       }
-      chargeWind(x, y, col, dur) {   // 🌀氣流臂由小慢→大快,結束像龍卷風收縮消失;碎屑被甩開;之後進點宮模式
-        const ADD = Phaser.BlendModes.ADD, D = DEPTH.proj, arms = 4, g = this.add.graphics().setDepth(D).setBlendMode(ADD);
-        const drawArms = (A, sizeF, al) => { g.clear(); for (let k = 0; k < arms; k++) { const base = A + k * (Math.PI * 2 / arms); g.lineStyle(4, col, 0.6 * al); g.beginPath(); for (let t = 0; t <= 1.0001; t += 0.1) { const ang = base + t * 2.6, r = (10 + t * 46) * sizeF, px = x + Math.cos(ang) * r, py = y + Math.sin(ang) * r; if (t === 0) g.moveTo(px, py); else g.lineTo(px, py); } g.strokePath(); } };
-        const T = Math.max(dur, 1500), TSPIN = Math.PI * 9, st = { p: 0 };
-        this.tweens.add({ targets: st, p: 1, duration: T, ease: 'Linear', onUpdate: () => drawArms(Math.pow(st.p, 1.8) * TSPIN, 0.3 + 0.7 * st.p, 1), onComplete: () => {   // 由小慢→大快:旋轉 p^1.8 加速、半徑 0.3→1
-          const c = { q: 0 }; this.tweens.add({ targets: c, q: 1, duration: 360, ease: 'Quad.in', onUpdate: () => drawArms(TSPIN + c.q * Math.PI * 3, Math.max(0.04, 1 - c.q), 1 - c.q), onComplete: () => g.destroy() });   // 龍卷風收縮消失(邊轉邊縮邊淡),非忽然不見
+      chargeWind(x, y, col, dur) {   // 🌀①臂由大慢→小快集氣(粒子捲進)→②瞬間爆成暴風圈(攻擊在此)→③龍卷風收縮消失;碎屑被甩開後慢淡
+        const ADD = Phaser.BlendModes.ADD, D = DEPTH.proj, arms = 4, T = Math.max(dur, 1500), Tg = Math.round(T * 0.62), g = this.add.graphics().setDepth(D).setBlendMode(ADD);
+        const drawArms = (A, sizeF, al) => { g.clear(); for (let k = 0; k < arms; k++) { const b = A + k * (Math.PI * 2 / arms); g.lineStyle(4, col, 0.6 * al); g.beginPath(); for (let t = 0; t <= 1.0001; t += 0.1) { const ang = b + t * 2.6, r = (10 + t * 46) * sizeF, px = x + Math.cos(ang) * r, py = y + Math.sin(ang) * r; if (t === 0) g.moveTo(px, py); else g.lineTo(px, py); } g.strokePath(); } };
+        const TSPIN = Math.PI * 9, st = { p: 0 };
+        this.tweens.add({ targets: st, p: 1, duration: Tg, ease: 'Quad.in', onUpdate: () => drawArms(Math.pow(st.p, 1.8) * TSPIN, 1 - 0.72 * st.p, 1), onComplete: () => {   // ①集氣:臂由大慢→小快(半徑1→0.28、旋轉加速)
+          const burst = this.add.circle(x, y, 46, col, 0).setStrokeStyle(7, col, 0.9).setBlendMode(ADD).setDepth(D).setScale(0.3); this.tweens.add({ targets: burst, scale: 1.15, alpha: 0, duration: 300, ease: 'Quad.out', onComplete: () => burst.destroy() });   // ②瞬間爆成暴風圈(0.3→1),攻擊發動在此
+          const flash = this.add.circle(x, y, 16, 0xffffff, 0.9).setBlendMode(ADD).setDepth(D); this.tweens.add({ targets: flash, scale: 2.6, alpha: 0, duration: 220, ease: 'Quad.out', onComplete: () => flash.destroy() });
+          const c = { q: 0 }; this.tweens.add({ targets: c, q: 1, duration: 380, ease: 'Quad.in', onUpdate: () => drawArms(TSPIN + c.q * Math.PI * 4, Math.max(0.03, 0.28 * (1 - c.q)), 1 - c.q), onComplete: () => g.destroy() });   // ③龍卷風收縮消失
         } });
-        const leafCol = shadeColor(col, -0.2);   // 碎屑實色+白邊才在明亮天空看得見
-        for (let k = 0; k < 8; k++) { const a0 = Math.random() * Math.PI * 2, r0 = 62 + Math.random() * 40, lf = this.add.rectangle(x + Math.cos(a0) * 12, y + Math.sin(a0) * 12, 13, 6, leafCol, 1).setStrokeStyle(2, 0xffffff, 0.95).setDepth(D + 1), spin = { t: 0 }; this.tweens.add({ targets: spin, t: 1, duration: T + 360, ease: 'Quad.in', onUpdate: () => { const ang = a0 + spin.t * 8, r = 12 + spin.t * spin.t * r0; lf.setPosition(x + Math.cos(ang) * r, y + Math.sin(ang) * r).setRotation(ang + Math.PI / 2); lf.alpha = spin.t < 0.6 ? 1 : Math.max(0, 1 - (spin.t - 0.6) / 0.4); }, onComplete: () => lf.destroy() }); }   // 碎屑加速外拋(r∝t²=被龍卷風甩開)後,最後40%慢慢淡出
+        this.time.addEvent({ delay: 40, repeat: Math.max(2, Math.floor(Tg / 40)) - 1, callback: () => { for (let j = 0; j < 2; j++) { const a = Math.random() * Math.PI * 2, r0 = 46 + Math.random() * 30, p = this.add.rectangle(x + Math.cos(a) * r0, y + Math.sin(a) * r0, 9, 4, shadeColor(col, -0.2), 1).setStrokeStyle(1.5, 0xffffff, 0.9).setRotation(a).setDepth(D + 1); this.tweens.add({ targets: p, x: x, y: y, rotation: a + 2, scale: 0.3, alpha: 0.5, duration: 300 + Math.random() * 160, ease: 'Quad.in', onComplete: () => p.destroy() }); } } });   // 集氣期間:粒子被捲進中心
+        this.time.delayedCall(Tg, () => { const leafCol = shadeColor(col, -0.2); for (let k = 0; k < 8; k++) { const a0 = Math.random() * Math.PI * 2, r0 = 62 + Math.random() * 42, lf = this.add.rectangle(x + Math.cos(a0) * 10, y + Math.sin(a0) * 10, 13, 6, leafCol, 1).setStrokeStyle(2, 0xffffff, 0.95).setDepth(D + 1), spin = { t: 0 }; this.tweens.add({ targets: spin, t: 1, duration: 900, ease: 'Quad.in', onUpdate: () => { const ang = a0 + spin.t * 6, r = 10 + spin.t * spin.t * r0; lf.setPosition(x + Math.cos(ang) * r, y + Math.sin(ang) * r).setRotation(ang + Math.PI / 2); lf.alpha = spin.t < 0.6 ? 1 : Math.max(0, 1 - (spin.t - 0.6) / 0.4); }, onComplete: () => lf.destroy() }); } });   // 碎屑被甩開(爆發後生成)加速外拋,最後40%慢淡
       }
+      chargeClimaxMs(el) { return ({ fire: 902, water: 1000, thunder: 1260, earth: 970, wind: 930 })[el] || 400; }   // 各屬集氣「高潮/攻擊發動」時間(ms):與 chargeXxx 內部 T×係數對齊;攻擊的 delayedCall 用此對齊視覺高潮
       chargeEl(el, x, y, dur) {   // 主動技①集氣分派:依屬性播各自集氣(family/台灣卡的①集氣共用此分派,②效果各自保留);不明屬性退回舊共用 chargeAt
         const col = (EL[el] && EL[el].color != null) ? EL[el].color : 0xffffff;
         switch (el) {
@@ -3927,7 +3931,7 @@
             const col = EL.fire.color, hot = shadeColor(col, 0.55), tgt = this.targetEnemy(); if (!tgt) break;   // 集氣蓄力 → 對「鎖定單敵」大招(AoE 留給拼圖 15 HIT 去賺,不給便宜按鈕);吃相剋
             const dmg = Math.round(atk * 3 * (EL.fire.beats === tgt.el ? CONFIG.ADV_MULT : ((EL[tgt.el] && EL[tgt.el].beats === 'fire') ? CONFIG.WEAK_MULT : CONFIG.NORM_MULT)));   // 火相剋:打風×1.6、打水×0.7、其餘×1.0
             this.chargeFire(ox, oy, col, 420);
-            this.time.delayedCall(420, () => {
+            this.time.delayedCall(this.chargeClimaxMs('fire'), () => {   // 攻擊發動=火苗爆開瞬間
               this.labSnd(['s_fire1', 's_fire2', 's_fire3'][Math.floor(Math.random() * 3)], 0.6); this.chakraBolt(ox, oy, tgt.sprite.x, tgt.sprite.y, col, tgt, dmg, 3, hot);   // 火主動技發射(隨機)
               this.cameras.main.shake(240, 0.009);
               this.time.delayedCall(360, () => {
@@ -3941,7 +3945,7 @@
           case 'water': {
             const col = EL.water.color, h = Math.round(this.maxHP * 0.3);   // 聚氣花火 → 用元素把傷口治好
             this.chargeWater(ox, oy, col, 380);
-            this.time.delayedCall(380, () => {
+            this.time.delayedCall(this.chargeClimaxMs('water'), () => {   // 攻擊發動=水華綻放瞬間
               this.labSnd('s_heal', 0.7); this.playerHP = Math.min(this.maxHP, this.playerHP + h);   // 水主動技回血音
               this.floatText(CX, PHP_Y - 22, '癒+' + h, '#74e09a'); this.animPlayerHP(true);
               const au = this.add.circle(ox, oy, 16, col, 0.5).setBlendMode(Phaser.BlendModes.ADD).setDepth(DEPTH.proj); this.tweens.add({ targets: au, scale: 2.4, alpha: 0, duration: 500, onComplete: () => au.destroy() });
@@ -3951,7 +3955,7 @@
           case 'thunder': {
             const col = EL.thunder.color;   // 聚氣花火 → 天落雷 + 麻痺
             this.chargeThunder(ox, oy, col, 380);
-            this.time.delayedCall(380, () => {
+            this.time.delayedCall(this.chargeClimaxMs('thunder'), () => {   // 攻擊發動=收尾白光銳閃瞬間
               this.cameras.main.shake(220, 0.006);   // 整體只輕抖一次(不每隻各抖)
               this.enemies.forEach((e, k) => { if (!e.dead) { e.timer += 3; this.time.delayedCall(k * 90, () => { this.labSnd('s_boom', 0.6); this.lightningStrike(e); }); if (e.sprite) this.floatText(e.sprite.x, e.sprite.y - 24, '封+3', '#f4da52'); } });
             });   // 雷打下來音(每道)
@@ -3960,10 +3964,10 @@
           case 'earth': {
             const col = EL.earth.color;   // 聚氣花火 → 托盤塊重生
             this.chargeEarth(ox, oy, col, 380);
-            this.time.delayedCall(380, () => { this.labSnd('s_earth_skill', 0.7); this.tonFloat('重生能量塊', '#d49a4a'); this.trayRebirth(); });   // 土主動技塊變形音
+            this.time.delayedCall(this.chargeClimaxMs('earth'), () => { this.labSnd('s_earth_skill', 0.7); this.tonFloat('重生能量塊', '#d49a4a'); this.trayRebirth(); });   // 攻擊發動=碎石爆開瞬間
             break;
           }
-          case 'wind': this.chargeWind(ox, oy, EL.wind.color, 420); this.windSelect(i, atk); break;   // 風:先旋風集氣→進入「點選宮」模式 → 點一宮全清化風刃單體(算 combo)
+          case 'wind': this.chargeWind(ox, oy, EL.wind.color, 420); this.time.delayedCall(this.chargeClimaxMs('wind'), () => this.windSelect(i, atk)); break;   // 風:集氣→暴風圈爆發(攻擊發動)才進「點選宮」模式 → 點一宮全清化風刃單體(算 combo)
         }
         if (this.hitLab) this.charge = this.teamCards.map((c, k) => { const a = activeSkill(c.el, this.presetTeam && this.presetTeam[k] && this.presetTeam[k].id); return a ? a.cd : 0; });   // 實驗室:主動技恆滿
         this.updateAll(); this.renderCharges();
@@ -3981,7 +3985,7 @@
         if (fam === 'cat') {   // 🐱疾風連擊:單體 攻×1 連打 3 下(吃相剋)
           const tgt = this.targetEnemy(); if (!tgt) return; const dmg = Math.round(atk * relM(tgt.el));
           this.chargeEl(el, ox, oy, 280);
-          for (let k = 0; k < 3; k++)this.time.delayedCall(280 + k * 170, () => {
+          for (let k = 0; k < 3; k++)this.time.delayedCall(this.chargeClimaxMs(el) + k * 170, () => {
             if (tgt.dead) return; this.labSnd('s_hit_' + el, 0.7); this.chakraBolt(ox, oy, tgt.sprite.x, tgt.sprite.y, col, tgt, dmg, 2, hot); this.cameras.main.shake(110, 0.005);
             this.time.delayedCall(300, () => { tgt.hp = Math.max(0, tgt.hp - dmg); if (tgt.hp > 0) this._activeCounter(tgt, el); this.updateEnemies(); if (tgt.hp <= 0) this.killEnemy(tgt); });
           });
@@ -3990,7 +3994,7 @@
         if (fam === 'dog') {   // 🐶群擊:全體敵 攻×2(吃相剋)
           const alive = this.enemies.filter(e => !e.dead && e.hp > 0); if (!alive.length) return;
           this.chargeEl(el, ox, oy, 340);
-          this.time.delayedCall(340, () => {
+          this.time.delayedCall(this.chargeClimaxMs(el), () => {
             this.cameras.main.shake(240, 0.009); this.labSnd('s_hit_' + el, 0.7);
             alive.forEach((e, k) => {
               if (e.dead) return; const dmg = Math.round(atk * 2 * relM(e.el)); this.chakraBolt(ox, oy, e.sprite.x, e.sprite.y, col, e, dmg, 2, hot);
@@ -4001,7 +4005,7 @@
         }
         if (fam === 'bird') {   // 🐦亂鳴:只對「剋屬」的敵人→CD+2(出手延遲 +2,與隊長技同語意,不永久疊 interval)
           this.chargeEl(el, ox, oy, 360);
-          this.time.delayedCall(360, () => {
+          this.time.delayedCall(this.chargeClimaxMs(el), () => {
             this.cameras.main.shake(200, 0.005); this.labSnd('s_boom', 0.55); let any = false;
             this.enemies.forEach(e => { if (!e.dead && EL[card.el] && EL[card.el].beats === e.el) { any = true; e.timer += 2; if (e.sprite) this.floatText(e.sprite.x, e.sprite.y - 24, '剋屬 CD+2', '#f4da52'); } });
             if (!any) this.tonFloat('場上無剋屬敵', '#9fb0c0'); this.updateEnemies();
@@ -4011,7 +4015,7 @@
         if (fam === 'rat') {   // 🐭鼠潮:方塊從上方「掉落填補」該屬性宮的空缺(連鐵塊一起砸穿)→ 大 HIT;中性表現(掉方塊,不綁角色,未來換角也通用)
           const b = ELEMENT_BOXES[i], br = Math.floor(b / 3) * 3, bc = (b % 3) * 3, ADD = Phaser.BlendModes.ADD, cenB = this.cellCenter(br + 1, bc + 1), boxSz = 2 * CS + RECT;
           this.chargeEl(el, ox, oy, 300);
-          this.time.delayedCall(300, () => {
+          this.time.delayedCall(this.chargeClimaxMs(el), () => {
             this.labSnd('s_pick', 0.6);
             const fills = []; for (let r = br; r < br + 3; r++)for (let c = bc; c < bc + 3; c++) { const cur = this.board[r][c]; if (!cur || cur.el === 'junk') fills.push([r, c, !!(cur && cur.el === 'junk')]); }   // 空格 + 鐵塊都要填(鐵塊會被砸穿)
             let last = 0;
@@ -4060,7 +4064,7 @@
           const alive = this.enemies.filter(e => !e.dead && e.hp > 0); if (!alive.length) return;
           const per = atk * 2 / alive.length;
           this.chargeEl('fire', ox, oy, 360);
-          this.time.delayedCall(360, () => {
+          this.time.delayedCall(this.chargeClimaxMs('fire'), () => {
             this.labSnd(['s_fire1', 's_fire2', 's_fire3'][Math.floor(Math.random() * 3)], 0.62); this.cameras.main.shake(220, 0.008);
             alive.forEach((e, k) => {
               if (e.dead) return;
@@ -4078,7 +4082,7 @@
         if (cid === 'c22') {   // 🐦藍鵲 群鵲圍攻:全體敵出手延遲 +2,CD4
           const col = EL.thunder.color;
           this.chargeEl('thunder', ox, oy, 360);
-          this.time.delayedCall(360, () => {
+          this.time.delayedCall(this.chargeClimaxMs('thunder'), () => {
             this.cameras.main.shake(200, 0.005);
             this.enemies.forEach((e, k) => { if (!e.dead) { e.timer += 2; this.time.delayedCall(k * 80, () => { this.labSnd('s_boom', 0.55); this.lightningStrike(e); }); if (e.sprite) this.floatText(e.sprite.x, e.sprite.y - 24, '延+2', '#f4da52'); } });
             this.updateEnemies();
@@ -4108,7 +4112,7 @@
           const tgt = this.targetEnemy(); if (!tgt) return;
           const col = EL[card.el] ? EL[card.el].color : 0xb79bff;
           this.chargeEl(card.el, ox, oy, 300);
-          this.time.delayedCall(300, () => {
+          this.time.delayedCall(this.chargeClimaxMs(card.el), () => {
             this.labSnd('s_boom', 0.5); tgt.timer += 1;
             if (tgt.sprite) this.floatText(tgt.sprite.x, tgt.sprite.y - 24, '纏+1', '#b79bff');
             this.updateEnemies();
@@ -4121,7 +4125,7 @@
           const relM = (tel) => (EL[card.el].beats === tel) ? CONFIG.ADV_MULT : ((EL[tel] && EL[tel].beats === card.el) ? CONFIG.WEAK_MULT : CONFIG.NORM_MULT);
           const dmg = Math.round(atk * 2 * relM(tgt.el));
           this.chargeEl(card.el, ox, oy, 380);
-          this.time.delayedCall(380, () => {
+          this.time.delayedCall(this.chargeClimaxMs(card.el), () => {
             this.labSnd('s_hit_' + card.el, 0.72); this.chakraBolt(ox, oy, tgt.sprite.x, tgt.sprite.y, col, tgt, dmg, 2, hot);
             this.cameras.main.shake(220, 0.008);
             this.time.delayedCall(360, () => {
@@ -4134,7 +4138,7 @@
         if (cid === 'c46' || cid === 'c47' || cid === 'c48' || cid === 'c49' || cid === 'c50') {   // 🧱牆怪系 築牆阻擋:全體敵人出手延遲 +1,CD6(比照蜘蛛單體延遲改為全體;防禦系買時間,無傷害)
           const col = EL[card.el] ? EL[card.el].color : 0xc9a86a;
           this.chargeEl(card.el, ox, oy, 320);
-          this.time.delayedCall(320, () => {
+          this.time.delayedCall(this.chargeClimaxMs(card.el), () => {
             this.labSnd('s_boom', 0.5);
             this.enemies.forEach(en => { if (en && !en.dead) { en.timer += 1; if (en.sprite) this.floatText(en.sprite.x, en.sprite.y - 24, '牆+1', '#c9b892'); } });
             this.updateEnemies();
@@ -4146,7 +4150,7 @@
           const col = EL[card.el] ? EL[card.el].color : 0xb06ad0, hot = shadeColor(col, 0.55);
           const relM = (tel) => (EL[card.el].beats === tel) ? CONFIG.ADV_MULT : ((EL[tel] && EL[tel].beats === card.el) ? CONFIG.WEAK_MULT : CONFIG.NORM_MULT);
           this.chargeEl(card.el, ox, oy, 360);
-          this.time.delayedCall(360, () => {
+          this.time.delayedCall(this.chargeClimaxMs(card.el), () => {
             this.cameras.main.shake(240, 0.009); this.labSnd('s_hit_' + card.el, 0.7);
             alive.forEach((en, k) => {
               if (en.dead) return; const dmg = Math.round(atk * 1.6 * relM(en.el)); this.chakraBolt(ox, oy, en.sprite.x, en.sprite.y, col, en, dmg, 2, hot);
@@ -4158,7 +4162,7 @@
         if (cid === 'c56' || cid === 'c57' || cid === 'c58' || cid === 'c59' || cid === 'c60') {   // 🩹史萊姆醫療系 治療凝膠(原藥師系靈藥術式,2026-08-02 改名):回復全隊 HP 35%,CD6(照抄 fireActive() case 'water' 預設「回春之泉」的 this.playerHP 回血寫法,只把回復率從 30% 調到 35% 對齊較高 CD;不動傷害/延遲類邏輯,不影響其他技能)
           const col = EL[card.el] ? EL[card.el].color : 0x4fbf8f, h = Math.round(this.maxHP * 0.35);
           this.chargeEl(card.el, ox, oy, 380);
-          this.time.delayedCall(380, () => {
+          this.time.delayedCall(this.chargeClimaxMs(card.el), () => {
             this.labSnd('s_heal', 0.7); this.playerHP = Math.min(this.maxHP, this.playerHP + h);
             this.floatText(CX, PHP_Y - 22, '癒+' + h, '#74e09a'); this.animPlayerHP(true);
             const au = this.add.circle(ox, oy, 16, col, 0.5).setBlendMode(Phaser.BlendModes.ADD).setDepth(DEPTH.proj); this.tweens.add({ targets: au, scale: 2.4, alpha: 0, duration: 500, onComplete: () => au.destroy() });
