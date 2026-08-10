@@ -3766,45 +3766,55 @@
         });
       }
       // ── 主動技①集氣:五屬各自的發動演出(只換集氣,②效果沿用);純粒子、不動數值。family/台灣卡仍走共用 chargeAt ──
-      chargeFire(x, y, col, dur) {   // 🔥向外炸開的火舌+上竄火星,暖、急、爆裂(誇大版)
-        const ADD = Phaser.BlendModes.ADD, hot = shadeColor(col, 0.55), D = DEPTH.proj;
-        const sw = this.add.circle(x, y, 14, hot, 0).setStrokeStyle(5, hot, 0.9).setBlendMode(ADD).setDepth(D); this.tweens.add({ targets: sw, scale: 3.8, alpha: 0, duration: 330, ease: 'Quad.out', onComplete: () => sw.destroy() });   // 爆炸衝擊環
-        for (let k = 0; k < 16; k++) { const a = Math.random() * Math.PI * 2, len = 34 + Math.random() * 42, t = this.add.rectangle(x, y, 7, 5, k % 2 ? hot : col).setOrigin(0, 0.5).setRotation(a).setBlendMode(ADD).setDepth(D); this.tweens.add({ targets: t, x: x + Math.cos(a) * len, y: y + Math.sin(a) * len, scaleX: 6.5, scaleY: 0.35, alpha: 0, duration: 260 + Math.random() * 150, ease: 'Quad.out', onComplete: () => t.destroy() }); }   // 火舌:16道向外爆射
-        this.time.addEvent({ delay: 30, repeat: Math.max(2, Math.floor(dur / 30)) - 1, callback: () => { for (let j = 0; j < 5; j++) { const px = x - 20 + Math.random() * 40, sp = this.add.circle(px, y + 6, 3.6 + Math.random() * 4, j % 2 ? hot : col, 1).setScale(0.25).setBlendMode(ADD).setDepth(D); this.tweens.add({ targets: sp, y: y - 48 - Math.random() * 64, x: px + (Math.random() * 26 - 13), alpha: 0, scale: 1.5, duration: 680 + Math.random() * 420, ease: 'Quad.out', onComplete: () => sp.destroy() }); } } });   // 上竄火星(由小變大、更久)
-        const fl = this.add.circle(x, y, 18, hot, 0.95).setBlendMode(ADD).setDepth(D); this.tweens.add({ targets: fl, scale: 3.4, alpha: 0, duration: 260, ease: 'Quad.out', onComplete: () => fl.destroy() });   // 起手大閃
-      }
-      chargeWater(x, y, col, dur) {   // 💧水珠從水平面隨機升起→集中到中心→水華綻放+漣漪外擴,柔、慢、療癒
-        const ADD = Phaser.BlendModes.ADD, D = DEPTH.proj, conv = Math.min(dur, 360), base = y + 22;
-        this.time.addEvent({ delay: 30, repeat: Math.max(1, Math.floor((conv - 120) / 30)) - 1, callback: () => { for (let j = 0; j < 2; j++) { const sx = x - 30 + Math.random() * 60, apex = y - 6 - Math.random() * 26, dp = this.add.circle(sx, base, 2.6 + Math.random() * 2.4, col, 0.95).setBlendMode(ADD).setDepth(D); this.tweens.add({ targets: dp, y: apex, duration: 200, ease: 'Quad.out', onComplete: () => { this.tweens.add({ targets: dp, x: x, y: y, scale: 0.3, alpha: 0.4, duration: 200, ease: 'Quad.in', onComplete: () => dp.destroy() }); } }); } } });   // ①水珠從水平面隨機升起→②再集中到中心
-        this.time.delayedCall(conv, () => {   // ③到中心→水華綻放+漣漪外擴
-          const bloom = this.add.circle(x, y, 16, col, 0.55).setBlendMode(ADD).setDepth(D); this.tweens.add({ targets: bloom, scale: 3.8, alpha: 0, duration: 540, ease: 'Sine.out', onComplete: () => bloom.destroy() });
-          for (let k = 0; k < 5; k++) this.time.delayedCall(k * 90, () => { const ring = this.add.circle(x, y, 12, col, 0).setStrokeStyle(4, col, 0.75).setBlendMode(ADD).setDepth(D); this.tweens.add({ targets: ring, scale: 5.0, alpha: 0, duration: 720, ease: 'Sine.out', onComplete: () => ring.destroy() }); });
+      chargeFire(x, y, col, dur) {   // 🔥中心火苗由小火→大火(點火感)+火星從下(y+16)由小變大升起→climax爆開,暖急爆裂
+        const ADD = Phaser.BlendModes.ADD, hot = shadeColor(col, 0.55), D = DEPTH.proj, T = Math.max(dur, 1100), build = Math.round(T * 0.82);
+        const flame = this.add.circle(x, y + 4, 12, col, 0.9).setBlendMode(ADD).setDepth(D).setScale(0.18);   // 中心火苗:從小火燒成大火
+        const fcore = this.add.circle(x, y + 5, 7, hot, 0.95).setBlendMode(ADD).setDepth(D).setScale(0.18);
+        this.tweens.add({ targets: [flame, fcore], scaleX: 1.7, scaleY: 2.1, duration: build, ease: 'Quad.in' });
+        const flick = this.tweens.add({ targets: fcore, alpha: 0.6, duration: 90, yoyo: true, repeat: -1 });   // 火焰閃爍
+        this.time.addEvent({ delay: 30, repeat: Math.max(2, Math.floor(build / 30)) - 1, callback: () => { for (let j = 0; j < 4; j++) { const px = x - 20 + Math.random() * 40, sp = this.add.circle(px, y + 16, 3.6 + Math.random() * 4, j % 2 ? hot : col, 1).setScale(0.2).setBlendMode(ADD).setDepth(D); this.tweens.add({ targets: sp, y: y - 40 - Math.random() * 74, x: px + (Math.random() * 26 - 13), alpha: 0, scale: 1.6, duration: 700 + Math.random() * 460, ease: 'Quad.out', onComplete: () => sp.destroy() }); } } });   // 火星:從下面(y+16)由小變大升起
+        this.time.delayedCall(build, () => {   // climax:火苗爆開
+          flick.stop(); this.tweens.add({ targets: [flame, fcore], scale: 2.8, alpha: 0, duration: 240, ease: 'Quad.out', onComplete: () => { flame.destroy(); fcore.destroy(); } });
+          const sw = this.add.circle(x, y, 14, hot, 0).setStrokeStyle(5, hot, 0.9).setBlendMode(ADD).setDepth(D); this.tweens.add({ targets: sw, scale: 4.4, alpha: 0, duration: 380, ease: 'Quad.out', onComplete: () => sw.destroy() });   // 爆炸衝擊環
+          for (let k = 0; k < 16; k++) { const a = Math.random() * Math.PI * 2, len = 34 + Math.random() * 46, t = this.add.rectangle(x, y, 7, 5, k % 2 ? hot : col).setOrigin(0, 0.5).setRotation(a).setBlendMode(ADD).setDepth(D); this.tweens.add({ targets: t, x: x + Math.cos(a) * len, y: y + Math.sin(a) * len, scaleX: 6.5, scaleY: 0.35, alpha: 0, duration: 280 + Math.random() * 170, ease: 'Quad.out', onComplete: () => t.destroy() }); }   // 火舌爆射
+          const fl = this.add.circle(x, y, 18, hot, 0.95).setBlendMode(ADD).setDepth(D); this.tweens.add({ targets: fl, scale: 3.6, alpha: 0, duration: 280, ease: 'Quad.out', onComplete: () => fl.destroy() });
         });
       }
-      chargeThunder(x, y, col, dur) {   // ⚡①中心集氣(亮核漸大+電點久收,有蓄力感)→②周圍電弧劈啪→③收尾白光銳閃(唯一保持短促)
-        const ADD = Phaser.BlendModes.ADD, D = DEPTH.proj, WH = 0xffffff, conv = Math.max(300, Math.round(dur * 0.62));
-        const core = this.add.circle(x, y, 4, WH, 0.85).setBlendMode(ADD).setDepth(D); this.tweens.add({ targets: core, scale: 3.4, duration: conv, ease: 'Quad.in' });   // ①集氣亮核:慢慢脹大
-        const gcore = this.add.circle(x, y, 9, col, 0.5).setBlendMode(ADD).setDepth(D); this.tweens.add({ targets: gcore, scale: 3.4, duration: conv, ease: 'Quad.in' });
+      chargeWater(x, y, col, dur) {   // 💧水珠從水平面隨機升起→集中到中心→停頓一下→水華綻放+漣漪外擴,柔慢療癒
+        const ADD = Phaser.BlendModes.ADD, D = DEPTH.proj, T = Math.max(dur, 1400), base = y + 22, conv = Math.round(T * 0.5), pause = 300;
+        this.time.addEvent({ delay: 34, repeat: Math.max(1, Math.floor((conv - 120) / 34)) - 1, callback: () => { for (let j = 0; j < 2; j++) { const sx = x - 30 + Math.random() * 60, apex = y - 6 - Math.random() * 30, dp = this.add.circle(sx, base, 2.6 + Math.random() * 2.4, col, 0.95).setBlendMode(ADD).setDepth(D); this.tweens.add({ targets: dp, y: apex, duration: 240, ease: 'Quad.out', onComplete: () => { this.tweens.add({ targets: dp, x: x, y: y, scale: 0.3, alpha: 0.4, duration: 240, ease: 'Quad.in', onComplete: () => dp.destroy() }); } }); } } });   // ①升起→②集中到中心
+        this.time.delayedCall(conv, () => { const held = this.add.circle(x, y, 8, col, 0.85).setBlendMode(ADD).setDepth(D); this.tweens.add({ targets: held, scale: 1.5, duration: pause, ease: 'Sine.inOut', yoyo: true, onComplete: () => held.destroy() }); });   // 停頓:凝聚水核在中心微脹
+        this.time.delayedCall(conv + pause, () => {   // ③水華綻放+漣漪外擴
+          const bloom = this.add.circle(x, y, 16, col, 0.55).setBlendMode(ADD).setDepth(D); this.tweens.add({ targets: bloom, scale: 4.2, alpha: 0, duration: 580, ease: 'Sine.out', onComplete: () => bloom.destroy() });
+          for (let k = 0; k < 6; k++) this.time.delayedCall(k * 95, () => { const ring = this.add.circle(x, y, 12, col, 0).setStrokeStyle(4, col, 0.75).setBlendMode(ADD).setDepth(D); this.tweens.add({ targets: ring, scale: 5.4, alpha: 0, duration: 780, ease: 'Sine.out', onComplete: () => ring.destroy() }); });
+        });
+      }
+      chargeThunder(x, y, col, dur) {   // ⚡①中心集氣(亮核漸大+電點久收)→②周圍電弧劈啪→③收尾白光銳閃(短)→④餘電殘留
+        const ADD = Phaser.BlendModes.ADD, D = DEPTH.proj, WH = 0xffffff, T = Math.max(dur, 1500), conv = Math.round(T * 0.42), arcDur = Math.round(T * 0.42);
+        const core = this.add.circle(x, y, 4, WH, 0.85).setBlendMode(ADD).setDepth(D); this.tweens.add({ targets: core, scale: 3.6, duration: conv, ease: 'Quad.in' });   // ①集氣亮核:慢慢脹大
+        const gcore = this.add.circle(x, y, 9, col, 0.5).setBlendMode(ADD).setDepth(D); this.tweens.add({ targets: gcore, scale: 3.6, duration: conv, ease: 'Quad.in' });
         this.time.addEvent({ delay: 28, repeat: Math.max(2, Math.floor(conv / 28)) - 1, callback: () => { for (let j = 0; j < 2; j++) { const a = Math.random() * Math.PI * 2, r0 = 32 + Math.random() * 30, sp = this.add.rectangle(x + Math.cos(a) * r0, y + Math.sin(a) * r0, 7, 2, Math.random() < 0.5 ? WH : col).setOrigin(0.5).setRotation(a).setBlendMode(ADD).setDepth(D); this.tweens.add({ targets: sp, x: x, y: y, alpha: 0.3, duration: 200 + Math.random() * 120, ease: 'Quad.in', onComplete: () => sp.destroy() }); } } });   // 電點持續往中心收(久)
+        const draw = (gg, cnt, spread, wide, al) => { gg.clear(); for (let k = 0; k < cnt; k++) { const a = Math.random() * Math.PI * 2, r = 14 + Math.random() * spread; let px = x, py = y; gg.lineStyle(wide, Math.random() < 0.45 ? WH : col, al); gg.beginPath(); gg.moveTo(px, py); const seg = 4 + Math.floor(Math.random() * 3); for (let s = 1; s <= seg; s++) { const rr = r * s / seg; px = x + Math.cos(a) * rr + (Math.random() * 12 - 6); py = y + Math.sin(a) * rr + (Math.random() * 12 - 6); gg.lineTo(px, py); } gg.strokePath(); } };
         this.time.delayedCall(conv, () => {   // ②卡片周圍隨機電弧每 40ms 劈啪重畫
           core.destroy(); gcore.destroy();
           const g = this.add.graphics().setDepth(D).setBlendMode(ADD);
-          const draw = () => { g.clear(); const arcs = 5 + Math.floor(Math.random() * 4); for (let k = 0; k < arcs; k++) { const a = Math.random() * Math.PI * 2, r = 22 + Math.random() * 34; let px = x, py = y; g.lineStyle(Math.random() < 0.5 ? 3 : 2, Math.random() < 0.45 ? WH : col, 0.95); g.beginPath(); g.moveTo(px, py); const seg = 4 + Math.floor(Math.random() * 3); for (let s = 1; s <= seg; s++) { const rr = r * s / seg; px = x + Math.cos(a) * rr + (Math.random() * 12 - 6); py = y + Math.sin(a) * rr + (Math.random() * 12 - 6); g.lineTo(px, py); } g.strokePath(); } };
-          const arcDur = Math.max(280, Math.round(dur * 0.7));   // 電弧段也拉長
-          this.time.addEvent({ delay: 40, repeat: Math.max(2, Math.floor(arcDur / 40)) - 1, callback: draw });
-          this.time.delayedCall(arcDur, () => { g.destroy(); const fl = this.add.circle(x, y, 20, WH, 1).setBlendMode(ADD).setDepth(D); this.tweens.add({ targets: fl, scale: 4, alpha: 0, duration: 180, ease: 'Quad.out', onComplete: () => fl.destroy() }); });   // ③收尾白光銳閃(維持短)
+          this.time.addEvent({ delay: 40, repeat: Math.max(2, Math.floor(arcDur / 40)) - 1, callback: () => draw(g, 5 + Math.floor(Math.random() * 4), 42, Math.random() < 0.5 ? 3 : 2, 0.95) });
+          this.time.delayedCall(arcDur, () => {
+            g.destroy(); const fl = this.add.circle(x, y, 20, WH, 1).setBlendMode(ADD).setDepth(D); this.tweens.add({ targets: fl, scale: 4, alpha: 0, duration: 180, ease: 'Quad.out', onComplete: () => fl.destroy() });   // ③收尾白光銳閃(短)
+            const gr = this.add.graphics().setDepth(D).setBlendMode(ADD); this.time.addEvent({ delay: 100, repeat: 3, callback: () => draw(gr, 1 + Math.floor(Math.random() * 2), 16, 1.5, 0.5) }); this.time.delayedCall(480, () => gr.destroy());   // ④餘電:閃完後零星弱電弧殘留(餘電仍在感)
+          });
         });
       }
-      chargeEarth(x, y, col, dur) {   // 🪨①許多小石頭從地平面升起→集中中心→②成大塊往下砸→③塵土往兩側強噴,厚重沉穩
-        const ADD = Phaser.BlendModes.ADD, D = DEPTH.proj, dust = shadeColor(col, -0.12), base = y + 26, conv = Math.min(dur, 300);
-        this.time.addEvent({ delay: 28, repeat: Math.max(2, Math.floor((conv - 100) / 28)) - 1, callback: () => { for (let j = 0; j < 2; j++) { const sx = x - 34 + Math.random() * 68, st = this.add.rectangle(sx, base, 6 + Math.random() * 4, 6 + Math.random() * 4, col, 0.95).setStrokeStyle(1, 0xffffff, 0.3).setDepth(D); this.tweens.add({ targets: st, y: y - 4, duration: 220, ease: 'Quad.out', onComplete: () => { this.tweens.add({ targets: st, x: x, y: y, scale: 0.4, alpha: 0.5, duration: 180, ease: 'Quad.in', onComplete: () => st.destroy() }); } }); } } });   // ①小石頭從地平面升起→集中到中心
-        this.time.delayedCall(conv, () => {   // ②中心成形大塊→往下砸
-          const big = this.add.rectangle(x, y - 8, 26, 26, col, 1).setStrokeStyle(3, 0xffffff, 0.5).setDepth(D).setScale(0.4); this.tweens.add({ targets: big, scaleX: 1, scaleY: 1, duration: 120, ease: 'Back.out', onComplete: () => {
-            this.tweens.add({ targets: big, y: y + 16, duration: 130, ease: 'Quad.in', onComplete: () => {   // 往下砸
-              this.cameras.main.shake(150, 0.007);
-              const ring = this.add.circle(x, y + 18, 16, dust, 0).setStrokeStyle(6, shadeColor(col, 0.2), 0.9).setBlendMode(ADD).setDepth(D); this.tweens.add({ targets: ring, scaleX: 4.8, scaleY: 1.2, alpha: 0, duration: 560, ease: 'Quad.out', onComplete: () => ring.destroy() });
-              for (let w = 0; w < 3; w++) this.time.delayedCall(w * 70, () => { for (let j = 0; j < 5; j++) { const dir = j < 2 ? -1 : (j < 4 ? 1 : 0), du = this.add.circle(x, y + 18, 6 + Math.random() * 6, dust, 0.72).setBlendMode(ADD).setDepth(D - 1); this.tweens.add({ targets: du, x: x + dir * (32 + Math.random() * 42), y: y + 10 - Math.random() * 26, alpha: 0, scale: 3.4, duration: 640, ease: 'Quad.out', onComplete: () => du.destroy() }); } });   // ③塵土往兩側強噴(更多更大更遠更久)
-              this.tweens.add({ targets: big, alpha: 0, duration: 220, delay: 140, onComplete: () => big.destroy() });
+      chargeEarth(x, y, col, dur) {   // 🪨小石頭從地平面升起(升高)→集中中心→成大塊往下砸(砸點=卡中心)→塵土往兩側5波強噴(更久),厚重沉穩
+        const ADD = Phaser.BlendModes.ADD, D = DEPTH.proj, dust = shadeColor(col, -0.12), base = y + 30, T = Math.max(dur, 1400), conv = Math.round(T * 0.5);
+        this.time.addEvent({ delay: 28, repeat: Math.max(2, Math.floor((conv - 100) / 28)) - 1, callback: () => { for (let j = 0; j < 2; j++) { const sx = x - 34 + Math.random() * 68, st = this.add.rectangle(sx, base, 6 + Math.random() * 4, 6 + Math.random() * 4, col, 0.95).setStrokeStyle(1, 0xffffff, 0.3).setDepth(D); this.tweens.add({ targets: st, y: y - 22 - Math.random() * 10, duration: 260, ease: 'Quad.out', onComplete: () => { this.tweens.add({ targets: st, x: x, y: y, scale: 0.4, alpha: 0.5, duration: 220, ease: 'Quad.in', onComplete: () => st.destroy() }); } }); } } });   // ①小石頭從地平面升起(升更高)→集中到中心
+        this.time.delayedCall(conv, () => {   // ②中心成形大塊→往下砸(砸點=卡中心 y)
+          const big = this.add.rectangle(x, y - 34, 28, 28, col, 1).setStrokeStyle(3, 0xffffff, 0.5).setDepth(D).setScale(0.4); this.tweens.add({ targets: big, scaleX: 1, scaleY: 1, duration: 130, ease: 'Back.out', onComplete: () => {
+            this.tweens.add({ targets: big, y: y, duration: 140, ease: 'Quad.in', onComplete: () => {   // 往下砸到卡中心
+              this.cameras.main.shake(160, 0.008);
+              const ring = this.add.circle(x, y + 4, 16, dust, 0).setStrokeStyle(6, shadeColor(col, 0.2), 0.9).setBlendMode(ADD).setDepth(D); this.tweens.add({ targets: ring, scaleX: 5.0, scaleY: 1.2, alpha: 0, duration: 580, ease: 'Quad.out', onComplete: () => ring.destroy() });
+              for (let w = 0; w < 5; w++) this.time.delayedCall(w * 90, () => { for (let j = 0; j < 5; j++) { const dir = j < 2 ? -1 : (j < 4 ? 1 : 0), du = this.add.circle(x, y + 4, 6 + Math.random() * 6, dust, 0.72).setBlendMode(ADD).setDepth(D - 1); this.tweens.add({ targets: du, x: x + dir * (32 + Math.random() * 46), y: y - 2 - Math.random() * 26, alpha: 0, scale: 3.4, duration: 660, ease: 'Quad.out', onComplete: () => du.destroy() }); } });   // ③塵土往兩側強噴(5波、更久)
+              this.tweens.add({ targets: big, alpha: 0, duration: 240, delay: 160, onComplete: () => big.destroy() });
             } });
           } });
         });
@@ -3812,12 +3822,12 @@
       chargeWind(x, y, col, dur) {   // 🌀氣流臂由小慢→大快,結束像龍卷風收縮消失;碎屑被甩開;之後進點宮模式
         const ADD = Phaser.BlendModes.ADD, D = DEPTH.proj, arms = 4, g = this.add.graphics().setDepth(D).setBlendMode(ADD);
         const drawArms = (A, sizeF, al) => { g.clear(); for (let k = 0; k < arms; k++) { const base = A + k * (Math.PI * 2 / arms); g.lineStyle(4, col, 0.6 * al); g.beginPath(); for (let t = 0; t <= 1.0001; t += 0.1) { const ang = base + t * 2.6, r = (10 + t * 46) * sizeF, px = x + Math.cos(ang) * r, py = y + Math.sin(ang) * r; if (t === 0) g.moveTo(px, py); else g.lineTo(px, py); } g.strokePath(); } };
-        const TSPIN = Math.PI * 7, st = { p: 0 };
-        this.tweens.add({ targets: st, p: 1, duration: dur, ease: 'Linear', onUpdate: () => drawArms(Math.pow(st.p, 1.8) * TSPIN, 0.35 + 0.65 * st.p, 1), onComplete: () => {   // 由小慢→大快:旋轉 p^1.8 加速、半徑 0.35→1
-          const c = { q: 0 }; this.tweens.add({ targets: c, q: 1, duration: 320, ease: 'Quad.in', onUpdate: () => drawArms(TSPIN + c.q * Math.PI * 3, Math.max(0.04, 1 - c.q), 1 - c.q), onComplete: () => g.destroy() });   // 龍卷風收縮消失(邊轉邊縮邊淡),非忽然不見
+        const T = Math.max(dur, 1500), TSPIN = Math.PI * 9, st = { p: 0 };
+        this.tweens.add({ targets: st, p: 1, duration: T, ease: 'Linear', onUpdate: () => drawArms(Math.pow(st.p, 1.8) * TSPIN, 0.3 + 0.7 * st.p, 1), onComplete: () => {   // 由小慢→大快:旋轉 p^1.8 加速、半徑 0.3→1
+          const c = { q: 0 }; this.tweens.add({ targets: c, q: 1, duration: 360, ease: 'Quad.in', onUpdate: () => drawArms(TSPIN + c.q * Math.PI * 3, Math.max(0.04, 1 - c.q), 1 - c.q), onComplete: () => g.destroy() });   // 龍卷風收縮消失(邊轉邊縮邊淡),非忽然不見
         } });
         const leafCol = shadeColor(col, -0.2);   // 碎屑實色+白邊才在明亮天空看得見
-        for (let k = 0; k < 8; k++) { const a0 = Math.random() * Math.PI * 2, r0 = 60 + Math.random() * 36, lf = this.add.rectangle(x + Math.cos(a0) * 12, y + Math.sin(a0) * 12, 13, 6, leafCol, 1).setStrokeStyle(2, 0xffffff, 0.95).setDepth(D + 1), spin = { t: 0 }; this.tweens.add({ targets: spin, t: 1, duration: dur + 120, ease: 'Quad.in', onUpdate: () => { const ang = a0 + spin.t * 7, r = 12 + spin.t * spin.t * r0; lf.setPosition(x + Math.cos(ang) * r, y + Math.sin(ang) * r).setRotation(ang + Math.PI / 2); lf.alpha = spin.t < 0.82 ? 1 : Math.max(0, 1 - (spin.t - 0.82) / 0.18); }, onComplete: () => lf.destroy() }); }   // 碎屑加速外拋(r∝t²=像被龍卷風甩開),最後才快速淡出
+        for (let k = 0; k < 8; k++) { const a0 = Math.random() * Math.PI * 2, r0 = 62 + Math.random() * 40, lf = this.add.rectangle(x + Math.cos(a0) * 12, y + Math.sin(a0) * 12, 13, 6, leafCol, 1).setStrokeStyle(2, 0xffffff, 0.95).setDepth(D + 1), spin = { t: 0 }; this.tweens.add({ targets: spin, t: 1, duration: T + 360, ease: 'Quad.in', onUpdate: () => { const ang = a0 + spin.t * 8, r = 12 + spin.t * spin.t * r0; lf.setPosition(x + Math.cos(ang) * r, y + Math.sin(ang) * r).setRotation(ang + Math.PI / 2); lf.alpha = spin.t < 0.6 ? 1 : Math.max(0, 1 - (spin.t - 0.6) / 0.4); }, onComplete: () => lf.destroy() }); }   // 碎屑加速外拋(r∝t²=被龍卷風甩開)後,最後40%慢慢淡出
       }
       chargeEl(el, x, y, dur) {   // 主動技①集氣分派:依屬性播各自集氣(family/台灣卡的①集氣共用此分派,②效果各自保留);不明屬性退回舊共用 chargeAt
         const col = (EL[el] && EL[el].color != null) ? EL[el].color : 0xffffff;
