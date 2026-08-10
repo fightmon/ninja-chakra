@@ -6173,9 +6173,9 @@
         const dir = (from != null && Math.abs(from - x0) >= TH) ? (from < x0 ? 1 : -1) : (Math.random() < 0.5 ? 1 : -1);
         e._hitFromX = null;
         this.tweens.add({
-          targets: sp, y: y0 - 100, x: x0 + dir * 52, scaleX: bs * 0.12, scaleY: bs * 0.12, angle: dir * 360, alpha: 0.15, duration: 1500, ease: 'Quad.in',
+          targets: sp, y: y0 - 100, x: x0 + dir * 52, scaleX: bs * 0.12, scaleY: bs * 0.12, angle: dir * 360, alpha: 0.15, duration: 1500, ease: 'Cubic.out',
           onComplete: () => { this.deathLight(sp.x, sp.y, e.el); sp.setVisible(false); }
-        });   // 打飛:單一動作(飛出+旋轉+縮小+淡出一起,1500ms);方向/角度隨攻擊起點(dir)
+        });   // 打飛:單一動作(飛出+旋轉+縮小+淡出一起,1500ms);先快再慢(Cubic.out);方向/角度隨攻擊起點(dir)
       }
       deathLight(x, y, el) {
         const ADD = Phaser.BlendModes.ADD;
