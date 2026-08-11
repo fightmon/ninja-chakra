@@ -1724,8 +1724,11 @@
       mutSave(s => { s.meta.dayKey = todayKey(); s.meta.dailyN = d.dailyN; });
       return { day: d.reward.day, ic: d.reward.ic, label: d.reward.label, gemEl: null };
     }
-    const GACHA_ROSTER = ROSTER.filter(c => !EVO_CARDS[c.id]);   // 🕷️蜘蛛/👹鬼 雜牌卡只從關卡掉落、不進轉蛋(否則會佔滿 genin 池、癱瘓轉蛋)
-    const RANK_POOL = { genin: GACHA_ROSTER.filter(c => c.rank === 'genin'), chunin: GACHA_ROSTER.filter(c => c.rank === 'chunin'), jonin: GACHA_ROSTER.filter(c => c.rank === 'jonin'), kage: GACHA_ROSTER.filter(c => c.rank === 'kage') };
+    const MONEY_CARDS = new Set(['c71', 'c72', 'c73', 'c74', 'c75', 'c76']);   // 金屬/金錢卡:進「一般轉蛋」、不進「召喚勇者」
+    const PREMIUM_ROSTER = ROSTER.filter(c => !EVO_CARDS[c.id] && !MATERIAL_IDS.has(c.id));   // 🏆召喚勇者池=英雄卡(排妖怪系EVO + 排所有素材:寶玉JEWEL c61-65、金銀 c71-76)→ 只剩 c01-c35 英雄/家族/台灣隊
+    const NORMAL_ROSTER = ROSTER.filter(c => EVO_CARDS[c.id] || MONEY_CARDS.has(c.id));   // 💰一般轉蛋池=妖怪系(鐵機人/哥布林/磚牆/賊鴨/護理/方塊怪)+金/銀卡;寶玉素材(c61-65)兩池都不進
+    const rankPoolOf = (roster) => ({ genin: roster.filter(c => c.rank === 'genin'), chunin: roster.filter(c => c.rank === 'chunin'), jonin: roster.filter(c => c.rank === 'jonin'), kage: roster.filter(c => c.rank === 'kage') });
+    const PREMIUM_POOL = rankPoolOf(PREMIUM_ROSTER), NORMAL_POOL = rankPoolOf(NORMAL_ROSTER);
     function pickDrop(spec) {
       let pool = ROSTER; if (spec.el) pool = pool.filter(c => c.el === spec.el);
       if (spec.rank) pool = pool.filter(c => c.rank === spec.rank); else pool = pool.filter(c => c.rank !== 'kage' && c.rank !== 'jonin');   // 掉落上限2星(關卡只到中級;3★/4★只出轉蛋,2026-07-11定案):未指定 rank 的屬性掉落排除 jonin/kage
@@ -1739,7 +1742,7 @@
       normal: { name: '一般轉蛋', cur: 'coins', icon: '💰', cost1: 1000, cost10: 9000, rates: [['genin', 0.70], ['chunin', 0.28], ['jonin', 0.02]] },
     };
     function rollRarity(rates) { const r = Math.random(); let acc = 0; for (let k = 0; k < rates.length; k++) { acc += rates[k][1]; if (r < acc) return rates[k][0]; } return rates[rates.length - 1][0]; }
-    function gachaPull(bankey) { let pool = RANK_POOL[rollRarity(GACHA[bankey].rates)]; if (!pool || !pool.length) pool = GACHA_ROSTER; return pool[rnd(pool.length)]; }   // ⚠️ 暫時防呆:全卡★3後 genin/chunin/kage 池為空→退回(排除蜘蛛的)全卡均抽(避免崩;正式抽卡機制待定)
+    function gachaPull(bankey) { const isP = bankey === 'premium', roster = isP ? PREMIUM_ROSTER : NORMAL_ROSTER, byRank = isP ? PREMIUM_POOL : NORMAL_POOL; let pool = byRank[rollRarity(GACHA[bankey].rates)]; if (!pool || !pool.length) pool = roster; return pool[rnd(pool.length)]; }   // 召喚勇者→PREMIUM_POOL(英雄);一般轉蛋→NORMAL_POOL(妖怪系+金銀);該 rank 空→退回該轉蛋全池(devGate 測試用,正式抽卡在伺服器)
     function spendCoins(n) { let ok = false; mutSave(s => { if ((s.meta.coins || 0) >= n) { s.meta.coins -= n; ok = true; } }); return ok; }
     const PITY_MAX = 50;   // 召喚勇者保底:第 50 抽必得六星(kage)
     function getPity() { return loadSave().meta.pity || 0; }
@@ -1752,7 +1755,7 @@
         let c, pityHit = false;
         if (bankey === 'premium') {
           let p = getPity();
-          if (p >= PITY_MAX - 1) { c = RANK_POOL.kage[rnd(RANK_POOL.kage.length)]; setPity(0); pityHit = true; }   // 第50抽保底:必六星
+          if (p >= PITY_MAX - 1) { c = PREMIUM_POOL.kage[rnd(PREMIUM_POOL.kage.length)]; setPity(0); pityHit = true; }   // 第50抽保底:必六星(召喚勇者英雄池)
           else { c = gachaPull(bankey); if (c.rank === 'kage') setPity(0); else setPity(p + 1); }                  // 抽到六星歸零、否則+1
         } else { c = gachaPull(bankey); }
         out.push({ cd: c, isNew: !isOwned(c.id), pity: pityHit }); addCard(c.id);
