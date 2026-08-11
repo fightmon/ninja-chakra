@@ -3773,7 +3773,7 @@
           const ADD = Phaser.BlendModes.ADD, col = (EL[card.el] && EL[card.el].color != null) ? EL[card.el].color : 0xffffff, x = card._coin.img.x, y = card._coin.img.y, D = DEPTH.abtn - 1;
           const glow = this.add.circle(x, y, 17, col, 0.55).setBlendMode(ADD).setDepth(D);
           const tw = this.tweens.add({ targets: glow, scale: { from: 0.9, to: 1.35 }, alpha: { from: 0.3, to: 0.72 }, duration: 620, yoyo: true, repeat: -1, ease: 'Sine.inOut' });
-          const wisp = this.time.addEvent({ delay: 120, loop: true, callback: () => { for (let k = 0; k < 2; k++) { const px = x - 10 + Math.random() * 20, p = this.add.rectangle(px, y + 12, 2.5 + Math.random() * 2, 7 + Math.random() * 6, col, 0.85).setBlendMode(ADD).setDepth(D); this.tweens.add({ targets: p, y: y - 16 - Math.random() * 16, x: px + (Math.random() * 8 - 4), scaleY: 0.3, alpha: 0, duration: 480 + Math.random() * 200, ease: 'Quad.out', onComplete: () => p.destroy() }); } } });   // 鬥氣粒子往上噴(硬幣後方)
+          const wisp = this.time.addEvent({ delay: 90, loop: true, callback: () => { for (let k = 0; k < 4; k++) { const px = x - 13 + Math.random() * 26, p = this.add.rectangle(px, y + 12, 2.5 + Math.random() * 2.5, 8 + Math.random() * 7, col, 0.85).setBlendMode(ADD).setDepth(D); this.tweens.add({ targets: p, y: y - 30 - Math.random() * 26, x: px + (Math.random() * 10 - 5), scaleY: 0.3, alpha: 0, duration: 560 + Math.random() * 240, ease: 'Quad.out', onComplete: () => p.destroy() }); } } });   // 鬥氣粒子往上噴(硬幣後方,更多更高)
           card._coinGlowObj = { glow, tw, wisp };
         } else {
           if (!card._coinGlowObj) return;
