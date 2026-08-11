@@ -3700,7 +3700,8 @@
             if (!a) { card._coin.img.setVisible(false); card._coin.txt.setVisible(false); if (card._coin.hit.input) card._coin.hit.input.enabled = false; this._cardAura(card, false); return; }
             card._coin.img.setVisible(true); card._coin.txt.setVisible(true); if (card._coin.hit.input) card._coin.hit.input.enabled = true;
             const rdy = (this.charge[i] || 0) >= a.cd;
-            card._coin.txt.setText(rdy ? (COIN_EL[card.el] || a.icon) : String(Math.max(0, a.cd - (this.charge[i] || 0)))).setFontSize(rdy ? '15px' : '13px');
+            card._coin.img.setTexture(rdy ? this._coinTex(card.el) : this._coinTex('dim')).setDisplaySize(30, 30);   // 未滿→暗底,白數字明顯;滿→彩色元素
+            card._coin.txt.setText(rdy ? (COIN_EL[card.el] || a.icon) : String(Math.max(0, a.cd - (this.charge[i] || 0)))).setFontSize(rdy ? '15px' : '14px');
             this._cardAura(card, rdy);   // 🔥可施放→卡片透出鬥氣
             return;
           }
@@ -3717,7 +3718,7 @@
       _coinTex(el) {   // 🪙預渲染高解析硬幣貼圖(離屏 canvas 3×)→ 存成 Phaser 材質;金框+面漸層+高光+斜面
         const key = 'cointex_' + el; if (this.textures.exists(key)) return key;
         const S = 96, cv = document.createElement('canvas'); cv.width = S; cv.height = S; const g = cv.getContext('2d'), cx = S / 2, cy = S / 2, R = S / 2 - 3;
-        const COL = ({ fire: ['#ff8a63', '#ff5a2e', '#d8420f'], water: ['#6fbaff', '#3aa0ff', '#1e78d0'], thunder: ['#ffd94f', '#f4c430', '#d69f16'], earth: ['#e2b46a', '#cf9a4a', '#a5762f'], wind: ['#93e093', '#6fce6f', '#45a552'] })[el] || ['#ccc', '#999', '#666'];
+        const COL = ({ fire: ['#ff8a63', '#ff5a2e', '#d8420f'], water: ['#6fbaff', '#3aa0ff', '#1e78d0'], thunder: ['#ffd94f', '#f4c430', '#d69f16'], earth: ['#e2b46a', '#cf9a4a', '#a5762f'], wind: ['#93e093', '#6fce6f', '#45a552'], dim: ['#6a6258', '#40392f', '#221e18'] })[el] || ['#ccc', '#999', '#666'];   // dim=未蓄滿的暗底(白數字明顯)
         const rim = g.createLinearGradient(cx - R, cy - R, cx + R, cy + R); rim.addColorStop(0, '#f5d67e'); rim.addColorStop(.3, '#c69518'); rim.addColorStop(.55, '#ffe9ad'); rim.addColorStop(.8, '#a8791e'); rim.addColorStop(1, '#6d4c11');
         g.beginPath(); g.arc(cx, cy, R, 0, Math.PI * 2); g.fillStyle = rim; g.fill();   // ①金框
         const fr = R * 0.74; const face = g.createLinearGradient(cx, cy - fr, cx, cy + fr); face.addColorStop(0, COL[0]); face.addColorStop(.34, COL[1]); face.addColorStop(.66, COL[1]); face.addColorStop(1, COL[2]);
