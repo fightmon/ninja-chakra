@@ -3690,14 +3690,16 @@
       }
       // 主動技蓄力條/發光/icon 同步
       renderCharges() {
-        if (!this.charge) return; this.teamCards.forEach((card, i) => {
+        if (!this.charge) return;
+        const COIN_EL = { fire: '🔥', water: '💧', thunder: '⚡', earth: '🪨', wind: '🌪️' };   // 🪙硬幣中間=元素圖示(跟遊戲其他處一致);非技能icon(家族卡技能icon是🐱🐦不好認)
+        this.teamCards.forEach((card, i) => {
           const a = activeSkill(card.el, this.presetTeam && this.presetTeam[i] && this.presetTeam[i].id);
           if (card._coinEl) {   // 🪙DOM 硬幣鈕:更新圖示/剩餘手數/蓄滿光環;隱藏舊 Phaser 圓鈕
             if (card.abtn) card.abtn.setVisible(false);
             if (!a) { card._coinEl.style.display = 'none'; return; }
             card._coinEl.style.display = '';
             const rdy = (this.charge[i] || 0) >= a.cd;
-            card._coinGlyph.textContent = rdy ? a.icon : String(Math.max(0, a.cd - (this.charge[i] || 0)));
+            card._coinGlyph.textContent = rdy ? (COIN_EL[card.el] || a.icon) : String(Math.max(0, a.cd - (this.charge[i] || 0)));
             card._coinGlyph.classList.toggle('num', !rdy);
             card._coinVis.classList.toggle('ready', rdy);
             return;
