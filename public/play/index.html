@@ -2706,6 +2706,7 @@
         if (this.enemyG) this.enemyG.setAlpha(1);
         this.enemies.forEach(e => { [e.sprite, e.turnG, e.hpGfx, e.shadow, e.gateTx, e.weakBadge].forEach(o => { if (o && o.alpha < 1) o.setAlpha(1); }); });
         this.locked = false;
+        this.teamCards.forEach(c => { if (c._coinEl) c._coinEl.style.visibility = ''; });   // 🪙進場完成→顯示硬幣鈕(進場期間先藏,避免 DOM 疊在橫幅上先露出)
         if (this.stage === 1 && !this.hitLab && !this.enemyLab && !this.tut && ENEMY_BRIEF[this.dungeonId] && ['normal', 'advanced', 'super', 'hell'].includes((this.diff && this.diff.key) || '') && !this._briefSeen(this.dungeonId)) this.time.delayedCall(300, () => this.showEnemyBrief(this.dungeonId));   // 敵情簡報延到進場演出後才彈
       }
       makeEmbers() {
@@ -3726,6 +3727,7 @@
           hit.addEventListener('pointerup', (ev) => { ev.stopPropagation(); this.fireActive(i); });
           card._coinEl = hit; card._coinVis = vis; card._coinGlyph = g;
           card._coinDom = this.add.dom(card.rect.x, CARDS_Y - 40, hit).setDepth(DEPTH.abtn + 5);
+          if (this.dive) hit.style.visibility = 'hidden';   // 🪙進場動畫期間先藏(DOM 疊在畫布上、蓋不住關卡橫幅);reveal 完成才顯示。用 visibility(renderCharges 只動 display,不衝突)
           if (card.abtn) card.abtn.setVisible(false);
         });
         this.renderCharges();
