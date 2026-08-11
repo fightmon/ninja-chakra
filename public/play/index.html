@@ -3702,6 +3702,7 @@
             card._coinGlyph.textContent = rdy ? (COIN_EL[card.el] || a.icon) : String(Math.max(0, a.cd - (this.charge[i] || 0)));
             card._coinGlyph.classList.toggle('num', !rdy);
             card._coinVis.classList.toggle('ready', rdy);
+            this._cardAura(card, rdy);   // 🔥可施放→卡片透出鬥氣
             return;
           }
           if (!card.abtn) return;
@@ -3734,6 +3735,22 @@
         this.teamCards.forEach(c => { if (c._coinEl) { c._coinEl.style.opacity = '0'; c._coinEl.style.pointerEvents = 'none'; } });
         if (this._coinRestoreT) this._coinRestoreT.remove();
         this._coinRestoreT = this.time.delayedCall(ms, () => { this.teamCards.forEach(c => { if (c._coinEl) { c._coinEl.style.opacity = ''; c._coinEl.style.pointerEvents = ''; } }); this._coinRestoreT = null; });
+      }
+      _cardAura(card, on) {   // 🔥蓄滿可施放:卡片透出鬥氣(元素色發光邊框 + 邊緣上竄能量)→「可放技」一眼看出;放技歸零自動收
+        if (on) {
+          if (card._aura || !card.el) return;
+          const ADD = Phaser.BlendModes.ADD, col = (EL[card.el] && EL[card.el].color != null) ? EL[card.el].color : 0xffffff, x = card.rect.x, y = card.rect.y, w = 62, h = 62, D = DEPTH.card - 1;
+          const glow = this.add.graphics().setPosition(x, y).setDepth(D).setBlendMode(ADD); glow.lineStyle(5, col, 0.9); glow.strokeRoundedRect(-w / 2 - 2, -h / 2 - 2, w + 4, h + 4, 9);
+          const pulse = this.tweens.add({ targets: glow, alpha: { from: 0.3, to: 0.85 }, scaleX: { from: 1, to: 1.06 }, scaleY: { from: 1, to: 1.06 }, duration: 620, yoyo: true, repeat: -1, ease: 'Sine.inOut' });
+          const wisp = this.time.addEvent({ delay: 120, loop: true, callback: () => { for (let k = 0; k < 2; k++) { const side = Math.random() < 0.5 ? -1 : 1, px = x + side * (w / 2 - 2 + Math.random() * 5), p = this.add.rectangle(px, y + h / 2 - 6, 3 + Math.random() * 2, 9 + Math.random() * 8, col, 0.8).setBlendMode(ADD).setDepth(D); this.tweens.add({ targets: p, y: y - h / 2 - 8 - Math.random() * 16, x: px + side * (2 + Math.random() * 8), scaleY: 0.3, alpha: 0, duration: 520 + Math.random() * 220, ease: 'Quad.out', onComplete: () => p.destroy() }); } } });
+          card._aura = { glow, pulse, wisp };
+        } else {
+          if (!card._aura) return;
+          if (card._aura.pulse) card._aura.pulse.stop();
+          if (card._aura.wisp) card._aura.wisp.remove();
+          if (card._aura.glow) card._aura.glow.destroy();
+          card._aura = null;
+        }
       }
       // 屬塊存放顯示:無框無底,元素色塊+「明暗漸層流動」(能量在屬性裡流的感覺);新生時彈出一下
       renderStored() {
