@@ -3695,14 +3695,12 @@
         const COIN_EL = { fire: '🔥', water: '💧', thunder: '⚡', earth: '🪨', wind: '🌪️' };   // 🪙硬幣中間=元素圖示(跟遊戲其他處一致);非技能icon(家族卡技能icon是🐱🐦不好認)
         this.teamCards.forEach((card, i) => {
           const a = activeSkill(card.el, this.presetTeam && this.presetTeam[i] && this.presetTeam[i].id);
-          if (card._coinEl) {   // 🪙DOM 硬幣鈕:更新圖示/剩餘手數/蓄滿光環;隱藏舊 Phaser 圓鈕
+          if (card._coin) {   // 🪙硬幣 sprite:更新圖示/剩餘手數/蓄滿鬥氣;隱藏舊 Phaser 圓鈕
             if (card.abtn) card.abtn.setVisible(false);
-            if (!a) { card._coinEl.style.display = 'none'; return; }
-            card._coinEl.style.display = '';
+            if (!a) { card._coin.img.setVisible(false); card._coin.txt.setVisible(false); if (card._coin.hit.input) card._coin.hit.input.enabled = false; this._cardAura(card, false); return; }
+            card._coin.img.setVisible(true); card._coin.txt.setVisible(true); if (card._coin.hit.input) card._coin.hit.input.enabled = true;
             const rdy = (this.charge[i] || 0) >= a.cd;
-            card._coinGlyph.textContent = rdy ? (COIN_EL[card.el] || a.icon) : String(Math.max(0, a.cd - (this.charge[i] || 0)));
-            card._coinGlyph.classList.toggle('num', !rdy);
-            card._coinVis.classList.toggle('ready', rdy);
+            card._coin.txt.setText(rdy ? (COIN_EL[card.el] || a.icon) : String(Math.max(0, a.cd - (this.charge[i] || 0)))).setFontSize(rdy ? '15px' : '13px');
             this._cardAura(card, rdy);   // 🔥可施放→卡片透出鬥氣
             return;
           }
@@ -3716,18 +3714,30 @@
           if (!ready && card.pulse) { card.pulse.stop(); card.pulse = null; card.abtn.setScale(1); }
         });
       }
-      _setupCoinBtns() {   // 🪙主動技鈕=DOM 立體硬幣(金框真實按鈕、任意dpi銳利);全戰鬥模式共用;圖示用遊戲同字型;狀態(圖示/剩餘手數/光環)由 renderCharges 更新
+      _coinTex(el) {   // 🪙預渲染高解析硬幣貼圖(離屏 canvas 3×)→ 存成 Phaser 材質;金框+面漸層+高光+斜面
+        const key = 'cointex_' + el; if (this.textures.exists(key)) return key;
+        const S = 96, cv = document.createElement('canvas'); cv.width = S; cv.height = S; const g = cv.getContext('2d'), cx = S / 2, cy = S / 2, R = S / 2 - 3;
+        const COL = ({ fire: ['#ff8a63', '#ff5a2e', '#d8420f'], water: ['#6fbaff', '#3aa0ff', '#1e78d0'], thunder: ['#ffd94f', '#f4c430', '#d69f16'], earth: ['#e2b46a', '#cf9a4a', '#a5762f'], wind: ['#93e093', '#6fce6f', '#45a552'] })[el] || ['#ccc', '#999', '#666'];
+        const rim = g.createLinearGradient(cx - R, cy - R, cx + R, cy + R); rim.addColorStop(0, '#f5d67e'); rim.addColorStop(.3, '#c69518'); rim.addColorStop(.55, '#ffe9ad'); rim.addColorStop(.8, '#a8791e'); rim.addColorStop(1, '#6d4c11');
+        g.beginPath(); g.arc(cx, cy, R, 0, Math.PI * 2); g.fillStyle = rim; g.fill();   // ①金框
+        const fr = R * 0.74; const face = g.createLinearGradient(cx, cy - fr, cx, cy + fr); face.addColorStop(0, COL[0]); face.addColorStop(.34, COL[1]); face.addColorStop(.66, COL[1]); face.addColorStop(1, COL[2]);
+        g.beginPath(); g.arc(cx, cy, fr, 0, Math.PI * 2); g.fillStyle = face; g.fill();   // ②面(上下淡光)
+        g.save(); g.beginPath(); g.arc(cx, cy, fr, 0, Math.PI * 2); g.clip();
+        const bsh = g.createLinearGradient(cx, cy + fr * 0.25, cx, cy + fr); bsh.addColorStop(0, 'rgba(0,0,0,0)'); bsh.addColorStop(1, 'rgba(0,0,0,.32)'); g.fillStyle = bsh; g.fillRect(cx - fr, cy, 2 * fr, fr);   // 底內陰影
+        g.beginPath(); g.ellipse(cx, cy - fr * 0.4, fr * 0.62, fr * 0.34, 0, 0, Math.PI * 2); const gl = g.createLinearGradient(cx, cy - fr * 0.78, cx, cy - fr * 0.05); gl.addColorStop(0, 'rgba(255,255,255,.44)'); gl.addColorStop(1, 'rgba(255,255,255,0)'); g.fillStyle = gl; g.fill();   // ③頂部薄反光
+        g.restore();
+        g.beginPath(); g.arc(cx, cy, fr, 0, Math.PI * 2); g.strokeStyle = 'rgba(0,0,0,.22)'; g.lineWidth = 1.6; g.stroke();
+        this.textures.addCanvas(key, cv); return key;
+      }
+      _setupCoinBtns() {   // 🪙主動技鈕=預渲染硬幣 sprite(畫布物件→depth 層級自動正確:進場橫幅/技能動畫都會蓋在它上面,不必手動藏);觸及區獨立寬 58×34
         if (this._coinsDone) return; this._coinsDone = true;
-        if (typeof document !== 'undefined' && !document.getElementById('coinbtn-css')) { const st = document.createElement('style'); st.id = 'coinbtn-css'; st.textContent = '.coinhit{width:58px;height:34px;border:none;padding:0;margin:0;background:transparent;cursor:pointer;display:grid;place-items:center;-webkit-tap-highlight-color:transparent;transition:opacity .18s}.coinbtn{--c:#ff5a2e;--cl:#ff8a63;--cd:#d8420f;position:relative;width:30px;height:30px;border-radius:50%;display:grid;place-items:center;background:conic-gradient(from 218deg,#6d4c11,#f5d67e 20%,#c69518 40%,#ffe9ad 55%,#a8791e 74%,#6d4c11);box-shadow:0 2px 4px rgba(0,0,0,.5);transition:transform .09s;pointer-events:none}.coinbtn .face{width:23px;height:23px;border-radius:50%;position:relative;overflow:hidden;display:grid;place-items:center;background:linear-gradient(180deg,var(--cl) 0%,var(--c) 34%,var(--c) 66%,var(--cd) 100%);box-shadow:inset 0 1px 1px rgba(255,255,255,.4),inset 0 -2px 3px rgba(0,0,0,.26),inset 0 0 0 1px rgba(0,0,0,.22)}.coinbtn .face::after{content:"";position:absolute;top:2px;left:14%;right:14%;height:34%;border-radius:50% 50% 42% 42%;background:linear-gradient(180deg,rgba(255,255,255,.34),rgba(255,255,255,0));opacity:.7}.coinbtn .glyph{font-family:"Segoe UI Emoji","GenSen","Microsoft JhengHei",sans-serif;font-size:12px;line-height:1;z-index:1;filter:drop-shadow(0 1px 1px rgba(0,0,0,.55))}.coinbtn .glyph.num{font-weight:800;color:#fff;font-size:13px;filter:none}.coinhit:active .coinbtn{transform:translateY(1px) scale(.96)}.coinbtn.water{--c:#3aa0ff;--cl:#6fbaff;--cd:#1e78d0}.coinbtn.thunder{--c:#f4c430;--cl:#ffd94f;--cd:#d69f16}.coinbtn.earth{--c:#cf9a4a;--cl:#e2b46a;--cd:#a5762f}.coinbtn.wind{--c:#6fce6f;--cl:#93e093;--cd:#45a552}.coinbtn.ready::before{content:"";position:absolute;inset:-2px;border-radius:50%;box-shadow:0 0 0 1.2px rgba(255,255,255,.85),0 0 6px 1px var(--c);animation:coinpulse 1s ease-in-out infinite}@keyframes coinpulse{0%,100%{opacity:.35;transform:scale(1)}50%{opacity:.9;transform:scale(1.05)}}'; document.head.appendChild(st); }
         this.teamCards.forEach((card, i) => {
-          if (!card.el) return;
-          const hit = document.createElement('button'); hit.className = 'coinhit';   // 觸及區:透明、寬(58)、只跟硬幣一樣高(34)→好點又不擋卡片中央屬塊
-          const vis = document.createElement('span'); vis.className = 'coinbtn ' + card.el;   // 視覺:30px 金框硬幣
-          const g = document.createElement('span'); g.className = 'glyph'; const f = document.createElement('span'); f.className = 'face'; f.appendChild(g); vis.appendChild(f); hit.appendChild(vis);
-          hit.addEventListener('pointerup', (ev) => { ev.stopPropagation(); this.fireActive(i); });
-          card._coinEl = hit; card._coinVis = vis; card._coinGlyph = g;
-          card._coinDom = this.add.dom(card.rect.x, CARDS_Y - 40, hit).setDepth(DEPTH.abtn + 5);
-          if (this.dive) hit.style.visibility = 'hidden';   // 🪙進場動畫期間先藏(DOM 疊在畫布上、蓋不住關卡橫幅);reveal 完成才顯示。用 visibility(renderCharges 只動 display,不衝突)
+          if (!card.el) return; const x = card.rect.x, y = CARDS_Y - 40;
+          const img = this.add.image(x, y, this._coinTex(card.el)).setDisplaySize(30, 30).setDepth(DEPTH.abtn);
+          const txt = this.add.text(x, y, '', { fontFamily: EMOJIFONT, fontSize: '14px', color: '#fff', fontStyle: 'bold' }).setOrigin(0.5).setResolution(3).setDepth(DEPTH.abtn + 1);
+          const hit = this.add.zone(x, y, 58, 34).setInteractive({ useHandCursor: true }).setDepth(DEPTH.abtn + 2);
+          hit.on('pointerup', () => this.fireActive(i));
+          card._coin = { img, txt, hit };
           if (card.abtn) card.abtn.setVisible(false);
         });
         this.renderCharges();
@@ -4002,7 +4012,6 @@
         const colHex = '#' + EL[card.el].color.toString(16).padStart(6, '0');
         this.tonFloat('★ ' + a.name, colHex);
         const cardObj = this.boxCard[ELEMENT_BOXES[i]], atk = cardObj ? cardObj.atk : 200, ox = card.rect.x, oy = card.rect.y;
-        this._hideCoinsFor(1800);   // 🪙放技時暫隱硬幣→動畫在最上層演
         if (this.hitLab) {   // 🧪實驗室:只演「該屬集氣→發動時射一發該屬彈命中敵人」看發動節奏順不順,不跑實際效果(回血/重生/家族技);五屬統一一發彈、純視覺不扣血
           this.chargeEl(card.el, ox, oy, 400);
           const _bt = this.targetEnemy() || this.enemies.find(e => !e.dead);
