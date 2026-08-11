@@ -3767,16 +3767,18 @@
           card._aura = null;
         }
       }
-      _coinGlow(card, on) {   // 🪙主動技可施放→硬幣後方元素色脈動光暈(可施放的辨識改在按鈕本身)
+      _coinGlow(card, on) {   // 🪙主動技可施放→硬幣後方元素色脈動光暈 + 鬥氣粒子往上噴
         if (on) {
           if (card._coinGlowObj || !card._coin) return;
-          const ADD = Phaser.BlendModes.ADD, col = (EL[card.el] && EL[card.el].color != null) ? EL[card.el].color : 0xffffff, x = card._coin.img.x, y = card._coin.img.y;
-          const glow = this.add.circle(x, y, 17, col, 0.55).setBlendMode(ADD).setDepth(DEPTH.abtn - 1);
+          const ADD = Phaser.BlendModes.ADD, col = (EL[card.el] && EL[card.el].color != null) ? EL[card.el].color : 0xffffff, x = card._coin.img.x, y = card._coin.img.y, D = DEPTH.abtn - 1;
+          const glow = this.add.circle(x, y, 17, col, 0.55).setBlendMode(ADD).setDepth(D);
           const tw = this.tweens.add({ targets: glow, scale: { from: 0.9, to: 1.35 }, alpha: { from: 0.3, to: 0.72 }, duration: 620, yoyo: true, repeat: -1, ease: 'Sine.inOut' });
-          card._coinGlowObj = { glow, tw };
+          const wisp = this.time.addEvent({ delay: 120, loop: true, callback: () => { for (let k = 0; k < 2; k++) { const px = x - 10 + Math.random() * 20, p = this.add.rectangle(px, y + 12, 2.5 + Math.random() * 2, 7 + Math.random() * 6, col, 0.85).setBlendMode(ADD).setDepth(D); this.tweens.add({ targets: p, y: y - 16 - Math.random() * 16, x: px + (Math.random() * 8 - 4), scaleY: 0.3, alpha: 0, duration: 480 + Math.random() * 200, ease: 'Quad.out', onComplete: () => p.destroy() }); } } });   // 鬥氣粒子往上噴(硬幣後方)
+          card._coinGlowObj = { glow, tw, wisp };
         } else {
           if (!card._coinGlowObj) return;
           if (card._coinGlowObj.tw) card._coinGlowObj.tw.stop();
+          if (card._coinGlowObj.wisp) card._coinGlowObj.wisp.remove();
           if (card._coinGlowObj.glow) card._coinGlowObj.glow.destroy();
           card._coinGlowObj = null;
         }
