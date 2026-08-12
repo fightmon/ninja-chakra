@@ -488,7 +488,7 @@
       { id: 'c46', name: '火磚牆', el: 'fire', race: 'yokai', rank: 'genin', atk: 105, hp: 135, rcv: 8, attrs: ['fire'] },
       { id: 'c47', name: '水磚牆', el: 'water', race: 'yokai', rank: 'genin', atk: 55, hp: 165, rcv: 20, attrs: ['water'] },
       { id: 'c48', name: '雷磚牆', el: 'thunder', race: 'yokai', rank: 'genin', atk: 95, hp: 140, rcv: 12, attrs: ['thunder'] },
-      { id: 'c49', name: '土磚牆', el: 'earth', race: 'yokai', rank: 'genin', atk: 70, hp: 185, rcv: 12, attrs: ['earth'] },
+      { id: 'c49', name: '小石怪', el: 'earth', race: 'yokai', rank: 'genin', atk: 70, hp: 185, rcv: 12, attrs: ['earth'] },   // 土牆怪線改石頭主題(2026-08:小石怪→石頭人→石頭戰士→石頭王);其餘四屬維持磚牆/石牆/鐵牆
       { id: 'c50', name: '風磚牆', el: 'wind', race: 'yokai', rank: 'genin', atk: 85, hp: 150, rcv: 14, attrs: ['wind'] },
       /* ── 🦆 賊鴨系(雜牌卡,鏡像蜘蛛/鬼/牆系:不進 CARD_FAMILY/TW_IDS→保留 genin ★1;魔法攻擊系高攻中血;1★→2★→3★三階進化,見 WITCH_EVO/WITCH_EVO2;風城消卡片塊敵人/魔王借圖;內部 id/物種 key 沿用魔女時期,原名"魔女",2026-07-30 改名賊鴨)── */
       { id: 'c51', name: '火賊鴨', el: 'fire', race: 'yokai', rank: 'genin', atk: 135, hp: 85, rcv: 10, attrs: ['fire'] },
@@ -533,7 +533,7 @@
     const SPIDER_EVO = { c36: '火大鐵機', c37: '水大鐵機', c38: '雷大鐵機', c39: '土大鐵機', c40: '風大鐵機' };
     // 鬼系(現已改名哥布林系)1★→2★進化換名換圖表:進化階(getCardEvo)≥1 → 顯示「◯青年哥布林」+ <id>_e_ 圖
     const GHOST_EVO = { c41: '火青年哥布林', c42: '水青年哥布林', c43: '雷青年哥布林', c44: '土青年哥布林', c45: '風青年哥布林' };
-    const WALL_EVO = { c46: '火石牆', c47: '水石牆', c48: '雷石牆', c49: '土石牆', c50: '風石牆' };   // 牆怪 1★→2★進化換名換圖(鏡像蜘蛛/鬼系):進化階≥1 → 顯示「◯石牆」+ <id>_e_ 圖;土城盾王借石牆 e_full;2★→3★再進化見 WALL_EVO2
+    const WALL_EVO = { c46: '火石牆', c47: '水石牆', c48: '雷石牆', c49: '石頭人', c50: '風石牆' };   // 牆怪 1★→2★進化換名換圖(鏡像蜘蛛/鬼系):進化階≥1 → 顯示「◯石牆」+ <id>_e_ 圖;土城盾王借石牆 e_full;2★→3★再進化見 WALL_EVO2
     const WITCH_EVO = { c51: '火大賊鴨', c52: '水大賊鴨', c53: '雷大賊鴨', c54: '土大賊鴨', c55: '風大賊鴨' };   // 賊鴨(原魔女)1★→2★進化換名換圖:進化階≥1 → 顯示「◯大賊鴨」+ <id>_e_ 圖;風城魔王借圖見 WITCH_EVO2/king_full
     const YAKUSHI_EVO = { c56: '火護士', c57: '水護士', c58: '雷護士', c59: '土護士', c60: '風護士' };   // 史萊姆醫療(原藥師)1★→2★進化換名換圖:進化階≥1 → 顯示「◯護士」+ <id>_e_ 圖;水城魔王借圖見 YAKUSHI_EVO2/king_full
     const BLOCK_EVO = { c66: '火方塊獸', c67: '水方塊獸', c68: '雷方塊獸', c69: '土方塊獸', c70: '風方塊獸' };   // 方塊怪系 1★→2★進化換名換圖:進化階≥1 → 顯示「◯方塊獸」+ <id>_e_ 圖(2026-08-02 加);bonus 關雜兵/魔王借圖
@@ -544,7 +544,7 @@
     const WITCH_EVO2 = { c51: '火盜賊鴨', c52: '水盜賊鴨', c53: '雷盜賊鴨', c54: '土盜賊鴨', c55: '風盜賊鴨' };   // 賊鴨(原魔女)2★→3★再進化名表:進化階≥2 → 顯示「◯盜賊鴨」+ <id>_e2_ 圖(3星,2026-07-30 加);魔王另借 king_full(4星「◯盜賊鴨王」非卡片)
     const SPIDER_EVO2 = { c36: '火邪惡鐵機', c37: '水邪惡鐵機', c38: '雷邪惡鐵機', c39: '土邪惡鐵機', c40: '風邪惡鐵機' };   // 鐵機人(原蜘蛛)2★→3★再進化名表:進化階≥2 → 顯示「◯邪惡鐵機」+ <id>_e2_ 圖(3星,2026-07-31 加);魔王另借 king_full(4星「◯惡鐵王」非卡片)
     const YAKUSHI_EVO2 = { c56: '火醫生', c57: '水醫生', c58: '雷醫生', c59: '土醫生', c60: '風醫生' };   // 史萊姆醫療(原藥師)2★→3★再進化名表:進化階≥2 → 顯示「◯醫生」+ <id>_e2_ 圖(3星,2026-08-02 加);魔王另借 king_full(4星「◯醫學博士」非卡片)
-    const WALL_EVO2 = { c46: '火鐵牆', c47: '水鐵牆', c48: '雷鐵牆', c49: '土鐵牆', c50: '風鐵牆' };   // 牆怪 2★→3★再進化名表:進化階≥2 → 顯示「◯鐵牆」+ <id>_e2_ 圖(3星,2026-08-02 加);魔王另借 king_full(4星「◯城牆王」非卡片)
+    const WALL_EVO2 = { c46: '火鐵牆', c47: '水鐵牆', c48: '雷鐵牆', c49: '石頭戰士', c50: '風鐵牆' };   // 牆怪 2★→3★再進化名表:進化階≥2 → 顯示「◯鐵牆」+ <id>_e2_ 圖(3星,2026-08-02 加);魔王另借 king_full(4星「◯城牆王」非卡片)
     const BLOCK_EVO2 = { c66: '火方塊王', c67: '水方塊王', c68: '雷方塊王', c69: '土方塊王', c70: '風方塊王' };   // 方塊怪系 2★→3★再進化名表:進化階≥2 → 顯示「◯方塊王」+ <id>_e2_ 圖(3星,2026-08-02 加)
     const EVO2_CARDS = Object.assign({}, GHOST_EVO2, WITCH_EVO2, SPIDER_EVO2, YAKUSHI_EVO2, WALL_EVO2, BLOCK_EVO2);   // 合併「可進到 evo2(3星)」名表:目前哥布林系、賊鴨系、鐵機人系、史萊姆醫療系、牆怪系、方塊怪系支援,別的系要開 evo2 往這加
     function cardName(id, ovEvo) { const c = ROSTER.find(x => x.id === id) || {}; const t = getCardEvo(id, ovEvo); if (t >= 2 && EVO2_CARDS[id]) return EVO2_CARDS[id]; return (EVO_CARDS[id] && t >= 1) ? EVO_CARDS[id] : c.name; }   // 卡片顯示名字統一入口(evo2 名表優先於 evo1 名表,再 fallback ROSTER.name)
@@ -5767,7 +5767,7 @@
           if (shakeBig) this.cameras.main.shake(180, 0.007);
           victims.forEach((v, k) => { if (!v.sprite) return; this.time.delayedCall(k * 45, () => this.chakraBolt(cx, cy, v.sprite.x, v.sprite.y, color, v, dmg, 1, hot)); });
           this.time.delayedCall(330, () => {
-            let anyHit = false, anyBlock = false; victims.forEach(v => { if (v._blocked) { anyBlock = true; if (v.sprite && !v.dead) { if (v._nearMiss) { this._shieldNearMiss(v, v._nearMiss); v._nearMiss = null; } else this.floatText(v.sprite.x, v.sprite.y - 18, '🛡 擋下', '#cfe0ff'); } } else { anyHit = true; if (v.dispHp != null) v.dispHp = Math.max(0, v.dispHp - dmg); if (v._shieldBreak) { v._shieldBreak = false; this._breakEnemyShield(v); if (v._breakBonus > 0) { if (v.dispHp != null) v.dispHp = Math.max(0, v.dispHp - v._breakBonus); if (v.sprite) this.floatText(v.sprite.x, v.sprite.y - 42, '破盾 +' + v._breakBonus, '#ffe08a'); } } } if (v._finOrb && el && el !== 'neutral' && (v.finAnyHit || (EL[el] && EL[el].beats === v.el))) this._breakEnemyOrb(v); }); this.updateEnemies();   // 彈著→扣「顯示血量」逐宮下降(真 hp 已在 resolve 同步結清);蓄力中被命中→此刻(彈著後)才打斷:一般需剋屬,finAnyHit(初級哥布林)=任何攻擊屬性即斷
+            let anyHit = false, anyBlock = false; victims.forEach(v => { if (v._blocked) { anyBlock = true; const lk = v.shieldLeak || 0; if (lk > 0 && v.dispHp != null) v.dispHp = Math.max(0, v.dispHp - Math.round(dmg * lk)); if (v.sprite && !v.dead) { if (lk > 0) this.floatText(v.sprite.x, v.sprite.y - 18, '🛡 −' + Math.round(dmg * lk), '#a9c4e8'); else if (v._nearMiss) { this._shieldNearMiss(v, v._nearMiss); v._nearMiss = null; } else this.floatText(v.sprite.x, v.sprite.y - 18, '🛡 擋下', '#cfe0ff'); } } else { anyHit = true; if (v.dispHp != null) v.dispHp = Math.max(0, v.dispHp - dmg); if (v._shieldBreak) { v._shieldBreak = false; this._breakEnemyShield(v); if (v._breakBonus > 0) { if (v.dispHp != null) v.dispHp = Math.max(0, v.dispHp - v._breakBonus); if (v.sprite) this.floatText(v.sprite.x, v.sprite.y - 42, '破盾 +' + v._breakBonus, '#ffe08a'); } } } if (v._finOrb && el && el !== 'neutral' && (v.finAnyHit || (EL[el] && EL[el].beats === v.el))) this._breakEnemyOrb(v); }); this.updateEnemies();   // 彈著→扣「顯示血量」逐宮下降(真 hp 已在 resolve 同步結清);蓄力中被命中→此刻(彈著後)才打斷:一般需剋屬,finAnyHit(初級哥布林)=任何攻擊屬性即斷
             if (anyHit) { if (el && el !== 'neutral') this.labSnd('s_hit_' + el, 0.75); if (bigHit) { this.labSnd('s_boom', 0.6); this.labSnd('s_punch', 0.75); } } else if (anyBlock) { this.labSnd('s_block', 0.75); }
           });   // 彈著配音:各屬命中音 / ≥18重擊疊爆破+重拳 / 擋下用 flying_pan
         });
@@ -5871,7 +5871,7 @@
         //    否則清 5 宮以上時彈著(460+i*150+隨機)落在 endHand(1200ms) 之後:已被這手打死的敵人先出手、
         //    回血/扣血順序又吃 Math.random → 結果不可重放。endHand 靠 hp<=0 跳過已死敵;死亡演出仍由彈著/收尾觸發。
         const perVictim = plan.hits.reduce((s, h) => s + h.dmg, 0);
-        victims.forEach(v => { v.dispHp = v.hp; if (!v._blocked) { let extra = 0; if (v._shieldBreak) { extra = Math.round(perVictim * 0.5); v._breakBonus = extra; } v.hp = Math.max(0, v.hp - perVictim - extra); } });   // dispHp=血條顯示值:彈著逐宮扣、收尾歸還給真 hp;🛡破盾當手追加 0.5× 傷害
+        victims.forEach(v => { v.dispHp = v.hp; if (!v._blocked) { let extra = 0; if (v._shieldBreak) { extra = Math.round(perVictim * 0.5); v._breakBonus = extra; } v.hp = Math.max(0, v.hp - perVictim - extra); } else { const lk = v.shieldLeak || 0; if (lk > 0) { v._chip = Math.round(perVictim * lk); v.hp = Math.max(0, v.hp - v._chip); } } });   // dispHp=血條顯示值:彈著逐宮扣、收尾歸還給真 hp;🛡破盾當手追加 0.5× 傷害;🛡減傷盾(shieldLeak)盾住仍放行部分傷害
         if (this._tutLethalClear) { this._tutLethalClear = false; victims.forEach(v => { if (!v.dead) v.hp = 0; }); }   // 教學⑨火宮收尾安全網:把被打中的敵人殘血歸零(彈著/收尾會演死亡+觸發 win 畢業),不論實際 combo 高低都保證打死
         this.countFX(n);   // 盤面中央只留「n HIT」(清的格數);招式名/盤面 combo 已取消
         { const reps = n >= 18 ? 3 : n >= 15 ? 2 : 1; for (let r = 0; r < reps; r++)this.time.delayedCall(r * 200, () => this.labSnd('s_clear_n', 0.65)); }   // 解宮成功音:powerup10 重複(<15→1、15~17→2、≥18→3,隔 0.2 秒);卡片動畫改在各宮發射時 labCardHop

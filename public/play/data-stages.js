@@ -234,23 +234,24 @@ const OVERRIDES = {
             { el:'water', hp:760, atk:115, turns:2, tier:3, beh:'healAlly', healPct:0.5, healCD:2 } ] },
   ],
   // 🧱土城=牆怪:每隻帶盾(擋傷),清到門檻破盾+當手加成傷;破盾後花CD2詠唱重建盾、雷(剋土)可中止重建。大清(HIT15+)一次破多面盾。門檻:1星HIT12/2星COMBO2/3星HIT15/4星隨機。3隻關前2後1
+  // 入門/初級=教學梯度:S1/S2 全 combo 盾(教「連續清破盾」),S3 中間魔王才是 HIT 盾(教「爆發破盾」)。門檻 入門HIT12<初級HIT15
   'earth:baby': [
-    { es: [ { el:'earth', hp:600, atk:80, turns:2, tier:1, beh:'shield', shieldKind:'hit', hitGate:12 } ] },
-    { es: [ { el:'earth', hp:580, atk:78, turns:2, tier:1, beh:'shield', shieldKind:'hit', hitGate:12 },
-            { el:'earth', hp:580, atk:78, turns:2, tier:1, beh:'shield', shieldKind:'hit', hitGate:12 } ] },
-    { es: [ { el:'earth', hp:580, atk:78, turns:2, tier:1, beh:'shield', shieldKind:'hit', hitGate:12 },
-            { el:'earth', hp:700, atk:88, turns:2, tier:2, beh:'shield', shieldKind:'combo', comboGate:2 },
-            { el:'earth', hp:580, atk:78, turns:2, tier:1, beh:'shield', shieldKind:'hit', hitGate:12 } ] },
+    { es: [ { el:'earth', hp:600, atk:80, turns:2, tier:1, beh:'shield', shieldKind:'combo', comboGate:2 } ] },
+    { es: [ { el:'earth', hp:580, atk:78, turns:2, tier:1, beh:'shield', shieldKind:'combo', comboGate:2 },
+            { el:'earth', hp:580, atk:78, turns:2, tier:1, beh:'shield', shieldKind:'combo', comboGate:2 } ] },
+    { es: [ { el:'earth', hp:580, atk:78, turns:2, tier:1, beh:'shield', shieldKind:'combo', comboGate:2 },
+            { el:'earth', hp:700, atk:88, turns:2, tier:2, beh:'shield', shieldKind:'hit', hitGate:12 },
+            { el:'earth', hp:580, atk:78, turns:2, tier:1, beh:'shield', shieldKind:'combo', comboGate:2 } ] },
   ],
   'earth:beginner': [
     { es: [ { el:'earth', hp:700, atk:92, turns:2, tier:2, beh:'shield', shieldKind:'combo', comboGate:2 },
             { el:'earth', hp:700, atk:92, turns:2, tier:2, beh:'shield', shieldKind:'combo', comboGate:2 } ] },
-    { es: [ { el:'earth', hp:620, atk:85, turns:2, tier:1, beh:'shield', shieldKind:'hit', hitGate:12 },
+    { es: [ { el:'earth', hp:620, atk:85, turns:2, tier:1, beh:'shield', shieldKind:'combo', comboGate:2 },
             { el:'earth', hp:700, atk:92, turns:2, tier:2, beh:'shield', shieldKind:'combo', comboGate:2 },
-            { el:'earth', hp:620, atk:85, turns:2, tier:1, beh:'shield', shieldKind:'hit', hitGate:12 } ] },
-    { es: [ { el:'earth', hp:620, atk:85, turns:2, tier:1, beh:'shield', shieldKind:'hit', hitGate:12 },
+            { el:'earth', hp:620, atk:85, turns:2, tier:1, beh:'shield', shieldKind:'combo', comboGate:2 } ] },
+    { es: [ { el:'earth', hp:620, atk:85, turns:2, tier:1, beh:'shield', shieldKind:'combo', comboGate:2 },
             { el:'earth', hp:800, atk:100, turns:2, tier:3, beh:'shield', shieldKind:'hit', hitGate:15 },
-            { el:'earth', hp:620, atk:85, turns:2, tier:1, beh:'shield', shieldKind:'hit', hitGate:12 } ] },
+            { el:'earth', hp:620, atk:85, turns:2, tier:1, beh:'shield', shieldKind:'combo', comboGate:2 } ] },
   ],
   'earth:normal': [
     { es: [ { el:'earth', hp:760, atk:100, turns:2, tier:2, beh:'shield', shieldKind:'combo', comboGate:2 },
@@ -479,6 +480,9 @@ function spawnStage(dungeonId, diffKey, stageIdx){
       if(d.shieldRandom){ g.shieldRandom=true; g.shieldKind='hit'; g.hitGate=15; g.comboGate=0; }   // 4星城牆王:每次重建隨機 HIT15/COMBO3(初始hit15,重建時 _shieldAct 擲)
       else if(d.shieldKind){ g.shieldKind=d.shieldKind; if(d.shieldKind==='combo'){ g.comboGate=d.comboGate||2; g.hitGate=0; } else { g.hitGate=d.hitGate||15; g.comboGate=0; } }
       else { const kind=(stageIdx===0)?'combo':'hit'; if(kind==='combo'){g.comboGate=2;g.hitGate=0;}else{g.hitGate=15;g.comboGate=0;} g.shieldKind=kind; }
+      // 減傷盾(hybrid,全難度):盾住時「放行」部分傷害(不再全擋),星越高漏越少(1★漏50%/2★漏30%/3★漏10%);
+      //   魔王(4★石頭王)漏0=全擋、非破盾打不動。仍保留破盾(達 HIT/combo 門檻→該手全額+50%)。
+      { const _lk=({1:0.5,2:0.3,3:0.1})[d.tier]; g.shieldLeak=(d.shieldLeak!=null)?d.shieldLeak:(d.boss?0:((_lk!=null)?_lk:0)); }
     }
     // 🔥火城畜力技統一 CD式(CD4、倒數CD3/2/1顯示蓄力):中級雜兵(S1右/S2中)+魔王都套;地獄雜兵(full 非魔王)維持原樣。雜兵給2星哥布林貼圖,魔王維持自身貼圖(中級↑=4星酋長、初級=3星戰士)。||=OVERRIDE 明確值優先
     let tierV=d.tier||0, finCDV=d.finCD||0, finStagesV=d.finStages||0;

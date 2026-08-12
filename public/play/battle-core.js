@@ -197,9 +197,9 @@ class BattleSim {
     // 護盾門檻:本手 HIT/連段沒達標的 victim 這手不扣血
     this.enemies.forEach(e=>{ e._blocked=false; });
     victims.forEach(v=>{ v._blocked = ((v.hitGate&&n<v.hitGate)||(v.comboGate&&this.combo<v.comboGate)); });
-    // 傷害:每宮 dmg 對每個未被擋的 victim 逐宮累加
+    // 傷害:每宮 dmg 對每個未被擋的 victim 逐宮累加;盾住(_blocked)但有 shieldLeak(減傷盾)→放行部分傷害
     const perVictim = plan.hits.reduce((s,h)=>s+h.dmg, 0);
-    victims.forEach(v=>{ if(!v._blocked) v.hp=Math.max(0, v.hp-perVictim); });
+    victims.forEach(v=>{ if(!v._blocked){ v.hp=Math.max(0, v.hp-perVictim); } else { const lk=v.shieldLeak||0; if(lk>0) v.hp=Math.max(0, v.hp-Math.round(perVictim*lk)); } });
     // 無屬區回血:每個 neutral 宮按「被清格數」回血(heal×格數/3),teamRcv>0 才有
     let neutralHeal = 0;
     if(this.teamRcv>0) plan.hits.forEach(h=>{ if(h.el==='neutral'){ const hv=Math.max(1,Math.round(plan.heal*h.cells/3)); this.playerHP=Math.min(this.maxHP,this.playerHP+hv); neutralHeal+=hv; } });
