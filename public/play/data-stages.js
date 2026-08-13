@@ -482,7 +482,7 @@ function spawnStage(dungeonId, diffKey, stageIdx){
       else { const kind=(stageIdx===0)?'combo':'hit'; if(kind==='combo'){g.comboGate=2;g.hitGate=0;}else{g.hitGate=15;g.comboGate=0;} g.shieldKind=kind; }
       // 減傷盾(hybrid,全難度):盾住時「放行」部分傷害(不再全擋),星越高漏越少(1★漏50%/2★漏30%/3★漏10%);
       //   魔王(4★石頭王)漏0=全擋、非破盾打不動。仍保留破盾(達 HIT/combo 門檻→該手全額+50%)。
-      { const _lk=({1:0.5,2:0.3,3:0.1})[d.tier]; g.shieldLeak=(d.shieldLeak!=null)?d.shieldLeak:(d.boss?0:((_lk!=null)?_lk:0)); }
+      { const _lk=({1:0.4,2:0.25,3:0.1})[d.tier]; g.shieldLeak=(d.shieldLeak!=null)?d.shieldLeak:(d.boss?0:((_lk!=null)?_lk:0)); }
     }
     // 🔥火城畜力技統一 CD式(CD4、倒數CD3/2/1顯示蓄力):中級雜兵(S1右/S2中)+魔王都套;地獄雜兵(full 非魔王)維持原樣。雜兵給2星哥布林貼圖,魔王維持自身貼圖(中級↑=4星酋長、初級=3星戰士)。||=OVERRIDE 明確值優先
     let tierV=d.tier||0, finCDV=d.finCD||0, finStagesV=d.finStages||0;
