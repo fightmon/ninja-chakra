@@ -425,6 +425,16 @@ function resolveStages(dungeon, diffKey){
 const BOSS_ATK_MUL = 1.3;    // 魔王攻擊額外倍率(魔王一拳更痛)
 const ENEMY_HP_MUL = 1.8;    // 全域敵 HP 倍率(敵更耐打)
 const ENEMY_ATK_MUL = 1.0;   // 全域敵 atk 倍率(1.0=純資料值×難度,不灌水;高難靠 df.atk 疊)
+// 🔩分層鐵塊(lock)階梯:只有雷城鐵機人(d.iron>0)吃這張表,依難度 dk × 是否魔王(d.boss)決定該顆鐵塊要清幾次才真的消
+//   入門/初級/中級=雜兵魔王都 1 層(維持現況);上級=雜兵1/魔王2;超級/地獄=雜兵2/魔王3(只有魔王吃高層)。ironPunish 現況不動,由各關卡定義自己的 ironPunish 決定要不要罰
+const IRON_LOCK_LADDER = {
+  baby:      { grunt: 1, boss: 1 },
+  beginner:  { grunt: 1, boss: 1 },
+  normal:    { grunt: 1, boss: 1 },
+  advanced:  { grunt: 1, boss: 2 },
+  super:     { grunt: 2, boss: 3 },
+  hell:      { grunt: 2, boss: 3 },
+};
 
 // 招牌行為 → 護盾/DoT 數值(依難度 dk);spawnStage 與 phaseCheck 共用同一份
 // beh → 敵人數值旗標。full=true 完整版(魔王),false 輕鬆版(小關雜兵);率型再吃難度倍率 dm。
@@ -491,7 +501,9 @@ function spawnStage(dungeonId, diffKey, stageIdx){
     let peckN=d.peck||0, peckCD=0;
     if(d.peck>0){ const st=d.boss?(tierV||4):(tierV||1); const P=({1:[1,3],2:[1,2],3:[2,3],4:[2,2]})[st]||[1,2]; peckN=P[0]; peckCD=P[1]; }   // boss 有 tier 用 tier(入門2★/初級3★),沒 tier=4★賊鴨王
     const ival=(finCDV>0)?finCDV:(peckCD>0)?peckCD:(d.healCD>0)?d.healCD:((g.healAlly>0||(g.eatStored>0&&d.boss)||(g.paralyze>0&&d.boss))?1:turns);   // 🦆peckCD=賊鴨星級CD(蓋過 turns)   // 🩹healCD=史萊姆補血CD(=2,蓋過補師預設CD1)   // 🔥finCD=CD式畜力技的總CD(蓋過 turns);💚補師 CD=1;🌀消塊魔王 CD=1;⚡麻痺魔王 CD=1;術士 CD=turns(=2)
-    return {el,max:hp,hp:hp,atk:atk,interval:ival,timer:Math.max(2,ival),burn:0,dead:false,boss:!!d.boss,guard:(!d.boss&&stageHasBoss),...g,phases,phaseIdx:0,arch:d.arch||null,tier:tierV,finStages:finStagesV,finAnyHit:!!d.finAnyHit,finCD:finCDV,cardId:(d.cardId||null),peck:peckN,peckTray:!!d.peckTray,stealStored:!!d.stealStored,iron:d.iron||0,ironPunish:!!d.ironPunish,reviveMax:(d.reviveMax!=null?d.reviveMax:2)};   // 每關初始 timer≥2;tier=星級貼圖;finStages=蓄力段數;finCD>0=CD式畜力;peck>0=🦆賊鴨偷盤面格;iron>0=🤖鐵機人放n連體鐵塊卡位(避開湊滿宮/線、盤面太緊停放;ironPunish=沒清掉下輪2倍打)
+    // 🔩分層鐵塊:只有放鐵塊的敵人(d.iron>0)才吃 IRON_LOCK_LADDER,依難度×是否魔王決定該顆要清幾次;非鐵機人/非雷城敵人完全不帶 lock 欄位(閘門=d.iron>0)
+    const ironLockV = (d.iron>0) ? ((d.lock!=null) ? d.lock : ((IRON_LOCK_LADDER[dk]||IRON_LOCK_LADDER.normal)[d.boss?'boss':'grunt'])) : 0;
+    return {el,max:hp,hp:hp,atk:atk,interval:ival,timer:Math.max(2,ival),burn:0,dead:false,boss:!!d.boss,guard:(!d.boss&&stageHasBoss),...g,phases,phaseIdx:0,arch:d.arch||null,tier:tierV,finStages:finStagesV,finAnyHit:!!d.finAnyHit,finCD:finCDV,cardId:(d.cardId||null),peck:peckN,peckTray:!!d.peckTray,stealStored:!!d.stealStored,iron:d.iron||0,ironPunish:!!d.ironPunish,...(d.iron>0?{lock:ironLockV}:{}),reviveMax:(d.reviveMax!=null?d.reviveMax:2)};   // 每關初始 timer≥2;tier=星級貼圖;finStages=蓄力段數;finCD>0=CD式畜力;peck>0=🦆賊鴨偷盤面格;iron>0=🤖鐵機人放n連體鐵塊卡位(避開湊滿宮/線、盤面太緊停放;ironPunish=沒清掉下輪依 lock 算倍率打);lock=每顆鐵塊要清幾次(見 IRON_LOCK_LADDER,d.iron===0 的敵人不帶這欄位)
   });
 }
 
@@ -537,5 +549,5 @@ function enemyTurn(state, dk){
 
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = { DUNGEONS, STAGES, ELEM_DUNGEONS, DIFFS, DIFFS_BY, counterOf, ARCH, DIFF_RULES, OVERRIDES, resolveStages,
-    BOSS_ATK_MUL, ENEMY_HP_MUL, ENEMY_ATK_MUL, behGates, spawnStage, phaseCheck, enemyTurn };
+    BOSS_ATK_MUL, ENEMY_HP_MUL, ENEMY_ATK_MUL, IRON_LOCK_LADDER, behGates, spawnStage, phaseCheck, enemyTurn };
 }

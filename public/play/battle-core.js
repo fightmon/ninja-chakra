@@ -147,7 +147,12 @@ function computeClears(board, boxElement, boxCard, enemyEl, ampMult, neutralAtk)
     if(el!=null&&card){d+=Math.round(card.atk*mult(el)*ampMult*CONFIG.ELEM_RATE*cn);hel=el;}
     else if(neutralAtk>0){d+=Math.round(neutralAtk*CONFIG.NORM_MULT*ampMult*CONFIG.ELEM_RATE*cn);}   // 無屬宮:= 屬·普通(隊伍最高攻×1.0)
     hits.push({b,el:hel,cells:cn,dmg:Math.round(d)});}
-  return {groups,cells:[...cellSet].map(k=>k.split('_').map(Number)),parts,total,hitWeak,fx,hits};
+  // 🔒分層鐵塊:lock>1 的 iron 格「留下扣層」不進 cells(待移除),另收進 lockDec 給呼叫端扣層;
+  //   沒有 lock(或 lock<=1)的 iron/一般格照舊進 cells(待移除)→ 零回歸(閘門= cell.lock>1)。
+  const cells=[], lockDec=[];
+  cellSet.forEach(k=>{ const p=k.split('_'), r=+p[0], c=+p[1], cell=board[r][c];
+    if(cell && cell.el==='iron' && (cell.lock||1)>1) lockDec.push([r,c]); else cells.push([r,c]); });
+  return {groups,cells,lockDec,parts,total,hitWeak,fx,hits};
 }
 // Node(headless/回放)用:export 同一份。瀏覽器 classic script 無 module → 跳過,定義仍是共用全域。
 // ===== BattleSim:headless 戰鬥模型(純狀態 + 同步運算,無 Phaser)=====
@@ -193,7 +198,8 @@ class BattleSim {
       else if(a==='yin'){ this.amp=Math.max(this.amp,2); }
     });});
     { const atkEls=Object.keys(data.fx); victims.forEach(en=>{ if(!en.dead && atkEls.some(e=>EL[e]&&EL[e].beats===en.el)) en.timer+=1; }); }   // 相剋打弱點→該敵延後出手:AoE(15HIT↑)對每隻被剋敵生效,單體只判鎖定目標
-    data.cells.forEach(([r,c])=>{ this.board[r][c]=null; });   // 立即清盤
+    data.cells.forEach(([r,c])=>{ this.board[r][c]=null; });   // 立即清盤(不含 lock>1 的 iron,已被 computeClears 排除在 cells 外)
+    (data.lockDec||[]).forEach(([r,c])=>{ const cell=this.board[r][c]; if(cell) cell.lock=Math.max(1,(cell.lock||1)-1); });   // 🔒分層鐵塊:扣層不移除(cell 還在盤上)
     // 護盾門檻:本手 HIT/連段沒達標的 victim 這手不扣血
     this.enemies.forEach(e=>{ e._blocked=false; });
     victims.forEach(v=>{ v._blocked = ((v.hitGate&&n<v.hitGate)||(v.comboGate&&this.combo<v.comboGate)); });

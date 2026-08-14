@@ -577,6 +577,7 @@
     // 色彩工具:shadeColor(往白/往黑)、lerpColor(兩色內插)→ 給屬塊「明暗漸層流動」用
     function shadeColor(col, f) { let r = (col >> 16) & 255, g = (col >> 8) & 255, b = col & 255; if (f >= 0) { r += (255 - r) * f; g += (255 - g) * f; b += (255 - b) * f; } else { const k = 1 + f; r *= k; g *= k; b *= k; } return (Math.round(r) << 16) | (Math.round(g) << 8) | Math.round(b); }
     function lerpColor(a, b, t) { const A = [(a >> 16) & 255, (a >> 8) & 255, a & 255], B = [(b >> 16) & 255, (b >> 8) & 255, b & 255]; return (Math.round(A[0] + (B[0] - A[0]) * t) << 16) | (Math.round(A[1] + (B[1] - A[1]) * t) << 8) | Math.round(A[2] + (B[2] - A[2]) * t); }
+    function ironPunishMult(lock) { const lv = Math.max(1, lock | 0); return 1 + 0.25 * Math.pow(2, lv - 1); }   // 🤖鐵機人 ironPunish 倍率(純函式,_ironAct 用):依鐵塊目前最大剩餘 lock 算——1層1.25×/2層1.5×/3層2×
     // 註:卡身(card)壓在 HP/combo之下(照規格);但「卡上的屬塊(store)與主技鈕(abtn)」是可拖/可點的前景配件,提到 HP/combo之上才不會被擋住。兩者空間上不與盤面重疊,故仍排在 board 之下無妨。
     // 版面高度依「當下」裝置比例算(尺寸變化時即時重算),FIT 不黑邊;上下錨定
     let H, TRAY_Y, BY0, CARDS_Y, PHP_Y, INFO_Y, BG_H, BATTLE_CY, BOARD_CY;
@@ -2338,7 +2339,7 @@
       preload() {
         this.load.maxParallelDownloads = 6;   // 限制同時下載數→對弱伺服器/弱網路更穩(避免一次塞太多卡住)
         const _CLS = ['grunt', 'grunt2', 'guard', 'caster', 'healer', 'shield', 'boss_baby', 'boss_beg', 'boss_nrm'];
-        if (this.enemyLab) { for (const el in MONSTER_IMG) if (!this.textures.exists('mon_' + el)) this.load.image('mon_' + el, MONSTER_IMG[el]); for (const k in ENEMY_IMG) if (!this.textures.exists(k)) this.load.image(k, ENEMY_IMG[k]); }   // 敵技實驗室=全載
+        if (this.enemyLab) { for (const el in MONSTER_IMG) if (!this.textures.exists('mon_' + el)) this.load.image('mon_' + el, MONSTER_IMG[el]); for (const k in ENEMY_IMG) if (!this.textures.exists(k)) this.load.image(k, ENEMY_IMG[k]); _loadCardArt(this, ['c38']); }   // 敵技實驗室=全載;🔩補載雷鐵機人(c38)卡圖給「分層鐵塊」demo 借圖用(比照 thunder 城 2354 行)
         else {
           const _els = new Set(), _cids = new Set(); const _nSt = (this.stagesEff || []).length; for (let _si = 0; _si < _nSt; _si++) { if (this.stagesEff[_si] && this.stagesEff[_si].bonus) continue; const _rawSi = (this._bonusStagePos && _si >= this._bonusStagePos) ? _si - 1 : _si; try { spawnStage(this.dungeonId, this.diff.key, _rawSi).forEach(e => { _els.add(e.el); if (e.cardId) _cids.add(e.cardId); if (e.phases) e.phases.forEach(ph => _els.add(ph.el)); }); } catch (_e) { } }
           _cids.forEach(id => _loadCardArt(this, [id]));   // 🆕載本關敵人指定的 cardId(風城跨屬護衛補師c57/哥布林c41/方塊怪c70 等,_loadCardArt 含 _e/_e2 進化圖)   // 只載本關屬性:用 spawnStage 產「真敵人」收集元素(涵蓋上級↑懲罰屬 pun + 魔王階段變身),與 spawnEnemies 完全對齊→動態屬不再漏載變 emoji;原無腦全載 50 檔~5.2MB 大砍;🆕bonus 槽跳過+其後索引 -1 校正(比照 spawnEnemies 的 _si 換算,避免漏載真正 S3+ 的屬性)
@@ -3648,6 +3649,7 @@
         if (this.junkNums) this.junkNums.forEach(t => t.destroy()); this.junkNums = [];
         for (let r = 0; r < N; r++)for (let c = 0; c < N; c++) {
           const cell = this.board[r][c]; if (!cell) continue; const x = BX0 + c * CS, y = BY0 + r * CS, s = RECT;
+          if (cell.el === 'iron' && cell.lock) { this._drawLockIron(g, x, y, s, cell.lock); continue; }   // 🔒分層鐵塊(閘門=cell.lock 有值):換成金屬框+層數斜鋼條畫法,不進舊 junk/iron 畫法;沒有 lock 的塊(含所有現有塊)完全不受影響
           if (cell.el === 'junk' || cell.el === 'iron') {
             const p = 2, t = 3;
             g.fillStyle(0x6d727c, 0.9); g.fillRect(x + p, y + p, s - 2 * p, t); g.fillRect(x + p, y + p, t, s - 2 * p);                       // 左/上亮邊
@@ -3657,6 +3659,22 @@
             if (cell.timer != null) { const nt = this.add.text(x + s / 2, y + s / 2, '' + cell.timer, { fontFamily: EMOJIFONT, fontSize: Math.round(s * 0.5) + 'px', color: '#eef2f8', fontStyle: 'bold', stroke: '#15171c', strokeThickness: 4 }).setOrigin(0.5).setDepth(DEPTH.board + 2); this.junkNums.push(nt); }
           }
         }
+      }
+      _drawLockIron(g, x, y, s, lock) {   // 🔒分層鐵塊外觀:鋼框(深邊+亮內框)+四角鉚釘+層數斜鋼條(lock1=框only/lock2=單斜/lock3=完整X+中央鉚釘);金屬色:base #454f5f、亮 #7d8a9e、深邊 #141820、核心鋼 #2f3744
+        const BASE = 0x454f5f, BRIGHT = 0x7d8a9e, DEEP = 0x141820, CORE = 0x2f3744, p = 2;
+        g.fillStyle(BASE, 1); g.fillRect(x + p, y + p, s - 2 * p, s - 2 * p);
+        g.lineStyle(3, DEEP, 1); g.strokeRect(x + p + 1.5, y + p + 1.5, s - 2 * p - 3, s - 2 * p - 3);
+        g.lineStyle(1.4, BRIGHT, 0.5); g.strokeRect(x + p + 5, y + p + 5, s - 2 * p - 10, s - 2 * p - 10);
+        const rv = Math.max(2, s * 0.075), o = s * 0.2, corners = [[o, o], [s - o, o], [o, s - o], [s - o, s - o]];
+        corners.forEach(([dx, dy]) => { g.fillStyle(DEEP, 1); g.fillCircle(x + dx, y + dy, rv); g.fillStyle(BRIGHT, 0.85); g.fillCircle(x + dx - rv * 0.3, y + dy - rv * 0.3, rv * 0.45); });   // 四角鉚釘(暗底+亮頂圓點)
+        const pad = s * 0.16, barW = Math.max(4, s * 0.14);
+        const bar = (x1, y1, x2, y2) => {
+          g.lineStyle(barW + 2, DEEP, 1); g.beginPath(); g.moveTo(x1, y1); g.lineTo(x2, y2); g.strokePath();
+          g.lineStyle(barW, BASE, 1); g.beginPath(); g.moveTo(x1, y1); g.lineTo(x2, y2); g.strokePath();
+          g.lineStyle(barW * 0.35, BRIGHT, 0.7); g.beginPath(); g.moveTo(x1, y1); g.lineTo(x2, y2); g.strokePath();
+        };   // 斜鋼條同框材質(深邊+底色+亮高光三層描邊,疊出斷面厚度感)
+        if (lock >= 2) bar(x + pad, y + pad, x + s - pad, y + s - pad);   // lock2 起:單斜鋼條(左上→右下)
+        if (lock >= 3) { bar(x + s - pad, y + pad, x + pad, y + s - pad); g.fillStyle(DEEP, 1); g.fillCircle(x + s / 2, y + s / 2, rv * 1.15); g.fillStyle(CORE, 1); g.fillCircle(x + s / 2, y + s / 2, rv * 0.6); }   // lock3:第二道斜鋼條合成完整 X + 中央核心鉚釘
       }
       drawGloss() { const g = this.gloss; if (g) g.clear(); }   // 玻璃光澤/斜角都已拿掉,只留屬色亮邊(描邊);保留空函式避免呼叫端報錯
       // 放塊:能量凝聚成形 —— 屬色凝聚體由略大半透明收實 + 粒子向中心收束 + 格子淡入(只演「放下後仍在盤上」的格)
@@ -3782,6 +3800,27 @@
           if (card._coinGlowObj.glow) card._coinGlowObj.glow.destroy();
           card._coinGlowObj = null;
         }
+      }
+      _enemyKi(e, level) {   // 🔩🔒鐵機人鬥氣(僅敵技實驗室「分層鐵塊」demo 用):強度依牠當前 lock 鐵塊的最大 lock 值——3=強/2=中/1=小/0=收;比照 _cardAura 改寫成敵人版(黃鋼色光暈+上竄鬥氣粒子)
+        if (!e) return;
+        if (!level) { if (e._ki) { if (e._ki.pulse) e._ki.pulse.stop(); if (e._ki.wisp) e._ki.wisp.remove(); if (e._ki.glow) e._ki.glow.destroy(); e._ki = null; } return; }
+        if (!e.sprite) return;
+        if (e._ki) { if (e._ki.level === level) return; if (e._ki.pulse) e._ki.pulse.stop(); if (e._ki.wisp) e._ki.wisp.remove(); if (e._ki.glow) e._ki.glow.destroy(); e._ki = null; }
+        const ADD = Phaser.BlendModes.ADD, col = 0xffd94f;   // 雷/鋼鬥氣配色:黃鋼色(呼應鐵機人+雷屬)
+        const scale = level === 3 ? 1 : level === 2 ? 0.68 : 0.42, rate = level === 3 ? 70 : level === 2 ? 110 : 170, cnt = level === 3 ? 3 : level === 2 ? 2 : 1;
+        const x = e.sprite.x, y = e.sprite.y, R = Math.max(28, (e.cardW || 64) * 0.5 * scale + 18), D = DEPTH.fx - 1;
+        const glow = this.add.circle(x, y, R, col, 0.14 + 0.22 * scale).setBlendMode(ADD).setDepth(D);
+        const pulse = this.tweens.add({ targets: glow, scaleX: { from: 0.9, to: 1.18 }, scaleY: { from: 0.9, to: 1.18 }, alpha: { from: 0.1 + 0.18 * scale, to: 0.15 + 0.4 * scale }, duration: 560, yoyo: true, repeat: -1, ease: 'Sine.inOut' });
+        const wisp = this.time.addEvent({
+          delay: rate, loop: true, callback: () => {
+            if (!e.sprite || e.dead) return;
+            for (let k = 0; k < cnt; k++) {
+              const px = e.sprite.x - R * 0.5 + Math.random() * R, p = this.add.rectangle(px, e.sprite.y + R * 0.3, 3 + Math.random() * 2, 9 + Math.random() * 7, col, 0.85).setBlendMode(ADD).setDepth(D);
+              this.tweens.add({ targets: p, y: e.sprite.y - R * 0.9 - Math.random() * 18, x: px + (Math.random() * 10 - 5), scaleY: 0.3, alpha: 0, duration: 520 + Math.random() * 220, ease: 'Quad.out', onComplete: () => p.destroy() });
+            }
+          }
+        });
+        e._ki = { glow, pulse, wisp, level };
       }
       // 屬塊存放顯示:無框無底,元素色塊+「明暗漸層流動」(能量在屬性裡流的感覺);新生時彈出一下
       renderStored() {
@@ -4460,6 +4499,7 @@
         mk(cx4[0], r4[3], '變宮屬', 0x10303a, 0x4ab0c8, '#bfeefc', () => this.demoLabSwapBox());
         mk(cx4[1], r4[3], '詠唱復活', 0x10352a, 0x3ac88a, '#bfffe0', () => this.demoLabRevive());   // 按1詠唱、按2復活;詠唱中解宮→彈著打斷
         mk(cx4[2], r4[3], '預告消塊', 0x1d3a10, 0x7ac83a, '#dcffb0', () => this.demoLabEatCast());   // 按1預告(塊形狀浮敵前)、按2結算(塊還在→消/被用掉→封卡)
+        mk(cx4[3], r4[3], '分層鐵塊', 0x20242c, 0x7d8a9e, '#dbe2ec', () => this.demoLabIronLock());   // 🔒新按鈕:換鐵機人敵圖+鍛造疊層放一個 lock:3 的 iron 塊(_ironLockForge:框→單斜→X 逐級長出)+強鬥氣;清該塊所在線→逐層剝(小砸碎)→碎(大爆碎),鬥氣同步降
         if (this.teamCards) this.teamCards.slice(0, 3).forEach(c => { if (c && c.el) this.storeBlock(c.el, 2); });   // 給前 3 卡初始屬塊→可測「消屬塊」
       }
       _poisonTick() {   // 中毒:每手(實驗室=每次重置)扣血一輪,扣完輪數自動解;太低自動回滿以利連測
@@ -4471,16 +4511,21 @@
       _labReset() {   // 固定排法:rows0,1,3,5 滿(除 col4)→ 填 col4:1×2 清 rows0-1(18HIT)、1×1 清 row3、1×1 清 row5(可疊 3combo)
         this._poisonTick();
         const survivors = [];   // 鐵塊跨重置保留 + 倒數 -1,歸 0 演消失(才測得到倒數)
+        const lockSurvivors = [];   // 🔒分層鐵塊(el:'iron'&&lock)跨重置原樣保留,不隨重置倒數(只由清線扣層,見 resolve)
         for (let r = 0; r < 6; r++)for (let c = 0; c < 9; c++) {
-          const cell = this.board[r][c]; if (!(cell && cell.el === 'junk')) continue;
-          const t = (cell.timer != null ? cell.timer : 3) - 1;
-          if (t <= 0) { this._junkShatter(BX0 + c * CS + RECT / 2, BY0 + r * CS + RECT / 2, 0x8a7d6d, 'expire'); this.labSnd && this.labSnd('s_fall', 0.5); } else survivors.push([r, c, t]);
+          const cell = this.board[r][c];
+          if (cell && cell.el === 'junk') {
+            const t = (cell.timer != null ? cell.timer : 3) - 1;
+            if (t <= 0) { this._junkShatter(BX0 + c * CS + RECT / 2, BY0 + r * CS + RECT / 2, 0x8a7d6d, 'expire'); this.labSnd && this.labSnd('s_fall', 0.5); } else survivors.push([r, c, t]);
+          } else if (cell && cell.el === 'iron' && cell.lock) { lockSurvivors.push([r, c, cell.lock]); }
         }
         this.board = this.board.map(row => row.map(() => null));
         const fill = (r) => { for (let c = 0; c < 9; c++)if (c !== 4) this.board[r][c] = { el: this.boxElement[boxOf(r, c)] || 'neutral' }; };
         fill(0); fill(1); fill(3); fill(5);
         survivors.forEach(([r, c, t]) => { this.board[r][c] = { el: 'junk', timer: t }; });   // 鐵塊蓋回固定排法
+        lockSurvivors.forEach(([r, c, lock]) => { this.board[r][c] = { el: 'iron', lock }; });   // 🔒分層鐵塊蓋回固定排法(蓋在 fill() 之後,同 junk survivors 的作法)
         this.refreshBoard();
+        if (this.enemyLab) this._syncLabIronKi && this._syncLabIronKi();   // 重置後鬥氣狀態跟著現存 lock 鐵塊同步
         this.tray = [{ c: [[0, 0], [1, 0]], used: false }, { c: [[0, 0]], used: false }, { c: [[0, 0]], used: false }]; this.combo = 0; this.renderTray();
       }
       _bez(a, c, b, t) { const u = 1 - t; return { x: u * u * a.x + 2 * u * t * c.x + t * t * b.x, y: u * u * a.y + 2 * u * t * c.y + t * t * b.y }; }
@@ -4574,6 +4619,22 @@
         this._eneLunge(e); this._eneFly(sx, sy, cen.x, cen.y, 0x666666, 340, () => {
           this.labSnd && this.labSnd('s_boom', 0.6); this.labSnd && this.labSnd('s_block', 0.7); cells.forEach(([r, c]) => { this.board[r][c] = { el: 'junk', timer: 3 }; }); this.refreshBoard(); this.cameras.main.shake(180, 0.007);
           cells.forEach(([r, c], k) => this.time.delayedCall(k * 80, () => { this._junkForge(BX0 + c * CS + RECT / 2, BY0 + r * CS + RECT / 2); this.labSnd && this.labSnd('s_block', 0.5); }));   // 3 格逐一鍛造砸下
+        });
+      }
+      demoLabIronLock() {   // 🔒分層鐵塊demo:敵圖換雷鐵機人(c38)+放一個 lock:3 的 iron 塊在固定排法的 col4 缺口(該行本就 8/9 滿→下手放塊就會清到它);清一次只扣層不移除,層數見底才真的碎;鬥氣強度隨最大 lock 同步
+        const e = this._labBoss(); if (!e) return;
+        if (e.cardId !== 'c38') {   // 換敵圖成雷鐵機人卡圖(enemyTexKey 優先吃 e.cardId,見 2377 行);preload 已補載 c38(2341 行)
+          e.cardId = 'c38'; e.tier = e.tier || 1;
+          if (e.sprite && e.img) { const tk = this.enemyTexKey(e); if (tk && this.textures.exists(tk)) { e.sprite.setTexture(tk); this.fitEnemySprite(e); e.restY = e.sprite.y; } }
+        }
+        const gaps = [[0, 4], [1, 4], [3, 4], [5, 4]].filter(([r, c]) => !this.board[r][c]);   // 固定排法(_labReset)裡本就留空的 4 個 col4 缺口,挑一個沒被占用的
+        if (!gaps.length) { this.tonFloat('缺口已被占用,先清盤或重置再試', '#9fb0c0'); return; }
+        const [r, c] = gaps[Math.floor(Math.random() * gaps.length)], cen = this.cellCenter(r, c), sx = e.sprite ? e.sprite.x : CX, sy = e.sprite ? e.sprite.y : 60;
+        this._eneLunge(e); this._eneFly(sx, sy, cen.x, cen.y, 0xffd94f, 340, () => {
+          this.labSnd && this.labSnd('s_boom', 0.6);
+          this.cameras.main.shake(140, 0.005);   // 落地衝擊(鍛造疊層的每一級各自還有自己的小震+FX,見 _ironLockForge)
+          e._ironCells = [[r, c]];   // 記自己放的格(比照真關卡 _ironAct),讓 _syncIronKi 能認得這是這隻鐵機人自己的塊
+          this._ironLockForge && this._ironLockForge(r, c, 3, () => { this._syncLabIronKi && this._syncLabIronKi(); });   // 一層一層疊上去(框→單斜→X),疊完 lock=3 後鬥氣同步升到強
         });
       }
       demoLabParalyze() {
@@ -4725,6 +4786,17 @@
         });
       }
       _labBoss() { return this.enemies && (this.enemies.find(e => e.boss && !e.dead) || this.enemies.find(e => !e.dead)); }   // 魔王技目標=王(沒王就第一隻)
+      _syncIronKi(e) {   // 🔩通用:依「e 自己放的鐵塊(e._ironCells)」現存格的最大 lock 值同步牠的鬥氣(3強/2中/1小/0收);lab demo 與真關卡(_ironAct)共用同一份,多隻鐵機人各自算各自的 _ironCells,互不影響;只認 el==='iron'&&lock>0 的格→非鐵機人(沒有 _ironCells)、無 lock 的舊塊(cell.lock 為 undefined)都不會觸發
+        if (!e || !this.board) return;
+        if (!e._ironCells || !e._ironCells.length) { this._enemyKi(e, 0); return; }
+        let maxLock = 0;
+        e._ironCells.forEach(rc => { const cell = this.board[rc[0]] && this.board[rc[0]][rc[1]]; if (cell && cell.el === 'iron' && cell.lock > maxLock) maxLock = cell.lock; });
+        this._enemyKi(e, maxLock);
+      }
+      _syncLabIronKi() {   // 🔒分層鐵塊demo 用的薄包裝:只同步試驗室的王(_labBoss);真關卡走 resolve() 裡對「所有帶 _ironCells 的敵人」各自呼叫 _syncIronKi,不經過這裡
+        if (!this.enemyLab || !this.board) return;
+        const boss = this._labBoss(); if (boss) this._syncIronKi(boss);
+      }
       demoLabAbsorb() {   // ⭐元素吸收:王身上掛屬色光環(循環換屬,讀得出吸什麼);用屬色而非小徽章→好讀又不破壞「藏小招」
         const e = this._labBoss(); if (!e || !e.sprite) return; const els = ['fire', 'water', 'thunder', 'earth', 'wind'];
         e._absI = (e._absI == null ? -1 : e._absI) + 1; if (e._absI >= els.length) { e._absI = null; this._clearAbsorb(e); return; }
@@ -5064,21 +5136,32 @@
         }
         this.enemyAttack(e); e.timer = e.interval;
       }
-      _ironAct(e) {   // 🤖鐵機人出手:普通攻擊 + 放連體鐵塊(e.iron格)卡位;鐵塊清了不計攻擊(battle-core)、避開會湊滿宮/線的位置;盤面≤1/4空停放(免卡盤);ironPunish 敵上次鐵塊沒清→這手改2倍攻擊不放新塊(防洪+懲罰)
+      _ironAct(e) {   // 🤖鐵機人出手:普通攻擊 + 放連體鐵塊(e.iron格,lock=e.lock,見 data-stages IRON_LOCK_LADDER)卡位;鐵塊清了不計攻擊(battle-core)、避開會湊滿宮/線的位置;盤面≤1/4空停放(免卡盤)
         const ex = e.sprite ? e.sprite.x : CX, ey = (e.sprite ? e.sprite.y : 60);
-        const prevAlive = e._ironCells && e._ironCells.some(rc => { const cell = this.board[rc[0]][rc[1]]; return cell && cell.el === 'iron'; });   // 自己上次放的鐵塊還在?(不分星級都要判→免一直堆鐵塊清不完);保留 _ironCells 繼續追蹤,不清掉
-        if (prevAlive) {   // 鐵塊還在→這回合不放新塊;ironPunish(2星+)→2倍攻擊,1星→普通攻擊。等玩家把它清掉,下輪才會再放
-          if (e.ironPunish) { this.floatText(ex, ey - 34, '🤖 鐵塊未清·2倍攻擊!', '#ffd24a'); this.enemyAttack(e, { dmg: e.atk * 2, big: true }); }
-          else this.enemyAttack(e);
+        const aliveCells = (e._ironCells || []).filter(rc => { const cell = this.board[rc[0]][rc[1]]; return cell && cell.el === 'iron'; });   // 自己上次放的鐵塊裡,現在還在盤上的格(保留 _ironCells 繼續追蹤,不清掉)
+        if (aliveCells.length) {   // 鐵塊還在(全部或部分)→這回合不放新塊,依「有沒有被剝層」決定罰不罰
+          const curLock = Math.max(...aliveCells.map(rc => (this.board[rc[0]][rc[1]].lock || 1)));   // 現存格裡最大剩餘 lock
+          const prev = (e._ironLockPrev != null) ? e._ironLockPrev : curLock;   // 沒記錄過(理論不會發生,防呆)→視為沒變化,不誤判成「有剝層」
+          if (curLock < prev) {   // 玩家這輪有剝到層(層數比上次少)→免罰,只更新 prev,繼續等玩家清完
+            e._ironLockPrev = curLock;
+            this.enemyAttack(e); e.timer = e.interval; return;
+          }
+          e._ironLockPrev = curLock;   // 完全沒動它(curLock===prev)→依 mult 罰(只有 ironPunish 的敵人才罰;1層1.25×/2層1.5×/3層2×)
+          if (e.ironPunish) {
+            const mult = ironPunishMult(curLock), dmg = Math.round(e.atk * mult), multTxt = (Math.round(mult * 100) / 100 + '').replace(/\.?0+$/, '') || '1';
+            this.floatText(ex, ey - 34, '🤖 鐵塊未清·' + multTxt + '倍攻擊!', '#ffd24a'); this.enemyAttack(e, { dmg, big: true });
+          } else { this.enemyAttack(e); }
           e.timer = e.interval; return;
         }
+        // 鐵塊全清(或這隻第一次出手)→放新塊
         let empty = 0; for (let r = 0; r < N; r++) for (let c = 0; c < N; c++) if (!this.board[r][c]) empty++;
         const shape = (empty > (N * N) / 4) ? this._findIronSpot(e.iron || 1) : null;   // 安全閥:空格>1/4 才放
-        if (!shape || !shape.length) { this.enemyAttack(e); e.timer = e.interval; return; }   // 盤面緊/無合法位→普通攻擊
-        shape.forEach(rc => { this.board[rc[0]][rc[1]] = { el: 'iron' }; });   // 放鐵塊(模型)
-        e._ironCells = shape.map(rc => rc.slice());   // 記住這次放的格,下輪判有沒有被清
+        if (!shape || !shape.length) { e._ironLockPrev = 0; this.enemyAttack(e); e.timer = e.interval; return; }   // 盤面緊/無合法位→普通攻擊,沒有鐵塊在場
+        const lockV = e.lock || 1;   // 這隻鐵機人的鐵塊層數(見 data-stages spawnStage 依難度×是否魔王算好的 e.lock)
+        e._ironCells = shape.map(rc => rc.slice());   // 記住這次放的格,下輪判有沒有被清/剝層
+        e._ironLockPrev = lockV;
         this._eneCast && this._eneCast(e); this.chargeAt(ex, ey, 0x8a93a3, 340); this.labSnd && this.labSnd('s_block', 0.5);
-        this.floatText(ex, ey - 34, '🤖 放置鐵塊 ×' + shape.length, '#aab2c2');
+        this.floatText(ex, ey - 34, '🤖 放置鐵塊 ×' + shape.length + (lockV > 1 ? ('(鎖' + lockV + '層)') : ''), '#aab2c2');
         shape.forEach((rc, i) => {
           const cen = this.cellCenter(rc[0], rc[1]);
           this.time.delayedCall(200 + i * 110, () => {
@@ -5087,7 +5170,7 @@
               this.labSnd && this.labSnd('s_boom', 0.4);
               const pf = this.add.circle(cen.x, cen.y, RECT * 0.5, 0x9aa3b3, 0.7).setBlendMode(Phaser.BlendModes.ADD).setDepth(DEPTH.fx);
               this.tweens.add({ targets: pf, scale: 1.5, alpha: 0, duration: 300, onComplete: () => pf.destroy() });
-              if (!this.resultOpen) this.refreshBoard();   // 鐵塊落地→重繪(鋼鐵外觀)
+              if (!this.resultOpen) this._ironLockForge && this._ironLockForge(rc[0], rc[1], lockV, null, 150, 200);   // 落地→鍛造疊層(框→單斜→X),真關卡節奏 snappy(150~200ms/級);取代原本單純 refreshBoard
             });
           });
         });
@@ -5701,6 +5784,28 @@
         const ring = this.add.circle(cx, cy, s * 0.4, 0xcfe0ff, 0).setStrokeStyle(3, 0xcfe0ff, 0.95).setBlendMode(ADD).setDepth(DEPTH.fx); this.tweens.add({ targets: ring, scale: 2.5, alpha: 0, duration: 440, ease: 'Quad.out', onComplete: () => ring.destroy() });
         for (let k = 0; k < 10; k++) { const ang = Math.random() * Math.PI * 2, r0 = 18 + Math.random() * 32, sp = this.add.rectangle(cx, cy, 3 + Math.random() * 4, 3 + Math.random() * 4, 0xffd8a0, 1).setBlendMode(ADD).setDepth(DEPTH.fx); this.tweens.add({ targets: sp, x: cx + Math.cos(ang) * r0, y: cy + Math.sin(ang) * r0, alpha: 0, scale: 0.2, duration: 300 + Math.random() * 220, ease: 'Quad.out', onComplete: () => sp.destroy() }); }
       }
+      _ironLockForge(r, c, targetLock, onDone, stepMin, stepMax) {   // 🔩通用:讓 (r,c) 的分層鐵塊 lock 從 1 逐級「鍛造」疊到 targetLock(框→單斜→X),每級搭配鋼件從上砸下+彈入卡位+小撮火花+金屬鏘聲+極輕震;可重用——demo 不傳 stepMin/Max→預設 200~280ms,真關卡 _ironAct 傳 150~200ms 求 snappy
+        targetLock = Math.max(1, targetLock | 0);
+        stepMin = stepMin != null ? stepMin : 200; stepMax = stepMax != null ? stepMax : 280;
+        const step = (lv) => {
+          if (lv > targetLock) { if (onDone) onDone(); return; }
+          this.board[r][c] = { el: 'iron', lock: lv };   // 暫時設 lock=lv → refreshBoard 讓 _drawLockIron 依目前層數畫出中間態
+          this.refreshBoard();
+          const cen = this.cellCenter(r, c), ADD = Phaser.BlendModes.ADD, DEEP = 0x141820, BASE = 0x454f5f, BRIGHT = 0x7d8a9e;
+          const stamp = this.add.rectangle(cen.x, cen.y - 30, RECT * 0.72, RECT * 0.24, lv % 2 ? BRIGHT : BASE, 1).setStrokeStyle(2, DEEP, 1).setAngle(-9).setDepth(DEPTH.fx + 1).setScale(1.4);   // 那一道新鋼件從上砸下+彈入卡進位置
+          this.tweens.add({ targets: stamp, y: cen.y, angle: 0, scaleX: 1, scaleY: 1, duration: 180, ease: 'Back.out', onComplete: () => this.tweens.add({ targets: stamp, alpha: 0, duration: 140, onComplete: () => stamp.destroy() }) });
+          const flash = this.add.rectangle(cen.x, cen.y, RECT * 0.9, RECT * 0.9, 0xffffff, 0.55).setBlendMode(ADD).setDepth(DEPTH.fx); this.tweens.add({ targets: flash, alpha: 0, duration: 160, onComplete: () => flash.destroy() });
+          for (let k = 0; k < 4; k++) {   // 一小撮火花/電花
+            const ang = Math.random() * Math.PI * 2, r0 = 6 + Math.random() * 6, r1 = 16 + Math.random() * 12;
+            const bolt = this.add.rectangle(cen.x + Math.cos(ang) * r0, cen.y + Math.sin(ang) * r0, 2, 6 + Math.random() * 4, 0xffe14a, 0.9).setAngle(ang * 180 / Math.PI + 90).setBlendMode(ADD).setDepth(DEPTH.fx + 1);
+            this.tweens.add({ targets: bolt, x: cen.x + Math.cos(ang) * r1, y: cen.y + Math.sin(ang) * r1, alpha: 0, scaleY: 0.3, duration: 220 + Math.random() * 120, ease: 'Quad.out', onComplete: () => bolt.destroy() });
+          }
+          this.cameras.main.shake(80, 0.003);
+          this.labSnd && this.labSnd('s_block', 0.4);   // 金屬「鏘」聲(音量壓低)
+          this.time.delayedCall(stepMin + Math.random() * (stepMax - stepMin), () => step(lv + 1));
+        };
+        step(1);
+      }
       _junkShatter(cx, cy, col, kind) {
         const ADD = Phaser.BlendModes.ADD, s = RECT;   // 鐵塊消失:白閃 + 衝擊波環 + 12 片鐵屑旋轉飛散(break=屬色爆開往外;expire=灰鏽下墜崩解)
         const fl = this.add.rectangle(cx, cy, s, s, 0xffffff, 0.85).setBlendMode(ADD).setDepth(DEPTH.fx); this.tweens.add({ targets: fl, scale: 1.5, alpha: 0, duration: 240, onComplete: () => fl.destroy() });
@@ -5709,6 +5814,87 @@
           const ang = Math.random() * Math.PI * 2, r0 = 24 + Math.random() * 40, sq = this.add.rectangle(cx, cy, 5 + Math.random() * 7, 5 + Math.random() * 7, k % 3 ? col : 0x9097a0, 1).setAngle(Math.random() * 90).setBlendMode(kind === 'break' ? ADD : Phaser.BlendModes.NORMAL).setDepth(DEPTH.fx);
           this.tweens.add({ targets: sq, x: cx + Math.cos(ang) * r0, y: cy + Math.sin(ang) * r0 + (kind === 'expire' ? 42 : 16), angle: Phaser.Math.Between(-220, 220), alpha: 0, scale: 0.25, duration: 460 + Math.random() * 260, ease: 'Quad.out', onComplete: () => sq.destroy() });
         }
+      }
+      _metalBurst(cx, cy, opts) {   // 🔩共用:金屬碎片噴散(chip 剝層/spark 整塊破共用同一套「炸開→重力下墜+翻滾」兩段式碎片系統,只吃不同參數;每片=Container(暗邊 rect+亮/底色面 rect)疊出立體感)
+        opts = opts || {};
+        const DEEP = 0x141820, BASE = 0x454f5f, BRIGHT = 0x7d8a9e;
+        const fragN = opts.fragN || 10;
+        const spdMin = opts.spdMin != null ? opts.spdMin : 26, spdMax = opts.spdMax != null ? opts.spdMax : 76;
+        const upMin = opts.upMin != null ? opts.upMin : 8, upMax = opts.upMax != null ? opts.upMax : 20;
+        const fallMin = opts.fallMin != null ? opts.fallMin : 46, fallMax = opts.fallMax != null ? opts.fallMax : 86;
+        const wMin = opts.wMin != null ? opts.wMin : 5, wMax = opts.wMax != null ? opts.wMax : 13;
+        const hMin = opts.hMin != null ? opts.hMin : 4, hMax = opts.hMax != null ? opts.hMax : 11;
+        const d1Min = opts.d1Min != null ? opts.d1Min : 150, d1Max = opts.d1Max != null ? opts.d1Max : 260;
+        const d2Min = opts.d2Min != null ? opts.d2Min : 400, d2Max = opts.d2Max != null ? opts.d2Max : 590;
+        for (let i = 0; i < fragN; i++) {
+          const ang = Math.random() * Math.PI * 2, spd = spdMin + Math.random() * (spdMax - spdMin), w = wMin + Math.random() * (wMax - wMin), h = hMin + Math.random() * (hMax - hMin);
+          const dark = this.add.rectangle(1.6, 1.6, w, h, DEEP, 1), face = this.add.rectangle(0, 0, w, h, i % 2 ? BRIGHT : BASE, 1);   // 暗邊(背後偏移)+亮/底面(疊在上)= 簡易立體感
+          const frag = this.add.container(cx, cy, [dark, face]).setDepth(DEPTH.fx + 1).setAngle(Math.random() * 360).setAlpha(1);
+          const midX = cx + Math.cos(ang) * spd, midY = cy + Math.sin(ang) * spd - (upMin + Math.random() * (upMax - upMin));   // 第一段:炸開(略往外上,四面八方,不侷限軸向)
+          const fallX = midX + (Math.random() * 22 - 11), fallY = midY + fallMin + Math.random() * (fallMax - fallMin);   // 第二段:重力加速下墜
+          const rot1 = Phaser.Math.Between(-170, 170), rot2 = (Math.random() < 0.5 ? -1 : 1) * Phaser.Math.Between(160, 460);
+          const dur1 = d1Min + Math.random() * (d1Max - d1Min), dur2 = d2Min + Math.random() * (d2Max - d2Min);
+          this.tweens.add({
+            targets: frag, x: midX, y: midY, angle: '+=' + rot1, duration: dur1, ease: 'Quad.out', onComplete: () => {
+              this.tweens.add({ targets: frag, x: fallX, y: fallY, angle: '+=' + rot2, alpha: 0, duration: dur2, ease: 'Quad.in', onComplete: () => frag.destroy() });
+            }
+          });
+        }
+      }
+      _ironLockChip(cx, cy, oldLock) {   // 🔒分層鐵塊扣一層但沒移除(3→2/2→1)→「被鐵鎚砸碎」的重量感(小砸碎):8~12 塊不規則碎片(_metalBurst)四面八方噴散+重力下墜+翻滾,約550~750ms;疊白色衝擊閃+衝擊波環+灰塵+黃電花+輕震屏+撞擊音(比整塊破 _ironLockSpark 弱一階,但要夠明顯)
+        const ADD = Phaser.BlendModes.ADD, s = RECT;
+        // ① 撞擊瞬間:白色衝擊閃 + 一圈白/淡黃衝擊波環快速擴大淡出
+        const fl = this.add.rectangle(cx, cy, s * 1.05, s * 1.05, 0xffffff, 0.92).setBlendMode(ADD).setDepth(DEPTH.fx); this.tweens.add({ targets: fl, scale: 1.9, alpha: 0, duration: 280, ease: 'Quad.out', onComplete: () => fl.destroy() });
+        const ring = this.add.circle(cx, cy, s * 0.32, 0xfff3c0, 0).setStrokeStyle(3, 0xfff3c0, 0.85).setBlendMode(ADD).setDepth(DEPTH.fx); this.tweens.add({ targets: ring, scale: 3, alpha: 0, duration: 420, ease: 'Quad.out', onComplete: () => ring.destroy() });
+        // ② 8~12 塊金屬碎片(小砸碎規格)
+        this._metalBurst(cx, cy, { fragN: 8 + Math.floor(Math.random() * 5), spdMin: 26, spdMax: 76, upMin: 8, upMax: 20, fallMin: 46, fallMax: 86, wMin: 5, wMax: 13, hMin: 4, hMax: 11, d1Min: 150, d1Max: 260, d2Min: 400, d2Max: 590 });
+        // ③ 一撮灰色粉塵:噴起再落下(獨立於金屬碎片,補「砸」出的塵土感)
+        for (let k = 0; k < 7; k++) {
+          const ang = Math.random() * Math.PI * 2, r0 = 4 + Math.random() * 8, du = this.add.circle(cx + Math.cos(ang) * r0, cy + Math.sin(ang) * r0, 2.2 + Math.random() * 2.6, 0x8a7d6d, 0.75).setDepth(DEPTH.fx);
+          const upX = du.x + Math.cos(ang) * (14 + Math.random() * 18), upY = du.y - (14 + Math.random() * 16);
+          this.tweens.add({ targets: du, x: upX, y: upY, duration: 170 + Math.random() * 100, ease: 'Quad.out', onComplete: () => { this.tweens.add({ targets: du, y: upY + 34 + Math.random() * 22, alpha: 0, duration: 260 + Math.random() * 120, ease: 'Quad.in', onComplete: () => du.destroy() }); } });
+        }
+        // ④ 黃色電花:6~7 道帶柔光底
+        const boltN = 6 + Math.floor(Math.random() * 2);
+        for (let k = 0; k < boltN; k++) {
+          const ang = Math.random() * Math.PI * 2, r0 = 8 + Math.random() * 6, r1 = 26 + Math.random() * 18;
+          const glow = this.add.circle(cx + Math.cos(ang) * r0, cy + Math.sin(ang) * r0, 4.8, 0xffe14a, 0.4).setBlendMode(ADD).setDepth(DEPTH.fx);
+          this.tweens.add({ targets: glow, x: cx + Math.cos(ang) * r1, y: cy + Math.sin(ang) * r1, alpha: 0, duration: 260 + Math.random() * 150, ease: 'Quad.out', onComplete: () => glow.destroy() });
+          const bolt = this.add.rectangle(cx + Math.cos(ang) * r0, cy + Math.sin(ang) * r0, 2.6, 9 + Math.random() * 7, 0xffe14a, 0.95).setAngle(ang * 180 / Math.PI + 90).setBlendMode(ADD).setDepth(DEPTH.fx + 1);
+          this.tweens.add({ targets: bolt, x: cx + Math.cos(ang) * r1, y: cy + Math.sin(ang) * r1, alpha: 0, scaleY: 0.3, duration: 280 + Math.random() * 150, ease: 'Quad.out', onComplete: () => bolt.destroy() });
+        }
+        // ⑤ 輕震屏 + 金屬撞擊音(疊一聲更悶的「碎」音,音量壓低)
+        this.cameras.main.shake(140, 0.005);
+        this.labSnd && this.labSnd('s_block', 0.65);
+        this.labSnd && this.labSnd('s_boom', 0.3);
+      }
+      _ironLockSpark(cx, cy) {   // 🔒分層鐵塊層數見底、真的被移除→壓軸「大爆碎」:跟 _ironLockChip 同一套視覺語言(_metalBurst),但放到最大級——16~24 塊碎片、範圍最廣、下墜+翻滾時間最長(~0.8~1.1s);疊最大的白色爆閃圈+衝擊波環+灰塵+黃電花(比剝層多)+最強震屏
+        const ADD = Phaser.BlendModes.ADD, s = RECT;
+        // ① 撞擊瞬間:最大的白色衝擊閃 + 最大衝擊波環
+        const fl = this.add.rectangle(cx, cy, s * 1.3, s * 1.3, 0xffffff, 0.95).setBlendMode(ADD).setDepth(DEPTH.fx); this.tweens.add({ targets: fl, scale: 2.3, alpha: 0, duration: 340, ease: 'Quad.out', onComplete: () => fl.destroy() });
+        const wf = this.add.circle(cx, cy, RECT * 0.4, 0xffffff, 0.92).setBlendMode(ADD).setDepth(DEPTH.fx + 1); this.tweens.add({ targets: wf, scale: 3.4, alpha: 0, duration: 380, ease: 'Quad.out', onComplete: () => wf.destroy() });
+        const ring2 = this.add.circle(cx, cy, RECT * 0.5, 0xffe14a, 0).setStrokeStyle(4, 0xffe14a, 0.9).setBlendMode(ADD).setDepth(DEPTH.fx); this.tweens.add({ targets: ring2, scale: 4.4, alpha: 0, duration: 560, ease: 'Quad.out', onComplete: () => ring2.destroy() });
+        // ② 16~24 塊金屬碎片(壓軸規格:範圍最廣、下墜最久)
+        this._metalBurst(cx, cy, { fragN: 16 + Math.floor(Math.random() * 9), spdMin: 40, spdMax: 120, upMin: 14, upMax: 30, fallMin: 70, fallMax: 140, wMin: 6, wMax: 16, hMin: 5, hMax: 13, d1Min: 180, d1Max: 300, d2Min: 620, d2Max: 780 });   // 總時長約 0.8~1.1s
+        // ③ 灰塵/碎屑(比剝層範圍更廣、更多)
+        for (let k = 0; k < 10; k++) {
+          const ang = Math.random() * Math.PI * 2, r0 = 10 + Math.random() * 14, du = this.add.circle(cx, cy, 2.6 + Math.random() * 3.4, 0x8a7d6d, 0.8).setDepth(DEPTH.fx);
+          const upX = du.x + Math.cos(ang) * (18 + Math.random() * 26), upY = du.y - (16 + Math.random() * 20);
+          this.tweens.add({ targets: du, x: upX, y: upY, duration: 200 + Math.random() * 130, ease: 'Quad.out', onComplete: () => { this.tweens.add({ targets: du, y: upY + 46 + Math.random() * 26, alpha: 0, duration: 300 + Math.random() * 140, ease: 'Quad.in', onComplete: () => du.destroy() }); } });
+        }
+        // ④ 黃色電花 14~16 道(比剝層 6~7 道多很多),帶柔光底
+        const boltN = 14 + Math.floor(Math.random() * 3);
+        for (let k = 0; k < boltN; k++) {
+          const ang = Math.random() * Math.PI * 2, r0 = 10 + Math.random() * 8, r1 = 46 + Math.random() * 38;
+          const glow = this.add.circle(cx + Math.cos(ang) * r0, cy + Math.sin(ang) * r0, 6, 0xffe14a, 0.35).setBlendMode(ADD).setDepth(DEPTH.fx);   // 底層柔光模擬 shadowBlur 發光感
+          this.tweens.add({ targets: glow, x: cx + Math.cos(ang) * r1, y: cy + Math.sin(ang) * r1, alpha: 0, duration: 320 + Math.random() * 180, ease: 'Quad.out', onComplete: () => glow.destroy() });
+          const bolt = this.add.rectangle(cx + Math.cos(ang) * r0, cy + Math.sin(ang) * r0, 3, 13 + Math.random() * 12, 0xffe14a, 0.95).setAngle(ang * 180 / Math.PI + 90).setBlendMode(ADD).setDepth(DEPTH.fx + 1);
+          this.tweens.add({ targets: bolt, x: cx + Math.cos(ang) * r1, y: cy + Math.sin(ang) * r1, alpha: 0, scaleY: 0.3, duration: 340 + Math.random() * 200, ease: 'Quad.out', onComplete: () => bolt.destroy() });
+        }
+        // ⑤ 最強震屏 + 雙層撞擊音
+        this.cameras.main.shake(210, 0.0095);
+        this.labSnd && this.labSnd('s_block', 0.7);
+        this.labSnd && this.labSnd('s_boom', 0.5);
       }
       // 👑 魔王階段變身:隨血量切到下一屬,換屬+換招牌行為+演出
       bossTransform(e) {
@@ -5856,9 +6042,14 @@
           }
         }   // 非蓄力的「被攻擊」敵清到剋屬→出手延後一手
         if (this.firstClear) { this.firstClear = false; track('first_clear'); }   // ☁️ 勇者卡/綁定提示改到「教學結束後」(home create → promptAccountBindAfterTutorial),不再戰鬥中打斷
-        const _ironCleared = data.cells.filter(([r, c]) => this.board[r][c] && this.board[r][c].el === 'iron');   // 🔩本次清到的鐵塊格→收集(清空前),溶解時播金屬碎裂
+        const _ironCleared = data.cells.filter(([r, c]) => this.board[r][c] && this.board[r][c].el === 'iron');   // 🔩本次清到(會被移除)的鐵塊格→收集(清空前),溶解時播金屬碎裂
+        const _lockCleared = _ironCleared.filter(([r, c]) => this.board[r][c].lock != null);   // 🔒其中「有 lock 且這次真的見底被移除」的→額外播 _ironLockSpark(大爆碎,壓軸)
+        const _lockDec = (data.lockDec || []).map(([r, c]) => [r, c, this.board[r][c] ? (this.board[r][c].lock || 1) : 1]);   // 🔒這次扣層但不移除的 iron 格(cell.lock>1,見 battle-core computeClears);先記扣層前的舊 lock 值(目前 _ironLockChip 未用到,保留給未來擴充)
         data.cells.forEach(([r, c]) => { this.board[r][c] = null; });  // 立即從模型移除,避免重複觸發
-        if (_ironCleared.length) this.time.delayedCall(420, () => { _ironCleared.forEach(([r, c]) => this._junkShatter && this._junkShatter(BX0 + c * CS + RECT / 2, BY0 + r * CS + RECT / 2, 0x9aa8bd, 'break')); this.labSnd && this.labSnd('s_block', 0.55); });   // 🔩清宮/清線連鐵塊一起清→金屬碎裂演出(同溶解時機)
+        _lockDec.forEach(([r, c]) => { const cell = this.board[r][c]; if (cell) cell.lock = Math.max(1, (cell.lock || 1) - 1); });   // 🔒分層鐵塊:扣層不移除(cell 還在盤上,下次 refreshBoard 換圖層)
+        if (this._syncIronKi) this.enemies.forEach(en => { if (en._ironCells && en._ironCells.length) this._syncIronKi(en); });   // 🔩鐵機人鬥氣:對「每隻有放過鐵塊(_ironCells)」的敵人各自同步(試驗室與真關卡雷城共用同一條路;沒放過鐵塊的敵人完全不觸發)
+        if (_ironCleared.length) this.time.delayedCall(420, () => { _ironCleared.forEach(([r, c]) => this._junkShatter && this._junkShatter(BX0 + c * CS + RECT / 2, BY0 + r * CS + RECT / 2, 0x9aa8bd, 'break')); _lockCleared.forEach(([r, c]) => this._ironLockSpark && this._ironLockSpark(BX0 + c * CS + RECT / 2, BY0 + r * CS + RECT / 2)); this.labSnd && this.labSnd('s_block', 0.55); });   // 🔩清宮/清線連鐵塊一起清→金屬碎裂演出(同溶解時機);有 lock 的額外播壓軸大爆碎(_ironLockSpark)
+        if (_lockDec.length) this.time.delayedCall(420, () => { _lockDec.forEach(([r, c, oldLock]) => this._ironLockChip && this._ironLockChip(BX0 + c * CS + RECT / 2, BY0 + r * CS + RECT / 2, oldLock)); });   // 🔒扣層但沒移除→砸碎版回饋(_ironLockChip,小砸碎):碎片四濺+電花+白閃+震屏+撞擊音,提示「剝了一層」
         const n = data.cells.length;
         this._placeCleared = true;   // 逐塊 combo:這塊有清到(沒清的塊由 afterAction 把 combo 歸零)
         this.showCombo(); this.renderCombo(true);   // combo 已在頂端 +1(每塊有清才+1)+ 常駐指示器彈一下
@@ -6206,6 +6397,7 @@
         }
         e.dead = true; if (e.bob) { e.bob.stop(); e.bob = null; } if (e.knockTw) { e.knockTw.stop(); e.knockTw = null; }   // ★ bob 在受擊擊退時會被設 null,務必判空(否則每次擊殺都丟例外→鎖死)
         this._clearEnemyIron(e);   // 🔩鐵機人被打倒→清掉牠放的鐵塊(逐隻歸屬,不動別隻的;玩家已清的略過)→不再賴到下一關
+        this._enemyKi && this._enemyKi(e, 0);   // 死了→立刻收掉牠的鬥氣光暈(免殘留飄在陣亡處)
         if (e.cardId && e.flee) { this._bonusKilled.push(e.cardId); }   // 🆕2026-08-02 bonus 關獎勵怪(flee 旗標識別)被玩家真正打死→記進 _bonusKilled,回報 run/complete;逃跑移除走 _fleeAct,不經過這裡→不會誤記
         const last = this.aliveCount() === 0, isFinal = last && this.stage >= this.stagesEff.length;
         if (isFinal) { this._finalEnemy = e; this.stageClear(); return; }   // 最後一關最後一擊:由 finalBlow 演特寫鏡頭+飛出(不在此 playDeath)
