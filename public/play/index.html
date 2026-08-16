@@ -273,7 +273,8 @@
       const TK = UI(), elc = EL[cd.el].color, elcTx = '#' + elc.toString(16).padStart(6, '0');
       const ac = activeSkill(cd.el, cd.id), ls = leadSkill(cd.id);
       const lv = getCardLv(cd.id), n = (loadOwned()[cd.id] || 0), atk = cardAtk(cd.id);
-      const exp = getCardExp(cd.id), need = expToNext(lv), mx = lv >= MAXLV;
+      const maxLv = maxLvForCard(cd.id);
+      const exp = getCardExp(cd.id), need = expToNext(lv), mx = lv >= maxLv;
       const RI2 = { human: { n: '人類', e: '🥷' }, yokai: { n: '妖怪', e: '👹' }, beast: { n: '靈獸', e: '🐾' } };
       const ri = CARD_SPECIES[cd.id] || RI2[cd.race] || RI2.human;   // 已歸物種隊→顯示貓/犬/鼠/台灣特有;其餘人類/妖怪/靈獸
       const txt = (x, y, s, fs, col, ox, bold) => add(scene.add.text(x, y, s, { fontFamily: EMOJIFONT, fontSize: fs, color: col || TK.ink, fontStyle: bold ? 'bold' : 'normal' }).setOrigin(ox == null ? 0.5 : ox, 0.5));
@@ -306,7 +307,7 @@
       stats.forEach((s, i) => { const x = CX + (i - 1) * 118; txt(x, yC + 158, String(s[1]), '27px', TK.ink, 0.5, true); txt(x, yC + 186, s[0], '13px', TK.ink2, 0.5); });
       rect(CX - 59, yC + 170, 1, 48, TK.divider); rect(CX + 59, yC + 170, 1, 48, TK.divider);
       // Lv 列:Lv + 經驗條(屬色) + 持有
-      txt(Lc, yC + 222, 'Lv.' + lv + (mx ? ' 最大' : ' / ' + MAXLV), '15px', mx ? elcTx : TK.ink, 0, true);
+      txt(Lc, yC + 222, 'Lv.' + lv + (mx ? ' 最大' : ' / ' + maxLv), '15px', mx ? elcTx : TK.ink, 0, true);
       rr(CX + 6, yC + 222, 150, 10, 5, TK.divider, 1, null, 0);
       { const p = mx ? 1 : Math.min(1, exp / need); if (p > 0.02) rr(CX + 6 - 75 + 75 * p, yC + 222, 150 * p, 10, 5, elc, 1, null, 0); }
       txt(CX + (W - 28) / 2 - 20, yC + 222, '持有 ×' + n, '15px', TK.ink2, 1);
@@ -1535,11 +1536,26 @@
       return false;
     }
     /* 養成:卡片等級/經驗(PAD式吃卡強化,同屬×1.5經驗) */
-    const MAXLV = 20, FEED_COST = 100;
     function expToNext(lv) { return 50 * lv; }
+    // 各星等級上限(spec-progression-economy.md §1,2026-08-16 取代固定 MAXLV=20):maxLv=(baseStar+evo)×20。
+    // baseStar 查 ROSTER 該卡 rank → RANK_STARS_N;ovEvo 沒給→用該卡種目前 derived 進化階(getCardEvo)。
+    // 鏡射後端 _lib/gamedata.ts maxLvForCard(baseStar, evo),數值須一致。
+    const RANK_STARS_N = { genin: 1, chunin: 2, jonin: 3, kage: 4 };
+    function maxLvForCard(id, ovEvo) {
+      const c = ROSTER.find(x => x.id === id);
+      const baseStar = c ? (RANK_STARS_N[c.rank] || 1) : 1;
+      const evo = ovEvo != null ? ovEvo : getCardEvo(id);
+      return (baseStar + Math.max(0, evo || 0)) * 20;
+    }
+    // 餵卡金幣成本(spec-progression-economy.md §4,2026-08-16 取代固定 FEED_COST=100/張):
+    // 花的金幣＝這次獲得經驗×5%(四捨五入)。鏡射後端 _lib/gamedata.ts feedCoinCost,數值須一致。
+    function feedCoinCost(expGained) { return Math.round(Math.max(0, expGained || 0) * 0.05); }
     function getCardLv(id, ovLv) { if (ovLv != null) return ovLv; const c = loadSave().cardLv[id]; return c ? c.lv : 1; }   // ovLv 傳入=用個體自己的等級(個體制);不傳=per-type 最強快取
     function getCardExp(id) { const c = loadSave().cardLv[id]; return c ? c.exp : 0; }
-    function _statMul(id, ovLv, ovEvo) { return EVO_MULT[getCardEvo(id, ovEvo)] * (1 + (getCardLv(id, ovLv) - 1) * 0.05); }   // 進化×等級 共用成長倍率;ovLv/ovEvo 傳入=個體制
+    // 三圍成長曲線分段(spec-progression-economy.md §2,2026-08-16):LV1-20 沿用 +5%/級(現況不變,零震撼);
+    // LV21 以上 +1.5%/級(深度養成,3★滿級約 +31%,不是翻倍)。LV20 兩段公式交界值相同(1.95),連續不跳動。
+    function levelMul(lv) { return lv <= 20 ? (1 + (lv - 1) * 0.05) : (1.95 + (lv - 20) * 0.015); }
+    function _statMul(id, ovLv, ovEvo) { return EVO_MULT[getCardEvo(id, ovEvo)] * levelMul(getCardLv(id, ovLv)); }   // 進化×等級 共用成長倍率;ovLv/ovEvo 傳入=個體制
     function cardAtk(id, ovLv, ovEvo) { const base = (ROSTER.find(c => c.id === id) || {}).atk || 0; return Math.round(base * _statMul(id, ovLv, ovEvo)); }
     function cardHp(id, ovLv, ovEvo) { const base = (ROSTER.find(c => c.id === id) || {}).hp || 0; return Math.round(base * _statMul(id, ovLv, ovEvo)); }
     function cardRcv(id, ovLv, ovEvo) { const base = (ROSTER.find(c => c.id === id) || {}).rcv || 0; return Math.round(base * _statMul(id, ovLv, ovEvo)); }
@@ -1548,16 +1564,17 @@
       let res = { ok: false, msg: '' };
       mutSave(s => {
         if (s.cards.filter(c => c.id === fodderId).length < 2) { res.msg = '需要多餘的素材卡(同一張至少2張)'; return; }
-        if ((s.meta.coins || 0) < FEED_COST) { res.msg = '金錢不足(需' + FEED_COST + ')'; return; }
         if (!s.cardLv[targetId]) s.cardLv[targetId] = { lv: 1, exp: 0 };
-        const cl = s.cardLv[targetId]; if (cl.lv >= MAXLV) { res.msg = '已達滿級 Lv.' + MAXLV; return; }
+        const cl = s.cardLv[targetId]; const maxLv = maxLvForCard(targetId); if (cl.lv >= maxLv) { res.msg = '已達滿級 Lv.' + maxLv; return; }
         const f = ROSTER.find(c => c.id === fodderId), t = ROSTER.find(c => c.id === targetId);
         if (!f || !t) { res.msg = '卡片資料不存在'; return; }   // 存檔裡有、卡表已移除的 id(改表後的舊存檔)→安全拒絕,不崩
         const reward = Math.round(({ genin: 60, chunin: 150, jonin: 400, kage: 900 }[f.rank] || 60) * (f.el === t.el ? 1.5 : 1));
+        const cost = feedCoinCost(reward);   // §4:花的金幣＝這次獲得經驗×5%(取代舊固定 FEED_COST)
+        if ((s.meta.coins || 0) < cost) { res.msg = '金錢不足(需' + cost + ')'; return; }
         const fi = s.cards.findIndex(c => c.id === fodderId); if (fi >= 0) s.cards.splice(fi, 1);   // 吃掉一個素材個體(空出一格)
-        s.meta.coins -= FEED_COST; cl.exp += reward;
-        let ups = 0; while (cl.lv < MAXLV && cl.exp >= expToNext(cl.lv)) { cl.exp -= expToNext(cl.lv); cl.lv++; ups++; }
-        if (cl.lv >= MAXLV) cl.exp = 0;
+        s.meta.coins -= cost; cl.exp += reward;
+        let ups = 0; while (cl.lv < maxLv && cl.exp >= expToNext(cl.lv)) { cl.exp -= expToNext(cl.lv); cl.lv++; ups++; }
+        if (cl.lv >= maxLv) cl.exp = 0;
         res = { ok: true, reward: reward, lv: cl.lv, ups: ups, same: f.el === t.el };
       });
       return res;
@@ -1593,6 +1610,7 @@
     // 合成預覽(不變更存檔):回傳餵入後的 Lv/經驗/花費;每張素材依「自己的 lv」算經驗(fodderFeedExp),不再只看稀有度
     function previewFeed(targetId, us) {
       const s = loadSave(), t = ROSTER.find(c => c.id === targetId);
+      const maxLv = maxLvForCard(targetId);
       let lv = getCardLv(targetId), e = getCardExp(targetId) + 0, gained = 0, eaten = 0;
       if (!t) return { fromLv: lv, toLv: lv, exp: e, need: expToNext(lv), gained: 0, cost: 0, willMax: false, ups: 0, eaten: 0 };   // 目標卡不在卡表→空預覽,不崩
       (us || []).forEach(u => {
@@ -1600,9 +1618,9 @@
         gained += fodderFeedExp(f.id, f.rank, c.lv, f.el === t.el); eaten++;
       });
       let l = lv; e += gained;
-      while (l < MAXLV && e >= expToNext(l)) { e -= expToNext(l); l++; }
-      if (l >= MAXLV) e = 0;
-      return { fromLv: lv, toLv: l, exp: e, need: expToNext(l), gained: gained, cost: FEED_COST * eaten, willMax: l >= MAXLV, ups: l - lv, eaten: eaten };
+      while (l < maxLv && e >= expToNext(l)) { e -= expToNext(l); l++; }
+      if (l >= maxLv) e = 0;
+      return { fromLv: lv, toLv: l, exp: e, need: expToNext(l), gained: gained, cost: feedCoinCost(gained), willMax: l >= maxLv, ups: l - lv, eaten: eaten };
     }
     // 🔐 批次分解(個體 uid 陣列)改打伺服器 POST /api/cards/dissolve;伺服器保護「每種至少留 1 張」,回 {coins, removed:[uid], collection};離線/失敗→丟錯給呼叫端(呼叫端 toast「需要連線」)
     async function dissolveUids(uids) {
@@ -1644,7 +1662,8 @@
       // 單一 cap:👺哥布林系、🦆賊鴨系、🤖鐵機人系(原蜘蛛)、🩹史萊姆醫療系(原藥師)、🧱牆怪系 1★→2★→3★(cap 2);一般卡走 EVO_MAX。與 line 325 _evoCap、後端 evolve.ts evoCap 同一套,別再用 else-if(EVO_CARDS 含哥布林,t=1 會被誤擋)
       const evoCap = EVO2_CARDS[id] ? 2 : (EVO_CARDS[id] ? 1 : EVO_MAX);
       if (t >= evoCap) return { ok: false, msg: '已達進化上限' };
-      if (getCardLv(id) < MAXLV) return { ok: false, msg: '需先練滿 Lv.' + MAXLV };
+      const needLv = maxLvForCard(id, t);   // per-star 門檻(spec-progression-economy.md §1):要練到「當前星」的上限才能進化(1★要LV20、2★要LV40…)
+      if (getCardLv(id) < needLv) return { ok: false, msg: '需先練滿 Lv.' + needLv };
       const req = evoReq(t);
       const jid = JEWEL_OF[c.el];
       if (!jid || ownedCardCount(jid) < 1) return { ok: false, msg: '需 1 張「' + jewelName(c.el) + '」進化素材' };   // 伺服器仍會再驗一次(真相在後端)
@@ -1687,7 +1706,7 @@
     }   // 升級→補滿體力+上限+2;_lvUp 旗標供大廳彈 5 秒升級公告
     function spendStones(n) { let ok = false; mutSave(s => { if ((s.meta.stones || 0) >= n) { s.meta.stones -= n; ok = true; } }); return ok; }
     function refillStamina() { mutSave(s => { s.meta.stamina = s.meta.staminaMax; s.meta.staTs = Date.now(); }); }
-    function devSetAllLv(lv) { lv = Math.max(1, Math.min(MAXLV, lv)); mutSave(s => { const ids = {}; s.cards.forEach(c => ids[c.id] = 1); Object.keys(ids).forEach(id => { s.cardLv[id] = { lv: lv, exp: 0 }; }); }); }   // 測試:全持有卡設成指定等級
+    function devSetAllLv(lv) { lv = Math.max(1, Math.min(999, lv)); mutSave(s => { const ids = {}; s.cards.forEach(c => ids[c.id] = 1); Object.keys(ids).forEach(id => { s.cardLv[id] = { lv: lv, exp: 0 }; }); }); }   // 測試:全持有卡設成指定等級(上限改成通用999夾值,不再綁死單一 MAXLV;呼叫端按鈕固定傳1/10/20,不會超過任何卡種的 per-star 上限)
     function devUnlockAll() { mutSave(s => { ['prologue', 'fire', 'water', 'thunder', 'earth', 'wind', 'tower'].forEach(id => { s.progress.dungeonsCleared[id] = true; }); s.progress.cleared = true; }); }   // 測試:解鎖全關(含塔)
     // 每日登入獎勵:7 天循環,寬鬆(每個歷天可領一次、漏天不歸零、循環)
     const DAILY = [
@@ -8542,12 +8561,13 @@
       draw() {
         const T = UI();
         this.txt(CX, 34, '⬆️ 強化合成', FS.title, T.ink, 0.5, true);
-        this.txt(CX, 60, '💰 ' + getMeta().coins + ' · 同屬×1.5 · 每張 ' + FEED_COST + '金', '13px', '#8a6414', 0.5);   // 深金色→米色底可讀(原 #ffe08a 淺黃看不到)
+        this.txt(CX, 60, '💰 ' + getMeta().coins + ' · 同屬×1.5 · 金幣＝經驗×5%', '13px', '#8a6414', 0.5);   // 深金色→米色底可讀(原 #ffe08a 淺黃看不到);§4:花費改成經驗比例,不再是固定每張金額
         if (this.mode === 'pick') return this.drawPick();
         const t = ROSTER.find(c => c.id === this.target);
         if (!t) { this.btn(CX, 200, 220, 48, '選擇強化對象', () => { this.mode = 'pick'; this.rebuild(); }, { col: UI().gold, stroke: UI().gold, color: UI().onAccent, fs: FS.sub, bold: true }); this.back(); return; }
         const sel = this.sel || [];
-        const lv = getCardLv(this.target), exp = getCardExp(this.target), need = expToNext(lv), mx = lv >= MAXLV;
+        const maxLv = maxLvForCard(this.target);
+        const lv = getCardLv(this.target), exp = getCardExp(this.target), need = expToNext(lv), mx = lv >= maxLv;
         const pv = (sel.length && !mx) ? previewFeed(this.target, sel) : null;   // 選了素材→即時預覽結果
         const atk = cardAtk(this.target), hp = cardHp(this.target), rcv = cardRcv(this.target);   // 現在三圍(per-type 最強個體)
         const nAtk = pv ? cardAtk(this.target, pv.toLv) : atk, nHp = pv ? cardHp(this.target, pv.toLv) : hp, nRcv = pv ? cardRcv(this.target, pv.toLv) : rcv;   // 餵完後三圍(用預覽 toLv)
@@ -8601,7 +8621,7 @@
         }
         // 合成確認 bar(神魔/龍族式:選好才按)
         const canFuse = sel.length > 0 && !mx;
-        this.btn(CX, H - 96, 330, 50, canFuse ? ('⚡ 合成  ' + sel.length + '/5  ·  ' + (FEED_COST * sel.length) + '金') : (mx ? '已達滿級 Lv.' + MAXLV : '點素材選取後可合成'),
+        this.btn(CX, H - 96, 330, 50, canFuse ? ('⚡ 合成  ' + sel.length + '/5  ·  ' + (pv ? pv.cost : 0) + '金') : (mx ? '已達滿級 Lv.' + maxLv : '點素材選取後可合成'),
           () => this.tryFuse(), { col: canFuse ? T.ok : T.surf2, stroke: canFuse ? T.ok : T.divider, color: canFuse ? T.onAccent : T.ink3, bold: true, fs: '18px' });
         this.back();
       }
@@ -8612,7 +8632,7 @@
       }
       tryFuse() {
         const sel = this.sel || []; if (!sel.length) { this.toast('先點素材選取'); return; }
-        if (getCardLv(this.target) >= MAXLV) { this.toast('已達滿級'); return; }
+        if (getCardLv(this.target) >= maxLvForCard(this.target)) { this.toast('已達滿級'); return; }
         const s = loadSave(), rare = sel.some(u => { const c = s.cards.find(x => x.u === u); const cd = c && ROSTER.find(r => r.id === c.id); return cd && (cd.rank === 'jonin' || cd.rank === 'kage'); });
         if (rare) { this.confirmFuse(); return; }   // 防呆:含 ★★★↑ 稀有素材→二次確認
         this.doFuse();
