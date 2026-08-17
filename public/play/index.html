@@ -1746,6 +1746,7 @@
     }
     // ===== 🆕2026-08-17 初始島「每日修煉」(spec-daily-island.md §6):與上面的「每日登入」(claimDaily 系列)完全不同的功能,
     //   只是剛好共用同一個 POST /api/daily/claim 路徑(body 帶 task 欄位才會走這條,見 claim.ts 檔頭「命名空間備註」)。=====
+    let _dailyStateDirty = false;   // 🆕每日狀態髒旗:打完每日關(_grantRun)後標記→回地圖強制重抓 daily/state,讓初始島徽章即時更新(三關全清即消失)
     async function fetchDailyState() {   // GET /api/daily/state:回當日屬性/型態/tier_clears/task_progress/task_claimed;失敗/離線→null(呼叫端顯示「連線失敗」)
       try { const r = await authedFetch('/api/daily/state'); if (!r || !r.ok) return null; return await r.json(); }
       catch (e) { return null; }
@@ -6577,6 +6578,7 @@
         if (this._runGranted) return; this._runGranted = true;   // 🏆全清結算:整趟累積的 EXP 一次入帳(只有全清才呼叫→中途放棄/戰敗自然全沒收);🔐 卡片掉落/寶玉/金幣改由伺服器 run/complete 回應決定(見下),不再前端算
         // 🔐 等級/經驗改伺服器權威:通關 exp/升級/上限+補滿由 run/complete 決定,前端不再本地 addRewards 遞增(擋竄改);升級慶祝改由回應 leveledUp 觸發(見 _sendRunComplete().then)。金幣/掉卡入帳同樣走伺服器,displayed runCoins/runExp 照舊只是本場顯示。
         const _isDaily = !!(this.dungeon && this.dungeon.daily);   // 🆕2026-08-17 每日修煉:bonusKilled 欄位對 daily 分支語意不同(金屬怪擊殺清單,見 run/complete.ts daily 分支),要送 _dailyKilled 而非 _bonusKilled;另外多帶 comboCount(T3 任務進度)
+        if (_isDaily) _dailyStateDirty = true;   // 🆕全清一層每日關→標記狀態已變,回地圖時 bDungeon 重抓 daily/state 更新初始島徽章(三關全清即消失)
         const item = { dungeonId: this.dungeon.id, diff: (this.diff && this.diff.key) || 'normal', runId: this.serverRunId || ('r' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8)), name: getMeta().name, bonusKilled: (_isDaily ? this._dailyKilled : this._bonusKilled) || [], comboCount: _isDaily ? (this._dailyComboHits || 0) : undefined };   // name=記錄保持者名字→run/complete 破全服最速榜時一起存(排行顯示是誰)   // 🔐 優先用開戰領到的伺服器票券(含'.',run/complete 走時間閘+一次性);拿不到→本地 runId 走離線 fallback(限流);🆕2026-08-02 bonusKilled=本場實際打死的獎勵怪卡id陣列,伺服器取「這個∩票券簽的」發獎勵
         this.runDrops = []; this._runDropsPending = true;   // showResult 顯示「連線後發放」暫態,直到下面拿到結果或確認離線
         mutSave(s => {
@@ -7727,9 +7729,9 @@
         tapBind(this, c, cb); return c;
       }
       bDungeon() {   // 🗺️ 新美術世界地圖(以 map_demo 排版);等比縮放(contain)自適應手機高度→不跑位;線性解鎖(鎖住=變暗不可點);島浮、雲飄
-        if (isDungeonCleared('prologue') && this._dailyTaskAvail === undefined && !this._dailyTaskFetching) {   // 🆕每日修煉徽章:序章已破→抓一次今日狀態,有未通關層→下方 _mapIsle 給初始島掛驚嘆號(抓完若有再刷一次地圖)
-          this._dailyTaskFetching = true;
-          fetchDailyState().then(st => { this._dailyTaskFetching = false; this._dailyTaskAvail = st ? ![1, 2, 3].every(t => st.tierClears && st.tierClears[String(t)]) : false; if (this._dailyTaskAvail && this.scene && this.scene.isActive() && this.tab === 'dungeon') this.rebuild(); });
+        if (isDungeonCleared('prologue') && (this._dailyTaskAvail === undefined || _dailyStateDirty) && !this._dailyTaskFetching) {   // 🆕每日修煉徽章:序章已破→抓今日狀態(首次或打完每日關後 dirty→重抓),有未通關層→下方 _mapIsle 給初始島掛驚嘆號
+          this._dailyTaskFetching = true; _dailyStateDirty = false;
+          fetchDailyState().then(st => { this._dailyTaskFetching = false; const prevVis = !!this._dailyTaskAvail; this._dailyTaskAvail = st ? ![1, 2, 3].every(t => st.tierClears && st.tierClears[String(t)]) : false; if (prevVis !== !!this._dailyTaskAvail && this.scene && this.scene.isActive() && this.tab === 'dungeon') this.rebuild(); });   // 徽章「該不該顯示」有變(出現或消失)才重畫,三關全清→false→徽章即時消失
         }
         const mapTop = 84, availH = (H - 62) - mapTop;                    // 可用區:貨幣列(84)下 ~ nav(H-62)上
         const S = Math.min(W / 1080, availH / 1920); this._mapS = S;      // 等比縮放:寬或高哪個先滿就用哪個
