@@ -2381,7 +2381,7 @@
           const _els = new Set(), _cids = new Set(); const _nSt = (this.stagesEff || []).length; for (let _si = 0; _si < _nSt; _si++) { if (this.stagesEff[_si] && this.stagesEff[_si].bonus) continue; const _rawSi = (this._bonusStagePos && _si >= this._bonusStagePos) ? _si - 1 : _si; try { spawnStage(this.dungeonId, this.diff.key, _rawSi).forEach(e => { _els.add(e.el); if (e.cardId) _cids.add(e.cardId); if (e.phases) e.phases.forEach(ph => _els.add(ph.el)); }); } catch (_e) { } }
           _cids.forEach(id => _loadCardArt(this, [id]));   // 🆕載本關敵人指定的 cardId(風城跨屬護衛補師c57/哥布林c41/方塊怪c70 等,_loadCardArt 含 _e/_e2 進化圖)   // 只載本關屬性:用 spawnStage 產「真敵人」收集元素(涵蓋上級↑懲罰屬 pun + 魔王階段變身),與 spawnEnemies 完全對齊→動態屬不再漏載變 emoji;原無腦全載 50 檔~5.2MB 大砍;🆕bonus 槽跳過+其後索引 -1 校正(比照 spawnEnemies 的 _si 換算,避免漏載真正 S3+ 的屬性)
           _els.forEach(el => { if (MONSTER_IMG[el] && !this.textures.exists('mon_' + el)) this.load.image('mon_' + el, MONSTER_IMG[el]); _CLS.forEach(c => { const k = c + '_' + el; if (ENEMY_IMG[k] && !this.textures.exists(k)) this.load.image(k, ENEMY_IMG[k]); }); });
-          if (!['fire', 'water', 'thunder', 'earth', 'wind'].includes(this.dungeonId)) { const _BLK = { fire: 'c66', water: 'c67', thunder: 'c68', earth: 'c69', wind: 'c70' }; _els.forEach(el => { if (_BLK[el]) _loadCardArt(this, [_BLK[el]]); }); }   // 🆕2026-08-03 非五城地城(序章/塔等)一般雜兵改用方塊怪卡圖→預載本關元素的方塊怪(含 _e/_e2 進化圖,見 enemyTexKey 通用 fallback)
+          if (!['fire', 'water', 'thunder', 'earth', 'wind'].includes(this.dungeonId)) { const _BLK = { fire: 'c66', water: 'c67', thunder: 'c68', earth: 'c69', wind: 'c70' }, _NAT = { fire: 'c41', water: 'c57', thunder: 'c38', earth: 'c49', wind: 'c55' }; _els.forEach(el => { if (_BLK[el]) _loadCardArt(this, [_BLK[el]]); if (_NAT[el]) _loadCardArt(this, [_NAT[el]]); }); }   // 🆕2026-08-03 非五城地城(每日/序章/塔)雜兵→方塊怪卡圖;🆕2026-08-17 技能怪→該屬招牌卡(c41/c57/c38/c49/c55),兩者都預載本關元素(含 _e/_e2 進化圖,見 enemyTexKey)
           else { const _sb = { thunder: 36, fire: 41, earth: 46, wind: 51, water: 56 }[this.dungeonId], _ei = { fire: 0, water: 1, thunder: 2, earth: 3, wind: 4 }; _els.forEach(el => { if (_ei[el] != null) _loadCardArt(this, ['c' + (_sb + _ei[el])]); }); }   // 🎨2026 五城:載本關「每個出現屬性」的招牌卡(含被自動剋屬混搭換屬的那隻)→顏色對得上血條,不再顯示錯色
         }
         _loadCardArt(this, (this.presetTeam || []).map(c => c && c.id));   // 只載「出戰 5 張」卡圖(不再一次載全部 40 張)
@@ -2399,7 +2399,7 @@
       }   // ⚠️ 音訊(BGM 3~8MB + 音效)改「非阻塞」載入(見 _startStageAudio):不放阻塞 preload,否則弱網卡關甚至開不了
       // 非阻塞載入本關 BGM + 戰鬥音效(在 create 之後動態載;關卡已可玩,聲音背景串流→弱網不卡關)
       _startStageAudio() {
-        const bk = 'bgm_' + this.dungeonId;
+        const bk = 'bgm_' + (this._bgId || this.dungeonId);   // 🆕每日修煉沿用同屬五屬城 BGM(_bgId,跟背景同源;daily_fire→bgm_fire);非每日 _bgId===dungeonId 不受影響
         const playBgm = () => { if (this.bgmMp3) return; if (this.cache.audio.exists(bk)) { this._bgmBase = 0.5; this.bgmMp3 = this.sound.add(bk, { loop: true, volume: 0.5 * (SFX.bgmVol ? SFX.bgmVol() : 1) }); try { this.bgmMp3.play(); } catch (e) { } } else SFX.startBgm(); };
         const need = [];
         if (!this.cache.audio.exists(bk)) need.push([bk, 'snd/' + bk + '.mp3']);
@@ -2427,15 +2427,16 @@
           if (e.boss && this.textures.exists(cn + '_e_full')) return cn + '_e_full';
           if (this.textures.exists(cn + '_full')) return cn + '_full';   // 無 tier 的雜兵(補師/術士/盾/消塊等)→該屬 base 圖
         }
-        if (e.boss) { const tier = dk === 'baby' ? 'baby' : (dk === 'beginner' ? 'beg' : 'nrm'); const k = 'boss_' + tier + '_' + el; if (this.textures.exists(k)) return k; }
-        else {
-          if (e.healAlly > 0 && this.textures.exists('healer_' + el)) return 'healer_' + el;   // 補師(回血)→ m006 補師圖
-          if ((e.arch === 'caster' || e.eatStored > 0 || e.paralyze > 0) && this.textures.exists('caster_' + el)) return 'caster_' + el;   // 術士兵(麻痺/消屬塊)→法師圖,兵種一眼分得出
-          if (e.shield && this.textures.exists('shield_' + el)) return 'shield_' + el;   // 🛡盾兵/盾王(護盾)→ m007 盾兵圖
-          const adv = (dk !== 'baby' && dk !== 'beginner');
-          if (adv && this.textures.exists('guard_' + el)) return 'guard_' + el;
-        }   // 中級(normal)以上雜兵(含魔王關護衛)→m003
-        const _blk = { fire: 'c66', water: 'c67', thunder: 'c68', earth: 'c69', wind: 'c70' }[el];   // 🆕2026-08-03 一般雜兵(非五城/非 bonus)改用方塊怪卡圖:tier 1/2/3 → 方塊怪/方塊獸/方塊王;取代舊 grunt_/mon_/emoji(需 preload 已補載,見上方 _BLK)
+        // 🎨2026-08-17 非五城地城(每日/序章/塔)比照五城招牌物種:技能怪(有機制/魔王)→該屬招牌卡(火c41/水c57/雷c38/土c49/風c55,依 tier 進化);一般無技雜兵→方塊怪(c66-70);退休舊人形兵圖(guard/healer/caster/shield)
+        const _nat = { fire: 'c41', water: 'c57', thunder: 'c38', earth: 'c49', wind: 'c55' }[el];
+        const _skill = !!(e.boss || e.finisher > 0 || e.finCD > 0 || e.healAlly > 0 || e.shield || e.arch === 'caster' || e.eatStored > 0 || e.paralyze > 0 || e.iron > 0 || e.peck > 0);   // 有機制=技能怪(finisher/補血/護盾/術士/鐵塊/啄食…);金屬經驗怪(cardId)已在上面分支攔掉,不會進到這
+        if (_nat && _skill && e.tier >= 1) {   // 技能怪(有明確 tier,=每日守門怪)→該屬招牌卡(跟五屬城同一張),tier1/2/3→base/_e/_e2(daily 魔王 tier3→_e2);序章/塔那種 tier:0 魔王不走這,維持下面專屬魔王圖
+          const nk = e.tier === 3 ? 'card_' + _nat + '_e2_full' : e.tier === 2 ? 'card_' + _nat + '_e_full' : 'card_' + _nat + '_full';
+          if (this.textures.exists(nk)) return nk;
+          if (this.textures.exists('card_' + _nat + '_full')) return 'card_' + _nat + '_full';
+        }
+        if (e.boss) { const tier = dk === 'baby' ? 'baby' : (dk === 'beginner' ? 'beg' : 'nrm'); const k = 'boss_' + tier + '_' + el; if (this.textures.exists(k)) return k; }   // 魔王:序章/塔等無明確 tier 的魔王→保留專屬魔王圖 boss_<tier>_<el>(daily 魔王已在上面用招牌卡 _e2 攔掉)
+        const _blk = { fire: 'c66', water: 'c67', thunder: 'c68', earth: 'c69', wind: 'c70' }[el];   // 一般雜兵(無技能)→方塊怪卡圖:tier 1/2/3 → 方塊怪/方塊獸/方塊王(需 preload 已補載,見上方 _BLK)
         if (_blk) {
           const bk = e.tier === 3 ? 'card_' + _blk + '_e2_full' : e.tier === 2 ? 'card_' + _blk + '_e_full' : 'card_' + _blk + '_full';
           if (this.textures.exists(bk)) return bk;
