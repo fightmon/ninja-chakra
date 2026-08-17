@@ -1375,7 +1375,7 @@
     function cardsFetch() { authedFetch('/api/cards').then(r => r.ok ? r.json() : null).then(d => { if (d) syncCards(d); }).catch(() => { }); }   // 🔐 fire-and-forget 拉收藏(離線/失敗靜默,沿用本地快取);開場/切帳/找回後強制校正用
     async function _sendRunComplete(item) {   // 🔐 送出單筆通關(POST /api/run/complete,idem 靠 runId);成功→syncWallet(coins/stones/gem_*)+從 pendingRuns 佇列移除,回 {ok:true,drops};冪等重放 drops 會是空陣列;失敗/離線→回 null(呼叫端自行決定要不要保留佇列等下次)
       let r;
-      try { r = await authedFetch('/api/run/complete', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ dungeonId: item.dungeonId, diff: item.diff, runId: item.runId, name: item.name || getMeta().name, bonusKilled: item.bonusKilled || [] }) }); }   // 🆕2026-08-02 bonusKilled 隨行帶給伺服器(見 _grantRun 組 item);離線佇列裡的舊 item 沒這欄→||[] 保底
+      try { r = await authedFetch('/api/run/complete', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ dungeonId: item.dungeonId, diff: item.diff, runId: item.runId, name: item.name || getMeta().name, bonusKilled: item.bonusKilled || [], comboCount: item.comboCount }) }); }   // 🆕2026-08-02 bonusKilled 隨行帶給伺服器(見 _grantRun 組 item);離線佇列裡的舊 item 沒這欄→||[] 保底;🆕2026-08-17 comboCount=每日修煉 T3 任務進度(item.comboCount undefined→JSON.stringify 略過該欄,非 daily/舊佇列項目不受影響,見 run/complete.ts daily 分支預設 0)
       catch (e) { return null; }   // 網路失敗:保留該筆,下次再試
       if (r.ok) {
         const d = await r.json(); syncWallet(d); if (d.gems) syncGems(d.gems);
@@ -1743,6 +1743,19 @@
       const d = await r.json(); syncWallet(d);
       mutSave(s => { s.meta.dayKey = todayKey(); s.meta.dailyN = d.dailyN; });
       return { day: d.reward.day, ic: d.reward.ic, label: d.reward.label, gemEl: null };
+    }
+    // ===== 🆕2026-08-17 初始島「每日修煉」(spec-daily-island.md §6):與上面的「每日登入」(claimDaily 系列)完全不同的功能,
+    //   只是剛好共用同一個 POST /api/daily/claim 路徑(body 帶 task 欄位才會走這條,見 claim.ts 檔頭「命名空間備註」)。=====
+    async function fetchDailyState() {   // GET /api/daily/state:回當日屬性/型態/tier_clears/task_progress/task_claimed;失敗/離線→null(呼叫端顯示「連線失敗」)
+      try { const r = await authedFetch('/api/daily/state'); if (!r || !r.ok) return null; return await r.json(); }
+      catch (e) { return null; }
+    }
+    async function claimDailyTask(task) {   // POST /api/daily/claim {task:'t1'|'t2'|'t3'|'all'}:任務看板領獎;409(已領)/400(未達標)/離線→null,呼叫端當「還沒達標或已領過」處理
+      try {
+        const r = await authedFetch('/api/daily/claim', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ task }) });
+        if (!r || !r.ok) return null;
+        return await r.json();
+      } catch (e) { return null; }
     }
     const MONEY_CARDS = new Set(['c71', 'c72', 'c73', 'c74', 'c75', 'c76']);   // 金屬/金錢卡:進「一般轉蛋」、不進「召喚勇者」
     const PREMIUM_ROSTER = ROSTER.filter(c => !EVO_CARDS[c.id] && !MATERIAL_IDS.has(c.id));   // 🏆召喚勇者池=英雄卡(排妖怪系EVO + 排所有素材:寶玉JEWEL c61-65、金銀 c71-76)→ 只剩 c01-c35 英雄/家族/台灣隊
@@ -2338,12 +2351,16 @@
     class GameScene extends Phaser.Scene {
       constructor() { super('game'); }
       init(data) {
-        this.presetTeam = (data && data.team) ? data.team : null; this.dungeonId = (data && data.dungeonId) || 'prologue'; this.dungeon = DUNGEONS[this.dungeonId] || DUNGEONS.prologue; this.hitLab = !!(data && data.lab); this.enemyLab = !!(data && data.elab); this._elabFilled = false; this.diff = DIFFS_BY[(data && data.diff)] || DIFFS_BY.normal;
+        this.presetTeam = (data && data.team) ? data.team : null; this.dungeonId = (data && data.dungeonId) || 'prologue'; this.dungeon = DUNGEONS[this.dungeonId] || DAILY_DUNGEONS[this.dungeonId] || DUNGEONS.prologue; this.hitLab = !!(data && data.lab); this.enemyLab = !!(data && data.elab); this._elabFilled = false; this.diff = DIFFS_BY[(data && data.diff)] || DIFFS_BY.normal;
+        // 🆕2026-08-17 每日修煉(daily_*):DUNGEONS 查無→退 DAILY_DUNGEONS(見 data-stages.js);背景圖沒有 daily_ 專屬素材
+        // →借同屬五屬城的背景(_bgId),不影響 this.dungeonId 本身(仍是 daily_fire_1 等,spawnStage/run api 都認這個真 id)
+        this._bgId = (this.dungeon && this.dungeon.daily && this.dungeon.el && DUNGEON_BG[this.dungeon.el]) ? this.dungeon.el : this.dungeonId;
         this.tut = (data && data.tutorial) ? { i: -1 } : null;   // 新手教學:腳本化引導模式(全程 if(this.tut) 包住)
         this.lesson = (data && data.lessonId && LESSONS[data.lessonId]) ? { id: data.lessonId, i: -1, free: false } : null;   // 序章練習課程:平行 this.tut 的獨立旗標,兩者同時只有一個非 null
         this.counterTeach = this.dungeonId === 'prologue' && this.diff && this.diff.key === 'baby' && !this.tut && !this.lesson;   // 🩹序章剋屬提醒:只在序章真戰鬥(baby、非腳本教學/課程)生效→敵人頭上常駐弱點徽章 + 一次性文字提示
         this.serverRunId = (data && data.serverRunId) || null;   // 🔐 戰鬥真實性:票券改由 HomeScene.startBattle 在進場前先領(run/start 當閘,見該函式),這裡只接收;全清時 _grantRun 優先用它送 run/complete(時間閘+一次性);拿不到(離線/失敗/教學/實驗室本就不領票)→退回本地 runId 走離線 fallback
         this._bonus = (data && data.bonus) || null; this._bonusKilled = [];   // 🆕2026-08-02 bonus 關:伺服器 run/start 回應擲骰出的獎勵卡id陣列(金屬c71-73/金錢c74-76)或 null;_bonusKilled 收集本場實際打死的獎勵卡id,回報 run/complete
+        this._dailyKilled = []; this._dailyComboHits = 0;   // 🆕2026-08-17 每日修煉:_dailyKilled=本場實際打死的金屬怪(c71/c72/c73)cardId 陣列(killEnemy 收集,回報 run/complete 的 bonusKilled);_dailyComboHits=本場 combo≥3 的清宮次數(resolve() 累計,回報 comboCount,供 T3 任務進度)
         this.dive = (data && data.dive) || null;   // 🎬從大廳俯衝進來的元素色(有值才播進場淡入+關卡橫幅)
         this.stagesEff = resolveStages(this.dungeon, this.diff.key);   // (b) 依難度解析「有效關卡結構」(規則+覆寫);slice1 規則=0 → 與 base 全等
         this._bonusStagePos = 0;   // 🆕 bonus 關插入位置(this.stage 的值,0=不插);插在 S2 之後→S1,S2,[BONUS],S3...
@@ -2369,7 +2386,7 @@
         _loadCardArt(this, (this.presetTeam || []).map(c => c && c.id));   // 只載「出戰 5 張」卡圖(不再一次載全部 40 張)
         if (this._bonus && this._bonus.length) _loadCardArt(this, [...this._bonus, 'c66', 'c67', 'c68', 'c69', 'c70']);   // 🆕2026-08-02 bonus 關:補載本場獎勵卡(金屬/金錢)+ 5 張方塊怪填充卡圖(base 圖即可,見 spawnBonusEnemies);enemyTexKey 靠 e.cardId 找 card_<id>_full,沒預載到就退回 EL['neutral'].face 💰 emoji(不會崩,但畫面會醜)
         if (this.counterTeach) _loadElSvgs(this);   // 🩹序章弱點徽章要用元素 SVG icon(el_<el>)
-        { const d = this.dungeonId, b = DUNGEON_BG[d]; if (b) { if (!this.textures.exists('bg_' + d + '_back')) this.load.image('bg_' + d + '_back', b.back); if (!this.textures.exists('bg_' + d + '_front')) this.load.image('bg_' + d + '_front', b.front); } }   // 只載「當前這關」背景(不再一次載全部地城)
+        { const d = this._bgId || this.dungeonId, b = DUNGEON_BG[d]; if (b) { if (!this.textures.exists('bg_' + d + '_back')) this.load.image('bg_' + d + '_back', b.back); if (!this.textures.exists('bg_' + d + '_front')) this.load.image('bg_' + d + '_front', b.front); } }   // 只載「當前這關」背景(不再一次載全部地城);🆕每日修煉借同屬五屬城背景(_bgId,見 init())
         if (this.dungeonId === 'tower') TOWER_MID.forEach(c => { if (!this.textures.exists(c.key)) this.load.image(c.key, c.src); });   // 塔中景元素方塊→只在打塔時載
         if (this.dungeonId === 'thunder') { _loadCardArt(this, ['c38']); if (!this.textures.exists('card_c38_king_full')) this.load.image('card_c38_king_full', 'art/cards/c38_king_full.webp'); }   // 🤖 雷之高原借鐵機人(原蜘蛛)透明大圖當敵圖:載 c38雷鐵機人(雜兵)完整大圖;魔王另載專屬 4星雷惡鐵王大圖(非玩家卡,只在此當魔王,比照 wind 分支)
         if (this.dungeonId === 'fire') { _loadCardArt(this, ['c41']); if (!this.textures.exists('card_c41_king_full')) this.load.image('card_c41_king_full', 'art/cards/c41_king_full.webp'); }   // 👺 火之火山借哥布林卡透明大圖當敵圖:載 c41哥布林(雜兵)完整大圖;魔王另載專屬 4星哥布林酋長大圖(非玩家卡,只在此當魔王)
@@ -2569,10 +2586,10 @@
         }
 
         // 戰鬥場景背景(由後到前):後景圖(-3)→中景火光餘燼(-2)→前景圖(-1)→盤面深底(0)。無關卡圖→漸層帶
-        const hasBG = this.textures.exists('bg_' + this.dungeonId + '_back');
+        const _bgKey = this._bgId || this.dungeonId, hasBG = this.textures.exists('bg_' + _bgKey + '_back');
         this.embers = null;
-        this.bgBack = hasBG ? this.add.image(CX, 0, 'bg_' + this.dungeonId + '_back').setOrigin(0.5, 0).setDepth(DEPTH.bg - 3) : null;
-        this.bgFront = hasBG && this.textures.exists('bg_' + this.dungeonId + '_front') ? this.add.image(CX, 0, 'bg_' + this.dungeonId + '_front').setOrigin(0.5, 0).setDepth(DEPTH.bg - 1) : null;
+        this.bgBack = hasBG ? this.add.image(CX, 0, 'bg_' + _bgKey + '_back').setOrigin(0.5, 0).setDepth(DEPTH.bg - 3) : null;
+        this.bgFront = hasBG && this.textures.exists('bg_' + _bgKey + '_front') ? this.add.image(CX, 0, 'bg_' + _bgKey + '_front').setOrigin(0.5, 0).setDepth(DEPTH.bg - 1) : null;
         this.towerCubes = null;
         if (hasBG) { if (this.dungeonId === 'tower') this.makeTowerCubes(); else this.makeEmbers(); }   // 中景:塔=元素方塊飄浮、其餘=粒子
         this.bgGfx = this.add.graphics().setDepth(DEPTH.bg);
@@ -3573,11 +3590,21 @@
       refill() {
         const easy = (this.lesson && this.lesson.free) || this.dungeonId === 'prologue' || (this.diff && this.diff.baby);   // 新手友善區:序章 + 所有城「入門(baby)」+ 課程自由清宮段 → 拖盤只出 4 種好解矩形(橫1×3/直3×1/2×3/3×2),不會抽到難塞的怪形狀,新手好補宮過關
         const noHard = !easy && this.diff && this.diff.key === 'beginner';   // 初級:一般隨機但排除 1×5/5×1/十字這3種最難塞的形狀(保留其餘變化,不像 baby 縮成4矩形)
-        this.tray = easy ? [this._pickEasy(), this._pickEasy(), this._pickEasy()].map(c => ({ c, used: false }))
-          : [pickShape(noHard), pickShape(noHard), pickShape(noHard)].map(c => ({ c, used: false }));   // 其餘難度=一般隨機塊(初級 noHard 過濾難形)
+        // 🆕2026-08-17 pieceSet(spec-daily-stages.md §3/spec-daily-island.md §7):關卡資料帶 pieceSet 就只從池內抽(daily=100%,pieceSetChance 未設→視為1);
+        //   通用參數,未設定的關卡(既有全部五屬城/序章/塔)行為完全不變(下方 pick() 在 pieceSet 為 falsy 時 100% 落回原本 easy/pickShape(noHard) 分支)。
+        const pieceSet = this.dungeon && this.dungeon.pieceSet;
+        const pieceSetChance = pieceSet ? ((this.dungeon.pieceSetChance != null) ? this.dungeon.pieceSetChance : 1) : 0;
+        const pick = () => (pieceSet && Math.random() < pieceSetChance) ? this._pickFromSet(pieceSet) : (easy ? this._pickEasy() : pickShape(noHard));
+        this.tray = [pick(), pick(), pick()].map(c => ({ c, used: false }));   // 其餘難度=一般隨機塊(初級 noHard 過濾難形)
         if (this.diff && this.diff.baby && this.babyNeedsHelp()) this.tray = this.babyTray();
       }      // 入門:快卡住時再降級成救援小塊(1×1/1×2 + renderHint 標最佳落點),蓋過上面的配置
       _pickEasy() { const P = [[[0, 0], [0, 1], [0, 2]], [[0, 0], [1, 0], [2, 0]], [[0, 0], [0, 1], [0, 2], [1, 0], [1, 1], [1, 2]], [[0, 0], [0, 1], [1, 0], [1, 1], [2, 0], [2, 1]]]; return P[Math.floor(Math.random() * P.length)].map(x => x.slice()); }   // 好解塊池(4種矩形):橫1×3/直3×1/2×3/3×2;全矩形無 T 等怪形→好補宮;深拷貝避免共用參照
+      // 🆕2026-08-17 pieceSet id → 座標形狀(見 DAILY_DUNGEONS _DAILY_PIECE_SET,7 種好解小塊):字串沒對到表→退回 1×2 保底,不會回傳空陣列卡死拖盤
+      _pickFromSet(ids) {
+        const SHAPE_BY_ID = { '1x2': [[0, 0], [0, 1]], '2x1': [[0, 0], [1, 0]], '1x3': [[0, 0], [0, 1], [0, 2]], '3x1': [[0, 0], [1, 0], [2, 0]], '2x2': [[0, 0], [0, 1], [1, 0], [1, 1]], '2x3': [[0, 0], [0, 1], [0, 2], [1, 0], [1, 1], [1, 2]], '3x2': [[0, 0], [0, 1], [1, 0], [1, 1], [2, 0], [2, 1]] };
+        const id = ids[Math.floor(Math.random() * ids.length)], s = SHAPE_BY_ID[id] || SHAPE_BY_ID['1x2'];
+        return s.map(x => x.slice());
+      }
       // 嬰兒救援判定:完全放不下、或「盤面已擁擠且這手清不掉任何線/box」→ 快解不出來,該救
       babyNeedsHelp() {
         if (!this.anyPlaceable()) return true;
@@ -6073,6 +6100,7 @@
         this._placeCleared = true;   // 逐塊 combo:這塊有清到(沒清的塊由 afterAction 把 combo 歸零)
         this.showCombo(); this.renderCombo(true);   // combo 已在頂端 +1(每塊有清才+1)+ 常駐指示器彈一下
         this.runMaxHit = Math.max(this.runMaxHit || 0, n); this.runMaxCombo = Math.max(this.runMaxCombo || 0, this.combo);   // 本局最佳 HIT/combo(我的紀錄/成就用)
+        if (this.dungeon && this.dungeon.daily && this.combo >= 3) this._dailyComboHits = (this._dailyComboHits || 0) + 1;   // 🆕2026-08-17 每日修煉 T3 任務:單次攻擊(這次清宮)combo≥3 累計次數,回報 run/complete 的 comboCount(spec-daily-island.md §5,伺服器單場上限20次)
         // 另類護盾:本手 HIT / 連段沒達門檻的敵人,這手不扣其 HP(演「🛡擋下」)
         this.enemies.forEach(e => { e._blocked = false; e._shieldBreak = false; e._nearMiss = null; e._breakBonus = 0; });
         victims.forEach(v => { v._blocked = ((v.hitGate && n < v.hitGate) || (v.comboGate && this.combo < v.comboGate)); });
@@ -6418,6 +6446,7 @@
         this._clearEnemyIron(e);   // 🔩鐵機人被打倒→清掉牠放的鐵塊(逐隻歸屬,不動別隻的;玩家已清的略過)→不再賴到下一關
         this._enemyKi && this._enemyKi(e, 0);   // 死了→立刻收掉牠的鬥氣光暈(免殘留飄在陣亡處)
         if (e.cardId && e.flee) { this._bonusKilled.push(e.cardId); }   // 🆕2026-08-02 bonus 關獎勵怪(flee 旗標識別)被玩家真正打死→記進 _bonusKilled,回報 run/complete;逃跑移除走 _fleeAct,不經過這裡→不會誤記
+        if (e.cardId && MONEY_CARDS.has(e.cardId) && this.dungeon && this.dungeon.daily) { this._dailyKilled.push(e.cardId); }   // 🆕2026-08-17 每日修煉:金屬怪(c71/c72/c73,el:'neutral')被玩家真正打死→記進 _dailyKilled,回報 run/complete 的 bonusKilled(伺服器取「這個∩該層掉落池」發卡,見 spec-daily-island.md §4/§6)
         const last = this.aliveCount() === 0, isFinal = last && this.stage >= this.stagesEff.length;
         if (isFinal) { this._finalEnemy = e; this.stageClear(); return; }   // 最後一關最後一擊:由 finalBlow 演特寫鏡頭+飛出(不在此 playDeath)
         this.playDeath(e);   // 敗陣演出:被打飛(後上)+縮小+旋轉+淡出 → 化成光芒
@@ -6547,7 +6576,8 @@
       _grantRun() {
         if (this._runGranted) return; this._runGranted = true;   // 🏆全清結算:整趟累積的 EXP 一次入帳(只有全清才呼叫→中途放棄/戰敗自然全沒收);🔐 卡片掉落/寶玉/金幣改由伺服器 run/complete 回應決定(見下),不再前端算
         // 🔐 等級/經驗改伺服器權威:通關 exp/升級/上限+補滿由 run/complete 決定,前端不再本地 addRewards 遞增(擋竄改);升級慶祝改由回應 leveledUp 觸發(見 _sendRunComplete().then)。金幣/掉卡入帳同樣走伺服器,displayed runCoins/runExp 照舊只是本場顯示。
-        const item = { dungeonId: this.dungeon.id, diff: (this.diff && this.diff.key) || 'normal', runId: this.serverRunId || ('r' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8)), name: getMeta().name, bonusKilled: this._bonusKilled || [] };   // name=記錄保持者名字→run/complete 破全服最速榜時一起存(排行顯示是誰)   // 🔐 優先用開戰領到的伺服器票券(含'.',run/complete 走時間閘+一次性);拿不到→本地 runId 走離線 fallback(限流);🆕2026-08-02 bonusKilled=本場實際打死的獎勵怪卡id陣列,伺服器取「這個∩票券簽的」發獎勵
+        const _isDaily = !!(this.dungeon && this.dungeon.daily);   // 🆕2026-08-17 每日修煉:bonusKilled 欄位對 daily 分支語意不同(金屬怪擊殺清單,見 run/complete.ts daily 分支),要送 _dailyKilled 而非 _bonusKilled;另外多帶 comboCount(T3 任務進度)
+        const item = { dungeonId: this.dungeon.id, diff: (this.diff && this.diff.key) || 'normal', runId: this.serverRunId || ('r' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8)), name: getMeta().name, bonusKilled: (_isDaily ? this._dailyKilled : this._bonusKilled) || [], comboCount: _isDaily ? (this._dailyComboHits || 0) : undefined };   // name=記錄保持者名字→run/complete 破全服最速榜時一起存(排行顯示是誰)   // 🔐 優先用開戰領到的伺服器票券(含'.',run/complete 走時間閘+一次性);拿不到→本地 runId 走離線 fallback(限流);🆕2026-08-02 bonusKilled=本場實際打死的獎勵怪卡id陣列,伺服器取「這個∩票券簽的」發獎勵
         this.runDrops = []; this._runDropsPending = true;   // showResult 顯示「連線後發放」暫態,直到下面拿到結果或確認離線
         mutSave(s => {
           const q = (s.pendingRuns = s.pendingRuns || []);
@@ -7052,7 +7082,7 @@
           const PH = contentH + PAD * 2, top = cy - PH / 2;
           panel.add(roundRectG(this, CX, cy, PW, PH, 16, T.surf, 1, T.divider, 1.5));   // 白色圓角面板(暗背幕之上承載結算內容)
           let y = top + PAD;
-          TX(y + Ht / 2, '🏆 通關 ' + this.dungeon.name + '！' + ((this.diff && this.diff.name) || ''), FS.title, T.goldTx, true); y += Ht + G;   // 標題帶難度→讓玩家知道過的是哪一級
+          TX(y + Ht / 2, '🏆 通關 ' + this.dungeon.name + '！' + ((this.dungeon.daily) ? '' : ((this.diff && this.diff.name) || '')), FS.title, T.goldTx, true); y += Ht + G;   // 標題帶難度→讓玩家知道過的是哪一級;🆕每日修煉固定 normal,不顯示「中級」字樣(容易誤會)
           TX(y + Hl / 2, pending ? '⏳ 戰利品連線後發放' : (drops.length ? ('戰利品 ×' + drops.length) : '(這趟沒有掉落)'), FS.sub, T.goldTx, true); y += Hl;   // 🔐 pending=還沒拿到伺服器掉落結果:不假顯示卡片
           if (dropsH) {
             y += G;
@@ -7756,7 +7786,7 @@
         this.showDiffPicker(id);
       }
       diffCost(id, df) {
-        const d = DUNGEONS[id] || DUNGEONS.prologue;
+        const d = DUNGEONS[id] || DAILY_DUNGEONS[id] || DUNGEONS.prologue;   // 🆕2026-08-17 每日修煉:DUNGEONS 查無→退 DAILY_DUNGEONS;d.cost 已是終值(5/10/15,spec §3/§8),配 daily 恆用 DIFFS_BY.normal(staM=1.0)算出來剛好等於終值,不用另開分支
         return Math.round(d.cost * df.staM);
       }   // 難度體力=關卡基準×難度倍率;🔐 伺服器 run/start 扣款不套隊長技折扣(無隊伍資訊,一律收全額)→前端顯示與出擊閘門一併改回全額,不再套 c11/c27 的 stamina 折扣,避免「前端顯示夠、伺服器402」;c11/c27 該效果目前對出擊體力已無實際作用(若日後要恢復,需前後端同時處理)
       showDiffPicker(id) {
@@ -7804,6 +7834,10 @@
         this.time.delayedCall(320, () => { ready = true; });   // ~0.3s 後才接受點擊
       }
       showLessonPicker() {   // 序章「練習課程」picker(mirror showDiffPicker,拿掉難度/體力/解鎖;一關一個玩法/免體力/可重玩)
+        // 🆕2026-08-17 初始島 picker 第三態(spec-daily-island.md §1/§7):序章已破→改開「每日修煉」面板(任務看板+今日三關),
+        //   原本的「3 堂課程」列表收進面板角落「📖 複習課程」小入口(見 showReviewLessons)。
+        //   ⚠️ 下面 prologueCleared===false(序章未破)分支一行不動——只在這裡提早 return,不改動、不搬移原本任何程式碼。
+        if (isDungeonCleared('prologue')) { this.showDailyIsland(); return; }
         if (this._lessonPickG) this._lessonPickG.destroy();
         const g = this.add.container(0, 0).setDepth(1500); this._lessonPickG = g;
         let ready = false;
@@ -7860,6 +7894,178 @@
         bhit.on('pointerup', () => { if (ready) close(); });
         this.time.delayedCall(320, () => { ready = true; });
       }
+      // 📖 複習課程(2026-08-17):序章已破後原本「3 堂課程」picker,原樣搬到獨立方法(內容/行為完全不變),
+      //   從每日修煉面板(showDailyIsland)角落小入口進來,不再是 showLessonPicker 序章已破分支的預設畫面。
+      showReviewLessons() {
+        if (this._lessonPickG) this._lessonPickG.destroy();
+        const g = this.add.container(0, 0).setDepth(1500); this._lessonPickG = g;
+        let ready = false;
+        const close = () => { g.destroy(); this._lessonPickG = null; };
+        const T = UI(), lc = (getMeta().lessonCleared || {});
+        const bg = this.add.rectangle(CX, H / 2, W, H, 0x0e0a16, 0).setInteractive().on('pointerup', () => { if (ready) close(); });
+        g.add(bg); this.tweens.add({ targets: bg, fillAlpha: { from: 0, to: 0.72 }, duration: 170 });
+        const title = this.add.text(CX, H * 0.075, '⛩️ 序章 · 練習課程', { fontFamily: EMOJIFONT, fontSize: FS.title, color: '#ffffff', fontStyle: 'bold' }).setOrigin(0.5).setStroke('#000000', 4);
+        const sub = this.add.text(CX, H * 0.075 + 30, '一關一個玩法 · 免體力 · 可重玩', { fontFamily: EMOJIFONT, fontSize: FS.cap, color: '#e2ddd4' }).setOrigin(0.5).setStroke('#000000', 3);
+        g.add(title); g.add(sub);
+        const backH = 50, backY = H - 38;
+        const list = [
+          { id: 'p1', name: '① 相剋與屬塊', kind: 'lesson', enabled: true },
+          { id: 'p3', name: '② 屬塊儲存與覆蓋', kind: 'lesson', enabled: true },
+          { id: 'p2', name: '③ 全體攻擊', kind: 'lesson', enabled: true },
+        ];
+        const areaTop = H * 0.075 + 62, areaBot = backY - backH / 2 - 14, areaH = areaBot - areaTop;
+        const rh = Math.min(72, areaH / list.length), blockTop = areaTop + (areaH - rh * list.length) / 2;
+        const rw = W - 24, Lx = -rw / 2 + 18;
+        list.forEach((item, i) => {
+          const y = blockTop + rh * i + rh / 2, done = !!lc[item.id], usable = item.enabled;
+          const kids = [];
+          kids.push(roundRectG(this, 0, 0, rw, rh - 8, 15, usable ? T.surf : T.surf2, 1, usable ? 0x35a866 : T.divider, usable ? 2.5 : 1.5));
+          const hit = this.add.rectangle(0, 0, rw, rh - 8, 0x000000, 0.001).setInteractive(); kids.push(hit);
+          kids.push(this.add.text(Lx + 6, 0, usable ? '🎓' : '🔒', { fontFamily: EMOJIFONT, fontSize: '26px' }).setOrigin(0, 0.5).setAlpha(usable ? 1 : 0.45));
+          kids.push(this.add.text(Lx + 44, 0, item.name, { fontFamily: EMOJIFONT, fontSize: '16px', color: usable ? T.ink : T.ink3, fontStyle: 'bold' }).setOrigin(0, 0.5));
+          if (usable && done) { kids.push(this.add.text(rw / 2 - 14, 0, '✅ 完成', { fontFamily: EMOJIFONT, fontSize: '13px', color: '#35a866', fontStyle: 'bold' }).setOrigin(1, 0.5)); }
+          else if (usable) { kids.push(this.add.text(rw / 2 - 14, 0, '🎁 首通 +1💎', { fontFamily: EMOJIFONT, fontSize: '13px', color: '#ffd56a', fontStyle: 'bold' }).setOrigin(1, 0.5)); }
+          else { kids.push(this.add.text(rw / 2 - 14, 0, '即將推出', { fontFamily: EMOJIFONT, fontSize: '13px', color: T.ink3, fontStyle: 'bold' }).setOrigin(1, 0.5)); }
+          const rc = this.add.container(CX, y, kids); g.add(rc);
+          rc.alpha = 0; rc.y = y + 18;
+          this.tweens.add({ targets: rc, alpha: 1, y: y, delay: 70 + i * 50, duration: 240, ease: 'Cubic.out' });
+          hit.on('pointerup', () => {
+            if (!ready) return;
+            if (!item.enabled) { this.toast('即將推出'); return; }
+            close();
+            const team = TUTORIAL_TEAM.map(id => ROSTER.find(c => c.id === id)).filter(Boolean);   // 借狗狗隊、免體力、腳本演示(同原本行為)
+            this.scene.manager.start('game', { team: team, dungeonId: 'prologue', lessonId: item.id });
+            this.scene.manager.stop('home');
+          });
+        });
+        const bb = roundRectG(this, 0, 0, rw, backH, backH / 2, T.surf, 1, T.divider, 2), bhit = this.add.rectangle(0, 0, rw, backH, 0x000000, 0.001).setInteractive();
+        const bt = this.add.text(0, 0, '← 返回', { fontFamily: EMOJIFONT, fontSize: FS.sub, color: T.ink, fontStyle: 'bold' }).setOrigin(0.5);
+        const bc = this.add.container(CX, backY, [bb, bhit, bt]); g.add(bc); bc.alpha = 0;
+        this.tweens.add({ targets: bc, alpha: 1, delay: 70 + list.length * 50, duration: 200 });
+        bhit.on('pointerup', () => { if (ready) close(); });
+        this.time.delayedCall(320, () => { ready = true; });
+      }
+      // 🆕2026-08-17 每日修煉面板(spec-daily-island.md §1/§7):序章已破後點初始島的新畫面。
+      //   先 GET /api/daily/state 拿當日狀態(不建列,見該端點註解),拿到才畫;失敗顯示「連線失敗」+ 返回鈕。
+      showDailyIsland() {
+        if (this._dailyIslandG) { this._dailyIslandG.destroy(); this._dailyIslandG = null; }
+        const g = this.add.container(0, 0).setDepth(1500); this._dailyIslandG = g;
+        const T = UI();
+        const bg = this.add.rectangle(CX, H / 2, W, H, 0x0e0a16, 0).setInteractive();
+        g.add(bg); this.tweens.add({ targets: bg, fillAlpha: { from: 0, to: 0.72 }, duration: 170 });
+        const loadTxt = this.add.text(CX, H / 2, '⏳ 載入每日修煉…', { fontFamily: EMOJIFONT, fontSize: FS.sub, color: '#f3e9d8', fontStyle: 'bold' }).setOrigin(0.5);
+        g.add(loadTxt);
+        fetchDailyState().then(st => {
+          if (this._dailyIslandG !== g) return;   // 面板已被關掉/重開過(防競態:回應回來時使用者已手滑關掉或再點一次)
+          loadTxt.destroy();
+          if (!st) {
+            g.add(this.add.text(CX, H / 2, '連線失敗,稍後再試', { fontFamily: EMOJIFONT, fontSize: FS.sub, color: '#ff9a7a', fontStyle: 'bold' }).setOrigin(0.5));
+            const backH = 50, backY = H - 38, rw = W - 24;
+            const bb = roundRectG(this, 0, 0, rw, backH, backH / 2, T.surf, 1, T.divider, 2), bhit = this.add.rectangle(0, 0, rw, backH, 0x000000, 0.001).setInteractive();
+            const bt = this.add.text(0, 0, '← 返回', { fontFamily: EMOJIFONT, fontSize: FS.sub, color: T.ink, fontStyle: 'bold' }).setOrigin(0.5);
+            const bc = this.add.container(CX, backY, [bb, bhit, bt]); g.add(bc);
+            bhit.on('pointerup', () => { g.destroy(); if (this._dailyIslandG === g) this._dailyIslandG = null; });
+            return;
+          }
+          this._renderDailyIsland(g, st);
+        });
+      }
+      // 每日修煉面板實際內容(拆開是因為要 async 抓完狀態才畫;領獎/打完關後 refresh() 會整個重開一次抓最新狀態,不做局部更新)
+      _renderDailyIsland(g, st) {
+        const T = UI(), el = st.element, elInfo = EL[el] || EL.fire;
+        const iconD = DAILY_DUNGEONS['daily_' + el + '_1'];
+        const icon = (iconD && iconD.emoji) || elInfo.fx;
+        let ready = false;
+        const close = () => { g.destroy(); if (this._dailyIslandG === g) this._dailyIslandG = null; };
+        const refresh = () => { close(); this.showDailyIsland(); };   // 領獎/打完關後想看最新狀態:簡化做法=整個面板重開重抓一次(不做局部更新)
+        const title = this.add.text(CX, H * 0.06, icon + ' ' + elInfo.name + '之日 · 每日修煉', { fontFamily: EMOJIFONT, fontSize: FS.title, color: '#ffffff', fontStyle: 'bold' }).setOrigin(0.5).setStroke('#000000', 4);
+        g.add(title);
+        const sub = this.add.text(CX, H * 0.06 + 28, '選擇修煉關卡 · 每層限通關一次', { fontFamily: EMOJIFONT, fontSize: FS.cap, color: '#e2ddd4' }).setOrigin(0.5).setStroke('#000000', 3);
+        g.add(sub);   // 🙈 不寫多金日/經驗日,讓玩家進去才知道金/銀;複習課程入口也拿掉
+
+        let y = H * 0.06 + 48;
+        const rw = W - 24, Lx = -rw / 2 + 14;
+        const SHOW_DAILY_TASKS = false;   // 🙈 先隱藏「今日任務」看板(4格);要開回來把這行改 true
+        if (SHOW_DAILY_TASKS) {
+        g.add(this.add.text(CX, y, '📋 今日任務', { fontFamily: EMOJIFONT, fontSize: FS.sub, color: '#ffe08a', fontStyle: 'bold' }).setOrigin(0.5).setStroke('#000000', 3));
+        y += 24;
+        const TASKS = [
+          { k: 't1', label: '全清任意地下城 ×1', target: 1, reward: '💰900' },
+          { k: 't2', label: '強化(餵卡) ×1', target: 1, reward: '🔮×2' },
+          { k: 't3', label: '單次 combo≥3 ×5', target: 5, reward: '💰600' },
+        ];
+        const rh2 = 46, taskGap = 6;
+        const claimBtn = (kids, btnX, task, met, claimed) => {
+          if (claimed) { kids.push(this.add.text(btnX, 0, '✅', { fontFamily: EMOJIFONT, fontSize: '20px' }).setOrigin(0.5)); return; }
+          if (!met) { kids.push(this.add.text(btnX, 0, '🔒', { fontFamily: EMOJIFONT, fontSize: '18px' }).setOrigin(0.5).setAlpha(0.5)); return; }
+          kids.push(roundRectG(this, btnX, 0, 66, 32, 16, T.gold, 1, null, 0));
+          kids.push(this.add.text(btnX, 0, '領取', { fontFamily: EMOJIFONT, fontSize: '14px', color: '#4a3510', fontStyle: 'bold' }).setOrigin(0.5));
+          const hit = this.add.rectangle(btnX, 0, 66, 32, 0x000000, 0.001).setInteractive(); kids.push(hit);
+          hit.on('pointerup', async () => {
+            if (!ready || this._dailyClaimBusy) return; this._dailyClaimBusy = true;
+            const r = await claimDailyTask(task); this._dailyClaimBusy = false;
+            if (r) { syncWallet(r); this._applyGrantedCards(r.grantedCards); this.toast('🎁 領取成功!'); refresh(); }
+            else { this.toast('還沒達標或已領過'); }
+          });
+        };
+        TASKS.forEach((tk, i) => {
+          const yy = y + i * (rh2 + taskGap) + rh2 / 2;
+          const prog = Math.min(tk.target, (st.taskProgress && st.taskProgress[tk.k]) || 0), claimed = !!(st.taskClaimed && st.taskClaimed[tk.k]), met = prog >= tk.target;
+          const kids = [];
+          kids.push(roundRectG(this, 0, 0, rw, rh2, 12, claimed ? T.surf2 : T.surf, 1, met ? 0x35a866 : T.divider, met ? 2 : 1.5));
+          kids.push(this.add.text(Lx + 4, -9, tk.label, { fontFamily: EMOJIFONT, fontSize: '14px', color: T.ink, fontStyle: 'bold' }).setOrigin(0, 0.5));
+          kids.push(this.add.text(Lx + 4, 11, '進度 ' + prog + '/' + tk.target + '　獎勵 ' + tk.reward, { fontFamily: EMOJIFONT, fontSize: FS.micro, color: T.ink2 }).setOrigin(0, 0.5));
+          claimBtn(kids, rw / 2 - 39, tk.k, met, claimed);
+          g.add(this.add.container(CX, yy, kids));
+        });
+        y += TASKS.length * (rh2 + taskGap) + 8;
+        { // 全清列(三格皆達標)
+          const allMet = TASKS.every(tk => ((st.taskProgress && st.taskProgress[tk.k]) || 0) >= tk.target), allClaimed = !!(st.taskClaimed && st.taskClaimed.all);
+          const yy = y + rh2 / 2, kids = [];
+          kids.push(roundRectG(this, 0, 0, rw, rh2, 12, allClaimed ? T.surf2 : T.surf, 1, allMet ? 0x35a866 : T.divider, allMet ? 2 : 1.5));
+          kids.push(this.add.text(Lx + 4, 0, '🌟 三格全清　🔮×2', { fontFamily: EMOJIFONT, fontSize: '14px', color: T.ink, fontStyle: 'bold' }).setOrigin(0, 0.5));
+          claimBtn(kids, rw / 2 - 39, 'all', allMet, allClaimed);
+          g.add(this.add.container(CX, yy, kids));
+          y += rh2 + 14;
+        }
+        }   // end if(SHOW_DAILY_TASKS)
+        // 屬城式:三關垂直置中、白圓角列+元素色框、逐列滑入(mirror showDiffPicker)
+        const backH2 = 46, backY2 = H - 32;
+        const areaTop = H * 0.06 + 52, areaBot = backY2 - backH2 / 2 - 14, areaH = areaBot - areaTop;
+        const rh3 = Math.min(72, areaH / 3), blockTop = areaTop + (areaH - rh3 * 3) / 2;
+        [1, 2, 3].forEach((tier, i) => {
+          const d = DAILY_DUNGEONS['daily_' + el + '_' + tier]; if (!d) return;
+          const yy = blockTop + i * rh3 + rh3 / 2;
+          const cost = d.cost, afford = getMeta().stamina >= cost, cleared = !!(st.tierClears && st.tierClears[String(tier)]);
+          const usable = afford && !cleared;
+          const kids = [];
+          kids.push(roundRectG(this, 0, 0, rw, rh3 - 8, 15, usable ? T.surf : T.surf2, 1, elInfo.color, usable ? 2.5 : 1.5));   // 白圓角列+元素色框
+          const hit = this.add.rectangle(0, 0, rw, rh3 - 8, 0x000000, 0.001).setInteractive(); kids.push(hit);
+          kids.push(this.add.text(Lx + 6, 0, d.emoji, { fontFamily: EMOJIFONT, fontSize: '26px' }).setOrigin(0, 0.5).setAlpha(usable ? 1 : 0.45));
+          kids.push(this.add.text(Lx + 44, -11, d.name, { fontFamily: EMOJIFONT, fontSize: '16px', color: usable ? T.ink : T.ink3, fontStyle: 'bold' }).setOrigin(0, 0.5));
+          kids.push(this.add.text(Lx + 44, 13, cleared ? '明日再來' : ('⚡ ' + cost + ' · 🪙 ★' + tier + '金屬怪 · 💎+1'), { fontFamily: EMOJIFONT, fontSize: '13px', color: cleared ? T.ink3 : (afford ? T.ink2 : '#c0492c'), fontStyle: (!cleared && !afford) ? 'bold' : 'normal' }).setOrigin(0, 0.5));
+          if (cleared) { kids.push(roundRectG(this, rw / 2 - 46, 0, 66, 26, 13, 0x35a866, 1, null, 0)); kids.push(this.add.text(rw / 2 - 46, 0, '✓ 完成', { fontFamily: EMOJIFONT, fontSize: '13px', color: '#ffffff', fontStyle: 'bold' }).setOrigin(0.5)); }
+          const rc = this.add.container(CX, yy, kids); g.add(rc);
+          rc.alpha = 0; rc.y = yy + 18;
+          this.tweens.add({ targets: rc, alpha: 1, y: yy, delay: 70 + i * 50, duration: 240, ease: 'Cubic.out' });
+          hit.on('pointerup', () => { if (!ready) return; if (cleared) { showWhiteToast(this, '今天已通關,明日再來', { fs: '26px', big: true, hold: 1500 }); return; } if (!afford) { showWhiteToast(this, '體力不足!去商店回復', { fs: '26px', big: true, hold: 1500 }); return; } close(); this.startBattle('daily_' + el + '_' + tier, DIFFS_BY.normal); });
+        });
+        // 底部:返回大廳(白色藥丸)
+        const backH = 46, backY = H - 32;
+        const bb = roundRectG(this, 0, 0, rw, backH, backH / 2, T.surf, 1, T.divider, 2), bhit = this.add.rectangle(0, 0, rw, backH, 0x000000, 0.001).setInteractive();
+        const bt = this.add.text(0, 0, '← 返回大廳', { fontFamily: EMOJIFONT, fontSize: FS.sub, color: T.ink, fontStyle: 'bold' }).setOrigin(0.5);
+        const bc = this.add.container(CX, backY, [bb, bhit, bt]); g.add(bc);
+        bhit.on('pointerup', () => { if (ready) close(); });
+        this.time.delayedCall(280, () => { ready = true; });
+      }
+      // 任務/看板領獎的 grantedCards([{id,rank,isNew}])落地:比照 _grantRun 掉落套用套路(本地鏡像 addCard + 補載卡圖 + cardsFetch 校正)
+      _applyGrantedCards(list) {
+        if (!list || !list.length) return;
+        list.forEach(x => { if (x && x.id) addCard(x.id); });
+        _loadCardArt(this, list.map(x => x.id));
+        if (this.load.list.size) this.load.start();
+        cardsFetch();
+      }
       async startBattle(id, df) {   // 🔐 出擊前先向伺服器領票(run/start 當閘):線上→伺服器判定解鎖/體力並扣款,拿回真正 stamina + 簽章 runId;離線/伺服器異常→照舊放行(不可卡死玩家,見下)
         const tm = leveledTeam(loadTeam().filter(Boolean));   // 🆕個體制:隊伍格(uid/舊id)→leveledTeam 內部解析成個體並用個體 lv/evo 算戰力   // 帶升級後 atk
         if (tm.length !== 5) { this.toast('隊伍不齊,先去編隊'); this.go('team'); return; }
@@ -7883,6 +8089,9 @@
           } else if (r && r.status === 400) {   // 尚未解鎖(理論上 UI 已灰掉,防禦性擋);區分城/難度未解鎖
             const body400 = await r.json().catch(() => ({}));
             failMsg = (body400 && body400.error === 'diff_locked') ? '尚未解鎖此難度,先破前一難度' : '尚未解鎖此關卡';
+          } else if (r && r.status === 409) {   // 🆕2026-08-17 每日修煉專屬(run/start.ts daily 分支):今天這層已通關過 / 換日了但前端還沒重整→屬性不對。每日修煉本版不做離線 fallback,這裡務必攔下,否則會白打一場(run/complete daily 分支拒絕未簽票的請求,見該檔案檔頭)
+            const body409 = await r.json().catch(() => ({}));
+            failMsg = (body409 && body409.error === 'already_cleared') ? '今天已經打過這層了,明天再來' : '今天不是這個屬性,重新整理看看';
           } else if (r && r.ok) { const d2 = await r.json(); serverRunId = (d2 && d2.runId) || null; serverBonus = (d2 && d2.bonus && d2.bonus.cards) || null; if (d2) syncWallet(d2); }
           // else:其他非預期狀態→比照離線放行(serverRunId 留 null,走本地 runId fallback)
         } catch (e) { }   // 🔐 網路失敗/離線 → 照舊進戰鬥,不卡死玩家
