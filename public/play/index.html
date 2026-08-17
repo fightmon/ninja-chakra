@@ -8084,7 +8084,8 @@
         const cost = this.diffCost(id, df), m = getMeta();
         if (m.stamina < cost) { this.toast('體力不足!去商店回復'); this.rebuild(); return; }   // 本地快速預檢(全額,與伺服器算式一致):明顯不夠就不必打 API
         if (boxFull()) {   // 🎒 背包滿→進關前先攔(PAD/ToS 做法:打之前就警告,不白打):掉落會收不到,問要不要先整理;照打也放行
-          const goClean = await uiConfirm({ title: '背包已滿', message: '背包滿了,這關掉落的卡會收不到。\n要先去整理嗎?', okLabel: '去卡片BOX', cancelLabel: '照樣打' });
+          const _isDailyId = typeof id === 'string' && id.indexOf('daily_') === 0;   // 🆕每日一天一次、損失無法補救(打完這層今天就鎖)→警告做硬,講清楚不是普通關可補
+          const goClean = await uiConfirm({ title: '背包已滿', message: _isDailyId ? '⚠️ 背包滿了!\n今天的每日獎勵(金屬怪)會直接收不到,\n而且這層今天就不能再打了。\n強烈建議先清背包再來。' : '背包滿了,這關掉落的卡會收不到。\n要先去整理嗎?', okLabel: '去卡片BOX', cancelLabel: _isDailyId ? '仍照樣打' : '照樣打' });
           if (goClean) { this.go('collection'); return; }
         }
         if (this._startBusy) return; this._startBusy = true;
