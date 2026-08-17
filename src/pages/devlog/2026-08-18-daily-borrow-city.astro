@@ -1,0 +1,114 @@
+---
+import Base from '../../layouts/Base.astro';
+---
+<Base title="「每日修煉」我沒有重做一座城，而是讓它整個借用五屬城 — 塊頭勇者 開發日誌" path="/devlog/2026-08-18-daily-borrow-city/" navActive="devlog"
+  description="做每日修煉這個新模式，我打定主意不重做一座城：今天練火，就讓它像火之火山城。結果我借了背景，卻忘了幫它接上音樂和怪圖。這篇講新模式怎麼借得乾淨，還有一個更難的抉擇——獎勵爆背包時，我為什麼寧可讓它消失，也不寄進信箱。">
+
+<article class="dp">
+  <div class="dp-wrap">
+    <a class="back" href="/devlog/">← 開發日誌</a>
+    <h1 class="title">「每日修煉」我沒有重做一座城——我讓它把五屬城整個借過來（然後發現漏接了兩條線）</h1>
+    <div class="meta">
+      <span>2026-08-18</span>
+      <span class="tag">#塊頭勇者</span><span class="tag">#每日修煉</span>
+      <span class="tag">#資產複用</span><span class="tag">#獎勵設計</span><span class="tag">#心得</span>
+    </div>
+
+    <div class="body">
+      <p class="lead">做「每日修煉」這個新模式時，我一開始就打定主意：<strong>不要自己重做一座城</strong>。今天練火，就讓它長得像、聽起來像火之火山城。結果我借了背景，卻忘了幫它接上音樂跟怪圖——玩家進去一看，沒音樂、守門怪還是隻不知名的路人兵。這篇講「新模式怎麼借得乾淨」，還有另一個更難的抉擇：獎勵爆背包時，我為什麼寧可讓它直接消失，也不寄進信箱。</p>
+
+      <h2>一、新模式最聰明的做法，是「借」</h2>
+      <p>每日修煉的設定很單純：<strong>一天輪一個屬性</strong>（火→風→雷→土→水），進去打該屬的守門怪、拿獎勵。說穿了，它就是五屬城的濃縮版。</p>
+      <p>所以我從一開始就決定：<strong>「火之修煉」直接借「火之火山城」的一切</strong>，省得重做一遍。背景、音樂、怪長什麼樣，全都跟那座城拿。</p>
+      <div class="demo">
+        <div class="steps">
+          <div class="step"><div class="e">🖼️</div><b>背景</b><div class="d">借火之火山的岩漿場景</div></div>
+          <div class="step"><div class="e">🎵</div><b>BGM</b><div class="d">借火城那首戰鬥曲</div></div>
+          <div class="step"><div class="e">👺</div><b>怪圖</b><div class="d">守門怪＝火城的火哥布林</div></div>
+        </div>
+        <div class="demo-cap">火之修煉：長相、聲音、怪，全部借自火之火山城——理論上啦</div>
+      </div>
+
+      <h2>二、我借了背景，卻忘了另外兩條線</h2>
+      <p>問題出在——<strong>我只把背景真的接上線</strong>。背景我早早就處理好了：給每日關掛一個「借同屬城」的旗標，畫背景時看這個旗標，就會去拿火城的岩漿場景。</p>
+      <p>但音樂跟怪圖的程式不是這樣寫的。它們是<strong>拿「關卡 id」去對資源</strong>的——每日火關的 id 是 <code>daily_fire_1</code>，它<strong>不等於</strong> <code>fire</code>。於是：</p>
+      <ul>
+        <li>找音樂 → 去找一首叫 <code>bgm_daily_fire_1</code> 的曲子 → <strong>根本沒這首 → 靜默，沒音樂</strong>。</li>
+        <li>找怪圖 → 對不上火城的招牌怪 → <strong>退回一隻通用護衛兵</strong>（那種「哪座城都長一樣」的路人）。</li>
+      </ul>
+      <p>玩家實際看到的：一個叫「火之修煉」的關卡，<strong>沒有音樂、守門的是隻不知名雜兵</strong>，完全沒有火城的味道。明明只差臨門一腳，卻整個廉價掉。</p>
+      <p>修法其實很無聊：<strong>把「如果是每日，就借同屬城」這條規則，補到音樂跟怪圖的取用路徑上</strong>——就跟背景用的是同一招。順手也把全遊戲的敵人圖統一了規則：一般雜兵一律用「方塊怪」，有機制的守門怪一律用各屬城的招牌怪（火就是火哥布林、水就是水史萊姆護理…）。</p>
+      <blockquote>這件事教我的是：當你做一個「借用 X」的模式，最容易漏的<strong>不是</strong>那個最明顯的資產（背景，你一定會記得），而是那些平常會<strong>「安靜地退回預設值」</strong>的——音樂、敵人圖。它們不會報錯、不會當機，只會讓新模式看起來廉價。<strong>列一張清單，逐項確認每一種資產都真的接到線</strong>，別只接了最顯眼那條。</blockquote>
+      <p>（附帶一提，同樣是「UI 要誠實反映狀態」，初始島地圖上那顆吸引點擊的驚嘆號，現在也會在你當天三關全清後<strong>當場消失</strong>，不再殘留騙你進去。）</p>
+
+      <h2>三、順手修的另一半：獎勵要「誠實」</h2>
+      <p>每日還有個回饋上的坑。每日的結算比一般關<strong>重很多</strong>——伺服器要發卡、算背包空位、記錄進度。手機網路一慢，<strong>結算畫面先跳出來了，伺服器還沒回</strong>，於是戰利品那行就卡在「⏳ 戰利品連線後發放」不動，玩家以為自己什麼都沒拿到。</p>
+      <p>其實卡早就發了——<strong>發卡是伺服器做的，跟畫面顯不顯示無關</strong>。只是面板畫太早、又不會回頭補。修法：<strong>伺服器回應晚到、而結算面板還開著的話，就把面板重畫一次</strong>，把佔位字換成真正掉到的卡。小事，但玩家「有沒有感覺被虧待」差很多。</p>
+
+      <h2>四、最難的一題：獎勵爆背包，卡怎麼辦？</h2>
+      <p>每日獎勵<strong>一天一次、拿不到就沒了</strong>。那如果玩家背包爆滿、獎勵塞不進去呢？直覺會想：<strong>寄信箱啊，別讓人白打一場</strong>。</p>
+      <p>但我停下來想了想——如果信箱能無限堆、又能直接從裡面用卡，那它就變成一個<strong>「繞過背包上限的第二背包」</strong>。而背包擴充，正是這遊戲要收費的地方。無腦寄信箱，等於親手把自己唯一的收費點掏空。</p>
+      <p>於是我去看<strong>龍族拼圖（Puzzle &amp; Dragons）</strong>怎麼處理，它其實想得很透：</p>
+      <div class="demo">
+        <div class="steps">
+          <div class="step"><div class="e">🚫</div><b>不能用</b><div class="d">禮物箱裡的怪不能上隊、不能餵、不能進化</div></div>
+          <div class="step"><div class="e">📥</div><b>要領進背包</b><div class="d">得「領取」進背包才會活</div></div>
+          <div class="step"><div class="e">🔒</div><b>領取需空位</b><div class="d">背包滿就領不出來，還有期限會過期</div></div>
+        </div>
+        <div class="demo-cap">龍族拼圖的禮物箱三道鎖：它只是暫存待領區，永遠不會變成第二倉庫</div>
+      </div>
+      <p>更關鍵的是：<strong>龍族的「地城掉落」遇背包滿，根本就是直接丟棄＋警告，它不寄信</strong>。信箱只收活動獎勵、補償這種特殊品，而且被上面那三道鎖鎖死。</p>
+      <p>所以我照做了：<strong>每日爆背包＝獎勵丟棄，但把進關前的警告做硬</strong>——背包滿時點每日關，會明白告訴你「今天的每日獎勵會直接收不到，而且這層今天就不能再打了」，讓你清楚這不是普通關、不是打壞了可以重來。多數人看到這句，會乖乖先去清背包。</p>
+      <blockquote>有時候「對玩家好」跟「遊戲活得下去」會正面打架。無腦寄信箱對玩家最爽，但它會一點一點掏空你唯一的收費點。<strong>設計不是只做加法——你也得知道什麼東西不能借、什麼損失該讓它痛一下</strong>，痛感才會讓人願意花那筆擴充。</blockquote>
+
+      <hr>
+      <p>這批每日修煉的坑就修到這。核心其實就兩句話：<strong>新模式要會「借」（而且每一種資產都要記得接線，別漏了會安靜退回預設的那些）；獎勵要嘛就給，要嘛就說清楚為什麼沒給。</strong></p>
+      <p>更多開發碎念都在 <a href="/devlog/">開發日誌</a>。要不要進去玩玩看每日修煉，順便幫我抓還有哪裡沒接好？下次見。</p>
+    </div>
+
+    <div class="foot">— 開發日誌 · 塊頭勇者</div>
+  </div>
+</article>
+
+<style is:global>
+.dp-wrap{max-width:720px;margin:0 auto;padding:clamp(28px,5vw,56px) 18px clamp(56px,8vw,90px)}
+.dp .back{display:inline-block;color:var(--ink2);text-decoration:none;font-size:14px;margin-bottom:20px}
+.dp .back:hover{color:var(--fire)}
+.dp .title{font-size:clamp(24px,4.6vw,35px);font-weight:900;line-height:1.34;margin:0 0 14px;letter-spacing:-.5px;color:var(--ink)}
+.dp .meta{display:flex;flex-wrap:wrap;align-items:center;gap:8px;font-size:13px;color:var(--ink2);margin-bottom:30px}
+.dp .tag{background:rgba(255,178,32,.12);border:1px solid rgba(200,140,40,.25);border-radius:999px;padding:2px 10px;color:var(--ink2)}
+.dp .body{font-size:16px;line-height:1.85;color:var(--ink)}
+.dp .body h2{font-size:clamp(19px,3.2vw,24px);font-weight:900;margin:40px 0 14px;letter-spacing:-.3px;color:var(--ink)}
+.dp .body p{margin:0 0 16px}
+.dp .body strong{color:var(--sun2)}
+.dp .body code{background:rgba(255,178,32,.14);border:1px solid rgba(200,140,40,.2);border-radius:6px;padding:1px 6px;font-size:13.5px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;color:var(--ink)}
+.dp .body ul{margin:0 0 16px;padding-left:22px}
+.dp .body li{margin:0 0 8px}
+.dp .body blockquote{margin:20px 0;padding:12px 18px;border-left:3px solid var(--sun2);background:rgba(255,178,32,.08);border-radius:0 10px 10px 0;color:var(--ink)}
+.dp .body hr{border:none;border-top:1px solid rgba(200,140,40,.2);margin:34px 0}
+.dp .body a{color:var(--fire);text-decoration:underline;text-underline-offset:2px}
+.dp .lead{font-size:17px;color:var(--ink2)}
+
+/* demo 框 */
+.dp .demo{margin:26px auto;background:#fff;border:1px solid rgba(200,140,40,.2);border-radius:18px;padding:20px 16px 14px;box-shadow:var(--shadow)}
+.dp .demo-cap{text-align:center;font-size:12px;color:var(--ink2);margin-top:14px;letter-spacing:.3px}
+
+/* 三格區塊 */
+.dp .steps{display:flex;gap:8px;align-items:stretch;justify-content:center;flex-wrap:wrap}
+.dp .step{flex:1;min-width:150px;background:rgba(255,178,32,.06);border:1px solid rgba(200,140,40,.2);border-radius:12px;padding:14px 12px;text-align:center}
+.dp .step .e{font-size:26px;line-height:1}
+.dp .step b{display:block;margin-top:6px;font-size:15px;color:var(--ink)}
+.dp .step .d{font-size:12.5px;color:var(--ink2);line-height:1.6;margin-top:4px}
+
+.dp .foot{margin-top:46px;padding-top:22px;border-top:1px solid rgba(200,140,40,.2);font-size:14px;color:var(--ink2)}
+
+/* dark */
+[data-theme="dark"] .dp .tag{background:rgba(255,255,255,.08);border-color:rgba(255,178,32,.2);color:#e8d4a8}
+[data-theme="dark"] .dp .body code{background:rgba(255,255,255,.08);border-color:rgba(255,178,32,.2);color:#e8d4a8}
+[data-theme="dark"] .dp .body blockquote{background:rgba(255,178,32,.1)}
+[data-theme="dark"] .dp .body hr{border-top-color:rgba(255,178,32,.16)}
+[data-theme="dark"] .dp .demo{background:#231d14;border-color:rgba(255,178,32,.16)}
+[data-theme="dark"] .dp .step{background:rgba(255,255,255,.05);border-color:rgba(255,178,32,.16)}
+[data-theme="dark"] .dp .foot{border-top-color:rgba(255,178,32,.16)}
+</style>
+</Base>
