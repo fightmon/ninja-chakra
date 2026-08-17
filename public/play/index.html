@@ -2887,7 +2887,7 @@
         this.maxHP = Math.round(teamHp * ((this.lead && (this.lead.type === 'hp' || this.lead.type === 'dog')) ? this.lead.v : 1));   // 🐶犬攻守雙修:也吃 HP×v
         this.teamRcv = (this.presetTeam || []).reduce((s, c) => s + (c.rcv || 0), 0) || 0;   // 隊伍回復力總和(清無屬區回血用)
         this.teamMaxAtk = (this.presetTeam || []).reduce((m, c) => Math.max(m, c.atk || 0), 0) || 0;   // 隊伍最高攻擊(無屬傷害基準=此值×普通×0.08,= 屬·普通)
-        this.playerHP = this.maxHP; this.stage = 1; this.resultOpen = false; this.chests = 0; this.gold = 0; this.runDrops = []; this._runDropsPending = false; this.runExp = 0; this.runCoins = 0; this._runGranted = false; this._runRw = null; this._firstClearStones = 0; this._clearSec = null; this._bestSec = null;   // 🔐 掉落/寶玉改伺服器 run/complete 決定,不再前端 runGems 預累積;🔐[首通石]每場重置,避免殘留上一場的值;⏱ 通關時間/最速同理每場重置
+        this.playerHP = this.maxHP; this.stage = 1; this.resultOpen = false; this.chests = 0; this.gold = 0; this.runDrops = []; this._runDropsPending = false; this._runDropsMsg = ''; this._runDropsBagFull = false; this._resultWin = false; this._resultG = null; this.runExp = 0; this.runCoins = 0; this._runGranted = false; this._runRw = null; this._firstClearStones = 0; this._clearSec = null; this._bestSec = null;   // 🔐 掉落/寶玉改伺服器 run/complete 決定,不再前端 runGems 預累積;🔐[首通石]每場重置,避免殘留上一場的值;⏱ 通關時間/最速同理每場重置
         this.charge = [0, 0, 0, 0, 0];   // 主動技蓄力(整場累積、跨關保留)
         this.stored = [null, null, null, null, null];   // 每卡存放的屬塊 {el,lv}(跨關保留,新局/重挑才清)
         this.firstClear = true;   // 新手鉤子:本場第一次消除=隆重慶祝
@@ -6581,29 +6581,30 @@
         const _isDaily = !!(this.dungeon && this.dungeon.daily);   // 🆕2026-08-17 每日修煉:bonusKilled 欄位對 daily 分支語意不同(金屬怪擊殺清單,見 run/complete.ts daily 分支),要送 _dailyKilled 而非 _bonusKilled;另外多帶 comboCount(T3 任務進度)
         if (_isDaily) _dailyStateDirty = true;   // 🆕全清一層每日關→標記狀態已變,回地圖時 bDungeon 重抓 daily/state 更新初始島徽章(三關全清即消失)
         const item = { dungeonId: this.dungeon.id, diff: (this.diff && this.diff.key) || 'normal', runId: this.serverRunId || ('r' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8)), name: getMeta().name, bonusKilled: (_isDaily ? this._dailyKilled : this._bonusKilled) || [], comboCount: _isDaily ? (this._dailyComboHits || 0) : undefined };   // name=記錄保持者名字→run/complete 破全服最速榜時一起存(排行顯示是誰)   // 🔐 優先用開戰領到的伺服器票券(含'.',run/complete 走時間閘+一次性);拿不到→本地 runId 走離線 fallback(限流);🆕2026-08-02 bonusKilled=本場實際打死的獎勵怪卡id陣列,伺服器取「這個∩票券簽的」發獎勵
-        this.runDrops = []; this._runDropsPending = true;   // showResult 顯示「連線後發放」暫態,直到下面拿到結果或確認離線
+        this.runDrops = []; this._runDropsPending = true; this._runDropsMsg = ''; this._runDropsBagFull = false;   // showResult 顯示「連線後發放」暫態,直到下面拿到結果或確認離線
         mutSave(s => {
           const q = (s.pendingRuns = s.pendingRuns || []);
           q.push(item);
           while (q.length > 20) { q.shift(); s.meta._pendingRunsDropped = (s.meta._pendingRunsDropped || 0) + 1; }   // 🔐[12] 佇列上限 20 筆,超過丟最舊;丟棄時記一筆計數,供下次進大廳 toast 告知玩家(而非靜默漏發獎勵)
         });
         _sendRunComplete(item).then(res => {   // 🔐 立即嘗試送出(在場景還開著時,盡量讓結算畫面就能顯示真實掉落);離線/失敗會保留在 pendingRuns,由 flushPendingRuns 之後補發
-          if (!res || !res.ok) return;   // res.ok 才代表這筆已經被伺服器接受(冪等重放也算,drops 可能是空陣列)
+          if (!res || !res.ok) {
+            if (res && res.rejected) { this._runDropsPending = false; this._runDropsMsg = '⚠️ 本場結算未通過,請重連後再打'; this._refreshResult(); }   // 400 被拒(已丟出佇列、不會補發):面板別再卡「連線後發放」
+            return;   // res=null:離線/暫時失敗→保留 pending,pendingRuns 佇列由 flushPendingRuns 補發,顯示「連線後發放」屬實
+          }   // res.ok 才代表這筆已被伺服器接受(冪等重放也算,drops 可能是空陣列)
           if (res.leveledUp) { this.tonFloat('🆙 等級提升! Lv.' + res.rank, '#ffe04a'); mutSave(s => { s.meta._lvUp = { rank: res.rank }; }); }   // 🔐 升級改吃伺服器 leveledUp(rank/exp/體力上限+補滿已由 _sendRunComplete→syncWallet 落地);_lvUp 讓回大廳也彈公告
           this._firstClearStones = res.firstClearStones || 0;   // 🔐[首通石]showResult 若已畫完面板不會補畫(同下方掉落的邊角案例註解);正常情況下這裡拿到得夠快
           this._clearSec = res.clearSec; this._bestSec = res.bestSec;   // ⏱ 通關時間/全服最速(伺服器算;離線 fallback=null→結算改用本地 _runStartMs 顯示、不顯示最速)
           const drops = res.drops || [];
           this.runDrops = drops.map(x => { const cd = ROSTER.find(c => c.id === x.id); return cd ? { cd: cd, isNew: !!x.isNew } : null; }).filter(Boolean);
-          this._runDropsPending = false;
+          this._runDropsPending = false; this._runDropsBagFull = !!res.bagFull;   // 🆕bagFull 旗標帶進結算面板顯示(不只 toast)
           if (res.bagFull) this.toast('🎒 背包滿了!這趟掉落沒收到,快到卡片→BOX清背包', 4200);   // 背包滿→伺服器跳過部分/全部掉落,明講不再默默漏(結算層提示)
           if (this.runDrops.length) {
             this.runDrops.forEach(o => addCard(o.cd.id));   // 本地鏡像,cardsFetch 再校正 uid
             _loadCardArt(this, this.runDrops.map(o => o.cd.id)); if (this.load.list.size) this.load.start();
             cardsFetch();
           }
-          // ⚠️ 若結算面板(showResult)這時已經畫完(回應很慢的邊角案例):卡片仍已正確入帳(上面 addCard),
-          // 只是這次面板不會回頭補畫戰利品格子(overlay() 不支援重繪、貿然重叫會疊出第二層面板,风险更高)。
-          // 玩家下次進卡冊/大廳會看到正確收藏(cardsFetch 已校正),只是少一次「當下的」視覺確認。
+          this._refreshResult();   // 🆕回應晚到、結算面板已開→原地重畫,把「連線後發放」換成真實戰利品(含背包滿提示);面板還沒畫(resultOpen=false)則略過,等 showResult 直接畫真值。卡片已由上面 addCard 正確入帳,補畫只是視覺同步
         }).catch(() => { });
         if (this._runStatsKey) recordRunClear(this._runStatsKey, Date.now() - (this._runStartMs || Date.now()));   // 📊 出擊漏斗:全清入帳
       }
@@ -7066,9 +7067,10 @@
         }
         return timers;
       }
-      showResult(win) {
+      showResult(win, redraw) {   // 🆕redraw=true:run/complete 回應晚到、面板已開→原地重畫更新戰利品,略過勝利音效/成就/教學畢業等一次性副作用
         if (this.lesson) { this.showLessonComplete(this.overlay(), win); return; }   // 練習課程:專屬完成/再試畫面,短路在 tutDone 之前,不呼叫 tutDone/showTutComplete
-        this.resultOpen = true; if (win) track('dungeon_win'); win ? SFX.win() : SFX.lose(); const wasTut = !!this.tut; if (this.tut) this.tutDone(win); const g = this.overlay(); const cy = H / 2, T = UI();   // 🔐[8] 教學打輸 tutDone(false):不畢業,下次重進教學重試(不會 0 卡死鎖);贏=tutDone(true) 畢業,行為與舊版一致
+        if (redraw && this._resultG) { this._resultG.destroy(); this._resultG = null; }   // 補畫:先清掉舊面板再重建
+        this.resultOpen = true; if (!redraw) { if (win) track('dungeon_win'); win ? SFX.win() : SFX.lose(); } const wasTut = !!this.tut; if (!redraw && this.tut) this.tutDone(win); const g = this.overlay(); this._resultG = g; this._resultWin = win; const cy = H / 2, T = UI();   // 🔐[8] 教學打輸 tutDone(false):不畢業,下次重進教學重試(不會 0 卡死鎖);🆕記住面板 _resultG/_resultWin 供 run/complete 晚到時補畫(_refreshResult)
         if (wasTut && win) { this.showTutComplete(g); return; }   // 教學通關 → 專屬綠框完成畫面(導向編隊教學)
         const panel = this.add.container(0, 0); g.add(panel);   // 內容容器:整體滑入淡入
         const PW = Math.min(W - 24, 400);
@@ -7086,7 +7088,8 @@
           panel.add(roundRectG(this, CX, cy, PW, PH, 16, T.surf, 1, T.divider, 1.5));   // 白色圓角面板(暗背幕之上承載結算內容)
           let y = top + PAD;
           TX(y + Ht / 2, '🏆 通關 ' + this.dungeon.name + '！' + ((this.dungeon.daily) ? '' : ((this.diff && this.diff.name) || '')), FS.title, T.goldTx, true); y += Ht + G;   // 標題帶難度→讓玩家知道過的是哪一級;🆕每日修煉固定 normal,不顯示「中級」字樣(容易誤會)
-          TX(y + Hl / 2, pending ? '⏳ 戰利品連線後發放' : (drops.length ? ('戰利品 ×' + drops.length) : '(這趟沒有掉落)'), FS.sub, T.goldTx, true); y += Hl;   // 🔐 pending=還沒拿到伺服器掉落結果:不假顯示卡片
+          const _dropTxt = pending ? '⏳ 戰利品連線後發放' : (drops.length ? ('戰利品 ×' + drops.length + (this._runDropsBagFull ? '  (背包滿,部分沒收到)' : '')) : (this._runDropsMsg || (this._runDropsBagFull ? '🎒 背包滿,戰利品沒收到' : '(這趟沒有掉落)')));
+          TX(y + Hl / 2, _dropTxt, FS.sub, this._runDropsBagFull ? '#c0492c' : T.goldTx, true); y += Hl;   // 🔐 pending=還沒拿到伺服器掉落結果:不假顯示卡片;🆕背包滿/被拒訊息(_runDropsMsg)、背包滿標紅
           if (dropsH) {
             y += G;
             const dy = y + Hnew + sq / 2, fr = Math.max(11, Math.round(sq * 0.18));   // 卡片中心(上方留 Hnew 給 ✦NEW)
@@ -7121,6 +7124,7 @@
         panel.y = 24; panel.alpha = 0;   // 登場:由下方滑入 + 淡入(Back.out 帶輕微回彈)
         this.tweens.add({ targets: panel, y: 0, alpha: 1, duration: 380, ease: 'Back.out' });
       }
+      _refreshResult() { if (this._resultWin && this.resultOpen && this._resultG && this.scene && this.scene.isActive()) this.showResult(true, true); }   // 🆕run/complete 晚到:通關面板還開著就原地重畫,把「連線後發放」換成真實戰利品/背包滿提示;面板還沒畫或玩家已離開(resultOpen=false/scene 停用)則不動
       showMenu() {
         if (this.resultOpen) return; this.resultOpen = true; const g = this.overlay(); const cy = H / 2, T = UI();
         const reMenu = () => { g.destroy(); this.resultOpen = false; this.showMenu(); };   // 切換開關後重畫選單(更新標籤)
