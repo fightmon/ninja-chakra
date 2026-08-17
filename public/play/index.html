@@ -7727,6 +7727,10 @@
         tapBind(this, c, cb); return c;
       }
       bDungeon() {   // 🗺️ 新美術世界地圖(以 map_demo 排版);等比縮放(contain)自適應手機高度→不跑位;線性解鎖(鎖住=變暗不可點);島浮、雲飄
+        if (isDungeonCleared('prologue') && this._dailyTaskAvail === undefined && !this._dailyTaskFetching) {   // 🆕每日修煉徽章:序章已破→抓一次今日狀態,有未通關層→下方 _mapIsle 給初始島掛驚嘆號(抓完若有再刷一次地圖)
+          this._dailyTaskFetching = true;
+          fetchDailyState().then(st => { this._dailyTaskFetching = false; this._dailyTaskAvail = st ? ![1, 2, 3].every(t => st.tierClears && st.tierClears[String(t)]) : false; if (this._dailyTaskAvail && this.scene && this.scene.isActive() && this.tab === 'dungeon') this.rebuild(); });
+        }
         const mapTop = 84, availH = (H - 62) - mapTop;                    // 可用區:貨幣列(84)下 ~ nav(H-62)上
         const S = Math.min(W / 1080, availH / 1920); this._mapS = S;      // 等比縮放:寬或高哪個先滿就用哪個
         this._mapOx = (W - 1080 * S) / 2; this._mapOy = mapTop + (availH - 1920 * S) / 2;   // 置中
@@ -7757,7 +7761,8 @@
           const hit = this.add.circle(0, Math.round(dh * 0.06), Math.min(dw, dh) * 0.4, 0xffffff, 0.001).setInteractive(); cont.add(hit); tapBind(this, hit, () => this.enterDungeon(is.id));   // 中央近隱形點擊區(縮小,減少島互相蓋到)
           this.tweens.add({ targets: cont, y: sy - 6, duration: 1800 + Math.floor(Math.random() * 800), yoyo: true, repeat: -1, ease: 'Sine.inOut' });   // 上下微浮
           const _guideIsle = (is.id === 'prologue' && !cl) || (is.id === 'fire' && isDungeonCleared('prologue') && !ELEM_DUNGEONS.some(e => isDungeonCleared(e)));   // 指路徽章:序章未破→掛序章島;序章破了但還沒破任何五屬城→交棒掛火城(破第一座即消失)
-          if (_guideIsle) {   // 🗨️ 島右上浮「對話框驚嘆號」,指引玩家下一步該打哪
+          const _dailyBadge = (is.id === 'prologue' && cl && this._dailyTaskAvail);   // 🆕每日修煉有未通關層→初始島掛驚嘆號吸引點擊(序章破了指路徽章已消失,正好空出來)
+          if (_guideIsle || _dailyBadge) {   // 🗨️ 島右上浮「對話框驚嘆號」:指路(下一步打哪)或每日修煉可打
             const bub = this.add.container(dw * 0.30, -dh * 0.30);
             const tail = this.add.graphics(); tail.fillStyle(0xffd54a, 1); tail.fillTriangle(-5, 11, 6, 11, -1, 22); bub.add(tail);   // 對話框小尾巴(指向島)
             bub.add(roundRectG(this, 0, 0, 40, 32, 10, 0xffd54a, 1, 0xffffff, 3));   // 黃圓角對話框
