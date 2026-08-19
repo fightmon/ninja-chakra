@@ -7802,6 +7802,13 @@
         const d = DUNGEONS[id] || DAILY_DUNGEONS[id] || DUNGEONS.prologue;   // 🆕2026-08-17 每日修煉:DUNGEONS 查無→退 DAILY_DUNGEONS;d.cost 已是終值(5/10/15,spec §3/§8),配 daily 恆用 DIFFS_BY.normal(staM=1.0)算出來剛好等於終值,不用另開分支
         return Math.round(d.cost * df.staM);
       }   // 難度體力=關卡基準×難度倍率;🔐 伺服器 run/start 扣款不套隊長技折扣(無隊伍資訊,一律收全額)→前端顯示與出擊閘門一併改回全額,不再套 c11/c27 的 stamina 折扣,避免「前端顯示夠、伺服器402」;c11/c27 該效果目前對出擊體力已無實際作用(若日後要恢復,需前後端同時處理)
+      _panelCloseX(g, closeFn, readyGet) {   // 🆕全螢幕瀏覽型彈窗統一右上角✕(配合暗底可點):readyGet()回 false 時先不觸發(登場保護,擋上一層連點穿透)。務必在暗底 bg 之後呼叫→才點得到
+        const T = UI(), cx = W - 30, cy = 42;
+        g.add(this.add.circle(cx, cy, 18, T.surf2, 0.95).setStrokeStyle(1.5, T.divider));
+        g.add(this.add.text(cx, cy, '✕', { fontFamily: EMOJIFONT, fontSize: '18px', color: T.ink2, fontStyle: 'bold' }).setOrigin(0.5));
+        const hit = this.add.rectangle(cx, cy, 46, 46, 0x000000, 0.001).setInteractive(); g.add(hit);
+        hit.on('pointerup', () => { if (!readyGet || readyGet()) closeFn(); });
+      }
       showDiffPicker(id) {
         const d = DUNGEONS[id] || DUNGEONS.prologue, m = getMeta();
         if (this._diffG) this._diffG.destroy();
@@ -7811,6 +7818,7 @@
         const T = UI(), cb = loadSave().progress.clearsByDiff || {}, dc = m.diffCleared || {};   // cb=本地清單快取(僅供 CLEAR 章顯示);dc=伺服器真相「城:難度」→判「是否解鎖」一律用它,不用 cb(老玩家 cb 有舊記錄會跟伺服器不一致)
         const bg = this.add.rectangle(CX, H / 2, W, H, 0x0e0a16, 0).setInteractive().on('pointerup', () => { if (ready) close(); });
         g.add(bg); this.tweens.add({ targets: bg, fillAlpha: { from: 0, to: 0.72 }, duration: 170 });   // 半暗底(亮色列在上更跳)
+        this._panelCloseX(g, close, () => ready);   // 🆕右上角✕(暗底可點+✕統一手勢)
         const title = this.add.text(CX, H * 0.075, d.emoji + ' ' + d.name, { fontFamily: EMOJIFONT, fontSize: FS.title, color: '#ffffff', fontStyle: 'bold' }).setOrigin(0.5).setStroke('#000000', 4);
         const sub = this.add.text(CX, H * 0.075 + 30, DUNGEON_TIP[d.id] || '選擇難度 — 體力越高、關數與獎勵越多', { fontFamily: EMOJIFONT, fontSize: FS.cap, color: '#e2ddd4' }).setOrigin(0.5).setStroke('#000000', 3);
         g.add(title); g.add(sub);
@@ -7859,6 +7867,7 @@
         const prologueCleared = isDungeonCleared('prologue');   // 序章(召喚之章)破過沒:沒破→picker 只給「序章關卡」一項(真出擊/扣體力/真掉落,打贏解鎖五屬關);破過→序章消失,改列三堂練習課程(免體力可重玩)。序章一破即消失,沒人回頭刷它
         const bg = this.add.rectangle(CX, H / 2, W, H, 0x0e0a16, 0).setInteractive().on('pointerup', () => { if (ready) close(); });
         g.add(bg); this.tweens.add({ targets: bg, fillAlpha: { from: 0, to: 0.72 }, duration: 170 });
+        this._panelCloseX(g, close, () => ready);   // 🆕右上角✕(暗底可點+✕統一手勢)
         const title = this.add.text(CX, H * 0.075, prologueCleared ? '⛩️ 序章 · 練習課程' : '⛩️ 序章 · 召喚之章', { fontFamily: EMOJIFONT, fontSize: FS.title, color: '#ffffff', fontStyle: 'bold' }).setOrigin(0.5).setStroke('#000000', 4);
         const sub = this.add.text(CX, H * 0.075 + 30, prologueCleared ? '一關一個玩法 · 免體力 · 可重玩' : '通關序章 · 解鎖五屬關卡', { fontFamily: EMOJIFONT, fontSize: FS.cap, color: '#e2ddd4' }).setOrigin(0.5).setStroke('#000000', 3);
         g.add(title); g.add(sub);
@@ -7993,6 +8002,7 @@
         let ready = false;
         const close = () => { g.destroy(); if (this._dailyIslandG === g) this._dailyIslandG = null; };
         const refresh = () => { close(); this.showDailyIsland(); };   // 領獎/打完關後想看最新狀態:簡化做法=整個面板重開重抓一次(不做局部更新)
+        this._panelCloseX(g, close, () => ready);   // 🆕右上角✕(暗底 bgReady 於 showDailyIsland 已接,這裡補✕統一手勢)
         const title = this.add.text(CX, H * 0.06, icon + ' ' + elInfo.name + '之日 · 每日修煉', { fontFamily: EMOJIFONT, fontSize: FS.title, color: '#ffffff', fontStyle: 'bold' }).setOrigin(0.5).setStroke('#000000', 4);
         g.add(title);
         const sub = this.add.text(CX, H * 0.06 + 28, '選擇修煉關卡 · 每層限通關一次', { fontFamily: EMOJIFONT, fontSize: FS.cap, color: '#e2ddd4' }).setOrigin(0.5).setStroke('#000000', 3);
