@@ -2628,7 +2628,7 @@
         this.sparkEmit = this.add.particles(0, 0, 'spark', { speed: { min: 40, max: 175 }, scale: { start: 0.7, end: 0 }, alpha: { start: 0.95, end: 0 }, lifespan: { min: 280, max: 560 }, gravityY: 140, blendMode: 'ADD', tint: [0xffe6a0, 0xffffff, 0xffd24a], emitting: false }).setDepth(DEPTH.board + 2);   // 🎆 常駐火花發射器(消塊/命中噴火花;emitParticleAt 逐點噴)
         this.pHpFrame = this.add.nineslice(BX0, PHP_Y, 'hpframe', undefined, W - 2 * BX0, 16, 8, 8, 0, 0).setOrigin(0, 0.5).setDepth(DEPTH.hp);   // 白框=抗鋸齒貼圖(取代 Graphics 描邊)
         this.drawPlayerHp();
-        this.pHpTxt = this.add.text(CX, PHP_Y, '', { fontFamily: EMOJIFONT, fontSize: '12px', color: '#fff', fontStyle: 'bold', stroke: '#0a2008', strokeThickness: 3 }).setOrigin(0.5).setDepth(DEPTH.hp);
+        this.pHpTxt = this.add.text(CX, PHP_Y, '', { fontFamily: EMOJIFONT, fontSize: '15px', color: '#fff', fontStyle: 'bold', stroke: '#0a2008', strokeThickness: 3.5 }).setOrigin(0.5).setDepth(DEPTH.hp);   // 🔎40+:戰鬥中最常看的我方血量,12→15px
         // combo 指示器:疊在 HP 條左端(原舊版胸章位置);combo≥2 才亮、隨連擊變熱、斷了熄掉
         this.comboBg = this.add.circle(BX0 + 16, PHP_Y, 16, 0x1a140c, 0.92).setStrokeStyle(2.5, 0x6a5a3a).setDepth(DEPTH.morale).setVisible(false);
         this.comboTxt = this.add.text(BX0 + 16, PHP_Y, '', { fontFamily: EMOJIFONT, fontSize: '15px', color: '#fff', fontStyle: 'bold' }).setOrigin(0.5).setDepth(DEPTH.morale).setVisible(false);
@@ -2636,7 +2636,7 @@
         this.leadGlow = this.add.circle(BX0 + 16, PHP_Y, 21, 0xff6ab0, 0).setBlendMode(Phaser.BlendModes.ADD).setDepth(DEPTH.morale).setVisible(false);   // 隊長徽章「備妥」呼吸光暈(迴生=粉紅,墊在徽章底)
         this.leadBg = this.add.image(BX0 + 16, PHP_Y, 'badgecircle').setDepth(DEPTH.morale).setVisible(false);   // 圓徽=抗鋸齒貼圖(深底白邊;狀態色改用 setTint,取代 Arc 描邊的鋸齒)
         this.leadIc = this.add.text(BX0 + 16, PHP_Y, '', { fontFamily: EMOJIFONT, fontSize: '16px' }).setOrigin(0.5).setDepth(DEPTH.morale).setVisible(false);
-        this.leadNum = this.add.text(BX0 + 27, PHP_Y + 9, '', { fontFamily: EMOJIFONT, fontSize: '11px', color: '#ffd24a', fontStyle: 'bold', stroke: '#000000', strokeThickness: 3 }).setOrigin(0.5).setDepth(DEPTH.morale + 1).setVisible(false);
+        this.leadNum = this.add.text(BX0 + 27, PHP_Y + 9, '', { fontFamily: EMOJIFONT, fontSize: '14px', color: '#ffd24a', fontStyle: 'bold', stroke: '#000000', strokeThickness: 3.5 }).setOrigin(0.5).setDepth(DEPTH.morale + 1).setVisible(false);   // 🔎40+:隊長技冷卻讀秒,11→14px
 
         // 召喚區
         for (let r = 0; r < N; r++)for (let c = 0; c < N; c++)
@@ -3527,7 +3527,7 @@
           let gt = null, gc = '#cfe0ff';   // 招牌行為徽章(教學)
           if (e.hitGate && !e.shield) { gt = '🛡' + e.hitGate + ' HIT'; } else if (e.comboGate && !e.shield) { gt = '🛡' + e.comboGate + ' COMBO'; }   // 盾兵的門檻由盾罩本身顯示,不再下方重複
           else if (e.dot) { gt = '🔥 灼燒'; gc = '#ffb09a'; } else if (e.regen) { gt = '💚 回血'; gc = '#9ae0a8'; } else if (e.paralyze) { gt = '🕸️ 蜘蛛網'; gc = '#d8d8e0'; } else if (e.healAlly) { gt = '💚 補師'; gc = '#9ae0a8'; } else if (e.eatStored > 0) { gt = '💨 消屬塊'; gc = '#dcffb0'; } else if (e.junk) { gt = '🔒 封鎖'; gc = '#c4a8e0'; }
-          if (gt) { e.gateTx = this.add.text(x, cy + szc / 2 + 9, gt, { fontFamily: EMOJIFONT, fontSize: '10px', color: gc, fontStyle: 'bold', stroke: '#0a1420', strokeThickness: 3 }).setOrigin(0.5); }
+          if (gt) { e.gateTx = this.add.text(x, cy + szc / 2 + 9, gt, { fontFamily: EMOJIFONT, fontSize: '13px', color: gc, fontStyle: 'bold', stroke: '#0a1420', strokeThickness: 4 }).setOrigin(0.5); }   // 🔎40+:敵人機制/破盾門檻是策略關鍵字,10→13px+加粗描邊
         });
         if (!this.enemyLab) this.enemies.forEach(e => { if (e.shield && !e.dead && e.sprite) { e.shieldUp = true; e._hitGate0 = e.hitGate || 0; e._comboGate0 = e.comboGate || 0; this._buildATField(e, e.shieldKind || 'hit'); } });   // 🛡盾兵/盾王:進場即帶盾罩;存原門檻(重建還原用,破盾會清成0)
         this.enemies.forEach(e => { if (e.shadow) this.enemyG.add(e.shadow); });   // 影は全 sprite の背面(先に add)
@@ -6911,10 +6911,11 @@
       }
 
       /* 彈窗 */
-      overlay() {
+      overlay(instant) {   // 🆕instant=true:暗幕直接給最終 alpha、不跑淡入(結算補畫 _refreshResult 重建面板時,避免暗幕又從 0 閃一次)
         const g = this.add.container(0, 0).setDepth(1000);
         const bg = this.add.rectangle(CX, H / 2, W, H, 0x000000, 0).setInteractive(); g.add(bg);
-        this.tweens.add({ targets: bg, fillAlpha: { from: 0, to: 0.74 }, duration: 200 });   // 背景淡入
+        if (instant) bg.setFillStyle(0x000000, 0.74);
+        else this.tweens.add({ targets: bg, fillAlpha: { from: 0, to: 0.74 }, duration: 200 });   // 背景淡入
         return g;
       }
       mkBtn(g, y, label, cb, col) {
@@ -7070,7 +7071,7 @@
       showResult(win, redraw) {   // 🆕redraw=true:run/complete 回應晚到、面板已開→原地重畫更新戰利品,略過勝利音效/成就/教學畢業等一次性副作用
         if (this.lesson) { this.showLessonComplete(this.overlay(), win); return; }   // 練習課程:專屬完成/再試畫面,短路在 tutDone 之前,不呼叫 tutDone/showTutComplete
         if (redraw && this._resultG) { this._resultG.destroy(); this._resultG = null; }   // 補畫:先清掉舊面板再重建
-        this.resultOpen = true; if (!redraw) { if (win) track('dungeon_win'); win ? SFX.win() : SFX.lose(); } const wasTut = !!this.tut; if (!redraw && this.tut) this.tutDone(win); const g = this.overlay(); this._resultG = g; this._resultWin = win; const cy = H / 2, T = UI();   // 🔐[8] 教學打輸 tutDone(false):不畢業,下次重進教學重試(不會 0 卡死鎖);🆕記住面板 _resultG/_resultWin 供 run/complete 晚到時補畫(_refreshResult)
+        this.resultOpen = true; if (!redraw) { if (win) track('dungeon_win'); win ? SFX.win() : SFX.lose(); } const wasTut = !!this.tut; if (!redraw && this.tut) this.tutDone(win); const g = this.overlay(redraw); this._resultG = g; this._resultWin = win; const cy = H / 2, T = UI();   // 🔐[8] 教學打輸 tutDone(false):不畢業,下次重進教學重試(不會 0 卡死鎖);🆕記住面板 _resultG/_resultWin 供 run/complete 晚到時補畫(_refreshResult)
         if (wasTut && win) { this.showTutComplete(g); return; }   // 教學通關 → 專屬綠框完成畫面(導向編隊教學)
         const panel = this.add.container(0, 0); g.add(panel);   // 內容容器:整體滑入淡入
         const PW = Math.min(W - 24, 400);
@@ -7121,8 +7122,8 @@
           this.mkBtn(panel, cy + 30, '再挑戰本關', () => { g.destroy(); this.resultOpen = false; this.restartStage(); });
           this.mkBtn(panel, cy + 90, '🏠 回大廳', () => { this.scene.manager.start('home'); this.scene.manager.stop('game'); });
         }
-        panel.y = 24; panel.alpha = 0;   // 登場:由下方滑入 + 淡入(Back.out 帶輕微回彈)
-        this.tweens.add({ targets: panel, y: 0, alpha: 1, duration: 380, ease: 'Back.out' });
+        if (redraw) { panel.y = 0; panel.alpha = 1; }   // 🆕補畫:不重播滑入(暗幕也不重閃),原地把「連線後發放」換成真實戰利品
+        else { panel.y = 24; panel.alpha = 0; this.tweens.add({ targets: panel, y: 0, alpha: 1, duration: 380, ease: 'Back.out' }); }   // 首次登場:由下方滑入 + 淡入(Back.out 帶輕微回彈)
       }
       _refreshResult() { if (this._resultWin && this.resultOpen && this._resultG && this.scene && this.scene.isActive()) this.showResult(true, true); }   // 🆕run/complete 晚到:通關面板還開著就原地重畫,把「連線後發放」換成真實戰利品/背包滿提示;面板還沒畫或玩家已離開(resultOpen=false/scene 停用)則不動
       showMenu() {
@@ -7963,7 +7964,9 @@
         if (this._dailyIslandG) { this._dailyIslandG.destroy(); this._dailyIslandG = null; }
         const g = this.add.container(0, 0).setDepth(1500); this._dailyIslandG = g;
         const T = UI();
-        const bg = this.add.rectangle(CX, H / 2, W, H, 0x0e0a16, 0).setInteractive();
+        let bgReady = false; this.time.delayedCall(300, () => { bgReady = true; });   // 🆕登場/連點保護:剛開時先不接受點暗底關閉(防上一層連點穿透瞬間關掉)
+        const closeIsland = () => { g.destroy(); if (this._dailyIslandG === g) this._dailyIslandG = null; };   // 🆕統一關閉(供暗底點擊用,與 _renderDailyIsland 內 close 等價)
+        const bg = this.add.rectangle(CX, H / 2, W, H, 0x0e0a16, 0).setInteractive().on('pointerup', () => { if (bgReady) closeIsland(); });   // 🆕點暗底關閉:補回與屬城(7811)/序章(7859)/複習(7917)picker 一致的手勢,原本每日獨漏
         g.add(bg); this.tweens.add({ targets: bg, fillAlpha: { from: 0, to: 0.72 }, duration: 170 });
         const loadTxt = this.add.text(CX, H / 2, '⏳ 載入每日修煉…', { fontFamily: EMOJIFONT, fontSize: FS.sub, color: '#f3e9d8', fontStyle: 'bold' }).setOrigin(0.5);
         g.add(loadTxt);
@@ -8584,6 +8587,10 @@
         const pw = Math.min(W - 24, 384), ph = 430;
         g.add(roundRectG(this, CX, H / 2, pw, ph, 20, T.surf, 1, T.gold, 3));
         g.add(this.add.rectangle(CX, H / 2, pw, ph, 0x000000, 0.001).setInteractive());   // 面板擋點穿(點卡片內不會關)
+        { const _cx = CX + pw / 2 - 26, _cy = H / 2 - ph / 2 + 30;   // 🆕右上角✕關閉鈕(比照信箱面板 renderMailPanel;救援碼是敏感畫面,給明確出口、不只靠「點外面」)
+          g.add(this.add.circle(_cx, _cy, 18, T.surf2, 0.95).setStrokeStyle(1.5, T.divider));
+          g.add(this.add.text(_cx, _cy, '✕', { fontFamily: EMOJIFONT, fontSize: '18px', color: T.ink2, fontStyle: 'bold' }).setOrigin(0.5));
+          const _ch = this.add.rectangle(_cx, _cy, 46, 46, 0x000000, 0.001).setInteractive(); g.add(_ch); _ch.on('pointerup', close); }   // 46×46 觸控熱區(40+ 好點)
         g.add(this.add.text(CX, H / 2 - 165, '🎴 我的勇者卡', { fontFamily: EMOJIFONT, fontSize: FS.title, color: T.ink, fontStyle: 'bold' }).setOrigin(0.5));
         const mkB = (y, w2, h2, label, fill, cb) => {   // 彈窗內按鈕(不能用 this.btn:那會進 rebuild 的 layer,深度會錯)
           g.add(roundRectG(this, CX, y, w2, h2, h2 / 2, fill, 1, null, 0));
