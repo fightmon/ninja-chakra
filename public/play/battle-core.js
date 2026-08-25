@@ -50,13 +50,14 @@ function comboMultiplier(combo, lead){
   const c = Math.max(1, combo);
   return 1 + ck*((c-1) + COMBO_RAMP*(c-1)*(c-2)/2);
 }
-function leadDamageMult(lead, fx, hitN, combo){       // 隊長技傷害加成(家族扛):allAtk=全體;其餘多為「該屬有參戰才吃」
+function leadDamageMult(lead, fx, hitN, combo, leadEvo){       // 隊長技傷害加成(家族扛):allAtk=全體;其餘多為「該屬有參戰才吃」;leadEvo=隊長卡個體進化階(0~3),lead.vByEvo 存在時取代 lead.v(目前只有🐱貓·自我爆發用,見 FAMILY_LEADER.cat)
   if(!lead)return 1;
-  if(lead.type==='allAtk')return lead.v;
-  if((lead.type==='elemAtk'||lead.type==='dog') && fx && fx[lead.el])return lead.v;   // 🐱貓/🐶犬:同屬有清→×v(犬另在 maxHP 加血)
-  if(lead.type==='hitAtk' && fx && fx[lead.el] && (hitN||0)>=(lead.gate||15))return lead.v;   // 🐭鼠:HIT≥gate 且同屬有清→×v
-  if(lead.type==='comboAtk' && fx && fx[lead.el] && (combo||0)>=(lead.gate||2))return lead.v; // (舊)combo 條件型
-  if(lead.type==='famAtk'){ let m = 1 + (lead.v-1)*(lead.famFrac==null?1:lead.famFrac);   // 🐭鼠/🐟魚/🐰兔:同家族攻×v(famFrac=隊中同家族比例,純家族隊=1=吃滿)
+  const v = (lead.vByEvo && lead.vByEvo[leadEvo||0] != null) ? lead.vByEvo[leadEvo||0] : lead.v;
+  if(lead.type==='allAtk')return v;
+  if((lead.type==='elemAtk'||lead.type==='dog') && fx && fx[lead.el])return v;   // 🐱貓/🐶犬:同屬有清→×v(犬另在 maxHP 加血);貓吃 vByEvo
+  if(lead.type==='hitAtk' && fx && fx[lead.el] && (hitN||0)>=(lead.gate||15))return v;   // 🐭鼠:HIT≥gate 且同屬有清→×v
+  if(lead.type==='comboAtk' && fx && fx[lead.el] && (combo||0)>=(lead.gate||2))return v; // (舊)combo 條件型
+  if(lead.type==='famAtk'){ let m = 1 + (v-1)*(lead.famFrac==null?1:lead.famFrac);   // 🐭鼠/🐟魚/🐰兔:同家族攻×v(famFrac=隊中同家族比例,純家族隊=1=吃滿)
     if(lead.boost && fx && fx[lead.el]){ const b=lead.boost;   // 招牌技疊加:同屬(同元素)有清 + 達門檻 → 在 famAtk 之上再相乘(鼠 HIT≥15→×2、魚 combo≥2→×1.8)
       if(b.cond==='hit'   && (hitN ||0)>=(b.gate||15)) m *= b.mul;
       else if(b.cond==='combo' && (combo||0)>=(b.gate||2 )) m *= b.mul; }
@@ -65,10 +66,10 @@ function leadDamageMult(lead, fx, hitN, combo){       // 隊長技傷害加成(�
 }
 // resolve 的純傷害計畫:給 computeClears 結果 + 戰鬥情境(隊長技/RCV/combo)→ 全部傷害數字。
 // 場景只「照計畫演」(誰被打、怎麼演留給場景);伺服器重算靠同一份。
-function planResolve(data, lead, teamRcv, combo){
+function planResolve(data, lead, teamRcv, combo, leadEvo){
   const comboMult = comboMultiplier(combo, lead);          // combo 倍率(不封頂)
   const hitN      = data.cells.length;                      // 本次清的格數
-  const leadMult  = leadDamageMult(lead, data.fx, hitN, combo);   // 隊長技傷害加成(條件型 鼠HIT/魚combo 需 hitN/combo)
+  const leadMult  = leadDamageMult(lead, data.fx, hitN, combo, leadEvo);   // 隊長技傷害加成(條件型 鼠HIT/魚combo 需 hitN/combo;leadEvo 給 vByEvo 用,見 leadDamageMult)
   const dmgMul    = comboMult * leadMult;                   // 每段傷害總倍率
   const aoe        = hitN >= AOE_HIT;                        // ≥AOE_HIT → 全體
   const hits      = (data.hits||[]).map(h => ({ b:h.b, el:h.el, cells:h.cells, dmg: Math.round(h.dmg*dmgMul) }));   // 各宮最終傷害
@@ -173,6 +174,7 @@ class BattleSim {
     this.maxHP = s.maxHP|0;
     this.teamRcv = s.teamRcv|0;
     this.lead = s.lead || null;
+    this.leadEvo = s.leadEvo || 0;        // 隊長卡個體進化階(0~3);目前只有貓·自我爆發 vByEvo 吃
     this.amp = s.amp || 1;
     this.combo = s.combo || 0;
   }
@@ -188,7 +190,7 @@ class BattleSim {
     const data = computeClears(this.board, this.boxElement, this.boxCard, tgt.el, this.amp);
     if(!data) return null;
     this.combo += 1;                                            // 逐塊 combo:這塊有清→+1
-    const plan = planResolve(data, this.lead, this.teamRcv, this.combo);
+    const plan = planResolve(data, this.lead, this.teamRcv, this.combo, this.leadEvo);
     const n = data.cells.length, aoe = plan.aoe;
     const victims = aoe ? this.enemies.filter(e=>!e.dead) : [tgt];
     // 陰陽子屬性(fireAttr):yang 回血、yin 本手起傷害×2(amp 給下一手用)

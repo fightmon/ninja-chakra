@@ -80,14 +80,14 @@
     const KEYS = ['fire', 'wind', 'thunder', 'earth', 'water'];
     const MONSTER_IMG = { water: 'art/monsters/slime_water.webp', fire: 'art/monsters/slime_fire.webp', thunder: 'art/monsters/slime_thunder.webp', earth: 'art/monsters/slime_earth.webp', wind: 'art/monsters/slime_wind.webp' };   // 舊五屬史萊姆(fallback);無對應則用 emoji 臉。圖檔放 001_website/art/monsters/(webp)
     const CARD_ART = { c03: 1, c06: 1, c19: 1, c10: 1, c12: 1, c02: 1, c05: 1, c08: 1, c09: 1, c11: 1, c13: 1, c16: 1, c20: 1, c23: 1, c27: 1, c15: 1, c18: 1, c22: 1, c26: 1, c30: 1, c31: 1, c32: 1, c33: 1, c34: 1, c35: 1, c14: 1, c17: 1, c21: 1, c24: 1, c28: 1, c01: 1, c04: 1, c07: 1, c25: 1, c29: 1, c36: 1, c37: 1, c38: 1, c39: 1, c40: 1, c41: 1, c42: 1, c43: 1, c44: 1, c45: 1, c46: 1, c47: 1, c48: 1, c49: 1, c50: 1, c51: 1, c52: 1, c53: 1, c54: 1, c55: 1, c56: 1, c57: 1, c58: 1, c59: 1, c60: 1, c61: 1, c62: 1, c63: 1, c64: 1, c65: 1, c66: 1, c67: 1, c68: 1, c69: 1, c70: 1, c71: 1, c72: 1, c73: 1, c74: 1, c75: 1, c76: 1 };   // 有角色圖的卡:犬/貓/鼠/台灣/兔/魚(c14,17,21,24,28)/鳥(c01,04,07,25,29)/妖·蜘蛛(c36-c40,1→2星換_e圖)/妖·鬼(c41-c45,1→2星換_e圖),各火水雷土風 → art/cards/<id>_thumb.webp+_full.webp;2026-08-02 加方塊怪(c66-c70,支援_e/_e2)+金屬/金錢(c71-c76,無_e/_e2,只有 base full/thumb)
-    function cardArtKey(id, size, ovEvo) { if (!id) return null; const t = getCardEvo(id, ovEvo); if (EVO2_CARDS[id] && t >= 2) return 'card_' + id + '_e2_' + size; if (EVO_CARDS[id] && t >= 1) return 'card_' + id + '_e_' + size; return CARD_ART[id] ? ('card_' + id + '_' + size) : null; }   // 回傳 texture key(thumb/full),無圖回 null→退回 emoji;進化雜牌卡 evo≥2(EVO2_CARDS)→<id>_e2_<size>,evo≥1→<id>_e_<size>
-    function _loadCardArt(scene, ids) { (ids || []).forEach(id => { if (!id || !CARD_ART[id]) return;['thumb', 'full'].forEach(s => { const k = 'card_' + id + '_' + s; if (!scene.textures.exists(k)) scene.load.image(k, 'art/cards/' + id + '_' + s + '.webp'); }); if (EVO_CARDS[id]) { ['thumb', 'full'].forEach(s => { const k = 'card_' + id + '_e_' + s; if (!scene.textures.exists(k)) scene.load.image(k, 'art/cards/' + id + '_e_' + s + '.webp'); }); } if (EVO2_CARDS[id]) { ['thumb', 'full'].forEach(s => { const k = 'card_' + id + '_e2_' + s; if (!scene.textures.exists(k)) scene.load.image(k, 'art/cards/' + id + '_e2_' + s + '.webp'); }); } }); }   // 按需載卡圖(戰鬥/大廳只載出戰隊);繪製端皆有 textures.exists 保護→沒載到退回 emoji;進化雜牌卡額外多載 _e 進化圖(兩形都要有),支援 evo2(EVO2_CARDS)再多載 _e2 三形
+    function cardArtKey(id, size, ovEvo) { if (!id) return null; const t = getCardEvo(id, ovEvo); if (EVO3_CARDS[id] && t >= 3) return 'card_' + id + '_e3_' + size; if ((EVO2_CARDS[id] || EVO3_CARDS[id]) && t >= 2) return 'card_' + id + '_e2_' + size; if ((EVO_CARDS[id] || EVO3_CARDS[id]) && t >= 1) return 'card_' + id + '_e_' + size; return CARD_ART[id] ? ('card_' + id + '_' + size) : null; }   // 回傳 texture key(thumb/full),無圖回 null→退回 emoji;進化雜牌卡 evo≥2(EVO2_CARDS)→<id>_e2_<size>,evo≥1→<id>_e_<size>
+    function _loadCardArt(scene, ids) { (ids || []).forEach(id => { if (!id || !CARD_ART[id]) return;['thumb', 'full'].forEach(s => { const k = 'card_' + id + '_' + s; if (!scene.textures.exists(k)) scene.load.image(k, 'art/cards/' + id + '_' + s + '.webp'); }); if (EVO_CARDS[id] || EVO3_CARDS[id]) { ['thumb', 'full'].forEach(s => { const k = 'card_' + id + '_e_' + s; if (!scene.textures.exists(k)) scene.load.image(k, 'art/cards/' + id + '_e_' + s + '.webp'); }); } if (EVO2_CARDS[id] || EVO3_CARDS[id]) { ['thumb', 'full'].forEach(s => { const k = 'card_' + id + '_e2_' + s; if (!scene.textures.exists(k)) scene.load.image(k, 'art/cards/' + id + '_e2_' + s + '.webp'); }); } if (EVO3_CARDS[id]) { ['thumb', 'full'].forEach(s => { const k = 'card_' + id + '_e3_' + s; if (!scene.textures.exists(k)) scene.load.image(k, 'art/cards/' + id + '_e3_' + s + '.webp'); }); } }); }   // 按需載卡圖(戰鬥/大廳只載出戰隊);繪製端皆有 textures.exists 保護→沒載到退回 emoji;進化雜牌卡額外多載 _e 進化圖(兩形都要有),支援 evo2(EVO2_CARDS)再多載 _e2 三形
     function _loadAllCardArt(scene) { _loadCardArt(scene, Object.keys(CARD_ART)); }   // 卡冊/編隊/合成/圖鑑=看全部卡→進場才載全部
-    function _loadCardThumbs(scene, ids) { (ids || []).forEach(id => { if (!id || !CARD_ART[id]) return; const k = 'card_' + id + '_thumb'; if (!scene.textures.exists(k)) scene.load.image(k, 'art/cards/' + id + '_thumb.webp'); if (EVO_CARDS[id]) { const ek = 'card_' + id + '_e_thumb'; if (!scene.textures.exists(ek)) scene.load.image(ek, 'art/cards/' + id + '_e_thumb.webp'); } if (EVO2_CARDS[id]) { const ek2 = 'card_' + id + '_e2_thumb'; if (!scene.textures.exists(ek2)) scene.load.image(ek2, 'art/cards/' + id + '_e2_thumb.webp'); } }); }   // 只載縮圖(格子用;大圖等開詳情才補);進化雜牌卡額外多載 _e_thumb(卡冊/合成/圖鑑格子才有進化縮圖),evo2(EVO2_CARDS)再多載 _e2_thumb
+    function _loadCardThumbs(scene, ids) { (ids || []).forEach(id => { if (!id || !CARD_ART[id]) return; const k = 'card_' + id + '_thumb'; if (!scene.textures.exists(k)) scene.load.image(k, 'art/cards/' + id + '_thumb.webp'); if (EVO_CARDS[id] || EVO3_CARDS[id]) { const ek = 'card_' + id + '_e_thumb'; if (!scene.textures.exists(ek)) scene.load.image(ek, 'art/cards/' + id + '_e_thumb.webp'); } if (EVO2_CARDS[id] || EVO3_CARDS[id]) { const ek2 = 'card_' + id + '_e2_thumb'; if (!scene.textures.exists(ek2)) scene.load.image(ek2, 'art/cards/' + id + '_e2_thumb.webp'); } if (EVO3_CARDS[id]) { const ek3 = 'card_' + id + '_e3_thumb'; if (!scene.textures.exists(ek3)) scene.load.image(ek3, 'art/cards/' + id + '_e3_thumb.webp'); } }); }   // 只載縮圖(格子用;大圖等開詳情才補);進化雜牌卡額外多載 _e_thumb(卡冊/合成/圖鑑格子才有進化縮圖),evo2(EVO2_CARDS)再多載 _e2_thumb
     function _loadAllCardThumbs(scene) { _loadCardThumbs(scene, Object.keys(CARD_ART)); }
     function _ensureFullArt(scene, id, onReady) {   // 開卡片詳情才補「大圖」:沒載到就載,載好回呼(通常重繪);已有則不動;進化後改補 _e_full/_e2_full(與 cardArtKey 回傳的 key 對齊)
       const t = getCardEvo(id);
-      const suf = (id && EVO2_CARDS[id] && t >= 2) ? '_e2_full' : (id && EVO_CARDS[id] && t >= 1) ? '_e_full' : '_full';
+      const suf = (id && EVO3_CARDS[id] && t >= 3) ? '_e3_full' : (id && (EVO2_CARDS[id] || EVO3_CARDS[id]) && t >= 2) ? '_e2_full' : (id && (EVO_CARDS[id] || EVO3_CARDS[id]) && t >= 1) ? '_e_full' : '_full';
       const k = (id && CARD_ART[id]) ? ('card_' + id + suf) : null;
       if (!k || scene.textures.exists(k)) return;
       scene.load.image(k, 'art/cards/' + id + suf + '.webp'); scene.load.once('complete', onReady);
@@ -325,7 +325,7 @@
       if (opt.manage) {
         gpill(CX - 118, H - 52, 110, 52, '⬆️ 強化', tint(elc, 0.3), elc, '#ffffff', FS.cap, () => opt.onFuse && opt.onFuse());   // 屬色漸層(上亮下深,寶可夢式)
         // 進化鈕:滿 LV20 且還能進化 → 金色漸層(可動作);未滿 LV20 / 已達進化上限 / 素材卡 → 灰階。仍可點,點了由 canEvolve 跳原因 toast
-        const _evoCap = EVO2_CARDS[cd.id] ? 2 : (EVO_CARDS[cd.id] ? 1 : EVO_MAX);   // 對齊 canEvolve 的上限判斷(哥布林/賊鴨/鐵機人/史萊姆醫療/牆怪系 evo2=3星,其餘雜牌系 evo1=2星封頂)
+        const _evoCap = EVO3_CARDS[cd.id] ? 3 : (EVO2_CARDS[cd.id] ? 2 : (EVO_CARDS[cd.id] ? 1 : EVO_MAX));   // 對齊 canEvolve 的上限判斷(哥布林/賊鴨/鐵機人/史萊姆醫療/牆怪系 evo2=3星,貓系 EVO3_CARDS=evo3/5星,其餘雜牌系 evo1=2星封頂)
         const _evoLit = mx && !MATERIAL_IDS.has(cd.id) && getCardEvo(cd.id) < _evoCap;
         gpill(CX, H - 52, 110, 52, '✨ 進化', _evoLit ? 0xffe9a8 : 0xe4e0d8, _evoLit ? 0xd9932a : 0xb8b0a4, _evoLit ? '#4a2c05' : '#8a8378', FS.cap, () => opt.onEvolve && opt.onEvolve());
         pill(CX + 118, H - 52, 110, 52, '✖ 關閉', TK.surf, TK.divider, TK.ink2, FS.cap, () => opt.onClose && opt.onClose());
@@ -437,16 +437,16 @@
     // 角色:個人名 + 種族(human/yokai/beast) + 三圍(攻/血/回,同星總量公平、分配不同) + rank(沿用:gacha/掉落/★用,genin=★1…kage=★4)
     const ROSTER = [
       { id: 'c01', name: '曦曦', el: 'fire', race: 'yokai', rank: 'jonin', atk: 300, hp: 375, rcv: 38, attrs: ['fire'] },
-      { id: 'c02', name: '暖暖', el: 'fire', race: 'human', rank: 'jonin', atk: 192, hp: 240, rcv: 24, attrs: ['fire'] },
+      { id: 'c02', name: '暖暖', el: 'fire', race: 'human', rank: 'chunin', atk: 192, hp: 240, rcv: 24, attrs: ['fire'] },
       { id: 'c03', name: '焰焰', el: 'fire', race: 'human', rank: 'jonin', atk: 120, hp: 150, rcv: 15, attrs: ['fire'] },
       { id: 'c04', name: '漣漣', el: 'water', race: 'yokai', rank: 'jonin', atk: 125, hp: 525, rcv: 100, attrs: ['water'] },
-      { id: 'c05', name: '露露', el: 'water', race: 'human', rank: 'jonin', atk: 80, hp: 336, rcv: 64, attrs: ['water'] },
+      { id: 'c05', name: '露露', el: 'water', race: 'human', rank: 'chunin', atk: 80, hp: 336, rcv: 64, attrs: ['water'] },
       { id: 'c06', name: '潑潑', el: 'water', race: 'human', rank: 'jonin', atk: 50, hp: 210, rcv: 40, attrs: ['water'] },
       { id: 'c07', name: '嗶嗶', el: 'thunder', race: 'yokai', rank: 'jonin', atk: 275, hp: 300, rcv: 63, attrs: ['thunder'] },
-      { id: 'c08', name: '霹霹', el: 'thunder', race: 'human', rank: 'jonin', atk: 176, hp: 192, rcv: 40, attrs: ['thunder'] },
-      { id: 'c09', name: '礫礫', el: 'earth', race: 'human', rank: 'jonin', atk: 64, hp: 576, rcv: 32, attrs: ['earth'] },
+      { id: 'c08', name: '霹霹', el: 'thunder', race: 'human', rank: 'chunin', atk: 176, hp: 192, rcv: 40, attrs: ['thunder'] },
+      { id: 'c09', name: '礫礫', el: 'earth', race: 'human', rank: 'chunin', atk: 64, hp: 576, rcv: 32, attrs: ['earth'] },
       { id: 'c10', name: '岩岩', el: 'earth', race: 'human', rank: 'jonin', atk: 40, hp: 360, rcv: 20, attrs: ['earth'] },
-      { id: 'c11', name: '飄飄', el: 'wind', race: 'human', rank: 'jonin', atk: 122, hp: 355, rcv: 40, attrs: ['wind'] },
+      { id: 'c11', name: '飄飄', el: 'wind', race: 'human', rank: 'chunin', atk: 122, hp: 355, rcv: 40, attrs: ['wind'] },
       { id: 'c12', name: '颯颯', el: 'wind', race: 'human', rank: 'jonin', atk: 76, hp: 222, rcv: 25, attrs: ['wind'] },
       /* ── 擴充:補滿五屬階梯 + 四星(kage ★4)SSR 層,共 30 張;★4 靈獸=五屬神主角 ── */
       { id: 'c13', name: '烘烘', el: 'fire', race: 'yokai', rank: 'jonin', atk: 120, hp: 150, rcv: 15, attrs: ['fire'] },
@@ -548,6 +548,7 @@
     const WALL_EVO2 = { c46: '火鐵牆', c47: '水鐵牆', c48: '雷鐵牆', c49: '石頭戰士', c50: '風鐵牆' };   // 牆怪 2★→3★再進化名表:進化階≥2 → 顯示「◯鐵牆」+ <id>_e2_ 圖(3星,2026-08-02 加);魔王另借 king_full(4星「◯城牆王」非卡片)
     const BLOCK_EVO2 = { c66: '火方塊王', c67: '水方塊王', c68: '雷方塊王', c69: '土方塊王', c70: '風方塊王' };   // 方塊怪系 2★→3★再進化名表:進化階≥2 → 顯示「◯方塊王」+ <id>_e2_ 圖(3星,2026-08-02 加)
     const EVO2_CARDS = Object.assign({}, GHOST_EVO2, WITCH_EVO2, SPIDER_EVO2, YAKUSHI_EVO2, WALL_EVO2, BLOCK_EVO2);   // 合併「可進到 evo2(3星)」名表:目前哥布林系、賊鴨系、鐵機人系、史萊姆醫療系、牆怪系、方塊怪系支援,別的系要開 evo2 往這加
+    const EVO3_CARDS = { c02: 1, c05: 1, c08: 1, c09: 1, c11: 1 };   // 貓系(2★chunin)可進到 evo3(5★)名單:只當 cap/art 開關用(值非名字,貓不換名只換圖),cardArtKey/_loadCardArt/_loadCardThumbs/_ensureFullArt/evoCap 都要吃這張表;不進 cardName(貓進化不改名)
     function cardName(id, ovEvo) { const c = ROSTER.find(x => x.id === id) || {}; const t = getCardEvo(id, ovEvo); if (t >= 2 && EVO2_CARDS[id]) return EVO2_CARDS[id]; return (EVO_CARDS[id] && t >= 1) ? EVO_CARDS[id] : c.name; }   // 卡片顯示名字統一入口(evo2 名表優先於 evo1 名表,再 fallback ROSTER.name)
     // CONFIG → battle-core.js
     const KATA = ['一之型', '二之型', '三之型', '四之型', '五之型', '禁術', '奧義'];   // LV1~7(簡單數字,日文漢字通用)
@@ -848,9 +849,9 @@
       const f = STAT_FAM[fam], e = STAT_EL[el]; if (!f || !e) return null; const s = [0, 1, 2].map(i => (f[i] + e[i]) / 2), sum = s[0] + s[1] + s[2], sh = s.map(x => x / sum);
       return { atk: Math.round(sh[0] * STAT_BUD), hp: Math.round(sh[1] * STAT_BUD / STAT_WT.hp / 10) * 10, rcv: Math.round(sh[2] * STAT_BUD / STAT_WT.rcv) };
     }
-    ROSTER.forEach(c => { const fam = TW_IDS.has(c.id) ? 'taiwan' : CARD_FAMILY[c.id]; if (!fam) return; const s = famStat(fam, c.el); if (!s) return; c.atk = s.atk; c.hp = s.hp; c.rcv = s.rcv; if (!TW_IDS.has(c.id)) c.rank = 'jonin'; });   // 家族全 ★3(jonin)+ 重算三圍;台灣三圍仍走統一上限但維持 kage(★4)不降階(2026-07-15)
+    ROSTER.forEach(c => { const fam = TW_IDS.has(c.id) ? 'taiwan' : CARD_FAMILY[c.id]; if (!fam) return; const s = famStat(fam, c.el); if (!s) return; c.atk = s.atk; c.hp = s.hp; c.rcv = s.rcv; if (!TW_IDS.has(c.id) && fam !== 'cat') c.rank = 'jonin'; });   // 家族全 ★3(jonin)+ 重算三圍;台灣三圍仍走統一上限但維持 kage(★4)不降階(2026-07-15);🐱貓系四階進化(2026-08-25)base 降 chunin(★2)不可被這裡蓋回 jonin,故排除 cat
     const FAMILY_ACTIVE = {   // 家族主動技(套用到該卡屬性);效果見 _familyActive
-      cat: { name: '疾風連擊', cd: 4, icon: '🐱', desc: '對單敵 攻×1 連打 3 下(吃相剋)' },
+      cat: { name: '疾風連擊', cd: 4, icon: '🐱', desc: '對單敵 攻×1 連打 N 下(吃相剋,N 隨進化階 2→5)' },
       dog: { name: '群擊', cd: 5, icon: '🐶', desc: '對全體敵 攻×2(吃相剋)' },
       bird: { name: '亂鳴', cd: 4, icon: '🐦', desc: '剋屬敵 CD+2(出手延遲 +2)' },
       rat: { name: '鼠潮', cd: 6, icon: '🐭', desc: '填滿該卡屬性宮並消除 → 大 HIT' },
@@ -858,7 +859,7 @@
       rabbit: { name: '化境', cd: 7, icon: '🐰', desc: '全盤屬性宮 1 回合內變成自己同屬(相剋爆發 setup)' },
     };
     const FAMILY_LEADER = {   // 家族隊長技(el 由卡屬性填);傷害型在 battle-core leadDamageMult
-      cat: { name: '貓·自我爆發', type: 'elemAtk', v: 1.5, desc: '同屬攻 ×1.5' },
+      cat: { name: '貓·自我爆發', type: 'elemAtk', v: 1.5, vByEvo: [1.4, 1.6, 1.8, 2.0], desc: '同屬攻 ×1.4~×2.0(隨進化階)' },
       dog: { name: '犬·攻守雙修', type: 'dog', v: 1.2, desc: '同屬 HP×1.2 + 攻×1.2' },
       bird: { name: '鳥·控敵先制', type: 'counterDelay', v: 2, desc: '開局剋屬敵 CD+2' },
       rat: { name: '鼠·大清爆發', type: 'famAtk', v: 1.5, boost: { cond: 'hit', gate: 15, mul: 2 }, desc: '同鼠系攻 ×1.5;HIT≥15 → 同屬攻 ×2' },
@@ -1644,7 +1645,7 @@
     }
     function setLeader(id) { mutSave(s => { const t = [id].concat((s.team || []).filter(x => x !== id)).slice(0, 5); s.team = t; if (s.teams && s.teams[s.teamIdx || 0]) s.teams[s.teamIdx || 0].ids = t.slice(); }); }   // 設為隊長(放隊首)
     /* 進化(PAD/神魔共通:滿級+寶玉素材→升階):gems 寶玉 + cardEvo 進化階 */
-    const EVO_MAX = 2, EVO_MULT = [1, 1.6, 2.4];
+    const EVO_MAX = 2, EVO_MULT = [1, 1.6, 2.4, 3.4];
     function evoReq(tier) { return { gems: 3 + tier * 3, coins: 1000 + tier * 2000 }; }   // gems 欄位進化已不用(改吃寶玉卡),coins 仍用
     const JEWEL_OF = { fire: 'c61', water: 'c62', thunder: 'c63', earth: 'c64', wind: 'c65' };   // 進化素材:各屬「寶玉卡」(取代舊寶玉貨幣;伺服器 evolve 會消耗 1 張對應屬性寶玉卡)
     const MATERIAL_IDS = new Set([...Object.values(JEWEL_OF), 'c71', 'c72', 'c73', 'c74', 'c75', 'c76']);   // 純素材卡:不可進化(素材自己能練成戰力卡就本末倒置了;且火晶精要吃火晶精=吃自己)。伺服器 evolve.ts 也擋一次。⚠️2026-08-02 判斷追加:金屬/金錢(c71-c76)依交辦「不進化」比照寶玉卡納入,鏡射後端 _lib/gamedata.ts MATERIAL_IDS(此為推測性延伸,交辦原文未逐字提及此常數,見回報)
@@ -1659,8 +1660,8 @@
       const c = ROSTER.find(x => x.id === id), t = getCardEvo(id);
       if (!c) return { ok: false, msg: '卡片資料不存在' };
       if (MATERIAL_IDS.has(id)) return { ok: false, msg: '素材卡不可進化(拿去進化別的卡)' };   // 純素材:不給練成戰力卡
-      // 單一 cap:👺哥布林系、🦆賊鴨系、🤖鐵機人系(原蜘蛛)、🩹史萊姆醫療系(原藥師)、🧱牆怪系 1★→2★→3★(cap 2);一般卡走 EVO_MAX。與 line 325 _evoCap、後端 evolve.ts evoCap 同一套,別再用 else-if(EVO_CARDS 含哥布林,t=1 會被誤擋)
-      const evoCap = EVO2_CARDS[id] ? 2 : (EVO_CARDS[id] ? 1 : EVO_MAX);
+      // 單一 cap:👺哥布林系、🦆賊鴨系、🤖鐵機人系(原蜘蛛)、🩹史萊姆醫療系(原藥師)、🧱牆怪系 1★→2★→3★(cap 2);🐱貓系(EVO3_CARDS) 2★→3★→4★→5★(cap 3);一般卡走 EVO_MAX。與 line 328 _evoCap、後端 evolve.ts evoCap 同一套,別再用 else-if(EVO_CARDS 含哥布林,t=1 會被誤擋)
+      const evoCap = EVO3_CARDS[id] ? 3 : (EVO2_CARDS[id] ? 2 : (EVO_CARDS[id] ? 1 : EVO_MAX));
       if (t >= evoCap) return { ok: false, msg: '已達進化上限' };
       const needLv = maxLvForCard(id, t);   // per-star 門檻(spec-progression-economy.md §1):要練到「當前星」的上限才能進化(1★要LV20、2★要LV40…)
       if (getCardLv(id) < needLv) return { ok: false, msg: '需先練滿 Lv.' + needLv };
@@ -2881,6 +2882,7 @@
         if (this.presetTeam) ELEMENT_BOXES.forEach((b, i) => { const card = this.presetTeam[i]; this.boxCard[b] = card; this.boxElement[b] = card.el; });
         else ELEMENT_BOXES.forEach(b => { const card = ROSTER[rnd(ROSTER.length)]; this.boxCard[b] = card; this.boxElement[b] = card.el; });
         this.lead = (this.presetTeam && this.presetTeam[2] && leadSkill(this.presetTeam[2].id)) || null;   // 隊長技=中央位卡(編隊正中央=隊長);走 leadSkill→家族/台灣
+        this.leadEvo = (this.presetTeam && this.presetTeam[2] && this.presetTeam[2].evo) || 0;   // 隊長卡個體進化階(leveledTeam 已解好個體制);傳給 planResolve→leadDamageMult,給 lead.vByEvo(目前只有🐱貓·自我爆發用)取值
         if (this.lead && this.lead.type === 'famAtk') { const fam = this.lead.fam, n = (this.presetTeam || []).filter(c => CARD_FAMILY[c.id] === fam).length; this.lead.famFrac = n / 5; }   // 同家族比例(純家族隊=1=吃滿;台灣同家族卡也算進)
         this._reviveReady = true; this._reviveCD = 0; this._shield = !!(this.lead && this.lead.type === 'shield'); this._shieldReady = this._shield; this._shieldCD = 0; this._shieldHandActive = false; this._salmonHeal = false; this._salmonHealed = 0; this._fishHeal = null; this._huajing = null;   // 隊長技/主動技狀態(救命/護盾/溯流/魚活水/兔化境)
         const teamHp = (this.presetTeam || []).reduce((s, c) => s + (c.hp || 0), 0) || CONFIG.PLAYER_HP_BASE;   // 隊伍血量=隊員 HP 三圍加總
@@ -4189,10 +4191,11 @@
       _familyActive(fam, i, ox, oy, atk, card) {
         const el = card.el, col = EL[el].color, hot = shadeColor(col, 0.55);
         const relM = (tel) => (EL[el].beats === tel) ? CONFIG.ADV_MULT : ((EL[tel] && EL[tel].beats === el) ? CONFIG.WEAK_MULT : CONFIG.NORM_MULT);
-        if (fam === 'cat') {   // 🐱疾風連擊:單體 攻×1 連打 3 下(吃相剋)
+        if (fam === 'cat') {   // 🐱疾風連擊:單體 攻×1 連打 (2+evo) 下(吃相剋);evo0=2/evo1=3/evo2=4/evo3=5,evo 取該張卡個體進化階(this.presetTeam[i].evo,leveledTeam 已解好個體制)
           const tgt = this.targetEnemy(); if (!tgt) return; const dmg = Math.round(atk * relM(tgt.el));
+          const _catEvo = (this.presetTeam && this.presetTeam[i] && this.presetTeam[i].evo) || 0, hits = 2 + _catEvo;
           this.chargeEl(el, ox, oy, 280);
-          for (let k = 0; k < 3; k++)this.time.delayedCall(this.chargeClimaxMs(el) + k * 170, () => {
+          for (let k = 0; k < hits; k++)this.time.delayedCall(this.chargeClimaxMs(el) + k * 170, () => {
             if (tgt.dead) return; this.labSnd('s_hit_' + el, 0.7); if (k === 0) this.boltLaunchFx(el, ox, oy, tgt.sprite.x, tgt.sprite.y); this.chakraBolt(ox, oy, tgt.sprite.x, tgt.sprite.y, col, tgt, dmg, 2, hot); this.cameras.main.shake(110, 0.005);
             this.time.delayedCall(300, () => { tgt.hp = Math.max(0, tgt.hp - dmg); if (tgt.hp > 0) this._activeCounter(tgt, el); this.updateEnemies(); if (tgt.hp <= 0) this.killEnemy(tgt); });
           });
@@ -6061,7 +6064,7 @@
         this.handCleared = true;
         this.combo += 1;   // combo 新定義:這塊有清→連續 +1(沒清的塊由 afterAction 歸零);取代舊「擊中次數」
         SFX.clear(this.combo);   // 消塊音(隨 combo 升調)
-        const plan = planResolve(data, this.lead, this.teamRcv, this.combo);   // battle-core:整包傷害計畫(combo倍率/隊長技/AoE/每段傷害/回血)→ 場景照演
+        const plan = planResolve(data, this.lead, this.teamRcv, this.combo, this.leadEvo);   // battle-core:整包傷害計畫(combo倍率/隊長技/AoE/每段傷害/回血)→ 場景照演;帶隊長卡 evo 給 leadDamageMult(貓·自我爆發 vByEvo 用)
         const { aoe, heal } = plan;
         if (this.tut) { if (aoe) this.tutEvent('aoe'); if (heal > 0) this.tutEvent('heal'); this.tutEvent('clear'); }   // 教學:消除/全體/回血事件
         if (this.lesson) { if (aoe) this.lessonEvent('aoe'); if (heal > 0) this.lessonEvent('heal'); this.lessonEvent('clear'); }   // 練習課程:消除/全體/回血事件
