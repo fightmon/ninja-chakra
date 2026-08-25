@@ -2362,6 +2362,7 @@
         this.counterTeach = this.dungeonId === 'prologue' && this.diff && this.diff.key === 'baby' && !this.tut && !this.lesson;   // 🩹序章剋屬提醒:只在序章真戰鬥(baby、非腳本教學/課程)生效→敵人頭上常駐弱點徽章 + 一次性文字提示
         this.serverRunId = (data && data.serverRunId) || null;   // 🔐 戰鬥真實性:票券改由 HomeScene.startBattle 在進場前先領(run/start 當閘,見該函式),這裡只接收;全清時 _grantRun 優先用它送 run/complete(時間閘+一次性);拿不到(離線/失敗/教學/實驗室本就不領票)→退回本地 runId 走離線 fallback
         this._bonus = (data && data.bonus) || null; this._bonusKilled = [];   // 🆕2026-08-02 bonus 關:伺服器 run/start 回應擲骰出的獎勵卡id陣列(金屬c71-73/金錢c74-76)或 null;_bonusKilled 收集本場實際打死的獎勵卡id,回報 run/complete
+        this.moneyDay = !!(data && data.moneyDay);   // 🆕2026-08-20 多金日(run/start.ts daily 回 daily.moneyDay,經 startBattle 帶入):spawnDailyStage 換金錢怪 c74-76;非每日關恆 false
         this._dailyKilled = []; this._dailyComboHits = 0;   // 🆕2026-08-17 每日修煉:_dailyKilled=本場實際打死的金屬怪(c71/c72/c73)cardId 陣列(killEnemy 收集,回報 run/complete 的 bonusKilled);_dailyComboHits=本場 combo≥3 的清宮次數(resolve() 累計,回報 comboCount,供 T3 任務進度)
         this.dive = (data && data.dive) || null;   // 🎬從大廳俯衝進來的元素色(有值才播進場淡入+關卡橫幅)
         this.stagesEff = resolveStages(this.dungeon, this.diff.key);   // (b) 依難度解析「有效關卡結構」(規則+覆寫);slice1 規則=0 → 與 base 全等
@@ -2379,7 +2380,7 @@
         const _CLS = ['grunt', 'grunt2', 'guard', 'caster', 'healer', 'shield', 'boss_baby', 'boss_beg', 'boss_nrm'];
         if (this.enemyLab) { for (const el in MONSTER_IMG) if (!this.textures.exists('mon_' + el)) this.load.image('mon_' + el, MONSTER_IMG[el]); for (const k in ENEMY_IMG) if (!this.textures.exists(k)) this.load.image(k, ENEMY_IMG[k]); _loadCardArt(this, ['c38']); }   // 敵技實驗室=全載;🔩補載雷鐵機人(c38)卡圖給「分層鐵塊」demo 借圖用(比照 thunder 城 2354 行)
         else {
-          const _els = new Set(), _cids = new Set(); const _nSt = (this.stagesEff || []).length; for (let _si = 0; _si < _nSt; _si++) { if (this.stagesEff[_si] && this.stagesEff[_si].bonus) continue; const _rawSi = (this._bonusStagePos && _si >= this._bonusStagePos) ? _si - 1 : _si; try { spawnStage(this.dungeonId, this.diff.key, _rawSi).forEach(e => { _els.add(e.el); if (e.cardId) _cids.add(e.cardId); if (e.phases) e.phases.forEach(ph => _els.add(ph.el)); }); } catch (_e) { } }
+          const _els = new Set(), _cids = new Set(); const _nSt = (this.stagesEff || []).length; for (let _si = 0; _si < _nSt; _si++) { if (this.stagesEff[_si] && this.stagesEff[_si].bonus) continue; const _rawSi = (this._bonusStagePos && _si >= this._bonusStagePos) ? _si - 1 : _si; try { spawnStage(this.dungeonId, this.diff.key, _rawSi, this.moneyDay).forEach(e => { _els.add(e.el); if (e.cardId) _cids.add(e.cardId); if (e.phases) e.phases.forEach(ph => _els.add(ph.el)); }); } catch (_e) { } }
           _cids.forEach(id => _loadCardArt(this, [id]));   // 🆕載本關敵人指定的 cardId(風城跨屬護衛補師c57/哥布林c41/方塊怪c70 等,_loadCardArt 含 _e/_e2 進化圖)   // 只載本關屬性:用 spawnStage 產「真敵人」收集元素(涵蓋上級↑懲罰屬 pun + 魔王階段變身),與 spawnEnemies 完全對齊→動態屬不再漏載變 emoji;原無腦全載 50 檔~5.2MB 大砍;🆕bonus 槽跳過+其後索引 -1 校正(比照 spawnEnemies 的 _si 換算,避免漏載真正 S3+ 的屬性)
           _els.forEach(el => { if (MONSTER_IMG[el] && !this.textures.exists('mon_' + el)) this.load.image('mon_' + el, MONSTER_IMG[el]); _CLS.forEach(c => { const k = c + '_' + el; if (ENEMY_IMG[k] && !this.textures.exists(k)) this.load.image(k, ENEMY_IMG[k]); }); });
           if (!['fire', 'water', 'thunder', 'earth', 'wind'].includes(this.dungeonId)) { const _BLK = { fire: 'c66', water: 'c67', thunder: 'c68', earth: 'c69', wind: 'c70' }, _NAT = { fire: 'c41', water: 'c57', thunder: 'c38', earth: 'c49', wind: 'c55' }; _els.forEach(el => { if (_BLK[el]) _loadCardArt(this, [_BLK[el]]); if (_NAT[el]) _loadCardArt(this, [_NAT[el]]); }); }   // 🆕2026-08-03 非五城地城(每日/序章/塔)雜兵→方塊怪卡圖;🆕2026-08-17 技能怪→該屬招牌卡(c41/c57/c38/c49/c55),兩者都預載本關元素(含 _e/_e2 進化圖,見 enemyTexKey)
@@ -3464,7 +3465,7 @@
         this.enemyG = this.add.container(0, 0).setDepth(DEPTH.enemy);   // 敵方整層在「我方卡」之下、背景之上
         const _bonusHere = this._bonusStagePos && this.stage === this._bonusStagePos;   // 🆕2026-08-02 bonus 關(插在 S2 之後):自建陣容,不吃 spawnStage
         const _spawnSi = (this._bonusStagePos && this.stage > this._bonusStagePos) ? this.stage - 2 : this.stage - 1;   // bonus 槽會讓後面各關的 stagesEff index 多 1→真正 spawnStage(無 bonus 概念)要扣回來,才對得到真正 S3 的資料
-        this.enemies = this.enemyLab ? this.labBossEnemies() : (this.tut ? this.tutEnemies() : this.lesson ? this.lessonEnemies() : _bonusHere ? this.spawnBonusEnemies() : spawnStage(this.dungeonId, this.diff.key, _spawnSi));   // 敵技實驗室=魔王陣型(王中+2小兵);headless 生敵 → data-stages.spawnStage(場景與 sim 共用同一份 model 數學);教學=固定 3 火敵;練習課程=固定單敵;bonus=前後方塊怪夾中間金屬/金錢獎勵怪
+        this.enemies = this.enemyLab ? this.labBossEnemies() : (this.tut ? this.tutEnemies() : this.lesson ? this.lessonEnemies() : _bonusHere ? this.spawnBonusEnemies() : spawnStage(this.dungeonId, this.diff.key, _spawnSi, this.moneyDay));   // 敵技實驗室=魔王陣型(王中+2小兵);headless 生敵 → data-stages.spawnStage(場景與 sim 共用同一份 model 數學);教學=固定 3 火敵;練習課程=固定單敵;bonus=前後方塊怪夾中間金屬/金錢獎勵怪
         this._soloBoss = this.enemies.length === 1 && !!(this.enemies[0] && this.enemies[0].boss);   // 🐲 單魔王關(全關只有一隻魔王,如上級)→ fitEnemySprite 用獨立比例/位置/影子;生成時鎖定,雜兵死光/變身也不誤判
         if (this.lead && this.lead.type === 'enemyDelay') this.enemies.forEach(e => { e.timer = (e.timer || e.interval || 5) + this.lead.v; });   // 🐦藍鵲隊長:每關開場全敵延遲 +v(一次性,不改 interval)
         if (this.lead && this.lead.type === 'counterDelay' && this.lead.el) { const tEl = EL[this.lead.el] && EL[this.lead.el].beats; if (tEl) this.enemies.forEach(e => { if (e.el === tEl) e.timer = (e.timer || e.interval || 5) + this.lead.v; }); }   // 🐦鳥·控敵先制:開局「被本屬相剋」的敵 CD+v
@@ -8108,7 +8109,7 @@
         const dc = (this.tab === 'dungeon') ? DIVE_COLOR[id] : null;   // 只從地圖進、且該城有轉場色→播出擊俯衝轉場
         // ✋ 即時回饋(一點就有反應,不等網路):地圖入口=俯衝+「出擊中…」;其餘=載入遮罩+轉圈。run/start 與此動畫並行跑。
         const fb = dc ? this._diveFeedback(id) : this._loadFeedback();
-        let serverRunId = null, serverBonus = null, failMsg = null;
+        let serverRunId = null, serverBonus = null, failMsg = null, serverMoneyDay = false;
         try {
           const r = await authedFetch('/api/run/start', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ dungeonId: id, diff: df.key }) });
           if (r && r.status === 402) {   // 體力不足(可能剛好被別的裝置/分頁花掉):不進戰鬥,用伺服器回的 nextRegenSec 顯示還要多久回1點
@@ -8121,13 +8122,13 @@
           } else if (r && r.status === 409) {   // 🆕2026-08-17 每日修煉專屬(run/start.ts daily 分支):今天這層已通關過 / 換日了但前端還沒重整→屬性不對。每日修煉本版不做離線 fallback,這裡務必攔下,否則會白打一場(run/complete daily 分支拒絕未簽票的請求,見該檔案檔頭)
             const body409 = await r.json().catch(() => ({}));
             failMsg = (body409 && body409.error === 'already_cleared') ? '今天已經打過這層了,明天再來' : '今天不是這個屬性,重新整理看看';
-          } else if (r && r.ok) { const d2 = await r.json(); serverRunId = (d2 && d2.runId) || null; serverBonus = (d2 && d2.bonus && d2.bonus.cards) || null; if (d2) syncWallet(d2); }
+          } else if (r && r.ok) { const d2 = await r.json(); serverRunId = (d2 && d2.runId) || null; serverBonus = (d2 && d2.bonus && d2.bonus.cards) || null; serverMoneyDay = !!(d2 && d2.daily && d2.daily.moneyDay); if (d2) syncWallet(d2); }   // 🆕多金日旗標(run/start.ts daily 分支回 daily.moneyDay)→帶進戰鬥換金錢怪
           // else:其他非預期狀態→比照離線放行(serverRunId 留 null,走本地 runId fallback)
         } catch (e) { }   // 🔐 網路失敗/離線 → 照舊進戰鬥,不卡死玩家
         if (failMsg) { this._startBusy = false; fb.abort(); this.toast(failMsg); this.rebuild(); return; }   // 失敗:收掉即時回饋、回首頁、提示
         await fb.ready();   // 等回饋演到「畫面已被蓋住」才切場景(dive=霧全滿;遮罩=即時)→ 慢網被動畫/遮罩蓋掉不突兀
         this._startBusy = false;
-        this.scene.manager.start('game', { team: tm, dungeonId: id, diff: df.key, dive: !!dc, serverRunId: serverRunId, bonus: serverBonus }); this.scene.manager.stop('home');
+        this.scene.manager.start('game', { team: tm, dungeonId: id, diff: df.key, dive: !!dc, serverRunId: serverRunId, bonus: serverBonus, moneyDay: serverMoneyDay }); this.scene.manager.stop('home');
       }
       _diveFeedback(id) {   // 🎬 出擊即時回饋(地圖):溫和俯衝+暗霧;回傳 {ready:霧全滿才可切場景, abort:失敗時收掉並復原相機}。網路請求與此動畫並行。
         const isle = MAP_ISLES.find(i => i.id === id), S = this._mapS || (W / 1080);

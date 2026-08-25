@@ -643,7 +643,7 @@ function behGates(beh, dk, full){
 // 不需要 spawnStage() 給五屬城 base 資料用的那套「myBeh 自動注入/pun 反制混搭/noSkill/covered」推導,
 // 所以獨立一份精簡版生敵,不呼叫 resolveStages(daily 走 GameScene.this.dungeon=DAILY_DUNGEONS[id] 時,
 // resolveStages 對不在 ELEM_DUNGEONS/OVERRIDES 的 id 本來就是 no-op,兩邊對得上,只是這裡不繞這條路更直接)。
-function spawnDailyStage(dungeonId, stageIdx){
+function spawnDailyStage(dungeonId, stageIdx, moneyDay){   // 🆕2026-08-20 moneyDay=true:多金日金屬怪原位換金錢怪(c71→c74/c72→c75/c73→c76,見 spec-daily-island §4),killEnemy 收集後 run/complete 發金錢卡、玩家分解換金幣
   const dungeon=DAILY_DUNGEONS[dungeonId]; if(!dungeon) return [];
   const stg=dungeon.stages[stageIdx]; if(!stg) return [];
   const dk='normal';
@@ -668,14 +668,14 @@ function spawnDailyStage(dungeonId, stageIdx){
     const stageHasBoss=stg.es.some(x=>x.boss);
     return {el:d.el,max:hp,hp:hp,atk:atk,interval:ival,timer:Math.max(2,ival),burn:0,dead:false,boss:!!d.boss,guard:(!d.boss&&stageHasBoss),
       ...g,phases:null,phaseIdx:0,arch:null,tier:tierV,finStages:finStagesV,finAnyHit:!!d.finAnyHit,finCD:finCDV,
-      cardId:(d.cardId||null),peck:peckN,peckTray:!!d.peckTray,stealStored:!!d.stealStored,iron:d.iron||0,ironPunish:!!d.ironPunish,
+      cardId:((moneyDay&&d.cardId)?(({c71:'c74',c72:'c75',c73:'c76'})[d.cardId]||d.cardId):(d.cardId||null)),peck:peckN,peckTray:!!d.peckTray,stealStored:!!d.stealStored,iron:d.iron||0,ironPunish:!!d.ironPunish,
       ...(d.iron>0?{lock:ironLockV}:{}),reviveMax:(d.reviveMax!=null?d.reviveMax:2)};
   });
 }
 
 // 生成某 (dungeon, 難度, 第 stageIdx 關;0 起) 的敵人模型陣列。timer 寬限:開局第1關(stageIdx0)+2。
-function spawnStage(dungeonId, diffKey, stageIdx){
-  if(typeof dungeonId==='string' && dungeonId.indexOf('daily_')===0) return spawnDailyStage(dungeonId, stageIdx);   // 🆕每日修煉(daily_*):固定敵組,不吃 DIFFS/stageCounts/OVERRIDES,見 spawnDailyStage 註解
+function spawnStage(dungeonId, diffKey, stageIdx, moneyDay){
+  if(typeof dungeonId==='string' && dungeonId.indexOf('daily_')===0) return spawnDailyStage(dungeonId, stageIdx, moneyDay);   // 🆕每日修煉(daily_*):固定敵組,不吃 DIFFS/stageCounts/OVERRIDES,見 spawnDailyStage 註解;moneyDay 轉傳(多金日換金錢怪)
   const dungeon=DUNGEONS[dungeonId]; if(!dungeon) return [];
   const df=DIFFS_BY[diffKey]||DIFFS_BY.normal;
   const _stg=resolveStages(dungeon, diffKey)[stageIdx], defs=_stg.es;
