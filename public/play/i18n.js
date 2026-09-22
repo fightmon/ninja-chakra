@@ -148,6 +148,15 @@ const I18N_DICT = {
     '⑧ 換你了!清掉發亮的「雷宮」繼續打牠 ⚡\n清任何屬性宮都能攻擊,挑剋牠的最痛。': '⑧ Your turn! Clear the glowing Thunder gate to keep attacking ⚡\nClearing any element gate attacks — but the counter element hurts most.',
     '⑨ 最後一擊!清掉「火宮」把牠打倒 💥\n兩隻都清光就贏了 —— 上!': '⑨ Final blow! Clear the Fire gate to finish it off 💥\nDefeat both enemies to win — go!',
 
+    // --- 新手教學 7 步重設計(2026-08-26,①無文字面板故無字典項;④⑤⑦沿用舊⑥⑦⑨文案但改了編號,故是新 key) ---
+    '② 填滿發亮的「宮」試試!': '② Try filling the glowing gate!',
+    '③ 三塊拼滿兩整行!\n一次清很大 → 全體攻擊,一次打全部敵人!': '③ Fit all 3 blocks into both rows!\nClear big in one go → AOE attack, hitting every enemy at once!',
+    '④ 剛剛被敵人攻擊了!牠左上的「沙漏」⏳\n歸零就會出手打你。被扣血別怕 →\n填滿灰色「無屬宮」清掉 → 既能攻擊、又能回血 💚': '④ The enemy just attacked! Its hourglass ⏳ (top-left)\nhits you when it runs out. Don\'t worry about the damage →\nfill the gray neutral gate to clear it — that both attacks and heals 💚',
+    '⑤ 挑「剋牠」的屬性宮打更痛!\n敵人是火 → 清「水宮」→ 水剋火 → 傷害翻倍 🌊\n🔄 相剋:火→風→雷→土→水→火': '⑤ Pick the element that counters it for extra damage!\nThe enemy is Fire → clear the Water gate → Water beats Fire → double damage 🌊\n🔄 Counter order: Fire→Wind→Thunder→Earth→Water→Fire',
+    '⑥ 把卡片上的屬塊拖進宮裡!': '⑥ Drag the element block on your card into the gate!',
+    '⑦ 最後一擊!清掉「火宮」把牠打倒 💥\n兩隻都清光就贏了 —— 上!': '⑦ Final blow! Clear the Fire gate to finish it off 💥\nDefeat both enemies to win — go!',
+    '剋屬!': 'Weakness hit!',
+
     // --- 序章練習課程(LESSONS p1/p2/p3) ---
     '相剋與屬塊': 'Type Matchups & Element Blocks',
     '👊 序章練習 · 相剋與屬塊\n我教你「挑對屬性打敵人」— 點任意處開始': '👊 Prologue Lesson · Type Matchups & Element Blocks\nLet me teach you to pick the right element — tap anywhere to start',
@@ -317,7 +326,7 @@ const I18N_DICT = {
     '火方塊王': 'Fire Block King', '水方塊王': 'Water Block King', '雷方塊王': 'Thunder Block King', '土方塊王': 'Earth Block King', '風方塊王': 'Wind Block King',
 
     // --- 城/難度名稱(定義在 data-stages.js,顯示點在 index.html 內;僅靜態城名,塔樓層動態組字名暫不譯) ---
-    '序章·召喚之章': 'Prologue · Chapter of Summoning',
+    '序章·召喚之章': 'Prologue: Summoning',   // 2026-09-21 精簡:地圖島嶼標籤/戰鬥載入橫幅也用這鍵(data-stages DUNGEONS.prologue.name),長版會爆版,與 picker 版(632行)統一
     '火之火山': 'Volcano of Fire',
     '水之深淵': 'Abyss of Water',
     '雷之高原': 'Plateau of Thunder',
@@ -620,16 +629,16 @@ const I18N_DICT = {
     '體力不足!去商店回復': 'Not enough stamina! Recover at the Shop',
     '← 返回大廳': '← Back to Lobby',
     '⛩️ 序章 · 練習課程': '⛩️ Prologue · Practice Lessons',
-    '⛩️ 序章 · 召喚之章': '⛩️ Prologue · Chapter of Summoning',
+    '⛩️ 序章 · 召喚之章': '⛩️ Prologue: Summoning',
     '一關一個玩法 · 免體力 · 可重玩': 'One mechanic per stage · No stamina cost · Replayable',
-    '通關序章 · 解鎖五屬關卡': 'Clear the Prologue to unlock the Element Dungeons',
+    '通關序章 · 解鎖五屬關卡': 'Clear it to unlock the Element Dungeons',
     '① 相剋與屬塊': '① Type Matchups & Element Blocks',
     '② 屬塊儲存與覆蓋': '② Storing & Overlaying Element Blocks',
     '③ 全體攻擊': '③ AOE Attack',
-    '序章 · 召喚之章': 'Prologue · Chapter of Summoning',
+    '序章 · 召喚之章': 'Prologue: Summoning',
 
     // === 第九批:序章複習課程/每日修煉面板/出擊流程/卡片管理頁 ===
-    '🔓 解鎖五屬關': '🔓 Unlocks the Element Dungeons',
+    '🔓 解鎖五屬關': '🔓 Unlocks Dungeons',
     '🎁 首通 +1💎': '🎁 First Clear +1💎',
     '即將推出': 'Coming Soon',
     '← 返回': '← Back',

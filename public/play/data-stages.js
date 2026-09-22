@@ -55,9 +55,13 @@ const _DAILY_PIECE_SET = ['2x2','1x3','3x1','2x3','3x2','1x2','2x1'];
 //   beh:'none' 是刻意的非機制值(behGates 對未知 beh 字串一律回傳全零 gate,見 data-stages.js behGates()):
 //   純為擋掉 spawnStage() 對「該屬城 specialIdx 自動注入簽名招」的預設行為(myBeh 分支只擋 d.iron/d.peck/d.beh 已設,
 //   金屬怪本身沒有 iron/peck,若不擋會被誤套上該屬簽名招),不代表金屬怪真的有機制。
-const _metalMini  = ()=>({el:'neutral', hp:250,  atk:10, turns:4, cardId:'c71', beh:'none'});   // 小金屬
-const _metalBig   = ()=>({el:'neutral', hp:600,  atk:15, turns:4, cardId:'c72', beh:'none'});   // 大金屬
-const _metalKing  = ()=>({el:'neutral', hp:1500, atk:30, turns:4, cardId:'c73', beh:'none'});   // 金屬王
+// 🆕2026-09-03 金屬怪 per-tier 配血(hp 參數覆蓋,同守門怪「越難的關怪越硬」邏輯;跟玩家戰力無關,固定值):
+//   目標=各 tier 的目標客群都「小2宮/大3宮/王4-5宮」(sim:LV1-20一宮259-368、LV20-30~530、LV40+~800,金屬無屬吃不到相剋)。
+//   t1 帶 _metalMini(300)=戰鬥540(新手2宮);t2 小用預設500=900、_metalBig(800)=1440;t3 大用預設1300=2340、王2200=3960。
+//   多金日金錢怪共用本組定義只換 cardId,血量自動同步。改血別動後端(dailyMetalSpawns 只管卡種數量)。
+const _metalMini  = (hp)=>({el:'neutral', hp:hp||500,  atk:10, turns:4, cardId:'c71', beh:'none'});   // 小金屬
+const _metalBig   = (hp)=>({el:'neutral', hp:hp||1300, atk:15, turns:4, cardId:'c72', beh:'none'});   // 大金屬
+const _metalKing  = (hp)=>({el:'neutral', hp:hp||2200, atk:30, turns:4, cardId:'c73', beh:'none'});   // 金屬王(別超過t3魔王(1400×1.8)太多免得同場搶戲)
 // 2026-08-16 企劃二次修訂:①移除「副機制怪」概念(灼燒/封鎖/麻痺/自回/連段盾等技能遊戲尚未定義,不出場),只留五屬主機制。
 //   ②星級上限★3:所有 boss 顯式帶 tier:3(不靠 KING_NAME 4星王貼圖/命名 fallback)。
 // 2026-08-16 三次修訂:星級階梯統一——修煉關星級＝場內最高怪星級,S1→S3 遞增,五屬同構,機制怪 tier 顯式指定(不再抄模板值):
@@ -66,13 +70,13 @@ const _metalKing  = ()=>({el:'neutral', hp:1500, atk:30, turns:4, cardId:'c73', 
 //   金屬怪全日總量五屬各自:小×5(1★S1×2+S2×1=3、2★S1×2=2)、大×5(2★S2×1+S3×1=2、3★S1×1+S2×2=3)、王×1(3★S3)。
 const DAILY_DUNGEONS = {
   daily_fire_1:{id:'daily_fire_1',el:'fire',name:'火之修煉·見習',emoji:'🔥',cost:5,daily:true,pieceSet:_DAILY_PIECE_SET,stages:[
-      {es:[_metalMini(),_metalMini()]},
-      {es:[{el:'fire',hp:380,atk:45,turns:4,tier:1,beh:'finisher',finCD:4,finStages:3,finPct:0.12,finAnyHit:true},_metalMini()]},
+      {es:[_metalMini(300),_metalMini(300)]},
+      {es:[{el:'fire',hp:380,atk:45,turns:4,tier:1,beh:'finisher',finCD:4,finStages:3,finPct:0.12,finAnyHit:true},_metalMini(300)]},
     ]},
   daily_fire_2:{id:'daily_fire_2',el:'fire',name:'火之修煉·修行',emoji:'🔥',cost:10,daily:true,pieceSet:_DAILY_PIECE_SET,stages:[
       {es:[{el:'fire',hp:420,atk:55,turns:4,tier:1,beh:'finisher',finCD:4,finStages:3,finPct:0.12,finAnyHit:true},_metalMini(),_metalMini()]},
-      {es:[{el:'fire',hp:420,atk:55,turns:4,tier:1,beh:'finisher',finCD:4,finStages:3,finPct:0.12,finAnyHit:true},{el:'fire',hp:420,atk:55,turns:4,tier:1,beh:'finisher',finCD:4,finStages:3,finPct:0.12,finAnyHit:true},_metalBig()]},
-      {es:[{el:'fire',hp:700,atk:85,turns:3,tier:2,beh:'finisher',finCD:4,finStages:3,finPct:0.20,finAnyHit:true},_metalBig()]},
+      {es:[{el:'fire',hp:420,atk:55,turns:4,tier:1,beh:'finisher',finCD:4,finStages:3,finPct:0.12,finAnyHit:true},{el:'fire',hp:420,atk:55,turns:4,tier:1,beh:'finisher',finCD:4,finStages:3,finPct:0.12,finAnyHit:true},_metalBig(800)]},
+      {es:[{el:'fire',hp:700,atk:85,turns:3,tier:2,beh:'finisher',finCD:4,finStages:3,finPct:0.20,finAnyHit:true},_metalBig(800)]},
     ]},
   daily_fire_3:{id:'daily_fire_3',el:'fire',name:'火之修煉·極意',emoji:'🔥',cost:15,daily:true,pieceSet:_DAILY_PIECE_SET,stages:[
       {es:[{el:'fire',hp:420,atk:55,turns:4,tier:1,beh:'finisher',finCD:4,finStages:3,finPct:0.12,finAnyHit:true},_metalBig()]},
@@ -81,13 +85,13 @@ const DAILY_DUNGEONS = {
     ]},
 
   daily_water_1:{id:'daily_water_1',el:'water',name:'水之修煉·見習',emoji:'💧',cost:5,daily:true,pieceSet:_DAILY_PIECE_SET,stages:[
-      {es:[_metalMini(),_metalMini()]},
-      {es:[{el:'water',hp:380,atk:45,turns:4,tier:1,beh:'healAlly',healPct:0.20,healCD:2},_metalMini()]},
+      {es:[_metalMini(300),_metalMini(300)]},
+      {es:[{el:'water',hp:380,atk:45,turns:4,tier:1,beh:'healAlly',healPct:0.20,healCD:2},_metalMini(300)]},
     ]},
   daily_water_2:{id:'daily_water_2',el:'water',name:'水之修煉·修行',emoji:'💧',cost:10,daily:true,pieceSet:_DAILY_PIECE_SET,stages:[
       {es:[{el:'water',hp:420,atk:55,turns:4,tier:1,beh:'healAlly',healPct:0.20,healCD:2},_metalMini(),_metalMini()]},
-      {es:[{el:'water',hp:420,atk:55,turns:4,tier:1,beh:'healAlly',healPct:0.20,healCD:2},{el:'water',hp:420,atk:55,turns:4,tier:1,beh:'healAlly',healPct:0.20,healCD:2},_metalBig()]},
-      {es:[{el:'water',hp:700,atk:85,turns:3,tier:2,beh:'healAlly',healPct:0.35,healCD:2},_metalBig()]},
+      {es:[{el:'water',hp:420,atk:55,turns:4,tier:1,beh:'healAlly',healPct:0.20,healCD:2},{el:'water',hp:420,atk:55,turns:4,tier:1,beh:'healAlly',healPct:0.20,healCD:2},_metalBig(800)]},
+      {es:[{el:'water',hp:700,atk:85,turns:3,tier:2,beh:'healAlly',healPct:0.35,healCD:2},_metalBig(800)]},
     ]},
   daily_water_3:{id:'daily_water_3',el:'water',name:'水之修煉·極意',emoji:'💧',cost:15,daily:true,pieceSet:_DAILY_PIECE_SET,stages:[
       {es:[{el:'water',hp:420,atk:55,turns:4,tier:1,beh:'healAlly',healPct:0.20,healCD:2},_metalBig()]},
@@ -96,13 +100,13 @@ const DAILY_DUNGEONS = {
     ]},
 
   daily_thunder_1:{id:'daily_thunder_1',el:'thunder',name:'雷之修煉·見習',emoji:'⚡',cost:5,daily:true,pieceSet:_DAILY_PIECE_SET,stages:[
-      {es:[_metalMini(),_metalMini()]},
-      {es:[{el:'thunder',hp:380,atk:45,turns:4,tier:1,iron:1,ironPunish:true},_metalMini()]},
+      {es:[_metalMini(300),_metalMini(300)]},
+      {es:[{el:'thunder',hp:380,atk:45,turns:4,tier:1,iron:1,ironPunish:true},_metalMini(300)]},
     ]},
   daily_thunder_2:{id:'daily_thunder_2',el:'thunder',name:'雷之修煉·修行',emoji:'⚡',cost:10,daily:true,pieceSet:_DAILY_PIECE_SET,stages:[
       {es:[{el:'thunder',hp:420,atk:55,turns:4,tier:1,iron:1,ironPunish:true},_metalMini(),_metalMini()]},
-      {es:[{el:'thunder',hp:420,atk:55,turns:4,tier:1,iron:1,ironPunish:true},{el:'thunder',hp:420,atk:55,turns:4,tier:1,iron:1,ironPunish:true},_metalBig()]},
-      {es:[{el:'thunder',hp:700,atk:85,turns:3,tier:2,iron:2,ironPunish:true},_metalBig()]},
+      {es:[{el:'thunder',hp:420,atk:55,turns:4,tier:1,iron:1,ironPunish:true},{el:'thunder',hp:420,atk:55,turns:4,tier:1,iron:1,ironPunish:true},_metalBig(800)]},
+      {es:[{el:'thunder',hp:700,atk:85,turns:3,tier:2,iron:2,ironPunish:true},_metalBig(800)]},
     ]},
   daily_thunder_3:{id:'daily_thunder_3',el:'thunder',name:'雷之修煉·極意',emoji:'⚡',cost:15,daily:true,pieceSet:_DAILY_PIECE_SET,stages:[
       {es:[{el:'thunder',hp:420,atk:55,turns:4,tier:1,iron:1,ironPunish:true},_metalBig()]},
@@ -111,13 +115,13 @@ const DAILY_DUNGEONS = {
     ]},
 
   daily_earth_1:{id:'daily_earth_1',el:'earth',name:'土之修煉·見習',emoji:'🪨',cost:5,daily:true,pieceSet:_DAILY_PIECE_SET,stages:[
-      {es:[_metalMini(),_metalMini()]},
-      {es:[{el:'earth',hp:380,atk:45,turns:4,tier:1,beh:'shield',shieldKind:'hit',hitGate:12},_metalMini()]},
+      {es:[_metalMini(300),_metalMini(300)]},
+      {es:[{el:'earth',hp:380,atk:45,turns:4,tier:1,beh:'shield',shieldKind:'hit',hitGate:12},_metalMini(300)]},
     ]},
   daily_earth_2:{id:'daily_earth_2',el:'earth',name:'土之修煉·修行',emoji:'🪨',cost:10,daily:true,pieceSet:_DAILY_PIECE_SET,stages:[
       {es:[{el:'earth',hp:420,atk:55,turns:4,tier:1,beh:'shield',shieldKind:'hit',hitGate:12},_metalMini(),_metalMini()]},
-      {es:[{el:'earth',hp:420,atk:55,turns:4,tier:1,beh:'shield',shieldKind:'hit',hitGate:12},{el:'earth',hp:420,atk:55,turns:4,tier:1,beh:'shield',shieldKind:'hit',hitGate:12},_metalBig()]},
-      {es:[{el:'earth',hp:700,atk:85,turns:3,tier:2,beh:'shield',shieldKind:'hit',hitGate:15},_metalBig()]},
+      {es:[{el:'earth',hp:420,atk:55,turns:4,tier:1,beh:'shield',shieldKind:'hit',hitGate:12},{el:'earth',hp:420,atk:55,turns:4,tier:1,beh:'shield',shieldKind:'hit',hitGate:12},_metalBig(800)]},
+      {es:[{el:'earth',hp:700,atk:85,turns:3,tier:2,beh:'shield',shieldKind:'hit',hitGate:15},_metalBig(800)]},
     ]},
   daily_earth_3:{id:'daily_earth_3',el:'earth',name:'土之修煉·極意',emoji:'🪨',cost:15,daily:true,pieceSet:_DAILY_PIECE_SET,stages:[
       {es:[{el:'earth',hp:420,atk:55,turns:4,tier:1,beh:'shield',shieldKind:'hit',hitGate:12},_metalBig()]},
@@ -126,13 +130,13 @@ const DAILY_DUNGEONS = {
     ]},
 
   daily_wind_1:{id:'daily_wind_1',el:'wind',name:'風之修煉·見習',emoji:'🌪',cost:5,daily:true,pieceSet:_DAILY_PIECE_SET,stages:[
-      {es:[_metalMini(),_metalMini()]},
-      {es:[{el:'wind',hp:380,atk:45,turns:4,tier:1,peck:1},_metalMini()]},
+      {es:[_metalMini(300),_metalMini(300)]},
+      {es:[{el:'wind',hp:380,atk:45,turns:4,tier:1,peck:1},_metalMini(300)]},
     ]},
   daily_wind_2:{id:'daily_wind_2',el:'wind',name:'風之修煉·修行',emoji:'🌪',cost:10,daily:true,pieceSet:_DAILY_PIECE_SET,stages:[
       {es:[{el:'wind',hp:420,atk:55,turns:4,tier:1,peck:1},_metalMini(),_metalMini()]},
-      {es:[{el:'wind',hp:420,atk:55,turns:4,tier:1,peck:1},{el:'wind',hp:420,atk:55,turns:4,tier:1,peck:1},_metalBig()]},
-      {es:[{el:'wind',hp:700,atk:85,turns:3,tier:2,peck:1},_metalBig()]},
+      {es:[{el:'wind',hp:420,atk:55,turns:4,tier:1,peck:1},{el:'wind',hp:420,atk:55,turns:4,tier:1,peck:1},_metalBig(800)]},
+      {es:[{el:'wind',hp:700,atk:85,turns:3,tier:2,peck:1},_metalBig(800)]},
     ]},
   daily_wind_3:{id:'daily_wind_3',el:'wind',name:'風之修煉·極意',emoji:'🌪',cost:15,daily:true,pieceSet:_DAILY_PIECE_SET,stages:[
       {es:[{el:'wind',hp:420,atk:55,turns:4,tier:1,peck:1},_metalBig()]},
@@ -168,32 +172,135 @@ function _twMb(b){ return 1 + 0.25*(b-1); }   // 區塊倍率:B1=1.0、B2=1.25�
 function _twScaled(key, m){ const [hp,atk]=TOWER_BASE[key]; return [Math.round(hp*m), Math.round(atk*m)]; }
 
 const TOWER_FLOORS = {};
+const TOWER_BONUS_CHANCE = 0.12;   // 🆕2026-08-26 驚喜關(S2-S3間)插入機率,比照五屬城 run/start.ts 的 12%;純資料佔位——
+                                    //   插入邏輯(伺服器擲骰/ELEM_BONUS 白名單/spawnBonusEnemies 接線)之後接塔進遊戲時再做,目前不影響任何現有行為。
+const TOWER_FLOOR_SPIKE = { 4: 1.3, 7: 1.1 };   // 期中考(F4)/王前熟練尾聲(F7)整層數值加成;其餘=1.0(F5 藉此「降回基準」)
+const TOWER_BOSS_SPIKE = 1.4;      // F8 樓主(4★王)專屬加成,疊在區塊倍率之上,只套樓主本體,不套 S1/S2 或護衛
+const TOWER_S3_BOOST = 1.15;       // 星級沒升等的「原地強化」倍率——目前只有 F3 的 S3 用到(2★→2★强,靠數值撐出關內曲線,而非跳星)
+
+// 🆕2026-08-26 星級曲線改版:星級(1-4★)與「機制強度檔」解耦——貼圖星等/顯示星數可以比機制強度先升一階,
+//   照 docs/spec-tower-curve.md §2.5 定案表:1★=art1/mech1/weak檔、2★=art2/mech1/std檔(貼圖先進化,機制強度暫不變)、
+//   3★=art3/mech2/t2檔、4★=art0(不帶tier→enemyArtUrl 無tier的boss 走 king 圖)/mech3/boss檔。
+const TOWER_STAR = {
+  1: { art: 1, mech: 1, key: 'weak' },
+  2: { art: 2, mech: 1, key: 'std'  },
+  3: { art: 3, mech: 2, key: 't2'   },
+  4: { art: 0, mech: 3, key: 'boss' },
+};
+// 🆕2026-08-26 修正:塔的機制怪/雜兵一律用「該 block 的種族」貼圖,只換屬性色——不是換種族/換機制。
+//   種族與機制固定用 block 自己的元素(raceEl);dmgEl 只決定相剋計算與 cardId 的屬性色(可以是 F4/F8 的剋屬、offEl 雜兵變化屬)。
+//   cardId 強制指定(不再讓 stageTablePerEnemy 靠 e.el 反推 dungeonId/種族——e.el=剋屬時會反推出錯的種族,例如水會被推成c56護理而不是哥布林)。
+const TOWER_RACE_BASE = { fire:41, wind:51, thunder:36, earth:46, water:56 };   // block 種族 base cardId(火哥布林/風賊鴨/雷鐵機人/土牆/水護理),同 stages-overview.html 的 CITY_BASE
+const TOWER_EL_IDX = { fire:0, water:1, thunder:2, earth:3, wind:4 };            // 屬性→cardId index(cardId=種族base+此index)
+function _twCardId(raceEl, dmgEl){ return 'c' + (TOWER_RACE_BASE[raceEl] + TOWER_EL_IDX[dmgEl]); }
+function _twStar(raceEl, dmgEl, star, fm, extra){   // 星級生怪:raceEl=block種族(決定機制查表+cardId種族),dmgEl=相剋用屬性(決定cardId屬性色+e.el);hp/atk=該星數值檔×fm;turns=1★2★慢(4手)、3★4★快(3手)
+  const s = TOWER_STAR[star], [hp, atk] = _twScaled(s.key, fm), turns = star <= 2 ? 4 : 3;
+  const o = Object.assign({el: dmgEl, hp, atk, turns, tier: s.art}, TOWER_MECH[raceEl][s.mech], extra || {});
+  if (s.art > 0) o.cardId = _twCardId(raceEl, dmgEl);   // 1-3★:強制種族+屬性 cardId;4★王(art=0)不設 cardId→enemyArtUrl 走 king 圖分支(dmgEl 恆=raceEl,CITY_KING 對得上)
+  return o;
+}
+const TOWER_MOB_BASE = 66;   // 🆕2026-08-26 主題調整:雜兵改用「方塊怪」家族(c66-70,五屬×base/_e/_e2,無king)——塔叫「方塊塔」,雜兵拿方塊怪比哥布林更搭主題
+function _twMobR(raceEl, dmgEl, hp, atk){ return { el: dmgEl, hp, atk, turns: 3, tier: 1, beh: 'none', cardId: 'c' + (TOWER_MOB_BASE + TOWER_EL_IDX[dmgEl]) }; }   // 塔區塊專用雜兵:cardId=方塊怪base+屬index(raceEl 參數保留供呼叫端統一介面,雜兵不吃種族);無機制(beh:'none')
+
+// 每關 3 小關·星級曲線(照 docs/spec-tower-curve.md §2.5 定案表逐關硬寫,8 關骨架彼此不同,非單一公式套用):
+//   F1:1★→1★x2→2★  F2:1★+雜兵→1★+2★→2★  F3:2★→2★+雜兵→2★强(原地強化)  F4測:剋E2★→剋E2★x2→剋E3★
+//   F5:2★→2★x2→2★(降回=F3基準,不強化)  F6:2★+雜兵→2★x2→3★  F7:3★→2★+3★→3★  F8終:3★x2→3★x2→4★王+剋E護衛
+//   雜兵可能摻非本屬(offEl,固定對照非RNG,做屬性變化);主機制怪維持本屬(或 F4 的剋E岔屬)。
 TOWER_BLOCKS.forEach((el, bi) => {
   const b = bi + 1, m = _twMb(b), floorBase = (b - 1) * 8;
-  const [wHp, wAtk] = _twScaled('weak', m), [sHp, sAtk] = _twScaled('std', m), [t2Hp, t2Atk] = _twScaled('t2', m),
-        [mHp, mAtk] = _twScaled('mob', m), [bHp, bAtk] = _twScaled('boss', m);
+  const cEl = counterOf(el);                        // 岔屬=剋本屬(B1火→水/B2風→火/B3雷→風/B4土→雷/B5水→土),固定對照非RNG
+  const offEl = TOWER_BLOCKS[(bi + 2) % 5];          // 雜兵變化屬:環上隔兩格的第三屬,5屬環下必然≠本屬也≠岔屬
   const easyPS = { pieceSet: _DAILY_PIECE_SET, pieceSetChance: 1.0 };   // 好解池:100% 從池內抽
   const midPS  = { pieceSet: _DAILY_PIECE_SET, pieceSetChance: 0.5 };   // 過渡池:50% 機率從池內抽,否則一般隨機
-  const layout = [
-    { es:[ _twMech(el,1,wHp,wAtk,4) ],                                                  extra: easyPS },   // n1 機制怪弱檔×1
-    { es:[ _twMech(el,1,wHp,wAtk,4), _twMob(el,mHp,mAtk) ],                             extra: easyPS },   // n2 弱檔×1＋雜兵×1
-    { es:[ _twMech(el,1,sHp,sAtk,4), _twMob(el,mHp,mAtk) ],                             extra: midPS  },   // n3 標準×1＋雜兵×1
-    { es:[ _twMech(el,1,sHp,sAtk,4), _twMech(el,1,sHp,sAtk,4) ],                        extra: midPS  },   // n4 標準×2
-    { es:[ _twMech(el,1,sHp,sAtk,4), _twMech(el,1,sHp,sAtk,4), _twMob(el,mHp,mAtk) ] },                    // n5 標準×2＋雜兵×1(一般拖盤)
-    { es:[ _twMech(el,2,t2Hp,t2Atk,3), _twMech(el,1,sHp,sAtk,4) ] },                                       // n6 ★2×1＋標準×1
-    { es:[ _twMech(el,2,t2Hp,t2Atk,3), _twMech(el,2,t2Hp,t2Atk,3) ] },                                     // n7 ★2×2
-    { es:[ _twMech(el,3,bHp,bAtk,3,{boss:true}), _twMob(el,mHp,mAtk), _twMob(el,mHp,mAtk) ] },             // n8 ★3樓主(boss)＋雜兵×2護衛
-  ];
-  layout.forEach((floor, i) => {
-    const n = i + 1, f = floorBase + n;
-    const dun = { id:'tower_f'+f, name:'塔 第'+f+'層·'+TOWER_EL_NAME[el], emoji:'🗼', cost:5, tower:true, el, stages:[ { es: floor.es } ] };
-    if (floor.extra) Object.assign(dun, floor.extra);
+
+  for (let n = 1; n <= 8; n++) {
+    const f = floorBase + n;
+    const fm = m * (TOWER_FLOOR_SPIKE[n] || 1.0);
+    const [mobHp, mobAtk] = _twScaled('mob', fm);
+    const mob = (dmgEl) => _twMobR(el, dmgEl, mobHp, mobAtk);                              // 雜兵:種族固定=block(el),屬性=dmgEl(offEl 或剋E護衛)
+    const star = (dmgEl, s, fmArg, extra) => _twStar(el, dmgEl, s, fmArg == null ? fm : fmArg, extra);   // 機制怪:種族/機制固定=block(el),屬性=dmgEl(本屬或F4剋屬)
+
+    let stages, extra, dispEl = el, examTag = '', mixName = null;
+    if (n === 8) {
+      // 期末考:S1-S2 本屬E(3★x2)、S3=3隻=本屬4★王(boss,×1.4,種族king圖)＋本屬3★護衛(finisher)＋剋E護衛(1★純雜兵)
+      stages = [
+        { es: [ star(el, 3), star(el, 3) ] },
+        { es: [ star(el, 3), star(el, 3) ] },
+        { es: [ star(el, 4, fm * TOWER_BOSS_SPIKE, { boss: true }), star(el, 3), mob(cEl) ] },
+      ];
+      examTag = '·期末考';
+      // n8 拖盤=全隨機,不設 pieceSet
+    } else if (n === 4) {
+      // 🆕2026-08-26 期中考改「本屬＋剋屬混場」(不再整關純剋屬):同場放本屬(el)＋剋屬(cEl)哥布林,都 finisher,都吃 fm(=m×1.3尖峰)
+      stages = [
+        { es: [ star(el, 2), star(cEl, 2) ] },                                          // S1:1本屬+1剋屬,都2★
+        { es: [ star(el, 2), star(cEl, 2), star(cEl, 2) ] },                            // S2:1本屬+2剋屬
+        { es: [ star(cEl, 3, null, { boss: true }), star(el, 2) ] },                    // S3(2隻):剋屬3★(王)+本屬2★(伴),混火水
+      ];
+      examTag = '·期中考';
+      mixName = TOWER_EL_NAME[el] + '+' + TOWER_EL_NAME[cEl];   // 混屬樓層,名稱比照 F41-49 的「A+B」慣例
+      extra = midPS;
+      // F4 混場不設 dun.el(比照 F8/F41-50 混屬樓層慣例,交由各敵人 e.el 決定)
+    } else {
+      if (n === 1) {
+        stages = [
+          { es: [ star(el, 1) ] },
+          { es: [ star(el, 1), star(el, 1) ] },
+          { es: [ star(el, 2, null, { boss: true }) ] },
+        ];
+      } else if (n === 2) {
+        stages = [
+          { es: [ star(el, 1), mob(offEl) ] },
+          { es: [ star(el, 1), star(el, 2) ] },
+          { es: [ star(el, 2, null, { boss: true }) ] },
+        ];
+      } else if (n === 3) {
+        stages = [
+          { es: [ star(el, 2) ] },
+          { es: [ star(el, 2), mob(offEl) ] },
+          { es: [ star(el, 2, fm * TOWER_S3_BOOST, { boss: true }) ] },   // 2★强:同星,靠數值撐出關內曲線
+        ];
+      } else if (n === 5) {
+        stages = [
+          { es: [ star(el, 2) ] },
+          { es: [ star(el, 2), star(el, 2) ] },
+          { es: [ star(el, 2, null, { boss: true }), star(el, 2) ] },   // S3改2隻:降回=F3基準(同星、同fm、不強化)
+        ];
+      } else if (n === 6) {
+        stages = [
+          { es: [ star(el, 2), mob(offEl) ] },
+          { es: [ star(el, 2), star(el, 2) ] },
+          { es: [ star(el, 3, null, { boss: true }), star(el, 2) ] },   // S3改2隻:3★(王)+2★(伴)
+        ];
+      } else {   // n === 7
+        stages = [
+          { es: [ star(el, 3) ] },
+          { es: [ star(el, 2), star(el, 3) ] },
+          { es: [ star(el, 3, null, { boss: true }), star(el, 3), star(el, 2) ] },   // S3改3隻:3★(王)+3★(伴)+2★(伴)
+        ];
+      }
+      if (n <= 2) extra = easyPS;
+      else if (n <= 4) extra = midPS;
+      // n5-7 拖盤=全隨機,不設 pieceSet
+    }
+
+    const dun = {
+      id: 'tower_f' + f, name: '塔 第' + f + '層·' + (mixName || TOWER_EL_NAME[dispEl]) + examTag,
+      emoji: '🗼', cost: 5, tower: true, stages,
+      bonusSlot: true, bonusChance: TOWER_BONUS_CHANCE,   // 🆕S2-S3 間驚喜關插槽(資料佔位,見上方常數註解)
+    };
+    if (n !== 8 && n !== 4) dun.el = dispEl;   // 單一屬性樓層才設 dungeon 級 el;F4(本屬+剋屬混場)/F8(王+雙護衛混屬)比照 F41-49/F50 慣例不設,交由各敵人 e.el 決定
+    if (n === 4) dun.examMid = true;
+    if (n === 8) dun.examFinal = true;
+    if (extra) Object.assign(dun, extra);
     TOWER_FLOORS[dun.id] = dun;
-  });
+  }
 });
 
 // ===== F41-49 混合段(一般拖盤,不設 pieceSet):四組跨屬對(照曜日相剋環相鄰) + F49 王前三機制怪關 =====
-// 倍率 m:F41-43=2.1、F44-46=2.2、F47-48=2.3、F49=2.4(只套 hp/atk,turns 不變:★2=3、雜兵=3)
+// 倍率 m:F41-43=2.1、F44-46=2.2、F47-48=2.3、F49=2.4(只套 hp/atk,turns 不變:★2=3、雜兵=3)。
+// 2026-08-26 改 3 小關:S3=原本(唯一)那個 stage 的內容原封不動(數值不動,維持既有曲線),S1/S2 是新增的漸進鋪陳(較少敵人)——
+//   不改動任何既有數值,只是把原本「一戰打完」拆成「先見過招式、最後一次全上」。
 (() => {
   const pairs = [['fire','wind'], ['wind','thunder'], ['thunder','earth'], ['earth','water']];   // [A,B]:低樓層=A★2+B★2+B雜兵;高樓層=A★2×2+B★2(A 從1隻→2隻遞增)
   const mLow = [2.1, 2.1, 2.2, 2.3], mHigh = [2.1, 2.2, 2.2, 2.3];   // 對應 F41/43/45/47(低) 與 F42/44/46/48(高) 的倍率
@@ -201,27 +308,39 @@ TOWER_BLOCKS.forEach((el, bi) => {
     const fLow = 41 + i * 2, fHigh = fLow + 1;
     const [t2LoHp, t2LoAtk] = _twScaled('t2', mLow[i]), [mobLoHp, mobLoAtk] = _twScaled('mob', mLow[i]);
     const [t2HiHp, t2HiAtk] = _twScaled('t2', mHigh[i]);
-    TOWER_FLOORS['tower_f'+fLow] = { id:'tower_f'+fLow, name:'塔 第'+fLow+'層·'+TOWER_EL_NAME[A]+'+'+TOWER_EL_NAME[B], emoji:'🗼', cost:5, tower:true, stages:[
-      { es:[ _twMech(A,2,t2LoHp,t2LoAtk,3), _twMech(B,2,t2LoHp,t2LoAtk,3), _twMob(B,mobLoHp,mobLoAtk) ] },
+    TOWER_FLOORS['tower_f'+fLow] = { id:'tower_f'+fLow, name:'塔 第'+fLow+'層·'+TOWER_EL_NAME[A]+'+'+TOWER_EL_NAME[B], emoji:'🗼', cost:5, tower:true, bonusSlot:true, bonusChance:TOWER_BONUS_CHANCE, stages:[
+      { es:[ _twStar(A,A,1,mLow[i]) ] },                                                                     // S1:A 1★先亮相(比 S3 主戰力矮一階,鋪星級曲線)
+      { es:[ _twStar(A,A,2,mLow[i]), _twStar(B,B,1,mLow[i]) ] },                                             // S2:A 升 2★(=S3 主戰力星級)、B 以 1★先登場
+      { es:[ _twMech(A,2,t2LoHp,t2LoAtk,3), _twMech(B,2,t2LoHp,t2LoAtk,3), _twMob(B,mobLoHp,mobLoAtk) ] },   // S3:原內容不變
     ] };
-    TOWER_FLOORS['tower_f'+fHigh] = { id:'tower_f'+fHigh, name:'塔 第'+fHigh+'層·'+TOWER_EL_NAME[A]+'+'+TOWER_EL_NAME[B], emoji:'🗼', cost:5, tower:true, stages:[
-      { es:[ _twMech(A,2,t2HiHp,t2HiAtk,3), _twMech(A,2,t2HiHp,t2HiAtk,3), _twMech(B,2,t2HiHp,t2HiAtk,3) ] },
+    TOWER_FLOORS['tower_f'+fHigh] = { id:'tower_f'+fHigh, name:'塔 第'+fHigh+'層·'+TOWER_EL_NAME[A]+'+'+TOWER_EL_NAME[B], emoji:'🗼', cost:5, tower:true, bonusSlot:true, bonusChance:TOWER_BONUS_CHANCE, stages:[
+      { es:[ _twStar(A,A,2,mHigh[i]) ] },                                                                    // S1:A 2★單隻
+      { es:[ _twStar(A,A,2,mHigh[i]), _twStar(A,A,3,mHigh[i]) ] },                                           // S2:敵數×2,其中一隻先跳 3★做星級變化
+      { es:[ _twMech(A,2,t2HiHp,t2HiAtk,3), _twMech(A,2,t2HiHp,t2HiAtk,3), _twMech(B,2,t2HiHp,t2HiAtk,3) ] },// S3:原內容不變
     ] };
   });
   // F49:水+火,三機制怪(水★2×1＋火★2×2),王前最難雜兵關,無填充雜兵,m=2.4
   const [t2F49Hp, t2F49Atk] = _twScaled('t2', 2.4);
-  TOWER_FLOORS['tower_f49'] = { id:'tower_f49', name:'塔 第49層·水+火', emoji:'🗼', cost:5, tower:true, stages:[
-    { es:[ _twMech('water',2,t2F49Hp,t2F49Atk,3), _twMech('fire',2,t2F49Hp,t2F49Atk,3), _twMech('fire',2,t2F49Hp,t2F49Atk,3) ] },
+  TOWER_FLOORS['tower_f49'] = { id:'tower_f49', name:'塔 第49層·水+火', emoji:'🗼', cost:5, tower:true, bonusSlot:true, bonusChance:TOWER_BONUS_CHANCE, stages:[
+    { es:[ _twStar('water','water',1,2.4) ] },                                                                                       // S1:水 1★單隻
+    { es:[ _twStar('water','water',2,2.4), _twStar('fire','fire',1,2.4) ] },                                                         // S2:水升 2★、火以 1★先登場
+    { es:[ _twMech('water',2,t2F49Hp,t2F49Atk,3), _twMech('fire',2,t2F49Hp,t2F49Atk,3), _twMech('fire',2,t2F49Hp,t2F49Atk,3) ] },     // S3:原內容不變
   ] };
 })();
 
-// F50:畢業王,照抄 DUNGEONS.tower.stages[2](五階段變身王,原欄位原數值整份複製,不吃 m 倍率;
-//   該關只有王本體、無護衛,與舊塔原始定義一致);dungeon 級不設 el(舊塔本尊也沒設,魔王靠 phases 自己決定屬性)。
-TOWER_FLOORS['tower_f50'] = { id:'tower_f50', name:'塔 第50層·畢業王', emoji:'🗼', cost:5, tower:true, stages:[
-  { es:[ { el:'fire', hp:3200, atk:210, turns:3, boss:true, phases:[
-      {el:'fire',beh:'burn'}, {el:'water',beh:'regen'}, {el:'thunder',beh:'paralyze'}, {el:'earth',beh:'hit'}, {el:'wind',beh:'combo'}
-    ] } ] },
-] };
+// F50:畢業王。S3=照抄 DUNGEONS.tower.stages[2](五階段變身王,原欄位原數值整份複製,不吃 m 倍率,與舊塔原始定義一致);
+//   S1/S2 為新增鋪陳(風→火,呼應 F49「相剋環閉合」收尾、銜接王的火階開場),數值比照 F49 的 m=2.4 檔。
+//   ⚠️本層 S1/S2 為企劃判斷(spec 未精算具體敵組),數值曲線待 sim 驗證;dungeon 級不設 el(舊塔本尊也沒設,魔王靠 phases 自己決定屬性)。
+(() => {
+  const [t2F50Hp, t2F50Atk] = _twScaled('t2', 2.4);
+  TOWER_FLOORS['tower_f50'] = { id:'tower_f50', name:'塔 第50層·畢業王', emoji:'🗼', cost:5, tower:true, bonusSlot:true, bonusChance:TOWER_BONUS_CHANCE, stages:[
+    { es:[ _twStar('wind','wind',1,2.4) ] },                                                                  // S1:風 1★,呼應相剋環閉合前的最後鋪陳
+    { es:[ _twStar('wind','wind',2,2.4), _twStar('fire','fire',1,2.4) ] },                                    // S2:風升 2★、火以 1★先登場,銜接王的火階開場
+    { es:[ { el:'fire', hp:3200, atk:210, turns:3, boss:true, phases:[
+        {el:'fire',beh:'burn'}, {el:'water',beh:'regen'}, {el:'thunder',beh:'paralyze'}, {el:'earth',beh:'hit'}, {el:'wind',beh:'combo'}
+      ] } ] },
+  ] };
+})();
 
 const STAGES = DUNGEONS.prologue.stages;   // 相容舊引用
 const ELEM_DUNGEONS=['fire','water','earth','thunder','wind'];   // 地圖五邊形順時針=相剋環(各被順時針鄰居剋:水剋火→土剋水→雷剋土→風剋雷→火剋風)
