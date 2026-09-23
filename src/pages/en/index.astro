@@ -1,5 +1,6 @@
 ---
 import Base from '../../layouts/Base.astro';
+import Icon from '../../components/Icon.astro';
 ---
 <Base title="Blockyusha — Woodoku × Card-Battle RPG" path="/en/" navActive="home" lang="en" alt="/">
 
@@ -42,7 +43,7 @@ import Base from '../../layouts/Base.astro';
         <p>The fastest Thunder-type hero — chain clears into a huge burst of damage in an instant.</p>
       </div>
     </div>
-    <div style="text-align:center;margin-top:30px"><a class="allbtn" href="/dex/">See all 60 heroes →</a></div>
+    <div style="text-align:center;margin-top:30px"><a class="allbtn" href="/dex/">See all 60 heroes <Icon name="arrow-right" size={16} /></a></div>
   </div>
 </section>
 
@@ -103,9 +104,9 @@ import Base from '../../layouts/Base.astro';
   <div class="handle">@blockyusha</div>
   <p>Share the game with friends, collect blocky heroes together, and climb the leaderboard! Follow the dev diary for behind-the-scenes updates.</p>
   <div class="socbtns">
-    <a href="/play/">🎮 Play Now</a>
-    <a href="/dex/">🐾 Character Dex</a>
-    <a href="/devlog/">📖 Dev Log</a>
+    <a href="/play/"><Icon name="gamepad-2" size={18} /> Play Now</a>
+    <a href="/dex/"><Icon name="paw-print" size={18} /> Character Dex</a>
+    <a href="/devlog/"><Icon name="book-open" size={18} /> Dev Log</a>
   </div>
 </section>
 

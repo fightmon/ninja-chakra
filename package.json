@@ -9,7 +9,10 @@
     "preview": "astro preview"
   },
   "dependencies": {
-    "astro": "^5.6.1",
-    "@astrojs/sitemap": "^3.3.0"
+    "@astrojs/sitemap": "^3.3.0",
+    "astro": "^5.6.1"
+  },
+  "devDependencies": {
+    "lucide-static": "^1.47.0"
   }
 }

@@ -1,5 +1,6 @@
 ---
 import Base from '../layouts/Base.astro';
+import Icon from '../components/Icon.astro';
 ---
 <Base title="塊頭勇者 Blockyusha — 方塊消除 × 轉珠 RPG" path="/" navActive="home" alt="/en/">
 
@@ -42,7 +43,7 @@ import Base from '../layouts/Base.astro';
         <p>速度最快的雷系勇者，連鎖消除瞬間打出高倍傷害。</p>
       </div>
     </div>
-    <div style="text-align:center;margin-top:30px"><a class="allbtn" href="/dex/">看全部 60 隻角色 →</a></div>
+    <div style="text-align:center;margin-top:30px"><a class="allbtn" href="/dex/">看全部 60 隻角色 <Icon name="arrow-right" size={16} /></a></div>
   </div>
 </section>
 
@@ -103,9 +104,9 @@ import Base from '../layouts/Base.astro';
   <div class="handle">@blockyusha</div>
   <p>把遊戲分享給朋友，一起收集方塊頭勇者、爬上天梯！追蹤開發、看幕後碎念都在開發日誌。</p>
   <div class="socbtns">
-    <a href="/play/">🎮 開始遊戲</a>
-    <a href="/dex/">🐾 角色圖鑑</a>
-    <a href="/devlog/">📖 開發日誌</a>
+    <a href="/play/"><Icon name="gamepad-2" size={18} /> 開始遊戲</a>
+    <a href="/dex/"><Icon name="paw-print" size={18} /> 角色圖鑑</a>
+    <a href="/devlog/"><Icon name="book-open" size={18} /> 開發日誌</a>
   </div>
 </section>
 

@@ -1,5 +1,6 @@
 ---
 // 全站共用版面：head/SEO/OG + 日夜模式 + 單一來源 nav/footer + 共用 CSS
+import Icon from '../components/Icon.astro';
 export interface Props {
   title: string;
   description?: string;
@@ -84,9 +85,9 @@ const switchLabel = isEn ? '中' : 'EN';
     </nav>
     <div class="navr">
       <a class="langsw" href={switchHref} aria-label="Switch language / 切換語言">{switchLabel}</a>
-      <button class="themebtn" type="button" onclick="toggleTheme()" aria-label="切換日夜模式">🌙</button>
+      <button class="themebtn" type="button" onclick="toggleTheme()" aria-label="切換日夜模式"><Icon name="moon" size={19} /></button>
       <a class="miniplay" href="/play/">{playLabel}</a>
-      <button class="hambtn" type="button" onclick="toggleMenu(this)" aria-label="選單" aria-expanded="false">☰</button>
+      <button class="hambtn" type="button" onclick="toggleMenu(this)" aria-label="選單" aria-expanded="false"><Icon name="menu" size={20} /></button>
     </div>
   </div>
   <nav class="mobmenu" id="mobmenu">
@@ -101,22 +102,27 @@ const switchLabel = isEn ? '中' : 'EN';
   {isEn
     ? <><a href="/en/">Home</a><a href="/dex/">Characters</a><a href="/play/">Play</a><a href="/en/faq/">FAQ</a><a href="/terms/">Terms</a><a href="/privacy/">Privacy</a></>
     : <><a href="/">首頁</a><a href="/dex/">角色圖鑑</a><a href="/play/">開始遊戲</a><a href="/devlog/">開發日誌</a><a href="/terms/">服務條款</a><a href="/privacy/">隱私權政策</a></>}
-  <div class="cp"><a href="mailto:hello@blockyusha.com">✉ hello@blockyusha.com</a></div>
+  <div class="cp"><a href="mailto:hello@blockyusha.com"><Icon name="mail" size={14} /> hello@blockyusha.com</a></div>
   <div class="cp">塊頭勇者 Blockyusha · {isEn ? 'in development' : '開發中'} · © 2026 fightmon</div>
 </footer>
 
 <script is:inline>
+// icon 字串抄自 lucide-static(moon/sun/menu/x)，配合上面 <Icon> 元件的 path 資料
+var ICO_MOON='<svg xmlns="http://www.w3.org/2000/svg" width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.985 12.486a9 9 0 1 1-9.473-9.472c.405-.022.617.46.402.803a6 6 0 0 0 8.268 8.268c.344-.215.825-.004.803.401"/></svg>';
+var ICO_SUN='<svg xmlns="http://www.w3.org/2000/svg" width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/></svg>';
+var ICO_MENU='<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h16"/><path d="M4 12h16"/><path d="M4 19h16"/></svg>';
+var ICO_X='<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>';
 function toggleTheme(){var d=document.documentElement,t=d.getAttribute('data-theme')==='dark'?'light':'dark';
   d.setAttribute('data-theme',t);try{localStorage.setItem('bytheme',t);}catch(e){}
-  document.querySelectorAll('.themebtn').forEach(function(b){b.textContent=t==='dark'?'☀️':'🌙';});}
+  document.querySelectorAll('.themebtn').forEach(function(b){b.innerHTML=t==='dark'?ICO_SUN:ICO_MOON;});}
 (function(){var t=document.documentElement.getAttribute('data-theme');
-  document.querySelectorAll('.themebtn').forEach(function(b){b.textContent=t==='dark'?'☀️':'🌙';});})();
+  document.querySelectorAll('.themebtn').forEach(function(b){b.innerHTML=t==='dark'?ICO_SUN:ICO_MOON;});})();
 function toggleMenu(btn){var m=document.getElementById('mobmenu');var open=m.classList.toggle('open');
-  if(btn){btn.setAttribute('aria-expanded',open);btn.textContent=open?'✕':'☰';}}
+  if(btn){btn.setAttribute('aria-expanded',open);btn.innerHTML=open?ICO_X:ICO_MENU;}}
 document.addEventListener('click',function(e){var m=document.getElementById('mobmenu');
   if(!m||!m.classList.contains('open'))return;
   if(e.target.closest('.mobmenu')||e.target.closest('.hambtn'))return;
-  m.classList.remove('open');var b=document.querySelector('.hambtn');if(b){b.setAttribute('aria-expanded','false');b.textContent='☰';}});
+  m.classList.remove('open');var b=document.querySelector('.hambtn');if(b){b.setAttribute('aria-expanded','false');b.innerHTML=ICO_MENU;}});
 </script>
 
 <style is:global>

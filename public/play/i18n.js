@@ -625,6 +625,7 @@ const I18N_DICT = {
     '{n} 關': '{n} stages',
     '🔒 未解鎖(先破 {n})': '🔒 Locked (clear {n} first)',
     '🎁 首通 +{n}💎': '🎁 First Clear +{n}💎',
+    '首通 +{n}': 'First Clear +{n}',   // 🆕2026-09-23 首通徽章 icon 化(icon_gift+文字+icon_gem):拆掉頭尾 emoji 後的純文字 key,n=1 時亦沿用(取代舊 '🎁 首通 +1💎' 固定字串)
     '先破【{n}】才能挑戰': 'Clear 【{n}】first to challenge this',
     '體力不足!去商店回復': 'Not enough stamina! Recover at the Shop',
     '← 返回大廳': '← Back to Lobby',

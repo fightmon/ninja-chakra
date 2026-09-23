@@ -1,5 +1,6 @@
 ---
 import Base from '../../layouts/Base.astro';
+import Icon from '../../components/Icon.astro';
 import { cards, byId, order, meta } from '../../data/cards';
 import type { Card } from '../../data/cards';
 
@@ -28,13 +29,13 @@ const desc = `${card.name}（${card.en}${card.species ? '・' + card.species : '
 <Base title={title} description={desc} path={`/dex/${card.id}/`} image={`/play/art/cards/${card.id}_full.webp`} navActive="dex">
 
 <div class="wrap">
-  <a class="back" href="/dex/">← 回角色圖鑑</a>
+  <a class="back" href="/dex/"><Icon name="arrow-left" size={14} /> 回角色圖鑑</a>
 
   <div class="top" style={`--el:${meta.elColor[card.el]}`}>
     <div class="art">
       <span class="num">No.{card.n}</span>
       {card.hero && <span class="hero">⭐ 台灣特有種</span>}
-      {card.dropOnly && <span class="drop">🎯 僅關卡掉落</span>}
+      {card.dropOnly && <span class="drop"><Icon name="target" size={12} /> 僅關卡掉落</span>}
       <img src={`/play/art/cards/${card.id}_full.webp`} alt={card.name} />
     </div>
     <div class="info">
@@ -92,20 +93,20 @@ const desc = `${card.name}（${card.en}${card.species ? '・' + card.species : '
   <div class="note">屬性相剋：火 → 風 → 雷 → 土 → 水 → 火（打中弱點傷害翻倍）。{meta.note}</div>
 
   <div class="pn">
-    {prev ? <a href={`/dex/${prev.id}/`}>← {prev.name}</a> : <a class="dis">←</a>}
-    <a class="toall" href="/dex/">☰ 圖鑑</a>
-    {next ? <a href={`/dex/${next.id}/`}>{next.name} →</a> : <a class="dis">→</a>}
+    {prev ? <a href={`/dex/${prev.id}/`}><Icon name="chevron-left" size={14} /> {prev.name}</a> : <a class="dis"><Icon name="chevron-left" size={14} /></a>}
+    <a class="toall" href="/dex/"><Icon name="layout-grid" size={14} /> 圖鑑</a>
+    {next ? <a href={`/dex/${next.id}/`}>{next.name} <Icon name="chevron-right" size={14} /></a> : <a class="dis"><Icon name="chevron-right" size={14} /></a>}
   </div>
 </div>
 
 <style is:global>
-.back{display:inline-block;margin:16px 0 6px;color:var(--ink2);font-weight:700;font-size:14px}
+.back{display:inline-flex;align-items:center;gap:4px;margin:16px 0 6px;color:var(--ink2);font-weight:700;font-size:14px}
 .top{background:linear-gradient(160deg,#fff,#fff8ea);border:2px solid #fff;border-radius:22px;box-shadow:0 12px 30px rgba(140,90,20,.16);overflow:hidden;margin-top:6px}
 .art{position:relative;background:var(--el)}
 .art img{width:100%;max-height:360px;object-fit:contain;background:var(--el)}
 .art .num{position:absolute;left:12px;top:10px;font-size:14px;font-weight:800;color:#fff;background:rgba(0,0,0,.45);border-radius:8px;padding:2px 12px}
 .art .hero{position:absolute;right:12px;top:10px;font-size:13px;font-weight:900;color:#7a4e00;background:#ffe36b;border-radius:999px;padding:3px 12px}
-.art .drop{position:absolute;right:12px;top:10px;font-size:13px;font-weight:900;color:#7a4e00;background:#ffe36b;border-radius:999px;padding:3px 12px}
+.art .drop{position:absolute;right:12px;top:10px;display:inline-flex;align-items:center;gap:3px;font-size:13px;font-weight:900;color:#7a4e00;background:#ffe36b;border-radius:999px;padding:3px 12px}
 .info{padding:20px}
 .info h1{font-size:28px;font-weight:900;line-height:1.2}
 .romaji{color:var(--ink2);font-size:14px;font-weight:700;margin-top:2px}
@@ -138,7 +139,7 @@ td b{font-size:17px}
 .skill p{color:var(--ink2);font-size:15px;margin-top:6px}
 .note{color:var(--ink2);font-size:13px;background:#fff6e0;border-radius:12px;padding:14px 16px;margin-top:18px}
 .pn{display:flex;justify-content:space-between;gap:10px;margin:22px 0 60px}
-.pn a{flex:1;background:#fff;border-radius:14px;padding:14px;text-align:center;font-weight:800;box-shadow:0 5px 14px rgba(140,90,20,.12);color:var(--ink)}
+.pn a{flex:1;display:flex;align-items:center;justify-content:center;gap:4px;background:#fff;border-radius:14px;padding:14px;text-align:center;font-weight:800;box-shadow:0 5px 14px rgba(140,90,20,.12);color:var(--ink)}
 .pn a.dis{opacity:.35;pointer-events:none}
 .pn .toall{flex:0 0 auto;background:linear-gradient(120deg,#ffdf6b,#ff8a2a);color:#3a1f00}
 [data-theme="dark"] .top{background:linear-gradient(160deg,#231d14,#1c170f);border-color:#231d14}
