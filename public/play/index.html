@@ -6701,6 +6701,7 @@
       }
       // 最後一擊:鏡頭推近最後一隻怪特寫 → 蓄勢一下 → 白閃+飛出 → 拉回 → 久一點才進結果
       finalBlow(e) {
+        this.camCine = true;   // 🔒2026-09-24 特寫鎖輸入:守衛(4261主動技/5533/5542拖曳)一直有查 camCine 但從沒人設 true=死碼→特寫 2.25s 內可拖塊放技會穿幫;此處設上,showResult 後由 resultOpen 接手擋,startStage(3585) 重置
         const cam = this.cameras.main, sp = e && e.sprite, EOut = Phaser.Math.Easing.Quadratic.Out, EIO = Phaser.Math.Easing.Quadratic.InOut;
         if (sp) { cam.pan(sp.x, sp.y, 460, EOut); cam.zoomTo(1.9, 460, EOut); }   // 特寫推近
         this.time.delayedCall(560, () => {   // 蓄勢後 → 白閃 + 飛出(特寫下更有張力)
@@ -8063,7 +8064,7 @@
           const hit = this.add.rectangle(0, 0, rw, rh - 8, 0x000000, 0.001).setInteractive(); kids.push(hit);
           { const _lk = !unlocked ? gameIcon(this, Lx + 6 + 13, 0, 'ui_lock', 26) : null; if (_lk) kids.push(_lk.setAlpha(usable ? 1 : 0.45)); else kids.push(this.add.text(Lx + 6, 0, unlocked ? df.emoji : '🔒', { fontFamily: EMOJIFONT, fontSize: '26px' }).setOrigin(0, 0.5).setAlpha(usable ? 1 : 0.45)); }   // 🆕2026-09-23 未解鎖→icon_lock(art/ui);未載到 fallback 原🔒文字
           const nameTx = this.add.text(Lx + 44, -11, tr(d.name) + ' · ' + tr(df.name), { fontFamily: EMOJIFONT, fontSize: '16px', color: usable ? T.ink : T.ink3, fontStyle: 'bold' }).setOrigin(0, 0.5); kids.push(nameTx);   // 關卡獨特名 · 難度(取代亂玩都過等)
-          const _lockMsg = tr('🔒 未解鎖(先破 {n})', { n: tr(list[i - 1].name) }), _lockMsgReady = !unlocked && _iconReady(this, 'ui_lock');   // 🆕2026-09-23 開頭 🔒 前綴→icon(stripEmoji 去字串開頭emoji,i18n key 不動);未載到就照舊顯示原字串
+          const _lockMsg = unlocked ? '' : tr('🔒 未解鎖(先破 {n})', { n: tr(list[i - 1].name) }), _lockMsgReady = !unlocked && _iconReady(this, 'ui_lock');   // 🆕2026-09-23 開頭 🔒 前綴→icon;⚠️2026-09-24 hotfix:lockMsg 只能在 !unlocked 才組——i=0 第一列恆解鎖且 list[-1]=undefined,無條件讀 .name 會 throw→整個 picker 只剩暗幕(線上事故)
           const descTx = this.add.text(Lx + 44 + (_lockMsgReady ? 18 : 0), 13, unlocked ? ('⚡ ' + cost + '　·　' + tr('{n} 關', { n: nStages })) : (_lockMsgReady ? stripEmoji(_lockMsg) : _lockMsg), { fontFamily: EMOJIFONT, fontSize: '13px', color: !unlocked ? T.ink3 : (afford ? T.ink2 : '#c0492c'), fontStyle: (unlocked && !afford) ? 'bold' : 'normal' }).setOrigin(0, 0.5); kids.push(descTx);   // 未解鎖→提示要先破哪個難度;已解鎖沿用原本體力+關數顯示
           if (_lockMsgReady) kids.push(this.add.image(Lx + 44 + 8, 13, 'ui_lock').setDisplaySize(15, 15).setOrigin(0.5));
           let badgeGapW = 0;
