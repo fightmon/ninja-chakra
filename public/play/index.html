@@ -86,8 +86,8 @@
     function _loadAllCardArt(scene) { _loadCardArt(scene, Object.keys(CARD_ART)); }   // 卡冊/編隊/合成/圖鑑=看全部卡→進場才載全部
     function _loadCardThumbs(scene, ids) { (ids || []).forEach(id => { if (!id || !CARD_ART[id]) return; const k = 'card_' + id + '_thumb'; if (!scene.textures.exists(k)) scene.load.image(k, 'art/cards/' + id + '_thumb.webp'); if (EVO_CARDS[id] || EVO3_CARDS[id]) { const ek = 'card_' + id + '_e_thumb'; if (!scene.textures.exists(ek)) scene.load.image(ek, 'art/cards/' + id + '_e_thumb.webp'); } if (EVO2_CARDS[id] || EVO3_CARDS[id]) { const ek2 = 'card_' + id + '_e2_thumb'; if (!scene.textures.exists(ek2)) scene.load.image(ek2, 'art/cards/' + id + '_e2_thumb.webp'); } if (EVO3_CARDS[id]) { const ek3 = 'card_' + id + '_e3_thumb'; if (!scene.textures.exists(ek3)) scene.load.image(ek3, 'art/cards/' + id + '_e3_thumb.webp'); } }); }   // 只載縮圖(格子用;大圖等開詳情才補);進化雜牌卡額外多載 _e_thumb(卡冊/合成/圖鑑格子才有進化縮圖),evo2(EVO2_CARDS)再多載 _e2_thumb
     function _loadAllCardThumbs(scene) { _loadCardThumbs(scene, Object.keys(CARD_ART)); }
-    function _ensureFullArt(scene, id, onReady) {   // 開卡片詳情才補「大圖」:沒載到就載,載好回呼(通常重繪);已有則不動;進化後改補 _e_full/_e2_full(與 cardArtKey 回傳的 key 對齊)
-      const t = getCardEvo(id);
+    function _ensureFullArt(scene, id, onReady, ovEvo) {   // 開卡片詳情才補「大圖」:沒載到就載,載好回呼(通常重繪);已有則不動;進化後改補 _e_full/_e2_full(與 cardArtKey 回傳的 key 對齊);🆕ovEvo=個體制傳入該個體自己的進化階,不傳=舊行為(type-level 快取)
+      const t = getCardEvo(id, ovEvo);
       const suf = (id && EVO3_CARDS[id] && t >= 3) ? '_e3_full' : (id && (EVO2_CARDS[id] || EVO3_CARDS[id]) && t >= 2) ? '_e2_full' : (id && (EVO_CARDS[id] || EVO3_CARDS[id]) && t >= 1) ? '_e_full' : '_full';
       const k = (id && CARD_ART[id]) ? ('card_' + id + suf) : null;
       if (!k || scene.textures.exists(k)) return;
@@ -271,9 +271,9 @@
       opt = opt || {};
       const TK = UI(), elc = EL[cd.el].color, elcTx = '#' + elc.toString(16).padStart(6, '0');
       const ac = activeSkill(cd.el, cd.id), ls = leadSkill(cd.id);
-      const lv = getCardLv(cd.id), n = (loadOwned()[cd.id] || 0), atk = cardAtk(cd.id);
-      const maxLv = maxLvForCard(cd.id);
-      const exp = getCardExp(cd.id), need = expToNext(lv), mx = lv >= maxLv;
+      const lv = getCardLv(cd.id, opt.ovLv), n = (loadOwned()[cd.id] || 0), atk = cardAtk(cd.id, opt.ovLv, opt.ovEvo);   // 🆕個體制:opt.ovLv/ovEvo=傳入這張個體自己的等級/進化,不傳=舊行為(type-level 最強快取,卡冊/轉蛋/圖鑑等原入口不受影響)
+      const maxLv = maxLvForCard(cd.id, opt.ovEvo);
+      const exp = (opt.ovLv != null) ? (opt.ovExp || 0) : getCardExp(cd.id), need = expToNext(lv), mx = lv >= maxLv;   // 🆕2026-09-25 個體制其實有自己的 exp 欄位(loadSave().cards 的 {u,id,lv,exp,evo});傳了個體時改用呼叫端傳入的 opt.ovExp(呼叫端補傳 inst.exp),不再寫死 0
       const RI2 = { human: { n: '人類', e: '🥷' }, yokai: { n: '妖怪', e: '👹' }, beast: { n: '靈獸', e: '🐾' } };
       const ri = CARD_SPECIES[cd.id] || RI2[cd.race] || RI2.human;   // 已歸物種隊→顯示貓/犬/鼠/台灣特有;其餘人類/妖怪/靈獸
       const txt = (x, y, s, fs, col, ox, bold) => add(scene.add.text(x, y, s, { fontFamily: EMOJIFONT, fontSize: fs, color: col || TK.ink, fontStyle: bold ? 'bold' : 'normal' }).setOrigin(ox == null ? 0.5 : ox, 0.5));
@@ -282,11 +282,17 @@
       const pill = (x, y, w, h, label, fill, stroke, col, fs, cb) => { rr(x, y, w, h, h / 2, fill, 1, stroke, 1.5); add(scene.add.text(x, y, label, { fontFamily: EMOJIFONT, fontSize: fs, color: col, fontStyle: 'bold' }).setOrigin(0.5)); if (cb) { const hit = add(scene.add.rectangle(x, y, w, h, 0x000000, 0.001).setInteractive()); tapBind(scene, hit, cb); return hit; } };
       const tint = (c, f) => { const r = (c >> 16) & 255, g = (c >> 8) & 255, b = c & 255, m = x => Math.round(x + (255 - x) * f); return (m(r) << 16) | (m(g) << 8) | m(b); };   // 變亮
       const shade = (c, f) => { const r = (c >> 16) & 255, g = (c >> 8) & 255, b = c & 255, m = x => Math.round(x * (1 - f)); return (m(r) << 16) | (m(g) << 8) | m(b); };   // 變暗
-      const gpill = (x, y, w, h, label, cTop, cBot, txtCol, fs, cb) => {   // 漸層藥丸(上→下漸層;fillRect 漸層 + 圓角遮罩,因 fillRoundedRect 不吃漸層)
+      const gpill = (x, y, w, h, label, cTop, cBot, txtCol, fs, cb, iconKey) => {   // 漸層藥丸(上→下漸層;fillRect 漸層 + 圓角遮罩,因 fillRoundedRect 不吃漸層);🆕2026-09-25 iconKey 選填→icon+文字置中(未載到 fallback 原樣文字,不影響原本沒傳 iconKey 的呼叫)
         const gfx = add(scene.add.graphics()); gfx.fillGradientStyle(cTop, cTop, cBot, cBot, 1); gfx.fillRect(x - w / 2, y - h / 2, w, h);
         const mk = scene.make.graphics(); mk.fillStyle(0xffffff, 1); mk.fillRoundedRect(x - w / 2, y - h / 2, w, h, h / 2);
         gfx.setMask(mk.createGeometryMask()); gfx.once('destroy', () => mk.destroy());
-        add(scene.add.text(x, y, label, { fontFamily: EMOJIFONT, fontSize: fs, color: txtCol, fontStyle: 'bold' }).setOrigin(0.5));
+        const _ready = iconKey && _iconReady(scene, iconKey);
+        if (_ready) {
+          const _disp = stripEmoji(label), _tmp = scene.add.text(0, 0, _disp, { fontFamily: EMOJIFONT, fontSize: fs, fontStyle: 'bold' }); const _tw = Math.ceil(_tmp.width); _tmp.destroy();
+          const _ics = 18, _gw = _ics + 6 + _tw, _left = x - _gw / 2;
+          add(scene.add.image(_left + _ics / 2, y, iconKey).setDisplaySize(_ics, _ics));
+          add(scene.add.text(_left + _ics + 6 + _tw / 2, y, _disp, { fontFamily: EMOJIFONT, fontSize: fs, color: txtCol, fontStyle: 'bold' }).setOrigin(0.5));
+        } else add(scene.add.text(x, y, label, { fontFamily: EMOJIFONT, fontSize: fs, color: txtCol, fontStyle: 'bold' }).setOrigin(0.5));
         if (cb) { const hit = add(scene.add.rectangle(x, y, w, h, 0x000000, 0.001).setInteractive()); tapBind(scene, hit, cb); return hit; }
       };
       // ── 全畫面屬色漸層底(最底層;寶可夢式)──
@@ -297,13 +303,23 @@
       rr(CX, (yC + H - 12) / 2, W - 28, H - 12 - yC, 24, TK.surf, 1, TK.divider, 1);
       const Lc = CX - (W - 28) / 2 + 20;   // 卡內左邊界
       txt(CX, yC + 26, 'No.' + cd.id.replace(/\D/g, '').padStart(3, '0'), '14px', TK.ink3, 0.5, true);
-      txt(CX, yC + 58, (cd.hero ? '👑 ' : '') + cardName(cd.id), '30px', TK.ink, 0.5, true);
+      fitText(txt(CX, yC + 58, (cd.hero ? '👑 ' : '') + cardName(cd.id, opt.ovEvo), '30px', TK.ink, 0.5, true), W - 56);   // 🈳 en 卡名最長 24 字(Thunder Grand Thief Duck)→縮進白卡內寬
       rr(CX, yC + 84, 60, 5, 3, elc, 1, null, 0);   // 名字底線(屬色)
-      gpill(CX - 52, yC + 112, 92, 30, EL[cd.el].fx + ' ' + tr(EL[cd.el].name + '屬'), tint(TK.elTint[cd.el], 0.1), TK.elTint2[cd.el], elcTx, '15px');
-      pill(CX + 52, yC + 112, 84, 30, ri.e + ' ' + tr(ri.n), TK.surf2, TK.divider, TK.ink, '15px');
+      gpill(CX - 54, yC + 112, 104, 30, EL[cd.el].fx + ' ' + tr(EL[cd.el].name + '屬'), tint(TK.elTint[cd.el], 0.1), TK.elTint2[cd.el], elcTx, '15px');
+      pill(CX + 50, yC + 112, 88, 30, ri.e + ' ' + tr(ri.n), TK.surf2, TK.divider, TK.ink, '15px');
       // 三圍:大數字在上、標籤在下(直欄分隔線)
-      const stats = [['❤️ 生命', cardHp(cd.id)], ['⚔️ 攻擊', atk], ['💚 回復', cardRcv(cd.id)]];
-      stats.forEach((s, i) => { const x = CX + (i - 1) * 118; txt(x, yC + 158, String(s[1]), '27px', TK.ink, 0.5, true); txt(x, yC + 186, tr(s[0]), '13px', TK.ink2, 0.5); });
+      const stats = [['❤️ 生命', cardHp(cd.id, opt.ovLv, opt.ovEvo), 'ui_hp'], ['⚔️ 攻擊', atk, 'ui_atk'], ['💚 回復', cardRcv(cd.id, opt.ovLv, opt.ovEvo), 'ui_heal']];   // 🆕2026-09-25 三圍標籤→icon_hp/icon_atk/icon_heal;未載到 fallback 原 emoji+文字
+      stats.forEach((s, i) => {
+        const x = CX + (i - 1) * 118;
+        txt(x, yC + 158, String(s[1]), '27px', TK.ink, 0.5, true);
+        const _ready = _iconReady(scene, s[2]);
+        if (_ready) {
+          const _disp = stripEmoji(tr(s[0])), _tmp = scene.add.text(0, 0, _disp, { fontFamily: EMOJIFONT, fontSize: '13px' }); const _tw = Math.ceil(_tmp.width); _tmp.destroy();
+          const _ics = 14, _gw = _ics + 4 + _tw, _left = x - _gw / 2;
+          add(scene.add.image(_left + _ics / 2, yC + 186, s[2]).setDisplaySize(_ics, _ics));
+          add(scene.add.text(_left + _ics + 4 + _tw / 2, yC + 186, _disp, { fontFamily: EMOJIFONT, fontSize: '13px', color: TK.ink2 }).setOrigin(0.5));
+        } else txt(x, yC + 186, tr(s[0]), '13px', TK.ink2, 0.5);
+      });
       rect(CX - 59, yC + 170, 1, 48, TK.divider); rect(CX + 59, yC + 170, 1, 48, TK.divider);
       // Lv 列:Lv + 經驗條(屬色) + 持有
       txt(Lc, yC + 222, 'Lv.' + lv + (mx ? tr(' 最大') : ' / ' + maxLv), '15px', mx ? elcTx : TK.ink, 0, true);
@@ -314,9 +330,9 @@
       const sk = (yy, tag, name, cdTx, desc) => {
         rr(CX, yy, W - 64, 56, 16, TK.surf2, 1, null, 0);
         let x = Lc + 6; const t1 = txt(x, yy - 11, tag, '14px', elcTx, 0, true); x += t1.width + 10;
-        const t2 = txt(x, yy - 11, name, '16px', TK.ink, 0, true); x += t2.width + 10;
+        const t2 = txt(x, yy - 11, name, '16px', TK.ink, 0, true); fitText(t2, (W - 64) - 12 - t1.width - 10 - (cdTx ? 54 : 0) - 8); x += t2.displayWidth + 10;   // 🈳 en 技名過長→縮進灰卡內(標籤+技名+CD章同列)
         if (cdTx) { rr(x + 22, yy - 11, 44, 20, 10, 0x22262a, 1, null, 0); txt(x + 22, yy - 11, cdTx, '12px', '#ffffff', 0.5, true); }
-        txt(Lc + 6, yy + 15, desc, '13px', TK.ink2, 0);
+        fitText(txt(Lc + 6, yy + 15, desc, '13px', TK.ink2, 0), W - 64 - 24);   // 🈳 en 說明單行縮進灰卡內寬(字典已瘦身到 ≤~44 字,此為保險)
       };
       sk(yC + 268, tr('⚡ 主動技'), ac ? tr(ac.name) : '—', ac ? 'CD' + ac.cd : null, ac ? tr(ac.desc) : '');
       sk(yC + 332, tr('🎖 隊長技'), ls ? tr(ls.name) : '—', null, ls ? tr(ls.desc) : '');
@@ -325,8 +341,8 @@
         gpill(CX - 118, H - 52, 110, 52, tr('⬆️ 強化'), tint(elc, 0.3), elc, '#ffffff', FS.cap, () => opt.onFuse && opt.onFuse());   // 屬色漸層(上亮下深,寶可夢式)
         // 進化鈕:滿 LV20 且還能進化 → 金色漸層(可動作);未滿 LV20 / 已達進化上限 / 素材卡 → 灰階。仍可點,點了由 canEvolve 跳原因 toast
         const _evoCap = EVO3_CARDS[cd.id] ? 3 : (EVO2_CARDS[cd.id] ? 2 : (EVO_CARDS[cd.id] ? 1 : EVO_MAX));   // 對齊 canEvolve 的上限判斷(哥布林/賊鴨/鐵機人/史萊姆醫療/牆怪系 evo2=3星,貓系 EVO3_CARDS=evo3/5星,其餘雜牌系 evo1=2星封頂)
-        const _evoLit = mx && !MATERIAL_IDS.has(cd.id) && getCardEvo(cd.id) < _evoCap;
-        gpill(CX, H - 52, 110, 52, tr('✨ 進化'), _evoLit ? 0xffe9a8 : 0xe4e0d8, _evoLit ? 0xd9932a : 0xb8b0a4, _evoLit ? '#4a2c05' : '#8a8378', FS.cap, () => opt.onEvolve && opt.onEvolve());
+        const _evoLit = mx && !MATERIAL_IDS.has(cd.id) && getCardEvo(cd.id, opt.ovEvo) < _evoCap;   // 帶 opt.ovEvo:個體檢視時金/灰狀態跟這張個體,與 canEvolve 實際判定一致(verifier 2026-09-25 抓的顯示不一致)
+        gpill(CX, H - 52, 110, 52, tr('✨ 進化'), _evoLit ? 0xffe9a8 : 0xe4e0d8, _evoLit ? 0xd9932a : 0xb8b0a4, _evoLit ? '#4a2c05' : '#8a8378', FS.cap, () => opt.onEvolve && opt.onEvolve(), 'ui_evo');
         pill(CX + 118, H - 52, 110, 52, tr('✖ 關閉'), TK.surf, TK.divider, TK.ink2, FS.cap, () => opt.onClose && opt.onClose());
       } else {
         pill(CX, H - 52, 220, 52, tr('✖ 關閉'), TK.surf, TK.divider, TK.ink2, FS.sub, () => opt.onClose && opt.onClose());
@@ -335,7 +351,7 @@
       const artW = Math.min(W + 12, 432), artH = Math.round(artW * 25 / 36);   // 角色寬 432(再大20%,等比長高;可微溢螢幕邊、溢出的是透明留白不裁到角色)
       const aCY = Math.round((40 + yC) / 2);   // 角色垂直置中於「頂鈕(~40)~白卡頂(yC)」的上半漸層區(取代原本底緣貼卡頂的探頭式)
       { const g = add(scene.add.graphics()); g.lineStyle(3, 0xffffff, 0.5); g.beginPath(); g.arc(CX, aCY + 10, Math.round(artW * 0.36), Phaser.Math.DegToRad(-205), Phaser.Math.DegToRad(25)); g.strokePath(); }   // 弧線
-      const fk = cardArtKey(cd.id, 'full');
+      const fk = cardArtKey(cd.id, 'full', opt.ovEvo);
       if (fk && scene.textures.exists(fk)) {
         const art = add(scene.add.image(CX, aCY, fk).setDisplaySize(artW, artH).setOrigin(0.5));
         const twf = scene.tweens.add({ targets: art, y: aCY - 8, duration: 1900, yoyo: true, repeat: -1, ease: 'Sine.inOut', onUpdate: () => { if (!art.active) twf.stop(); } });
@@ -344,7 +360,7 @@
       elementBgFX(scene, add, cd.el, CX, aCY, artW, artH);
       // ── 最上層:角落鈕(返回/星/分解)+ 主技形狀預覽(壓在角色之上,不被蓋)──
       { const c = add(scene.add.circle(34, 36, 20, TK.surf, 0.95).setStrokeStyle(1.5, TK.divider).setInteractive()); tapBind(scene, c, () => opt.onClose && opt.onClose()); txt(34, 35, '‹', '26px', TK.ink, 0.5, true); }
-      if (!starRow(scene, add, CX, 36, cardStars(cd.id), 26)) txt(CX, 36, starStr(cd.id), '26px', '#ffd257', 0.5, true).setStroke('#000000', 4);   // 🆕2026-09-23 星 icon 橫排(art/ui/icon_star.webp)取代金字★串;未載到 fallback 回原文字;星在頂中央,畫在角色之後 z 疊在上
+      if (!starRow(scene, add, CX, 36, cardStars(cd.id, opt.ovEvo), 26)) txt(CX, 36, starStr(cd.id, opt.ovEvo), '26px', '#ffd257', 0.5, true).setStroke('#000000', 4);   // 🆕2026-09-23 星 icon 橫排(art/ui/icon_star.webp)取代金字★串;未載到 fallback 回原文字;星在頂中央,畫在角色之後 z 疊在上;🆕2026-09-25 fallback 也補 opt.ovEvo,與上面 starRow 一致
       if (opt.manage) { const c = add(scene.add.circle(W - 34, 36, 20, TK.surf, 0.95).setStrokeStyle(1.5, TK.divider).setInteractive()); tapBind(scene, c, () => opt.onDissolve && opt.onDissolve()); txt(W - 34, 36, '♻️', '18px', TK.ink, 0.5); }
       // 主技形狀預覽(右上;深色小盤+「產生方塊」標;LV1→5 循環)
       {
@@ -360,7 +376,7 @@
         };
         let lastLv = 0; setLv(1); const drv = { v: 0 };
         const tw = scene.tweens.add({ targets: drv, v: 5, duration: 3600, repeat: -1, ease: 'Linear', onUpdate: () => { if (!cells[0] || !cells[0].active) { tw.stop(); return; } const L2 = Math.max(1, Math.min(5, Math.floor(drv.v) + 1)); if (L2 !== lastLv) { lastLv = L2; setLv(L2); } } });
-        rr(BC, BY + 52, 64, 18, 9, 0x12161a, 0.8, null, 0); txt(BC, BY + 52, tr('產生方塊'), '11px', '#ffffff', 0.5, true);
+        rr(BC, BY + 52, 86, 18, 9, 0x12161a, 0.8, null, 0); txt(BC, BY + 52, tr('產生方塊'), '11px', '#ffffff', 0.5, true);   // 🈳 膠囊 64→86:en「Spawns Block」12字@11px粗≈82px
       }
     }
     // 方塊敵正式美術:雜兵(grunt)+ 魔王三階(baby/beg/nrm)× 五屬。texture key→路徑;preload 全載,enemyTexKey() 依「是否魔王×難度×元素」挑圖
@@ -406,6 +422,13 @@
       ['ui_gem', 'res_gem'], ['ui_coin', 'res_coin'], ['ui_energy', 'res_energy'],
       ['ui_star', 'icon_star'], ['ui_crown', 'icon_crown'], ['ui_gift', 'icon_gift'], ['ui_shield', 'icon_shield'],   // 🆕2026-09-23 內容性彩圖 icon 批1(art/ui/*.webp,128px 萌系粗框 sticker):星級/首通禮包/資源前綴/鎖/BOX·背包 等非戰鬥 UI,戰鬥內演出 emoji 不動
       ['ui_lock', 'icon_lock'], ['ui_heal', 'icon_heal'], ['ui_card', 'icon_card'], ['ui_bag', 'icon_bag'],
+      ['ui_inn', 'icon_inn'], ['ui_mailbox', 'icon_mailbox'], ['ui_trophy', 'icon_trophy'], ['ui_torii', 'icon_torii'],   // 🆕2026-09-25 批2內容性彩圖:村落選單(宿屋/信箱/殿堂/神社)
+      ['ui_dex', 'icon_dex'], ['ui_hint', 'icon_hint'], ['ui_medal', 'icon_medal'], ['ui_crate', 'icon_crate'],           // 圖鑑/破法提示/成就稱號/BOX 擴張
+      ['ui_hp', 'icon_hp'], ['ui_atk', 'icon_atk'], ['ui_evo', 'icon_evo'], ['ui_flag', 'icon_flag'],                     // 卡片三圍(生命/攻擊)/進化鈕/最速紀錄旗標
+      ['sk_cat', 'sk_cat'], ['sk_dog', 'sk_dog'], ['sk_bird', 'sk_bird'], ['sk_rat', 'sk_rat'], ['sk_fish', 'sk_fish'], ['sk_rabbit', 'sk_rabbit'],   // 🆕2026-09-25 批4:16顆技能/教學自製圖示(取代主動技相關 emoji;art/ui/*.webp)家族主動技:貓/狗/鳥/鼠/魚/兔
+      ['sk_fist', 'sk_fist'], ['sk_wall', 'sk_wall'], ['sk_duck', 'sk_duck'], ['sk_gel', 'sk_gel'], ['sk_lock', 'sk_lock'],   // 物種主動技共用:鬼(怨擊)/牆怪(築牆阻擋)/賊鴨(群鴨亂啄)/史萊姆醫療(治療凝膠)/鐵機人(電磁絞鎖)
+      ['sk_leopard', 'sk_leopard'], ['sk_bear', 'sk_bear'], ['sk_monkey', 'sk_monkey'],   // 台灣專屬卡主動技:雲豹(裂空撲殺)/黑熊(巨塊)/獼猴(靈猴造塊);藍鵲/鮭魚共用上面 sk_bird/sk_fish
+      ['icon_puzzle', 'icon_puzzle'], ['icon_web', 'icon_web'],   // 新手教學第1步大圖示(拼塊×打怪)/蜘蛛網狀態圖示
     ];
     const UI_ICON_FILE = Object.fromEntries(UI_ICONS);   // key→檔名,給 gameIcon()/_iconReady() 按需 lazy load 查表用
     function _iconReady(scene, key) {   // 🆕泛用 UI webp icon 是否已可畫:已載回 true;未載且是合法 key→背景 lazy load(比照 _loadIcon/lucideIcon 模式,同一 key 只排一次隊)+ load 完成後 scene 仍 active 就 rebuild() 換上圖,回 false 讓呼叫端當下 fallback 原 emoji/文字
@@ -437,6 +460,18 @@
       add(scene.add.image(x + gs / 2, cy, 'ui_gift').setDisplaySize(gs, gs)); x += gs + gap;
       add(scene.add.text(x, cy, label, { fontFamily: EMOJIFONT, fontSize: '13px', color: '#ffd56a', fontStyle: 'bold' }).setOrigin(0, 0.5)); x += tw + gap;
       add(scene.add.image(x + gs / 2, cy, 'ui_gem').setDisplaySize(gs, gs));
+      return { width: totalW };
+    }
+    function menuLabelIcon(scene, add, cx, cy, iconKey, rawLabel, opts) {   // 🆕2026-09-25 泛用「icon + 文字」置中群組(村落/卡片管理/商店選單列共用):取代各處重複量測程式;內建 fitText 防長字爆版(en 標題常見);未載到 icon→回 null 讓呼叫端 fallback 原樣 emoji+文字
+      opts = opts || {};
+      const fs = opts.fs || FS.sub, bold = opts.bold !== false, col = opts.col, ics = opts.ics || 26, gap = opts.gap != null ? opts.gap : 8, maxW = opts.maxW;
+      if (!iconKey || !_iconReady(scene, iconKey)) return null;
+      const disp = stripEmoji(rawLabel);
+      const t = scene.add.text(0, 0, disp, { fontFamily: EMOJIFONT, fontSize: fs, color: col, fontStyle: bold ? 'bold' : 'normal' }).setOrigin(0.5);
+      if (maxW) fitText(t, Math.max(20, maxW - ics - gap));
+      const tw = t.displayWidth, totalW = ics + gap + tw, left = cx - totalW / 2;
+      add(scene.add.image(left + ics / 2, cy, iconKey).setDisplaySize(ics, ics));
+      t.setPosition(left + ics + gap + tw / 2, cy); add(t);
       return { width: totalW };
     }
     const DIVE_COLOR = { fire: [255, 90, 42], water: [58, 160, 220], thunder: [245, 205, 60], earth: [180, 130, 70], wind: [120, 210, 150], tower: [220, 200, 120] };   // 🎬大廳俯衝進關轉場的「有轉場城」清單(6 城全開;值目前僅當有無轉場的旗標,暗霧色固定 0x1b1620)。prologue 教學不列入(有專屬教學流程)
@@ -695,11 +730,28 @@
     }
     function _loadElSvgs(scene) { ['fire', 'water', 'thunder', 'earth', 'wind'].forEach(el => { if (!scene.textures.exists('el_' + el)) scene.load.svg('el_' + el, 'art/elements/element_' + el + '.svg', { width: 96, height: 96 }); }); }   // 元素剪影 SVG(徽章/篩選用),preload 呼叫
     // 🆕2026-09-23 Lucide icon 管線(emoji→icon 分層替換 第一批,遊戲端示範批=設定頁 bOther):MIT 授權 SVG 存於 art/icons/lucide_<name>.svg
-    const LUCIDE_ICONS = { settings: 1, 'volume-2': 1, music: 1, pencil: 1, link: 1, 'rotate-ccw': 1, x: 1, 'chevron-right': 1, cloud: 1, 'graduation-cap': 1, globe: 1, 'id-card': 1 };   // 目前已備妥 SVG 檔的 icon 名單(比照 CARD_ART 當「有沒有這張圖」的查表)
+    const LUCIDE_ICONS = { settings: 1, 'volume-2': 1, music: 1, pencil: 1, link: 1, 'rotate-ccw': 1, x: 1, 'chevron-right': 1, cloud: 1, 'graduation-cap': 1, globe: 1, 'id-card': 1, home: 1, 'trash-2': 1, copy: 1, mail: 1, key: 1, users: 1, 'chart-column': 1, hourglass: 1 };   // 目前已備妥 SVG 檔的 icon 名單(比照 CARD_ART 當「有沒有這張圖」的查表);🆕2026-09-25 批2補 7 顆(回大廳/刪信/複製/信箱/找回/好友上限/紀錄tab);🆕批3補 hourglass(戰鬥敵人出手倒數沙漏,取自 lucide-static v1.47.0 官方檔,逐位元組)
     function _loadIcon(scene, name) { if (!LUCIDE_ICONS[name]) return; const k = 'lucide_' + name; if (!scene.textures.exists(k)) scene.load.svg(k, 'art/icons/lucide_' + name + '.svg', { width: 96, height: 96 }); }   // 按需 lazy load(比照 _loadElSvgs):texture 已存在跳過;呼叫端需等 load.once('complete') 觸發重繪後才看得到圖(比照 _loadCardArt L2212 收尾模式),載完前 lucideIcon() 會回 null 讓呼叫端退回原樣文字
     function lucideIcon(scene, x, y, name, size, colorHex) { const k = 'lucide_' + name; if (!scene.textures.exists(k)) return null; const img = scene.add.image(x, y, k).setDisplaySize(size, size); if (colorHex != null) img.setTintFill(colorHex); return img; }   // 尚未載到回 null(避免顯示 Phaser 內建的破圖 placeholder),呼叫端自行 fallback 成原文字;載到才回傳上色+定大小(22-26px)的 add.image
     function _hex2num(s) { return parseInt(String(s).replace('#', ''), 16); }   // CSS hex 字串(如 T.ink='#2b333a')轉 setTintFill 要的數字色碼
     function stripEmoji(s) { if (!s) return s; return String(s).replace(/^[\p{Extended_Pictographic}️‍]+\s*/u, ''); }   // 只去字串「開頭」的 emoji(含變體選擇符 FE0F/ZWJ 組合)+其後空白,字串中段不動;i18n key/字典不動,只在顯示前呼叫這層
+    const FLOAT_ICON_MAP = { '💚': ['ui_heal', 'ui'], '🛡': ['ui_shield', 'ui'], '👑': ['ui_crown', 'ui'], '🔒': ['ui_lock', 'ui'], '💰': ['ui_coin', 'ui'], '📦': ['ui_crate', 'ui'], '⭐': ['ui_star', 'ui'], '💎': ['ui_gem', 'ui'], '🔥': ['el_fire', 'el'], '💧': ['el_water', 'el'], '⚡': ['el_thunder', 'el'], '🪨': ['el_earth', 'el'], '🌪️': ['el_wind', 'el'], '🕸️': ['icon_web', 'ui'] };   // 🆕2026-09-25 批3:floatText/tonFloat 開頭emoji→自製icon對照表(戰鬥浮字/演出文字共用);找不到映射或圖沒載到→回傳 null,呼叫端照舊顯示原 emoji 字串(不強求,比開天窗好)。🆕批4:🕸️(蜘蛛網,U+1F578+FE0F,與 tonFloat/floatText 實際字串一致)→icon_web,'ui'型不上色(webp本身彩圖)
+    const FLOAT_ICON_EL = { el_fire: 'fire', el_water: 'water', el_thunder: 'thunder', el_earth: 'earth', el_wind: 'wind' };   // el_* key → EL 表 key,取屬性色 tint(白色剪影太素,浮字場合改上色更好辨識)
+    function _iconLabel(scene, x, y, str, fontSize, color, depth) {   // 🆕字串開頭若是 FLOAT_ICON_MAP 收錄的 emoji 且圖已就緒→回傳「icon+去頭文字」的 Container(置中於 x,y,結構同 add.text 慣例,呼叫端可直接當 tween targets 用 y/alpha);沒對到或圖未就緒→回 null,呼叫端 fallback 走原本整串文字(含 emoji)的 add.text
+      const disp = stripEmoji(str); if (disp === str) return null;
+      const emo = str.slice(0, str.length - disp.length).trim(); const map = FLOAT_ICON_MAP[emo]; if (!map) return null;
+      const [key, kind] = map; const ready = kind === 'el' ? scene.textures.exists(key) : _iconReady(scene, key); if (!ready) return null;
+      const ics = Math.round(fontSize * 1.15);
+      const tmp = scene.add.text(0, 0, disp, { fontFamily: EMOJIFONT, fontSize: fontSize + 'px', fontStyle: 'bold' }); const tw = Math.ceil(tmp.width); tmp.destroy();
+      if (ics + 4 + tw > W - 24) return null;   // 🈳 en 長字串:icon+單行放不下→回 null,呼叫端改走 wordWrap 純文字(floatText/tonFloat 皆有折行)
+      const totalW = ics + 4 + tw, cont = scene.add.container(x, y);
+      if (depth != null) cont.setDepth(depth);
+      const img = scene.add.image(-totalW / 2 + ics / 2, 0, key).setDisplaySize(ics, ics);
+      if (kind === 'el' && FLOAT_ICON_EL[key] && EL[FLOAT_ICON_EL[key]]) img.setTintFill(EL[FLOAT_ICON_EL[key]].color);
+      const txt = scene.add.text(-totalW / 2 + ics + 4, 0, disp, { fontFamily: EMOJIFONT, fontSize: fontSize + 'px', color, fontStyle: 'bold' }).setOrigin(0, 0.5);
+      cont.add([img, txt]);
+      return cont;
+    }
     const _CARD_GRAD = { fire: [0xe8663e, 0x9c3620, 0xffb59c], water: [0x45a0e2, 0x235f8c, 0xa9d6f6], thunder: [0xe6c33d, 0xa5821c, 0xf4de8c], earth: [0xcc9350, 0x875629, 0xe0b98c], wind: [0x5bbd76, 0x2e7846, 0x9fe0b8] };   // demo .fcard.b-*:[亮,暗,邊框]
     function _elGradCardTex(scene, el, size, rad) {   // 方形元素漸層卡底(135deg 平滑無接縫+元素邊框,圓角):卡冊格子底,透明去背角色疊上→每張都有漸層背景。按 el+size 快取
       const G = _CARD_GRAD[el]; if (!G) return null;
@@ -858,24 +910,24 @@
     }   // 家族隊長技(el 填卡屬性,fam=家族給 famFrac)
     /* 主動技:戰鬥中蓄力(每出滿一手+1),蓄滿點該卡發動;依卡片屬性給效果(玩家主動決策層) */
     const ACTIVE_SKILLS = {
-      fire: { name: '業火奔流', cd: 5, icon: '🔥', desc: '對鎖定的單一敵人造成 攻擊×3 傷害' },
-      water: { name: '回春之泉', cd: 4, icon: '💧', desc: '回復 30% 生命' },
-      thunder: { name: '封雷結界', cd: 4, icon: '⚡', desc: '全體敵出手延遲 +3 手' },
-      earth: { name: '大地整復', cd: 5, icon: '🪨', desc: '洗換手中的能量塊(換新一手)' },
-      wind: { name: '疾風亂舞', cd: 5, icon: '🌀', desc: '清掉最滿的一宮,化風刃單體攻擊(+1連擊)' },
-    };
+      fire: { name: '業火奔流', cd: 5, icon: '🔥', iconKey: 'el_fire', desc: '對鎖定的單一敵人造成 攻擊×3 傷害' },
+      water: { name: '回春之泉', cd: 4, icon: '💧', iconKey: 'el_water', desc: '回復 30% 生命' },
+      thunder: { name: '封雷結界', cd: 4, icon: '⚡', iconKey: 'el_thunder', desc: '全體敵出手延遲 +3 手' },
+      earth: { name: '大地整復', cd: 5, icon: '🪨', iconKey: 'el_earth', desc: '洗換手中的能量塊(換新一手)' },
+      wind: { name: '疾風亂舞', cd: 5, icon: '🌀', iconKey: 'el_wind', desc: '清掉最滿的一宮,化風刃單體攻擊(+1連擊)' },
+    };   // 🆕2026-09-25 批4:iconKey=五屬預設技沿用現有 el_* 元素 SVG(白色剪影,同其他屬性徽章風格);icon(emoji)保留當 fallback
     // 物種卡專屬主動技(覆蓋屬性預設;activeSkill(el,id) 會優先吃這裡)→ 台灣隊等招牌卡用
-    const SPIDER_ACTIVE = { name: '電磁絞鎖', cd: 4, icon: '🤖', desc: '鎖定 1 敵,其出手倒數 +1 手' };   // 🤖鐵機人系(c36~c40,原蜘蛛)共用同一份主動技物件;技名 2026-07-31 改「電磁絞鎖」(原「蛛絲纏縛」),效果不變
-    const GHOST_ACTIVE = { name: '怨擊', cd: 5, icon: '👊', desc: '對指定 1 敵造成 攻擊力×2 傷害(吃相剋)' };
-    const WALL_ACTIVE = { name: '築牆阻擋', cd: 6, icon: '🧱', desc: '全體敵人出手倒數 +1 手' };   // 👹鬼系(c41~c45)共用同一份主動技物件
-    const WITCH_ACTIVE = { name: '群鴨亂啄', cd: 6, icon: '🦆', desc: '對全體敵人造成 攻擊力×1.6 傷害(吃相剋)' };   // 🦆賊鴨系(c51~c55,原魔女):全體傷害(區隔🐶群擊×2、👹怨擊單體×2)
-    const YAKUSHI_ACTIVE = { name: '治療凝膠', cd: 6, icon: '🩹', desc: '回復全隊 HP 35%' };   // 🩹史萊姆醫療系(c56~c60,原藥師系,2026-08-02 改名,效果不變):CD6 比照水屬預設「回春之泉」CD4回30%,CD拉高故回復率略增
+    const SPIDER_ACTIVE = { name: '電磁絞鎖', cd: 4, icon: '🤖', iconKey: 'sk_lock', desc: '鎖定 1 敵,其出手倒數 +1 手' };   // 🤖鐵機人系(c36~c40,原蜘蛛)共用同一份主動技物件;技名 2026-07-31 改「電磁絞鎖」(原「蛛絲纏縛」),效果不變;🆕批4 iconKey=sk_lock(art/ui/sk_lock.webp)
+    const GHOST_ACTIVE = { name: '怨擊', cd: 5, icon: '👊', iconKey: 'sk_fist', desc: '對指定 1 敵造成 攻擊力×2 傷害(吃相剋)' };
+    const WALL_ACTIVE = { name: '築牆阻擋', cd: 6, icon: '🧱', iconKey: 'sk_wall', desc: '全體敵人出手倒數 +1 手' };   // 👹鬼系(c41~c45)共用同一份主動技物件
+    const WITCH_ACTIVE = { name: '群鴨亂啄', cd: 6, icon: '🦆', iconKey: 'sk_duck', desc: '對全體敵人造成 攻擊力×1.6 傷害(吃相剋)' };   // 🦆賊鴨系(c51~c55,原魔女):全體傷害(區隔🐶群擊×2、👹怨擊單體×2)
+    const YAKUSHI_ACTIVE = { name: '治療凝膠', cd: 6, icon: '🩹', iconKey: 'sk_gel', desc: '回復全隊 HP 35%' };   // 🩹史萊姆醫療系(c56~c60,原藥師系,2026-08-02 改名,效果不變):CD6 比照水屬預設「回春之泉」CD4回30%,CD拉高故回復率略增
     const CARD_ACTIVE = {
-      c15: { name: '裂空撲殺', cd: 3, icon: '🐆', desc: '總傷≈攻×2:敵單隻→集中、多隻→均分全體,各吃相剋' },
-      c22: { name: '群鵲圍攻', cd: 4, icon: '🐦', desc: '全體敵出手延遲 +2 手' },
-      c18: { name: '溯流之癒', cd: 4, icon: '🐟', desc: '本手清除按格數額外回血(上限約半血)' },
-      c26: { name: '巨塊', cd: 5, icon: '🐻', desc: '清空托盤→生成 1 個 3×3 疊塊,放上去補滿一宮→大清(教高 HIT)' },
-      c30: { name: '靈猴造塊', cd: 4, icon: '🐒', desc: '托盤 3 塊變成可覆蓋的 2×2 塊,易解宮' },
+      c15: { name: '裂空撲殺', cd: 3, icon: '🐆', iconKey: 'sk_leopard', desc: '總傷≈攻×2:敵單隻→集中、多隻→均分全體,各吃相剋' },
+      c22: { name: '群鵲圍攻', cd: 4, icon: '🐦', iconKey: 'sk_bird', desc: '全體敵出手延遲 +2 手' },
+      c18: { name: '溯流之癒', cd: 4, icon: '🐟', iconKey: 'sk_fish', desc: '本手清除按格數額外回血(上限約半血)' },
+      c26: { name: '巨塊', cd: 5, icon: '🐻', iconKey: 'sk_bear', desc: '清空托盤→生成 1 個 3×3 疊塊,放上去補滿一宮→大清(教高 HIT)' },
+      c30: { name: '靈猴造塊', cd: 4, icon: '🐒', iconKey: 'sk_monkey', desc: '托盤 3 塊變成可覆蓋的 2×2 塊,易解宮' },
       c36: SPIDER_ACTIVE, c37: SPIDER_ACTIVE, c38: SPIDER_ACTIVE, c39: SPIDER_ACTIVE, c40: SPIDER_ACTIVE,
       c41: GHOST_ACTIVE, c42: GHOST_ACTIVE, c43: GHOST_ACTIVE, c44: GHOST_ACTIVE, c45: GHOST_ACTIVE,
       c46: WALL_ACTIVE, c47: WALL_ACTIVE, c48: WALL_ACTIVE, c49: WALL_ACTIVE, c50: WALL_ACTIVE,
@@ -897,13 +949,13 @@
       return { atk: Math.round(sh[0] * STAT_BUD), hp: Math.round(sh[1] * STAT_BUD / STAT_WT.hp / 10) * 10, rcv: Math.round(sh[2] * STAT_BUD / STAT_WT.rcv) };
     }
     ROSTER.forEach(c => { const fam = TW_IDS.has(c.id) ? 'taiwan' : CARD_FAMILY[c.id]; if (!fam) return; const s = famStat(fam, c.el); if (!s) return; c.atk = s.atk; c.hp = s.hp; c.rcv = s.rcv; if (!TW_IDS.has(c.id) && fam !== 'cat') c.rank = 'jonin'; });   // 家族全 ★3(jonin)+ 重算三圍;台灣三圍仍走統一上限但維持 kage(★4)不降階(2026-07-15);🐱貓系四階進化(2026-08-25)base 降 chunin(★2)不可被這裡蓋回 jonin,故排除 cat
-    const FAMILY_ACTIVE = {   // 家族主動技(套用到該卡屬性);效果見 _familyActive
-      cat: { name: '疾風連擊', cd: 4, icon: '🐱', desc: '對單敵 攻×1 連打 N 下(吃相剋,N 隨進化階 2→5)' },
-      dog: { name: '群擊', cd: 5, icon: '🐶', desc: '對全體敵 攻×2(吃相剋)' },
-      bird: { name: '亂鳴', cd: 4, icon: '🐦', desc: '剋屬敵 CD+2(出手延遲 +2)' },
-      rat: { name: '鼠潮', cd: 6, icon: '🐭', desc: '填滿該卡屬性宮並消除 → 大 HIT' },
-      fish: { name: '活水', cd: 5, icon: '🐟', desc: '6 手內清該屬宮也按格數回血' },
-      rabbit: { name: '化境', cd: 7, icon: '🐰', desc: '全盤屬性宮 1 回合內變成自己同屬(相剋爆發 setup)' },
+    const FAMILY_ACTIVE = {   // 家族主動技(套用到該卡屬性);效果見 _familyActive;🆕2026-09-25 批4 iconKey=自製圖(art/ui/sk_*.webp),icon(emoji)保留當 fallback
+      cat: { name: '疾風連擊', cd: 4, icon: '🐱', iconKey: 'sk_cat', desc: '對單敵 攻×1 連打 N 下(吃相剋,N 隨進化階 2→5)' },
+      dog: { name: '群擊', cd: 5, icon: '🐶', iconKey: 'sk_dog', desc: '對全體敵 攻×2(吃相剋)' },
+      bird: { name: '亂鳴', cd: 4, icon: '🐦', iconKey: 'sk_bird', desc: '剋屬敵 CD+2(出手延遲 +2)' },
+      rat: { name: '鼠潮', cd: 6, icon: '🐭', iconKey: 'sk_rat', desc: '填滿該卡屬性宮並消除 → 大 HIT' },
+      fish: { name: '活水', cd: 5, icon: '🐟', iconKey: 'sk_fish', desc: '6 手內清該屬宮也按格數回血' },
+      rabbit: { name: '化境', cd: 7, icon: '🐰', iconKey: 'sk_rabbit', desc: '全盤屬性宮 1 回合內變成自己同屬(相剋爆發 setup)' },
     };
     const FAMILY_LEADER = {   // 家族隊長技(el 由卡屬性填);傷害型在 battle-core leadDamageMult
       cat: { name: '貓·自我爆發', type: 'elemAtk', v: 1.5, vByEvo: [1.4, 1.6, 1.8, 2.0], desc: '同屬攻 ×1.4~×2.0(隨進化階)' },
@@ -1085,6 +1137,7 @@
     let hydrating = false;   // 開場調和中:writeSave 不觸發推雲(避免把剛拉下的雲檔又推回去)
     let _cloudUnverified = true;   // 🔐[6] 本 session 尚未成功 GET 過 /api/save(不知道真正的 rev)前一律為 true;cloudPull() 首次成功時解除。cloudPush 在此為 true 時直接不送,避免用過期/未知 rev 觸發 409→本地強制覆蓋雲端(跨裝置進度遺失)
     let _cloudT = null, _cloudT0 = 0, _cloudDead = false, _guestP = null;   // debounce 計時器 / max-wait 起點 / 413 停推 / 建帳號進行中鎖
+    let _nbMaint503At = 0;   // 🛠 維護閘 503 toast 節流時間戳(避免同時一堆 authedFetch 各噴一次 toast)
     let _playTick = null;   // 📊 前景遊玩計時起點(null=目前分頁隱藏,不計時);由 bootGame 開場設起點
     function cloudState() { let c = null; try { c = JSON.parse(localStorage.getItem(CLOUD_KEY)); } catch (e) { } return (c && typeof c === 'object') ? c : {}; }
     function cloudSet(patch) { const c = cloudState(); Object.assign(c, patch); try { localStorage.setItem(CLOUD_KEY, JSON.stringify(c)); } catch (e) { } return c; }
@@ -1136,6 +1189,16 @@
       if (r.status === 401) {
         if (c.guestCode) { try { const c2 = await cloudLogin(c.guestCode); r = await go(c2.token); } catch (e) { } }   // token 過期但帳號還在:換 token 成功→r 變 200,跳過下面自癒
         if (r.status === 401) { try { const c3 = await reregisterFreshGuest(); if (c3 && c3.token) r = await go(c3.token); } catch (e) { } }   // 仍 401=account_gone:重建帳號(本機存檔照舊,下次推雲搬過去)
+      }
+      if (r.status === 503) {   // 🛠 全域維護閘(functions/api/_middleware.ts)擋下;輕量 toast 提示一下,r 原封不動交還呼叫端(它們自己 !r.ok 的處理不變)
+        try {
+          const t = Date.now();
+          if (t - _nbMaint503At > 8000) {   // 節流:同一批並發請求只噴一次,別洗版
+            _nbMaint503At = t;
+            const d = await r.clone().json();
+            if (d && d.error === 'maintenance') domToast('🛠 ' + (d.message || tr('維護中,雲端同步可能暫停')), 4000);
+          }
+        } catch (e) { }
       }
       return r;
     }
@@ -1238,7 +1301,7 @@
         try { if (scene._setDomUI) scene._setDomUI(false); } catch (e) { }   // 🩹 DOM 分頁精緻鈕(抽卡/轉蛋藥丸等)永遠浮在 canvas 上、setDepth 無效→這個 canvas 彈窗的「知道了」會被 DOM 鈕蓋住吃不到點擊(在抽卡頁彈出時卡死)→先整組藏,close 時還原(同專案其他 canvas modal 慣例)
         const g = scene.add.container(0, 0).setDepth(10000);   // 蓋過戰鬥所有層(skipHit 用到 9000)
         const bg = scene.add.rectangle(CX, H / 2, W, H, 0x0e0a16, 0.82).setInteractive(); g.add(bg);
-        g.add(scene.add.text(CX, H / 2 - 84, '🎴 已為你保管勇者卡!', { fontFamily: EMOJIFONT, fontSize: FS.title, color: '#ffe04a', fontStyle: 'bold', stroke: '#000000', strokeThickness: 5 }).setOrigin(0.5));
+        g.add(scene.add.text(CX, H / 2 - 84, tr('🎴 已為你保管勇者卡!'), { fontFamily: EMOJIFONT, fontSize: FS.title, color: '#ffe04a', fontStyle: 'bold', stroke: '#000000', strokeThickness: 5 }).setOrigin(0.5));
         g.add(scene.add.text(CX, H / 2 - 18, '到『其他』頁可查看,\n換手機也不怕丟進度', { fontFamily: EMOJIFONT, fontSize: FS.sub, color: '#ffffff', align: 'center', lineSpacing: 10, stroke: '#000000', strokeThickness: 4 }).setOrigin(0.5));
         const by = H / 2 + 84;
         g.add(roundRectG(scene, CX, by, 230, 56, 28, 0x35a866, 1, null, 0));
@@ -1488,6 +1551,51 @@
       return mailAttachSummary(attach);
     }
     /* ── 📬 遊戲內信箱模組結束 ── */
+    /* ── 🎁 邀請好友(前端只顯示進度+綁定;獎勵由伺服器走信箱自動發,前端零領獎 UI)──
+       GET  /api/referral/me   → { code, invitedBy:bool, qualifiedCount, milestones:{"1":bool,"3":bool,"5":bool}, rewards:{ milestones:{"1":5,"3":15,"5":30}, invitee:5, enabled:true } }
+       POST /api/referral/bind {code} → {ok:true};錯誤 HTTP 400/404/409,body.error ∈ not_found/self_code/already_bound/too_old
+       ?ref=CODE 流程:captureRefParam(啟動時存 nb_pending_ref)→ tryBindPendingRef(開場調和後 fire-and-forget 綁定)→ 終局結果(成功/not_found/self_code/already_bound/too_old)才清 pending;網路/5xx/端點未上線=保留,下次啟動再試 */
+    const REF_PENDING_KEY = 'nb_pending_ref';
+    const REF_LINK_BASE = 'https://blockyusha.com/play/?ref=';
+    const REF_FINAL_ERR = ['not_found', 'self_code', 'already_bound', 'too_old'];   // 終局錯誤碼:再打一次結果不會變→清 pending;其餘(空 body 的 404=端點未部署、5xx、429、503 維護)一律視為暫時性,保留
+    let _refBindP = null;   // 自動綁定進行中鎖
+    function refSanitize(c) { return String(c == null ? '' : c).replace(/[^A-Za-z0-9_-]/g, '').slice(0, 32); }   // 邀請碼只留英數/底線/連字號(不轉大小寫,大小寫由伺服器比對規則決定)
+    function refClearPending() { window._nbPendingRef = null; try { localStorage.removeItem(REF_PENDING_KEY); } catch (e) { } }
+    function captureRefParam() {   // 啟動時讀 ?ref=CODE→存 localStorage(炸了退回記憶體變數,同 session 仍可綁);讀完把 ref 從網址列拿掉,免得之後再被重複捕捉/被玩家連同網址轉貼
+      try {
+        const u = new URL(location.href), raw = u.searchParams.get('ref');
+        if (raw == null) return;
+        const c = refSanitize(raw);
+        if (c) { window._nbPendingRef = c; try { localStorage.setItem(REF_PENDING_KEY, c); } catch (e) { } }
+        try { u.searchParams.delete('ref'); history.replaceState(null, '', u.pathname + u.search + u.hash); } catch (e) { }   // iframe sandbox 可能不給改歷史→靜默略過
+      } catch (e) { }
+    }
+    async function refBind(code) {   // → {ok:true} | {ok:false,error,status,final}(final=終局錯誤,呼叫端可清 pending);網路例外 → {ok:false,error:'network',final:false}
+      let r;
+      try { r = await authedFetch('/api/referral/bind', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ code: code }) }); }
+      catch (e) { return { ok: false, error: 'network', status: 0, final: false }; }
+      if (r.ok) return { ok: true };
+      let err = ''; try { const d = await r.json(); err = (d && d.error) || ''; } catch (e) { }
+      return { ok: false, error: err, status: r.status, final: REF_FINAL_ERR.indexOf(err) >= 0 };
+    }
+    function tryBindPendingRef() {   // 開場(雲端調和後)fire-and-forget:有 pending 碼→綁定;全程靜默(只 console),不彈窗吵玩家
+      if (_refBindP) return _refBindP;
+      let code = ''; try { code = localStorage.getItem(REF_PENDING_KEY) || ''; } catch (e) { }
+      code = refSanitize(code || window._nbPendingRef || '');
+      if (!code) return Promise.resolve(null);
+      _refBindP = (async () => {
+        try {
+          const res = await refBind(code);
+          if (res.ok) { refClearPending(); console.info('[referral] bind ok'); }
+          else if (res.final) { refClearPending(); console.info('[referral] bind skipped:', res.error); }   // already_bound/self_code/too_old/not_found 都清,避免每次啟動重打
+          else console.warn('[referral] bind deferred:', res.status, res.error);   // 暫時性失敗:保留 pending,下次啟動再試
+          return res;
+        } catch (e) { console.warn('[referral] bind error', e); return null; }
+        finally { _refBindP = null; }
+      })();
+      return _refBindP;
+    }
+    /* ── 🎁 邀請好友模組結束 ── */
     function ownedCount() { const seen = {}; loadSave().cards.forEach(c => { seen[c.id] = 1; }); return Object.keys(seen).length; }   // 收集的「種類」數
     function saveTeam(ids) { const t = ids.slice(0, 5); mutSave(s => { s.team = t; if (s.teams && s.teams[s.teamIdx || 0]) s.teams[s.teamIdx || 0].ids = t.slice(); }); }   // 存到目前選中隊
     function loadTeam() { const s = loadSave(); const at = s.teams && s.teams[s.teamIdx || 0]; return (at && Array.isArray(at.ids)) ? at.ids : s.team; }   // 回傳目前選中隊
@@ -1679,10 +1787,11 @@
       if (typeof d.coins === 'number') syncWallet({ coins: d.coins });
       return d;
     }
-    // 單張版(卡冊詳情頁「解散這張卡」):找該卡種任一個體 uid,轉呼共用的伺服器端點(同一保護規則)
-    async function dissolveCard(id) {
-      const c = loadSave().cards.find(x => x.id === id);
-      if (!c) return { ok: false, msg: tr('只剩 1 張,無法分解') };
+    // 單張版(卡冊詳情頁「解散這張卡」):uid 傳入=解散「正在看的那個個體」(2026-09-25 對準顯示,不再撈陣列第一張同種);
+    // 不傳 uid(舊呼叫相容,目前無此用法)→退回原「該卡種任一個體」行為。轉呼共用的伺服器端點(同一保護規則)
+    async function dissolveCard(id, uid) {
+      const c = uid ? loadSave().cards.find(x => x.u === uid) : loadSave().cards.find(x => x.id === id);
+      if (!c) return { ok: false, msg: tr('卡片不存在') };   // 🆕2026-09-25 uid 找不到個體(已被解散/吃掉等)是「卡不存在」,不是「只剩1張」,訊息改準確
       const before = getMeta().coins || 0;
       let d;
       try { d = await dissolveUids([c.u]); } catch (e) { return { ok: false, msg: tr('需要連線,請稍後再試') }; }
@@ -1700,34 +1809,35 @@
     function ownedCardCount(id) { return loadSave().cards.filter(c => c.id === id).length; }   // 背包中某卡種的個體張數
     function getCardEvo(id, ovEvo) { if (ovEvo != null) return ovEvo; return loadSave().cardEvo[id] || 0; }   // ovEvo 傳入=用個體自己的進化階(個體制)
     function cardStars(id, ovEvo) { const c = ROSTER.find(x => x.id === id) || {}; return Math.min(6, ({ genin: 1, chunin: 2, jonin: 3, kage: 4 }[c.rank] || 1) + getCardEvo(id, ovEvo)); }
-    function starStr(id) { return '★'.repeat(cardStars(id)); }
+    function starStr(id, ovEvo) { return '★'.repeat(cardStars(id, ovEvo)); }   // 🆕2026-09-25 補 ovEvo 第二參數(選填,不傳=舊行為),讓個體制檢視能對準這個體的進化階
     function getGems(el) { return loadSave().gems[el] || 0; }
     function addGem(el, n) { mutSave(s => { s.gems[el] = (s.gems[el] || 0) + (n || 1); }); }
-    function canEvolve(id) {
-      const c = ROSTER.find(x => x.id === id), t = getCardEvo(id);
+    function canEvolve(id, ovLv, ovEvo) {   // 🆕2026-09-25 ovLv/ovEvo=檢查「指定個體」(BOX 詳情正在看的那張);不傳→退回舊行為(該卡種目前最強個體,getCardLv/getCardEvo 的 per-type 快取本就鏡射 bestInstanceOf)
+      const c = ROSTER.find(x => x.id === id), t = getCardEvo(id, ovEvo);
       if (!c) return { ok: false, msg: tr('卡片資料不存在') };
       if (MATERIAL_IDS.has(id)) return { ok: false, msg: tr('素材卡不可進化(拿去進化別的卡)') };   // 純素材:不給練成戰力卡
       // 單一 cap:👺哥布林系、🦆賊鴨系、🤖鐵機人系(原蜘蛛)、🩹史萊姆醫療系(原藥師)、🧱牆怪系 1★→2★→3★(cap 2);🐱貓系(EVO3_CARDS) 2★→3★→4★→5★(cap 3);一般卡走 EVO_MAX。與 line 328 _evoCap、後端 evolve.ts evoCap 同一套,別再用 else-if(EVO_CARDS 含哥布林,t=1 會被誤擋)
       const evoCap = EVO3_CARDS[id] ? 3 : (EVO2_CARDS[id] ? 2 : (EVO_CARDS[id] ? 1 : EVO_MAX));
       if (t >= evoCap) return { ok: false, msg: tr('已達進化上限') };
       const needLv = maxLvForCard(id, t);   // per-star 門檻(spec-progression-economy.md §1):要練到「當前星」的上限才能進化(1★要LV20、2★要LV40…)
-      if (getCardLv(id) < needLv) return { ok: false, msg: tr('需先練滿 Lv.{n}', { n: needLv }) };
+      if (getCardLv(id, ovLv) < needLv) return { ok: false, msg: tr('需先練滿 Lv.{n}', { n: needLv }) };
       const req = evoReq(t);
       const jid = JEWEL_OF[c.el];
       if (!jid || ownedCardCount(jid) < 1) return { ok: false, msg: tr('需 1 張「{n}」進化素材', { n: jewelName(c.el) }) };   // 伺服器仍會再驗一次(真相在後端)
       if ((getMeta().coins || 0) < req.coins) return { ok: false, msg: tr('需 {n} 金', { n: req.coins }) };
       return { ok: true, req: req };
     }
-    // 🔐 進化改打伺服器 POST /api/cards/evolve {cardId};canEvolve 保留當前端「先擋一次」的友善錯誤訊息(伺服器仍會再驗一次,真相在後端)
-    async function evolveCard(id) {
-      const chk = canEvolve(id); if (!chk.ok) return chk;
-      const inst = bestInstanceOf(id);   // per-instance level:target 改成「指定個體 uid」,固定用該卡種目前最強那張(canEvolve 本就靠 getCardLv/getCardEvo=derived 最強個體驗證,兩者一致)
+    // 🔐 進化改打伺服器 POST /api/cards/evolve {targetUid};canEvolve 保留當前端「先擋一次」的友善錯誤訊息(伺服器仍會再驗一次,真相在後端)
+    // 🆕2026-09-25 uid 傳入=進化「正在看的那個個體」(BOX 詳情對準顯示);不傳→退回舊行為(該卡種目前最強個體)
+    async function evolveCard(id, uid) {
+      const inst = uid ? instOf(uid) : bestInstanceOf(id);
       if (!inst) return { ok: false, msg: tr('對象卡不存在') };
+      const chk = canEvolve(id, inst.lv || 1, inst.evo || 0); if (!chk.ok) return chk;   // 用這個體自己的 lv/evo 驗滿級(而非卡種最強個體);🆕2026-09-25 舊存檔個體可能缺 lv/evo 欄位,undefined 會讓 canEvolve 誤判,補預設 lv1/evo0
       let r;
       try { r = await authedFetch('/api/cards/evolve', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ targetUid: inst.u }) }); }
       catch (e) { return { ok: false, msg: tr('需要連線,請稍後再試') }; }
       if (!r.ok) { let body = {}; try { body = await r.json(); } catch (e2) { } return { ok: false, msg: body.error || tr('進化失敗') }; }
-      const d = await r.json();   // {gems:{[el]:n}, coins, target:{u,lv:1,exp:0,evo}, collection}
+      const d = await r.json();   // {gems:{[el]:n}, coins, target:{u,lv,exp,evo}, collection}
       if (d.gems) syncGems(d.gems);
       if (typeof d.coins === 'number') syncWallet({ coins: d.coins });
       if (d.collection) syncCards(d.collection); else cardsFetch();
@@ -1826,7 +1936,10 @@
     function rollRarity(rates) { const r = Math.random(); let acc = 0; for (let k = 0; k < rates.length; k++) { acc += rates[k][1]; if (r < acc) return rates[k][0]; } return rates[rates.length - 1][0]; }
     function gachaPull(bankey) { const isP = bankey === 'premium', roster = isP ? PREMIUM_ROSTER : NORMAL_ROSTER, byRank = isP ? PREMIUM_POOL : NORMAL_POOL; let pool = byRank[rollRarity(GACHA[bankey].rates)]; if (!pool || !pool.length) pool = roster; return pool[rnd(pool.length)]; }   // 召喚勇者→PREMIUM_POOL(英雄);一般轉蛋→NORMAL_POOL(妖怪系+金銀);該 rank 空→退回該轉蛋全池(devGate 測試用,正式抽卡在伺服器)
     function spendCoins(n) { let ok = false; mutSave(s => { if ((s.meta.coins || 0) >= n) { s.meta.coins -= n; ok = true; } }); return ok; }
-    const PITY_MAX = 50;   // 召喚勇者保底:第 50 抽必得六星(kage)
+    function pityMaxFor(bankey) {   // 🔐 保底顯示改讀伺服器(/api/gacha/rates 回應 pityMax);查無才 fallback 50(舊值,doGacha devGate 測試路徑用)
+      const srv = window._nbGachaRates && Array.isArray(window._nbGachaRates.pools) && window._nbGachaRates.pools.find(p => p.id === bankey);
+      return (srv && typeof srv.pityMax === 'number' && srv.pityMax > 0) ? srv.pityMax : 50;
+    }
     function getPity() { return loadSave().meta.pity || 0; }
     function setPity(n) { mutSave(s => { s.meta.pity = n; }); }
     function doGacha(bankey, count) {
@@ -1836,8 +1949,8 @@
       for (let i = 0; i < count; i++) {
         let c, pityHit = false;
         if (bankey === 'premium') {
-          let p = getPity();
-          if (p >= PITY_MAX - 1) { c = PREMIUM_POOL.kage[rnd(PREMIUM_POOL.kage.length)]; setPity(0); pityHit = true; }   // 第50抽保底:必六星(召喚勇者英雄池)
+          let p = getPity(), pMax = pityMaxFor(bankey);
+          if (p >= pMax - 1) { c = PREMIUM_POOL.kage[rnd(PREMIUM_POOL.kage.length)]; setPity(0); pityHit = true; }   // 保底(抽數讀伺服器 pityMax,查無 fallback 50):必六星(召喚勇者英雄池)
           else { c = gachaPull(bankey); if (c.rank === 'kage') setPity(0); else setPity(p + 1); }                  // 抽到六星歸零、否則+1
         } else { c = gachaPull(bankey); }
         out.push({ cd: c, isNew: !isOwned(c.id), pity: pityHit }); addCard(c.id);
@@ -2203,7 +2316,7 @@
         if (this.statHp) this.statHp.setText(hp.toLocaleString());
         if (this.statRcv) this.statRcv.setText(rcv.toLocaleString());
         const leaderId = this.slots[2] && this.slots[2].cardId, ls = leaderId ? leadSkill(leaderId) : null;
-        if (this.leadTxt) this.leadTxt.setText(ls ? tr('👑 隊長技 · {d}', { d: tr(ls.desc) }) : tr('👑 隊長技 · —'));
+        if (this.leadTxt) { this.leadTxt.setText(ls ? tr('👑 隊長技 · {d}', { d: tr(ls.desc) }) : tr('👑 隊長技 · —')); this.leadTxt.setScale(1); fitText(this.leadTxt, W - 24); }   // 🈳 en 隊長技說明長度不一→每次先還原再縮進畫面
       }
       async doRename() { const i = getTeamIdx(), v = await uiPrompt({ title: tr('隊伍名稱'), message: tr('最多 6 字,留空=隊{n}', { n: i + 1 }), value: teamCustomName(i), maxLen: 6 }); if (v != null) { renameTeam(i, v); this.updateSwitcher(); } }
       confirm() { saveTeamAt(getTeamIdx(), this.slots.map(s => s.uid || null)); this.scene.manager.start('home', this.tutTeam ? { tab: 'dungeon' } : undefined); this.scene.manager.stop('team'); }   // 存當前隊 + 回大廳(未滿也可離開,出戰時再擋);🗺️ 教學編隊完成→強制落在地圖(dungeon)分頁(否則沿用 persisted 的 gacha tab,看不到序章島指引)
@@ -2213,7 +2326,7 @@
         const dim = this.add.rectangle(CX, H / 2, W, H, 0x000000, 0.6).setInteractive(); g.add(dim);
         const _pw = W - 24, PAD = 30, GAP = 20, BTN_H = 54, SIDE = 34;   // 使用者回饋:字要和面板邊有間隔+字再大一點 → SIDE(左右內縮)34、PAD 30、字級一併放大
         let cy = Math.round(H * 0.5);
-        const title = this.add.text(0, 0, tr('🛡️ 最後一課 · 出戰編隊'), { fontFamily: EMOJIFONT, fontSize: '22px', color: '#c8912a', fontStyle: 'bold', align: 'center' }).setOrigin(0.5, 0);   // 金標題(放大 20→22)
+        const title = this.add.text(0, 0, tr('🛡️ 最後一課 · 出戰編隊'), { fontFamily: EMOJIFONT, fontSize: '22px', color: '#c8912a', fontStyle: 'bold', align: 'center', wordWrap: { width: _pw - SIDE * 2 } }).setOrigin(0.5, 0);   // 金標題(放大 20→22);🈳 en 長標題折行(th 後面會量測→面板自適應)
         const bodyStr = tr('① 點下方卡片 → 放進上方 5 個宮位\n② 👑 中央 = 隊長\n③ 放滿 5 隻 → 按右下「✅ 確定」完成')
           + (this.tutTeam ? tr('\n\n🔄 五行相剋（挑剋牠的打最痛）:\n　水剋火、火剋風、風剋雷、\n　雷剋土、土剋水\n👉 隊伍帶「不同屬性」的卡,\n　遇到什麼敵人都有得剋!') : '');   // 🩹 只在教學完首次編隊(tutTeam)加相剋教學。中文無空白→Phaser wordWrap 不會自動斷,只會斷在 emoji 後空白處(→emoji 孤行)+長中文串溢出被切;故手動 \n 斷行,每行≤約18字(SIDE=34→字寬328px)、emoji 那行夠短不觸發自動斷
         const body = this.add.text(0, 0, bodyStr, { fontFamily: EMOJIFONT, fontSize: '18px', color: '#2b333a', fontStyle: 'bold', align: 'left', lineSpacing: 11, wordWrap: { width: _pw - SIDE * 2 } }).setOrigin(0.5, 0);   // 深墨字放大 17→18/行距11;左右各內縮 SIDE=34(字不貼邊)
@@ -2298,7 +2411,7 @@
         this._setDomUI(false);   // 排序列/確定鈕是 DOM overlay(永遠壓過 canvas)→抓取期間先藏,浮卡(canvas depth400)才會在最上層;放開時還原(見 _endCarry)
         if (src.type === 'slot' && src.slot.img) src.slot.img.setAlpha(0.35);   // 來源宮位卡淡出→示意「提起中」
         const _gi = src.type === 'pool' ? src.inst : src.slot;   // 🆕個體制:浮卡顯示這張個體自己的等級/進化
-        this._carry.ghost = this._buildCarryGhost(src.cd, _gi && _gi.lv, _gi && _gi.evo);
+        this._carry.ghost = this._buildCarryGhost(src.cd, _gi ? (_gi.lv || 1) : undefined, _gi ? (_gi.evo || 0) : undefined);   // 🐛修:lv/evo 缺欄位(undefined)時原樣傳給 getCardLv 會 fallback 成 type-level 最強快取(顯示錯張)→比照全檔其餘 inst.lv||1 慣例先正規化再傳
         this._updateCarry(p);
       }
       _buildCarryGhost(cd, ovLv, ovEvo) {
@@ -2341,7 +2454,7 @@
           if (c.src.type === 'pool') this._placeInstIntoSlot(c.src.inst, c.cd, c.target);
           else this._swapSlots(c.src.slot, c.target);
           this._setDomUI(true);   // 放置/互換完→還原 DOM UI
-        } else if (c.moved < 16) { this.showCardDetail(c.cd); }   // 原地放開=看能力(showCardDetail 內含 _setDomUI(false)+關閉還原,故此路不自行還原)
+        } else if (c.moved < 16) { this.showCardDetail(c.cd, c.src.type === 'pool' ? c.src.inst : c.src.slot); }   // 原地放開=看能力(showCardDetail 內含 _setDomUI(false)+關閉還原,故此路不自行還原);🆕個體制:帶上被長按的這個個體(inst/slot),讓詳情頁顯示它自己的 lv/evo,不再落回 type-level 最強快取
         else { this._setDomUI(true); }   // 拖到空白放開=取消→還原 DOM UI
       }
       _placeInstIntoSlot(inst, cd, slot) {   // 卡池卡→宮位:目標有卡先退回、該卡已在別格先清(移動),再放入
@@ -2376,12 +2489,13 @@
         slot.cont.add(lBg); slot.cont.add(lTxt); slot._ov.push(lBg, lTxt);
       }
       _setDomUI(on) { [this.sortDom, this.confirmDom].forEach(d => { if (d && d.node) d.setVisible(on); }); }   // 排序列/確定鈕是 DOM overlay,永遠浮在 canvas 上→canvas 內 modal(詳情/教學)蓋不住,開 modal 時整組隱藏
-      showCardDetail(cd) {   // 久按卡片→就地詳細(共用 cardDetailPanel,版面與卡冊完全一致,只少管理鈕)
+      showCardDetail(cd, inst) {   // 久按卡片→就地詳細(共用 cardDetailPanel,版面與卡冊完全一致,只少管理鈕);🆕個體制:inst=被長按的那個個體(bench 傳 c._inst,宮位傳 slot 本身),兩者都有 lv/evo 欄位;不傳=舊行為(type-level 最強快取,目前沒有呼叫端會不傳)
         if (this._detailG) this._detailG.destroy();
         this._setDomUI(false);   // 藏 DOM UI(排序列+確定鈕),關閉時恢復
+        const ovLv = inst ? (inst.lv || 1) : undefined, ovEvo = inst ? (inst.evo || 0) : undefined, ovExp = inst ? (inst.exp || 0) : undefined;   // 正規化:個體缺欄位時預設 lv1/evo0/exp0,別讓 undefined 落回 getCardLv 的 type-level fallback;🆕2026-09-25 補傳 ovExp 讓經驗條顯示這個體真正的進度
         const g = this._detailG = this.add.container(0, 0).setDepth(100), close = () => { if (this._detailG) { this._detailG.destroy(); this._detailG = null; } this._setDomUI(true); };
-        _ensureFullArt(this, cd.id, () => { if (this._detailG) this.showCardDetail(cd); });   // bench 卡只載縮圖→開詳情才補大圖,載好重開
-        cardDetailPanel(this, o => { g.add(o); return o; }, cd, { manage: false, onClose: close });
+        _ensureFullArt(this, cd.id, () => { if (this._detailG) this.showCardDetail(cd, inst); }, ovEvo);   // bench 卡只載縮圖→開詳情才補大圖(這個體實際的進化階),載好重開
+        cardDetailPanel(this, o => { g.add(o); return o; }, cd, { manage: false, onClose: close, ovLv, ovEvo, ovExp });
       }
       refreshStart() {
         const n = this.slots.filter(s => s.el).length, ok = n === 5;   // 確定鈕外觀反映齊不齊(永遠可按=可離開,出戰時再擋)
@@ -2429,6 +2543,7 @@
       }   // 種子亂數:開戰播種(可由外部給種子=回放用),存 battleSeed
       preload() {
         this.load.maxParallelDownloads = 6;   // 限制同時下載數→對弱伺服器/弱網路更穩(避免一次塞太多卡住)
+        ['ui_coin', 'ui_crate', 'ui_heal', 'ui_shield', 'ui_crown', 'ui_lock', 'ui_star', 'ui_gem', 'sk_cat', 'sk_dog', 'sk_bird', 'sk_rat', 'sk_fish', 'sk_rabbit', 'sk_fist', 'sk_wall', 'sk_duck', 'sk_gel', 'sk_lock', 'sk_leopard', 'sk_bear', 'sk_monkey', 'icon_web', 'icon_puzzle'].forEach(k => { if (!this.textures.exists(k) && UI_ICON_FILE[k]) this.load.image(k, 'art/ui/' + UI_ICON_FILE[k] + '.webp'); }); ['settings', 'hourglass', 'graduation-cap', 'rotate-ccw'].forEach(n => { if (!this.textures.exists('lucide_' + n)) this.load.svg('lucide_' + n, 'art/icons/lucide_' + n + '.svg', { width: 96, height: 96 }); });   // 🆕2026-09-25 批3:GameScene 自己不 eager 全載 UI_ICONS/lucide(正常玩家經由 HomeScene 已預載大部分,這裡是防呆:①#hitlab/#enemylab 等 hash 直跳戰鬤繞過大廳、②新手第一次教學面板此時通常還沒去過村落頁(graduation-cap 平常靠村落頁 lazy load)→靠這行保底,loading bar 會等它跑完才進 create())。🆕批4:補 14 顆技能圖(sk_*,#hitlab/#enemylab 繞過大廳時主動技硬幣/abtn 仍要有圖)+ icon_web(戰鬥中蜘蛛網浮字/托盤鎖圖示,同理防呆)。🆕批5:再補 icon_puzzle(新手教學第1步大圖示,關掉「首見該面板該局可能 fallback 文字」的邊緣情況)
         const _CLS = ['grunt', 'grunt2', 'guard', 'caster', 'healer', 'shield', 'boss_baby', 'boss_beg', 'boss_nrm'];
         if (this.enemyLab) { for (const el in MONSTER_IMG) if (!this.textures.exists('mon_' + el)) this.load.image('mon_' + el, MONSTER_IMG[el]); for (const k in ENEMY_IMG) if (!this.textures.exists(k)) this.load.image(k, ENEMY_IMG[k]); _loadCardArt(this, ['c38']); }   // 敵技實驗室=全載;🔩補載雷鐵機人(c38)卡圖給「分層鐵塊」demo 借圖用(比照 thunder 城 2354 行)
         else {
@@ -2451,6 +2566,7 @@
         if (this.dungeonId === 'water') { _loadCardArt(this, ['c57']); if (!this.textures.exists('card_c57_king_full')) this.load.image('card_c57_king_full', 'art/cards/c57_king_full.webp'); }   // 🩹 水之深淵借史萊姆醫療(原藥師)透明大圖當補血怪/魔王圖:載 c57水小護理(補師)完整大圖;魔王另載專屬 4星水醫學博士大圖(非玩家卡,只在此當魔王,比照 thunder 分支)
         ['fire', 'water', 'thunder', 'earth', 'wind'].forEach(el => { if (!this.textures.exists('el_' + el)) this.load.svg('el_' + el, 'art/elements/element_' + el + '.svg', { width: 96, height: 96 }); });   // 元素符號:實心剪影 SVG,疊在盤面方塊正中央(setTintFill 上白),96px 光柵→顯示縮到 ~23px 保脆
         if (!this.textures.exists('fx_atkup')) this.load.image('fx_atkup', 'art/ui/atk_up.webp'); if (!this.textures.exists('fx_atkdown')) this.load.image('fx_atkdown', 'art/ui/atk_down.webp');   // 🆕剋屬預覽徽章圖示(金劍+/灰藍劍−,各~7KB,每場都載;_counterBadge 用)
+        if (!this.textures.exists('ui_hint')) this.load.image('ui_hint', 'art/ui/icon_hint.webp'); if (!this.textures.exists('lucide_home')) this.load.svg('lucide_home', 'art/icons/lucide_home.svg', { width: 96, height: 96 });   // 🆕2026-09-25 敵情簡報「💡破法」+ 結算/暫停面板「🏠回大廳」:GameScene 沒有泛用 rebuild(),改eager 預載避免面板開啟當下 fallback 文字
         showLoadBar(this);
       }   // ⚠️ 音訊(BGM 3~8MB + 音效)改「非阻塞」載入(見 _startStageAudio):不放阻塞 preload,否則弱網卡關甚至開不了
       // 非阻塞載入本關 BGM + 戰鬥音效(在 create 之後動態載;關卡已可玩,聲音背景串流→弱網不卡關)
@@ -2543,9 +2659,44 @@
       // 重設待機浮動(idempotent):先停舊的;已死/無 sprite/封印中→不啟動(封印=定身,不跳不浮)
       refreshBob(e) {
         if (e.bob) { e.bob.stop(); e.bob = null; }
-        if (e.dead || !e.sprite || !e.sprite.active || (e.sealed > 0)) return;
+        if (e.dead || !e.sprite || !e.sprite.active || (e.sealed > 0)) { this._breathStop(e); return; }
         if (e.restY != null) e.sprite.setY(e.restY);
         e.bob = this.idleAnim(e, e.restY != null ? e.restY : e.sprite.y);
+        this._breathStart(e);   // 🫁 每次待機動畫重啟時一併恢復呼吸(受擊/攻擊蓄力/入場等演出結束都會走到這)
+      }
+      // 🫁 只有金屬怪(c71-73 純礦物)與鐵機人(e.iron>0,會放鐵塊的機關怪)不呼吸(出戲);
+      // 金/銀錢怪(c74-76)是生物系照常呼吸——2026-09-25 使用者指正,原本誤用 MONEY_CARDS(c71-76 全包)排除太寬
+      _isMetalEnemy(e) {
+        return !!(e && ((e.cardId === 'c71' || e.cardId === 'c72' || e.cardId === 'c73') || (e.iron > 0)));
+      }
+      // 🫁 待機呼吸:scaleY 微漲(×1.025)/scaleX 微縮(×0.99),每隻 duration 820~980ms、delay 0~500ms 隨機錯開(避免全場同喘)。
+      // 敵圖 origin 是 (0.5,0.5)(見 spawnEnemies 的 add.image(...).setOrigin(0.5)),縮放會讓中心不動、腳底跟著上下飄;
+      // 用 onUpdate 依「這一幀 displayHeight 相對起始值的差」算出補償量,只把差值疊加到 sp.y(不寫絕對值)——
+      // 這樣才不會跟 idleAnim 的浮動/小跳(也在動 sp.y)互搶,兩者疊加後腳底仍貼地、頭頂自然起伏。
+      // 呼叫點:refreshBob(統一恢復)/enemyEnter/killEnemy/knockEnemy/enemyAttack/_eneLunge/_eneCast/bossTransform 一覽見交辦回報。
+      _breathStart(e) {
+        if (!e || !e.sprite || !e.sprite.active || e.dead || e._breathTw) return;
+        if (this._isMetalEnemy(e)) return;
+        const sp = e.sprite, bx = sp.scaleX, by = sp.scaleY, baseH = sp.displayHeight;
+        let lastComp = 0;
+        e._breathBase = { sx: bx, sy: by };   // 🆕2026-09-25 記下這次呼吸的基準縮放,供 _breathStop 停止時復原(避免 sealed 早退等路徑把 sprite 凍在半途縮放,下次再疊加漂移)
+        e._breathComp = 0;
+        e._breathTw = this.tweens.add({
+          targets: sp, scaleY: by * 1.025, scaleX: bx * 0.99,
+          duration: 820 + Math.random() * 160, delay: Math.random() * 500,
+          yoyo: true, repeat: -1, ease: 'Sine.easeInOut',
+          onUpdate: () => { const comp = (baseH - sp.displayHeight) / 2; sp.y += (comp - lastComp); lastComp = comp; e._breathComp = comp; }   // 🆕2026-09-25 把累計的 y 補償量掛在 e 上,供 _breathStop 扣回
+        });
+      }
+      _breathStop(e) {
+        if (e && e._breathTw) {
+          e._breathTw.stop(); e._breathTw = null;
+          if (e.sprite && e.sprite.active && e._breathBase) {   // 🆕2026-09-25 停在半途時 scale/y 會殘留變形值;sprite 還在才復原(死亡/銷毀不動它),恢復到這次呼吸的基準比例並扣回累計的 y 補償(等冪:呼叫點若接著自己 setScale/setY 會再覆蓋一次,不衝突)
+            e.sprite.setScale(e._breathBase.sx, e._breathBase.sy);
+            if (e._breathComp) e.sprite.y -= e._breathComp;
+          }
+          e._breathComp = 0;
+        }
       }
       // 敵 HP 條:圓角底 + 圓角血量 + 白色圓角外框(用 Graphics 重畫,hpRatio 動畫時 onUpdate 呼叫)
       drawHpBar(e) {
@@ -2655,11 +2806,18 @@
         this.drawBG();
 
         // nav(最高層;無背景條,文字加深色描邊保可讀)
-        this.goldTxt = this.add.text(10, 13, '💰 0', { fontFamily: EMOJIFONT, fontSize: '14px', color: '#ffe08a' }).setOrigin(0, 0.5).setStroke('#1a1208', 4).setDepth(DEPTH.nav);
-        this.chestTxt = this.add.text(298, 13, '📦 0', { fontFamily: EMOJIFONT, fontSize: '14px', color: '#cfe8ff' }).setOrigin(0, 0.5).setStroke('#1a1208', 4).setDepth(DEPTH.nav);
-        const gear = this.add.text(404, 13, '⚙', { fontFamily: EMOJIFONT, fontSize: '21px', color: '#f3e9d8' }).setOrigin(0.5).setStroke('#1a1208', 4).setDepth(DEPTH.nav);
-        gear.setInteractive(new Phaser.Geom.Rectangle(-17, -15, 34, 30), Phaser.Geom.Rectangle.Contains);
-        gear.on('pointerup', () => this.showMenu());
+        this._goldIco = gameIcon(this, 10 + 8, 13, 'ui_coin', 16); if (this._goldIco) this._goldIco.setDepth(DEPTH.nav);   // 🆕2026-09-25 批3:💰→ui_coin,📦→ui_crate,⚙→lucide settings(圖未就緒時 fallback 原 emoji/字元,不開天窗)
+        this.goldTxt = this.add.text(this._goldIco ? 10 + 20 : 10, 13, this._goldIco ? '0' : '💰 0', { fontFamily: EMOJIFONT, fontSize: '14px', color: '#ffe08a' }).setOrigin(0, 0.5).setStroke('#1a1208', 4).setDepth(DEPTH.nav);
+        this._chestIco = gameIcon(this, 298 + 8, 13, 'ui_crate', 16); if (this._chestIco) this._chestIco.setDepth(DEPTH.nav);
+        this.chestTxt = this.add.text(this._chestIco ? 298 + 20 : 298, 13, this._chestIco ? '0' : '📦 0', { fontFamily: EMOJIFONT, fontSize: '14px', color: '#cfe8ff' }).setOrigin(0, 0.5).setStroke('#1a1208', 4).setDepth(DEPTH.nav);
+        // ⚙ 系統鈕:深色底圓當「襯底+點擊區」——lucide 細線齒輪在花背景上會淡到像消失(2026-09-25 使用者回報);
+        // 且舊的自訂 hitArea 矩形是文字物件座標,套在 96px SVG 材質的 Image 上只蓋到角落=點不到,改由底圓收事件
+        const _gearBg = this.add.circle(404, 13, 15, 0x1a1208, 0.55).setDepth(DEPTH.nav);
+        const _gearIco = lucideIcon(this, 404, 13, 'settings', 22, _hex2num('#f3e9d8'));
+        const gear = _gearIco || this.add.text(404, 13, '⚙', { fontFamily: EMOJIFONT, fontSize: '21px', color: '#f3e9d8' }).setOrigin(0.5).setStroke('#1a1208', 4);
+        gear.setDepth(DEPTH.nav);
+        _gearBg.setInteractive(new Phaser.Geom.Circle(15, 15, 18), Phaser.Geom.Circle.Contains);
+        _gearBg.on('pointerup', () => this.showMenu());
 
         // 我方卡(正方形,背景之上)
         for (let i = 0; i < 5; i++) {
@@ -2672,9 +2830,10 @@
           const abtn = this.add.container(x, CARDS_Y - 40, []).setDepth(DEPTH.abtn);
           const abg = this.add.circle(0, 0, 13, 0x2b2014).setStrokeStyle(2, 0x5a4128);
           const aic = this.add.text(0, 0, '', { fontFamily: EMOJIFONT, fontSize: '12px', color: '#fff' }).setOrigin(0.5);
-          abtn.add([abg, aic]); abtn.setSize(30, 30).setInteractive(new Phaser.Geom.Rectangle(-15, -15, 30, 30), Phaser.Geom.Rectangle.Contains);
+          const aiIm = this.add.image(0, 0, 'el_fire').setDisplaySize(16, 16).setVisible(false);   // 🆕2026-09-25 批4:技能iconKey圖(教學/課程 abtn 按鈕用,取代aic疊字emoji);初始貼 el_fire 佔位(GameScene 恆已載,見 preload 2517)保證建構當下就有合法材質,renderCharges 依技能換圖
+          abtn.add([abg, aic, aiIm]); abtn.setSize(30, 30).setInteractive(new Phaser.Geom.Rectangle(-15, -15, 30, 30), Phaser.Geom.Rectangle.Contains);
           abtn.on('pointerup', () => this.fireActive(i));
-          this.teamCards.push({ rect, txt, storeObj, abtn, abg, aic, el: null, pulse: null, img: null });
+          this.teamCards.push({ rect, txt, storeObj, abtn, abg, aic, aiIm, el: null, pulse: null, img: null });
         }
 
         // 我方血條 + 資訊列
@@ -2737,10 +2896,10 @@
         const g = this.add.container(CX, Math.round(H / 2), []).setDepth(9500);   // 畫面正中央(上下也置中)
         g.add(this.add.rectangle(0, 0, W, 182, 0x000000, 0.58));
         g.add(this.add.rectangle(0, -91, W, 3, 0xffd56a, 0.75)); g.add(this.add.rectangle(0, 91, W, 3, 0xffd56a, 0.75));
-        g.add(this.add.text(0, -56, d.emoji + ' ' + tr(d.name), { fontFamily: EMOJIFONT, fontSize: '36px', color: '#ffe9b0', fontStyle: 'bold', stroke: '#000000', strokeThickness: 5 }).setOrigin(0.5));
+        g.add(fitText(this.add.text(0, -56, d.emoji + ' ' + tr(d.name), { fontFamily: EMOJIFONT, fontSize: '36px', color: '#ffe9b0', fontStyle: 'bold', stroke: '#000000', strokeThickness: 5 }).setOrigin(0.5), W - 24));   // 🈳 en 城名防切邊
         g.add(this.add.text(0, -16, ((this.diff && tr(this.diff.name)) || ''), { fontFamily: EMOJIFONT, fontSize: '23px', color: '#ffd56a', fontStyle: 'bold' }).setOrigin(0.5));
         if (this.lead) {
-          g.add(this.add.text(0, 26, '🎖 ' + tr(this.lead.name), { fontFamily: EMOJIFONT, fontSize: '26px', color: '#ffe08a', fontStyle: 'bold' }).setOrigin(0.5));
+          g.add(fitText(this.add.text(0, 26, '🎖 ' + tr(this.lead.name), { fontFamily: EMOJIFONT, fontSize: '26px', color: '#ffe08a', fontStyle: 'bold' }).setOrigin(0.5), W - 24));   // 🈳 en 隊長技名防切邊
           g.add(this.add.text(0, 62, tr(this.lead.desc), { fontFamily: EMOJIFONT, fontSize: '19px', color: '#ffeec4', align: 'center', lineSpacing: 4, wordWrap: { width: W - 32 } }).setOrigin(0.5));
         }
         g.setScale(1, 0); this.tweens.add({ targets: g, scaleY: 1, duration: 280, ease: 'Back.out' });
@@ -3052,7 +3211,7 @@
       // 🆕教學⑤:剋屬強化演出(大字「剋屬!」+放大傷害數字),疊在既有命中特效之上;只在 this.tut 且真的剋屬命中時觸發(見 resolve() 呼叫點)
       _tutCritFx(x, y, dmg) {
         this.shakeCam(260, 0.011);
-        const t = this.add.text(x, y - 60, tr('剋屬!'), { fontFamily: HITFONT, fontSize: '40px', color: '#fff2a0', fontStyle: 'bold', stroke: '#8a2a00', strokeThickness: 7 }).setOrigin(0.5).setDepth(2650).setScale(0.4).setAlpha(0);
+        const t = this.add.text(Math.max(150, Math.min(W - 150, x)), y - 60, tr('剋屬!'),   /* 🈳 en「Weakness hit!」40px 粗×1.15≈280px:x 夾回畫面內 */ { fontFamily: HITFONT, fontSize: '40px', color: '#fff2a0', fontStyle: 'bold', stroke: '#8a2a00', strokeThickness: 7 }).setOrigin(0.5).setDepth(2650).setScale(0.4).setAlpha(0);
         this.tweens.add({ targets: t, alpha: 1, scale: 1.15, duration: 200, ease: 'Back.out' });
         this.tweens.add({ targets: t, scale: 1, duration: 100, delay: 200 });
         this.tweens.add({ targets: t, alpha: 0, y: t.y - 24, delay: 720, duration: 340, onComplete: () => t.destroy() });
@@ -3411,7 +3570,7 @@
         const _canPull = !freePullDone();   // 已領過(重玩複習)→不再提「送十連」,避免誤導
         g.add(this.add.text(CX, cy - 44, _canPull ? tr('老玩家可以跳過教學,\n一樣送你「新手十連抽」!') : tr('老玩家可以直接跳過這段教學。'), { fontFamily: EMOJIFONT, fontSize: FS.body, color: T.ink2, align: 'center', lineSpacing: 8 }).setOrigin(0.5));
         this.mkBtn(g, cy + 26, _canPull ? tr('✅ 我是老手,跳過領十連') : tr('✅ 跳過教學'), () => { this._tutSkipG = null; this._doTutSkip(_canPull); }, T.ok);
-        this.mkBtn(g, cy + 86, tr('🎓 還是玩教學吧'), () => { g.destroy(); this._tutSkipG = null; }, null);
+        this.mkBtn(g, cy + 86, tr('🎓 還是玩教學吧'), () => { g.destroy(); this._tutSkipG = null; }, null, 'graduation-cap');   // 🆕2026-09-25 批3:🎓→同一顆 lucide graduation-cap
       }
       _doTutSkip(giveFreePull) {   // 真正執行跳過(原 tutSkip 內容)+ 視情況設免費十連旗標(大廳 create 讀到 settings.freePull 就 reveal)
         this.tutClearHint(); if (this.tutG) { this.tutG.destroy(); this.tutG = null; } if (this.tutBg) { this.tutBg.destroy(); this.tutBg = null; } this.tut = null;
@@ -3654,7 +3813,7 @@
           e.baseScale = e.sprite.scaleX;   // 受擊縮放動畫的基準(圖=szc/320、emoji=1),回彈要回到這個值,不能歸 1
           e.sprite.on('pointerdown', () => this.selectTarget(i));
           e.turnG = this.add.container(x - szc / 2 + 12, cy - szc / 2 + 11, []);   // 出手倒數:沙漏+數字,移到敵卡左上
-          e.glass = this.add.text(0, 0, '⏳', { fontFamily: EMOJIFONT, fontSize: '16px' }).setOrigin(0.5);
+          e.glass = lucideIcon(this, 0, 0, 'hourglass', 16, 0xffd56a) || this.add.text(0, 0, '⏳', { fontFamily: EMOJIFONT, fontSize: '16px' }).setOrigin(0.5);   // 🆕2026-09-25 批3:⏳→lucide hourglass(金色);圖沒就緒→退回原 emoji。updLeadBadge/updateEnemies 之後只對它動 .angle(翻轉動畫),Image/Text 都支援,安全代換
           e.turnTx = this.add.text(11, 0, String(e.timer), { fontFamily: EMOJIFONT, fontSize: '18px', color: '#eaf3ff', fontStyle: 'bold', stroke: '#1a0d05', strokeThickness: 4 }).setOrigin(0, 0.5);
           e.turnG.add([e.glass, e.turnTx]);
           e.hpW = Math.round(szc * HP_BAR_W); e.hpx = x - e.hpW / 2;   // 血條較窄、置中於敵下緣
@@ -3682,7 +3841,7 @@
           else if (e.dot) { gt = tr('🔥 灼燒'); gc = '#ffb09a'; } else if (e.regen) { gt = tr('💚 回血'); gc = '#9ae0a8'; } else if (e.paralyze) { gt = tr('🕸️ 蜘蛛網'); gc = '#d8d8e0'; } else if (e.healAlly) { gt = tr('💚 補師'); gc = '#9ae0a8'; } else if (e.eatStored > 0) { gt = tr('💨 消屬塊'); gc = '#dcffb0'; } else if (e.junk) { gt = tr('🔒 封鎖'); gc = '#c4a8e0'; }
           if (gt) { e.gateTx = this.add.text(x, cy + szc / 2 + 9, gt, { fontFamily: EMOJIFONT, fontSize: '13px', color: gc, fontStyle: 'bold', stroke: '#0a1420', strokeThickness: 4 }).setOrigin(0.5); }   // 🔎40+:敵人機制/破盾門檻是策略關鍵字,10→13px+加粗描邊
         });
-        if (!this.enemyLab) this.enemies.forEach(e => { if (e.shield && !e.dead && e.sprite) { e.shieldUp = true; e._hitGate0 = e.hitGate || 0; e._comboGate0 = e.comboGate || 0; this._buildATField(e, e.shieldKind || 'hit'); } });   // 🛡盾兵/盾王:進場即帶盾罩;存原門檻(重建還原用,破盾會清成0)
+        if (!this.enemyLab) this.enemies.forEach(e => { if (e.shield && !e.dead && e.sprite) { e.shieldUp = true; e._hitGate0 = e.hitGate || 0; e._comboGate0 = e.comboGate || 0; e._shieldPending = true; } });   // 🛡盾兵/盾王:減傷邏輯進場即生效(shieldUp),但盾罩視覺延到 enemyEnter 落地才展開(_shieldPending,2026-09-25 使用者回報「怪還沒登場盾就浮在空地」)
         this.enemies.forEach(e => { if (e.shadow) this.enemyG.add(e.shadow); });   // 影は全 sprite の背面(先に add)
         // 敵方同層 z 序:敵中 > 敵左 > 敵右(越靠中央畫越上;同距時左>右)。依此由後往前加入容器
         const zorder = FIVE ? [3, 4, 0, 2, 1] : THREE ? [1, 0, 2] : this.enemies.map((e, i) => i).sort((a, b) => {   // 前2後1:中間(1)先加畫在底(站後排被半遮)、兩側(0左/2右)後加;前3後2同理;平排則靠中央者最上
@@ -3916,11 +4075,15 @@
           const a = activeSkill(card.el, this.presetTeam && this.presetTeam[i] && this.presetTeam[i].id);
           if (card._coin) {   // 🪙硬幣 sprite:更新圖示/剩餘手數/蓄滿鬥氣;隱藏舊 Phaser 圓鈕
             if (card.abtn) card.abtn.setVisible(false);
-            if (!a) { card._coin.img.setVisible(false); card._coin.txt.setVisible(false); if (card._coin.hit.input) card._coin.hit.input.enabled = false; this._coinGlow(card, false); return; }
-            card._coin.img.setVisible(true); card._coin.txt.setVisible(true); if (card._coin.hit.input) card._coin.hit.input.enabled = true;
+            if (!a) { card._coin.img.setVisible(false); card._coin.txt.setVisible(false); if (card._coin.ic) card._coin.ic.setVisible(false); if (card._coin.hit.input) card._coin.hit.input.enabled = false; this._coinGlow(card, false); return; }
+            card._coin.img.setVisible(true); if (card._coin.hit.input) card._coin.hit.input.enabled = true;
             const rdy = (this.charge[i] || 0) >= a.cd;
             card._coin.img.setTexture(rdy ? this._coinTex(card.el) : this._coinTex('dim')).setDisplaySize(30, 30);   // 未滿→暗底,白數字明顯;滿→彩色元素
-            card._coin.txt.setText(rdy ? (COIN_EL[card.el] || a.icon) : String(Math.max(0, a.cd - (this.charge[i] || 0)))).setFontSize(rdy ? '15px' : '14px');
+            const _icKey = (a.iconKey && this.textures.exists(a.iconKey)) ? a.iconKey : ('el_' + card.el);   // 🆕2026-09-25 批5:主戰鬥硬幣蓄滿優先秀該技能自己的 iconKey(sk_*=14顆技能效果圖 或 el_*=五屬預設技);沒圖才退回批3「一律屬性圖」el_* 行為(el_* 恆已載,這條退路恆可用)
+            const useIc = rdy && card._coin.ic && this.textures.exists(_icKey);   // 再不行(理論不會走到)才退原 emoji/倒數文字,即下面現有鏈
+            if (card._coin.ic) { card._coin.ic.setVisible(!!useIc); if (useIc) { card._coin.ic.setTexture(_icKey).setDisplaySize(16, 16); if (_icKey.indexOf('el_') === 0) card._coin.ic.setTintFill(0xffffff); else card._coin.ic.clearTint(); } }
+            card._coin.txt.setVisible(!useIc);
+            if (!useIc) card._coin.txt.setText(rdy ? (COIN_EL[card.el] || a.icon) : String(Math.max(0, a.cd - (this.charge[i] || 0)))).setFontSize(rdy ? '15px' : '14px');
             this._coinGlow(card, rdy);   // 🔥可施放→硬幣自己發光(卡片鬥氣改給「有屬塊」用)
             return;
           }
@@ -3929,7 +4092,11 @@
           card.abtn.setVisible(true);
           const ready = (this.charge[i] || 0) >= a.cd;
           card.abg.setFillStyle(ready ? 0x6a5020 : 0x2b2014).setStrokeStyle(2, ready ? 0xffe066 : 0x5a4128);
-          card.aic.setText(ready ? a.icon : String(Math.max(0, a.cd - (this.charge[i] || 0)))).setFontSize(ready ? '14px' : '11px');   // 滿→icon可點;否則顯示剩餘手數
+          const _ikReady = ready && a.iconKey && this.textures.exists(a.iconKey);   // 🆕2026-09-25 批4:教學/課程abtn按鈕蓄滿→優先秀 iconKey 自製圖,取代疊字emoji(a.icon);沒圖(理論不會,見 preload 2500/2517)才退回原 emoji
+          if (card.aiIm) card.aiIm.setVisible(!!_ikReady);
+          card.aic.setVisible(!_ikReady);
+          if (_ikReady) { card.aiIm.setTexture(a.iconKey).setDisplaySize(16, 16); if (a.iconKey.indexOf('el_') === 0) card.aiIm.setTintFill(0xffffff); else card.aiIm.clearTint(); }
+          else card.aic.setText(ready ? a.icon : String(Math.max(0, a.cd - (this.charge[i] || 0)))).setFontSize(ready ? '14px' : '11px');   // 滿→icon可點;否則顯示剩餘手數
           if (ready && !card.pulse) card.pulse = this.tweens.add({ targets: card.abtn, scaleX: 1.15, scaleY: 1.15, duration: 480, yoyo: true, repeat: -1, ease: 'Sine.inOut' });
           if (!ready && card.pulse) { card.pulse.stop(); card.pulse = null; card.abtn.setScale(1); }
         });
@@ -3955,9 +4122,10 @@
           if (!card.el) return; const x = card.rect.x, y = CARDS_Y - 40;
           const img = this.add.image(x, y, this._coinTex(card.el)).setDisplaySize(30, 30).setDepth(DEPTH.abtn);
           const txt = this.add.text(x, y, '', { fontFamily: EMOJIFONT, fontSize: '14px', color: '#fff', fontStyle: 'bold' }).setOrigin(0.5).setResolution(3).setDepth(DEPTH.abtn + 1);
+          const ic = this.textures.exists('el_' + card.el) ? this.add.image(x, y, 'el_' + card.el).setDisplaySize(16, 16).setTintFill(0xffffff).setDepth(DEPTH.abtn + 1).setVisible(false) : null;   // 🆕2026-09-25 批3:蓄滿可放時的圖示,取代硬幣上疊字的 emoji;此處貼 el_* 只是佔位(GameScene.preload 固定載五屬 el_* SVG,不會沒有)→建立後立刻呼叫 renderCharges() 換成該技能真正的 iconKey(批5:sk_* 技能圖優先,退回 el_* 屬性圖)
           const hit = this.add.zone(x, y, 58, 34).setInteractive({ useHandCursor: true }).setDepth(DEPTH.abtn + 2);
           hit.on('pointerup', () => this.fireActive(i));
-          card._coin = { img, txt, hit };
+          card._coin = { img, txt, ic, hit };
           if (card.abtn) card.abtn.setVisible(false);
         });
         this.renderCharges();
@@ -4744,7 +4912,7 @@
       }
       _eneLunge(e) {
         if (!e || !e.sprite) return; const sp = e.sprite, ry = (e.restY != null ? e.restY : sp.y), sc = e.baseScale || sp.scaleX || 1;   // 攻擊性技(中毒/麻痺/封鎖):蓄力→朝玩家俯衝→彈回(同敵攻擊)
-        if (e.bob) { e.bob.stop(); e.bob = null; } if (e.knockTw) { e.knockTw.stop(); e.knockTw = null; } this.tweens.killTweensOf(sp); sp.setY(ry); sp.setScale(sc);   // ★重置到基準比例:若正被擊退(縮小中)時施法/俯衝,killTweensOf 砍掉回位後,tween 必須從基準出發,否則 yoyo 會卡在縮小比例
+        if (e.bob) { e.bob.stop(); e.bob = null; } if (e.knockTw) { e.knockTw.stop(); e.knockTw = null; } this._breathStop(e); this.tweens.killTweensOf(sp); sp.setY(ry); sp.setScale(sc);   // ★重置到基準比例:若正被擊退(縮小中)時施法/俯衝,killTweensOf 砍掉回位後,tween 必須從基準出發,否則 yoyo 會卡在縮小比例;呼吸也一併停(蓄力同樣動 scale,不停會打架)
         this.tweens.add({
           targets: sp, y: ry - 10, scaleX: sc * 0.9, scaleY: sc * 1.12, duration: 140, ease: 'Quad.out', onComplete: () => {
             this.tweens.add({
@@ -4757,7 +4925,7 @@
       }
       _eneCast(e) {
         if (!e || !e.sprite) return; const sp = e.sprite, ry = (e.restY != null ? e.restY : sp.y), sc = e.baseScale || sp.scaleX || 1;   // 輔助技(補師/自療/護盾):脹大上浮→落回(詠唱感,非俯衝)
-        if (e.bob) { e.bob.stop(); e.bob = null; } if (e.knockTw) { e.knockTw.stop(); e.knockTw = null; } this.tweens.killTweensOf(sp); sp.setY(ry); sp.setScale(sc);   // ★重置到基準比例:若正被擊退(縮小中)時施法/俯衝,killTweensOf 砍掉回位後,tween 必須從基準出發,否則 yoyo 會卡在縮小比例
+        if (e.bob) { e.bob.stop(); e.bob = null; } if (e.knockTw) { e.knockTw.stop(); e.knockTw = null; } this._breathStop(e); this.tweens.killTweensOf(sp); sp.setY(ry); sp.setScale(sc);   // ★重置到基準比例:若正被擊退(縮小中)時施法/俯衝,killTweensOf 砍掉回位後,tween 必須從基準出發,否則 yoyo 會卡在縮小比例;呼吸也一併停
         this.tweens.add({ targets: sp, y: ry - 12, scaleX: sc * 1.12, scaleY: sc * 1.12, duration: 230, ease: 'Quad.out', yoyo: true, onComplete: () => { if (!e.dead) this.refreshBob(e); } });
       }
       _medicAct(e) {   // 補師出手:雜兵雙模式(滿血攻/受損補);魔王=攻擊(+受損補20%);小兵全滅→詠唱復活(下手成、可被剋屬打斷、共2次額度、成功後力竭CD2)
@@ -4898,7 +5066,7 @@
       _shieldNearMiss(e, txt) {
         if (!e.sprite) return; const ADD = Phaser.BlendModes.ADD, x = e.sprite.x, y = e.sprite.y, sh = e.labShield;   // 近失:盾漣漪一下 + 「差N」約1.8秒慢淡(不一閃即消)
         if (sh) { const rg = this.add.graphics().setDepth(DEPTH.fx).setBlendMode(ADD); rg.lineStyle(3, sh._col || 0xffffff, 0.9); rg.strokePoints(this._hexPts(sh._R || 30), true); rg.x = x; rg.y = y; this.tweens.add({ targets: rg, scaleX: 1.32, scaleY: 1.32, alpha: 0, duration: 420, ease: 'Quad.out', onComplete: () => rg.destroy() }); this.labSnd && this.labSnd('s_block', 0.45); }
-        const t = this.add.text(x, y - 30, tr(txt), { fontFamily: EMOJIFONT, fontSize: '17px', color: '#ffe08a', fontStyle: 'bold', stroke: '#3a2400', strokeThickness: 5 }).setOrigin(0.5).setDepth(DEPTH.fx).setScale(0.4);
+        const t = this.add.text(x, y - 30, tr(txt), { fontFamily: EMOJIFONT, fontSize: '17px', color: '#ffe08a', fontStyle: 'bold', stroke: '#3a2400', strokeThickness: 5 }).setOrigin(0.5).setDepth(DEPTH.fx).setScale(0.4); t.x = Math.max(t.width / 2 + 8, Math.min(W - t.width / 2 - 8, x));   // 🈳 en「{n} combo short」比中文寬,敵人靠邊時夾回畫面內
         this.tweens.add({ targets: t, scaleX: 1, scaleY: 1, duration: 200, ease: 'Back.out' }); this.tweens.add({ targets: t, alpha: 0, y: y - 48, delay: 1100, duration: 720, onComplete: () => t.destroy() });
       }
       demoLabShield(kind) {
@@ -5853,11 +6021,11 @@
         g.add(this.add.text(CX, cy - 58, tr('所有能量塊都放不下了'), { fontFamily: EMOJIFONT, fontSize: FS.cap, color: T.ink2 }).setOrigin(0.5));
         if (!lowHP) {
           const cost = Math.max(1, Math.round(hp * 0.5));
-          g.add(this.add.text(CX, cy - 26, tr('燃燒生命重新凝聚能量?(−{n} ❤️)', { n: cost }), { fontFamily: EMOJIFONT, fontSize: FS.cap, color: T.ink }).setOrigin(0.5));
+          g.add(fitText(this.add.text(CX, cy - 26, tr('燃燒生命重新凝聚能量?(−{n} ❤️)', { n: cost }), { fontFamily: EMOJIFONT, fontSize: FS.cap, color: T.ink }).setOrigin(0.5), 310));   // 🈳 en 縮進 340 面板
           this.mkBtn(g, cy + 18, tr('🩸 花 {n} HP 重洗', { n: cost }), () => { g.destroy(); this.resultOpen = false; this.playerHP = Math.max(1, hp - cost); this.animPlayerHP(false); this._doStuckReshuffle(); }, T.ok);
         } else {
           const gems = getMeta().stones || 0;
-          g.add(this.add.text(CX, cy - 26, gems > 0 ? tr('血量偏低,改用魔法石重洗?(剩 💎{n})', { n: gems }) : tr('血量與魔法石都不足,免費送你重洗一次'), { fontFamily: EMOJIFONT, fontSize: FS.cap, color: T.ink }).setOrigin(0.5));
+          g.add(fitText(this.add.text(CX, cy - 26, gems > 0 ? tr('血量偏低,改用魔法石重洗?(剩 💎{n})', { n: gems }) : tr('血量與魔法石都不足,免費送你重洗一次'), { fontFamily: EMOJIFONT, fontSize: FS.cap, color: T.ink }).setOrigin(0.5), 310));   // 🈳 en 縮進 340 面板
           if (gems > 0) {
             this.mkBtn(g, cy + 18, tr('💎 花 1 重洗'), async () => {
               if (this._busyReshuffle) return; this._busyReshuffle = true;
@@ -5869,7 +6037,7 @@
               g.destroy(); this.resultOpen = false; this._doStuckReshuffle();
             }, T.ok);
           } else {
-            this.mkBtn(g, cy + 18, tr('🔄 免費重洗'), () => { g.destroy(); this.resultOpen = false; this._doStuckReshuffle(); }, T.ok);
+            this.mkBtn(g, cy + 18, tr('🔄 免費重洗'), () => { g.destroy(); this.resultOpen = false; this._doStuckReshuffle(); }, T.ok, 'rotate-ccw');   // 🆕2026-09-25 批3:🔄→lucide rotate-ccw
           }
         }
         this.mkBtn(g, cy + 78, tr('放棄(認輸)'), () => { g.destroy(); this.resultOpen = false; this.gameOver(tr('放棄提煉')); }, T.bad);
@@ -6174,6 +6342,7 @@
       // 👑 魔王階段變身:隨血量切到下一屬,換屬+換招牌行為+演出
       bossTransform(e) {
         const ph = e.phases[e.phaseIdx]; if (!ph) return; e.el = ph.el;
+        this._breathStop(e);   // 🫁 變身換圖+彈跳演出會動 scale,先停呼吸;bossPhaseFX 的彈跳 tween 完成後會重新 _breathStart(用新 baseScale)。放在 !ph 提前 return 之後,避免沒真的變身卻把呼吸停死不會恢復
         const dk = (this.diff && this.diff.key) || 'normal', beh = ph.beh;
         e.hitGate = 0; e.comboGate = 0; e.dot = 0; e.regen = 0; e.paralyze = 0;
         if (beh === 'hit') e.hitGate = 15; else if (beh === 'combo') e.comboGate = (dk === 'advanced') ? 2 : 3;
@@ -6192,13 +6361,13 @@
       bossPhaseFX(e) {
         const col = EL[e.el].color, ADD = Phaser.BlendModes.ADD;
         const sx = e.sprite ? e.sprite.x : CX, sy = e.sprite ? e.sprite.y : BATTLE_CY;
-        const t = this.add.text(CX, BATTLE_CY, tr('👑 魔王變身 · {el}!', { el: tr(EL[e.el].name) }), { fontFamily: EMOJIFONT, fontSize: '24px', color: '#fff', fontStyle: 'bold', stroke: '#1a0d05', strokeThickness: 6 }).setOrigin(0.5).setDepth(DEPTH.fx).setScale(0.4);
+        const t = (_iconLabel(this, CX, BATTLE_CY, tr('👑 魔王變身 · {el}!', { el: tr(EL[e.el].name) }), 24, '#fff', DEPTH.fx) || this.add.text(CX, BATTLE_CY, tr('👑 魔王變身 · {el}!', { el: tr(EL[e.el].name) }), { fontFamily: EMOJIFONT, fontSize: '24px', color: '#fff', fontStyle: 'bold', stroke: '#1a0d05', strokeThickness: 6 }).setOrigin(0.5).setDepth(DEPTH.fx)).setScale(0.4);   // 🆕2026-09-25 批3:👑→icon_crown(有描邊 fallback 版維持原樣,icon 版無描邊但深底夠讀)
         this.tweens.add({ targets: t, scale: 1, duration: 320, ease: 'Back.out' }); this.tweens.add({ targets: t, alpha: 0, delay: 1100, duration: 420, onComplete: () => t.destroy() });
         const f = this.add.rectangle(CX, H / 2, W, H, col, 0.32).setDepth(DEPTH.flash); this.tweens.add({ targets: f, alpha: 0, duration: 450, onComplete: () => f.destroy() });
         const fl = this.add.circle(sx, sy, 46, 0xffffff, 0.95).setBlendMode(ADD).setDepth(DEPTH.fx); this.tweens.add({ targets: fl, scale: 2.2, alpha: 0, duration: 400, ease: 'Quad.out', onComplete: () => fl.destroy() });   // 白光爆閃(蓋換圖瞬間→像變身)
         [0, 120].forEach(dl => { const ring = this.add.circle(sx, sy, 22, col, 0).setStrokeStyle(5, col, 0.95).setBlendMode(ADD).setDepth(DEPTH.fx); this.tweens.add({ targets: ring, scale: 3.4, alpha: 0, duration: 560, delay: dl, ease: 'Cubic.out', onComplete: () => ring.destroy() }); });   // 擴散屬色雙光環
         for (let k = 0; k < 16; k++) { const a = Math.random() * Math.PI * 2, r0 = 52 + Math.random() * 44, d = this.add.circle(sx, sy, 3 + Math.random() * 2.2, col, 1).setBlendMode(ADD).setDepth(DEPTH.fx); this.tweens.add({ targets: d, x: sx + Math.cos(a) * r0, y: sy + Math.sin(a) * r0, alpha: 0, scale: 0.2, duration: 480 + Math.random() * 240, ease: 'Quad.out', onComplete: () => d.destroy() }); }   // 屬色能量迸發
-        if (e.sprite) { const bs = e.baseScale || e.sprite.scaleX || 1; this.tweens.add({ targets: e.sprite, scaleX: bs * 1.35, scaleY: bs * 1.35, duration: 210, yoyo: true, ease: 'Back.out' }); }   // 換新型態彈一下(回基準)
+        if (e.sprite) { const bs = e.baseScale || e.sprite.scaleX || 1; this.tweens.add({ targets: e.sprite, scaleX: bs * 1.35, scaleY: bs * 1.35, duration: 210, yoyo: true, ease: 'Back.out', onComplete: () => { if (!e.dead) this._breathStart(e); } }); }   // 換新型態彈一下(回基準);彈完(用變身後新 baseScale)重新開始呼吸
         this.shakeCam(240, 0.008);
       }
 
@@ -6473,7 +6642,7 @@
           });
         };
         loop();
-        const txt = this.add.text(CX, Math.min(H - 18, CARDS_Y + 130), tr('👆 這是「屬塊」!抓下來蓋到盤面缺口,能湊更多消除'), { fontFamily: EMOJIFONT, fontSize: '17px', color: '#ffffff', fontStyle: 'bold', stroke: '#000000', strokeThickness: 4, align: 'center' }).setOrigin(0.5).setDepth(2560);
+        const txt = this.add.text(CX, Math.min(H - 18, CARDS_Y + 130), tr('👆 這是「屬塊」!抓下來蓋到盤面缺口,能湊更多消除'), { fontFamily: EMOJIFONT, fontSize: '17px', color: '#ffffff', fontStyle: 'bold', stroke: '#000000', strokeThickness: 4, align: 'center', wordWrap: { width: W - 40 } }).setOrigin(0.5).setDepth(2560);   // 🈳 en 長句折行
         objs.push(txt);
         this._storeHintTimer = this.time.delayedCall(7000, () => this._storeHintClearObjs());   // ~7秒沒拖→自動清,免玩家沒拖時手指一直在畫面上
       }
@@ -6565,7 +6734,7 @@
         const ox = opts.fromOrb ? opts.fromOrb.x : (e.sprite ? e.sprite.x : CX), oy = opts.fromOrb ? opts.fromOrb.y : (e.sprite ? e.sprite.y : 60), col = EL[e.el].color;
         if (e.sprite && !opts.fromOrb) {
           const sp = e.sprite, ry = (e.restY != null ? e.restY : sp.y), sc = e.baseScale || sp.scaleX || 1;   // 敵攻:蓄力→俯衝→彈回
-          if (e.bob) { e.bob.stop(); e.bob = null; } if (e.knockTw) { e.knockTw.stop(); e.knockTw = null; } this.tweens.killTweensOf(sp); sp.setY(ry); sp.setScale(sc);   // ★重置到基準比例:若正被擊退(縮小中)時施法/俯衝,killTweensOf 砍掉回位後,tween 必須從基準出發,否則 yoyo 會卡在縮小比例
+          if (e.bob) { e.bob.stop(); e.bob = null; } if (e.knockTw) { e.knockTw.stop(); e.knockTw = null; } this._breathStop(e); this.tweens.killTweensOf(sp); sp.setY(ry); sp.setScale(sc);   // ★重置到基準比例:若正被擊退(縮小中)時施法/俯衝,killTweensOf 砍掉回位後,tween 必須從基準出發,否則 yoyo 會卡在縮小比例;呼吸也一併停
           this.tweens.add({
             targets: sp, y: ry - 10, scaleX: sc * 0.9, scaleY: sc * 1.12, duration: 140, ease: 'Quad.out', onComplete: () => {   // 往上縮蓄力
               this.tweens.add({
@@ -6662,7 +6831,7 @@
         if (e.labShield) { if (e.labShield._rip) e.labShield._rip.remove(); e.labShield.destroy(); e.labShield = null; }   // 🛡盾兵/盾王死掉→盾罩一併清掉
         if (this.hitLab) {   // 實驗室:也演敗陣化光,演完原地重生(順便看入場動畫)→ 可一直測
           if (e._labDying) return; e._labDying = true;
-          e.dead = true; if (e.bob) { e.bob.stop(); e.bob = null; } if (e.knockTw) { e.knockTw.stop(); e.knockTw = null; }
+          e.dead = true; if (e.bob) { e.bob.stop(); e.bob = null; } if (e.knockTw) { e.knockTw.stop(); e.knockTw = null; } this._breathStop(e);   // 🫁 死亡永久停呼吸(下方 delayedCall 重生會走 enemyEnter→refreshBob 重新啟動)
           this.playDeath(e);
           this.time.delayedCall(2000, () => {   // 打飛演出加長到 ~2s→重生延後,免中途被重置
             e.dead = false; e._labDying = false; e.hp = e.max; e.dispHp = null; if (e.hpTw) { e.hpTw.stop(); e.hpTw = null; }
@@ -6672,7 +6841,7 @@
           });
           return;
         }
-        e.dead = true; if (e.bob) { e.bob.stop(); e.bob = null; } if (e.knockTw) { e.knockTw.stop(); e.knockTw = null; }   // ★ bob 在受擊擊退時會被設 null,務必判空(否則每次擊殺都丟例外→鎖死)
+        e.dead = true; if (e.bob) { e.bob.stop(); e.bob = null; } if (e.knockTw) { e.knockTw.stop(); e.knockTw = null; } this._breathStop(e);   // ★ bob 在受擊擊退時會被設 null,務必判空(否則每次擊殺都丟例外→鎖死);呼吸也永久停(死亡)
         this._clearEnemyIron(e);   // 🔩鐵機人被打倒→清掉牠放的鐵塊(逐隻歸屬,不動別隻的;玩家已清的略過)→不再賴到下一關
         this._enemyKi && this._enemyKi(e, 0);   // 死了→立刻收掉牠的鬥氣光暈(免殘留飄在陣亡處)
         if (e.cardId && e.flee) { this._bonusKilled.push(e.cardId); }   // 🆕2026-08-02 bonus 關獎勵怪(flee 旗標識別)被玩家真正打死→記進 _bonusKilled,回報 run/complete;逃跑移除走 _fleeAct,不經過這裡→不會誤記
@@ -6748,12 +6917,12 @@
       // 敵入場:從「遠處(小、偏高、淡)」浮現到定位 —— 像往深處推進後,新敵自遠方逼近
       enemyEnter(e, delay) {
         if (!e || !e.sprite) return; const sp = e.sprite, bs = e.baseScale || 1, ry = (e.restY != null ? e.restY : sp.y), rx = (e.card ? e.card.x : sp.x); delay = delay || 0;
-        if (e.bob) { e.bob.stop(); e.bob = null; } this.tweens.killTweensOf(sp);
+        if (e.bob) { e.bob.stop(); e.bob = null; } this._breathStop(e); this.tweens.killTweensOf(sp);
         sp.setScale(bs * 0.22).setAlpha(0).setAngle(0).setPosition(rx, ry - 48);   // ★ 用敵卡原始 x(非被打飛後的位移 x)→ 重生不再往左飄
         this.tweens.add({ targets: sp, alpha: 1, duration: 220, delay: delay });
         this.tweens.add({
           targets: sp, scaleX: bs, scaleY: bs, y: ry, duration: 460, delay: delay, ease: 'Back.out',
-          onComplete: () => { sp.setScale(bs); sp.setY(ry); this.refreshBob(e); }
+          onComplete: () => { sp.setScale(bs); sp.setY(ry); this.refreshBob(e); if (e._shieldPending && !e.dead) { e._shieldPending = false; this._buildATField(e, e.shieldKind || 'hit'); } }   // 🛡盾罩在落地瞬間展開(對齊「怪出現後才展開」)
         });
         [e.turnG, e.hpGfx, e.shadow, e.weakBadge].forEach(o => { if (o) { o.setAlpha(0); this.tweens.add({ targets: o, alpha: 1, duration: 300, delay: delay + 150 }); } });
       }
@@ -6787,8 +6956,8 @@
         this.resultOpen = true; const g = this.overlay(); const cy = H / 2, cost = 1, T = UI();   // HP 歸零→復活問詢 model
         g.add(roundRectG(this, CX, cy - 2, 340, 250, 16, T.surf, 1, T.divider, 1.5));   // 白色圓角面板(暗背幕之上)
         g.add(this.add.text(CX, cy - 98, tr('💔 HP 歸零!'), { fontFamily: EMOJIFONT, fontSize: FS.sub, color: T.badTx, fontStyle: 'bold' }).setOrigin(0.5));
-        g.add(this.add.text(CX, cy - 62, reason || '', { fontFamily: EMOJIFONT, fontSize: FS.cap, color: T.ink2 }).setOrigin(0.5));
-        g.add(this.add.text(CX, cy - 30, tr('花 💎{cost} 復活、回滿 HP 繼續?  (剩 💎{left})', { cost, left: (getMeta().stones || 0) }), { fontFamily: EMOJIFONT, fontSize: FS.cap, color: T.ink }).setOrigin(0.5));
+        g.add(fitText(this.add.text(CX, cy - 62, reason || '', { fontFamily: EMOJIFONT, fontSize: FS.cap, color: T.ink2 }).setOrigin(0.5), 310));   // 🈳 死因(如「Burned to Death」)縮進 340 面板
+        g.add(fitText(this.add.text(CX, cy - 30, tr('花 💎{cost} 復活、回滿 HP 繼續?  (剩 💎{left})', { cost, left: (getMeta().stones || 0) }), { fontFamily: EMOJIFONT, fontSize: FS.cap, color: T.ink }).setOrigin(0.5), 310));   // 🈳 en 縮進 340 面板
         this.mkBtn(g, cy + 18, tr('💎 復活(回滿 HP)'), async () => {   // 🔐 花石頭改打伺服器(POST /api/wallet/spend {action:'revive'});失敗維持面板不關,玩家仍可改選放棄;_busyRevive 防連點(死亡瞬間手滑雙擊=扣兩顆石只復活一次)
           if (this._busyRevive) return; this._busyRevive = true;
           let r;
@@ -6873,7 +7042,7 @@
       updateBars() {
         if ((!this.pHpTw || !this.pHpTw.isPlaying()) && !this._pHpHealPending) { this.pHpRatio = Math.max(0, Math.min(1, this.playerHP / this.maxHP)); this.pHpLag = this.pHpRatio; this.drawPlayerHp(); }   // 動畫扣/補血中→不瞬間蓋掉;_pHpHealPending(教學回血待演)→ 這段空窗也先別同步,留給慢動畫
         this.pHpTxt.setText(this.playerHP + '/' + this.maxHP);   // 去掉「我方」
-        this.chestTxt.setText('📦 ' + (this.chests || 0)); this.goldTxt.setText('💰 ' + (this.gold || 0));
+        this.chestTxt.setText(this._chestIco ? String(this.chests || 0) : ('📦 ' + (this.chests || 0))); this.goldTxt.setText(this._goldIco ? String(this.gold || 0) : ('💰 ' + (this.gold || 0)));
       }
 
       /* 特效 */
@@ -6901,7 +7070,8 @@
         if (tgt && !tgt.dead) {
           tgt.sprite.setTint(0xffffff);
           const bs = tgt.baseScale || 1; if (tgt.hitTw) tgt.hitTw.stop(); tgt.sprite.setScale(bs);   // 縮放動畫相對基準縮放(史來姆圖 base≈0.39),先停掉前一個受擊tween避免連擊疊加變大
-          tgt.hitTw = this.tweens.add({ targets: tgt.sprite, scaleX: bs * 1.18, scaleY: bs * 1.18, duration: 100, yoyo: true, onComplete: () => { tgt.sprite.setScale(bs); if (tgt.sealed > 0) { tgt.sprite.setTint(0xaad8ff).setAlpha(0.82); } else tgt.sprite.clearTint(); tgt.hitTw = null; } });
+          this._breathStop(tgt);   // 🫁 受擊暫停呼吸,演完在 onComplete 恢復(此路徑目前未被呼叫,保留一致性)
+          tgt.hitTw = this.tweens.add({ targets: tgt.sprite, scaleX: bs * 1.18, scaleY: bs * 1.18, duration: 100, yoyo: true, onComplete: () => { tgt.sprite.setScale(bs); if (tgt.sealed > 0) { tgt.sprite.setTint(0xaad8ff).setAlpha(0.82); } else tgt.sprite.clearTint(); tgt.hitTw = null; if (!tgt.dead) this._breathStart(tgt); } });
         }   // ★封印中受擊→還原藍 tint(別被白閃清掉)
         const flash = this.add.circle(x, y, 12, 0xffffff, 0.9).setDepth(DEPTH.proj);   // 命中:亮白爆閃
         this.tweens.add({ targets: flash, scale: 0.2, alpha: 0, duration: 220, onComplete: () => flash.destroy() });
@@ -6914,7 +7084,8 @@
         this.shakeCam(150, 0.005);
       }
       floatText(x, y, str, color) {
-        const t = this.add.text(x, y, str, { fontFamily: EMOJIFONT, fontSize: '19px', color, fontStyle: 'bold' }).setOrigin(0.5).setDepth(DEPTH.fx);
+        const t = _iconLabel(this, x, y, str, 19, color, DEPTH.fx) || this.add.text(x, y, str, { fontFamily: EMOJIFONT, fontSize: '19px', color, fontStyle: 'bold', align: 'center', wordWrap: { width: W - 32 } }).setOrigin(0.5).setDepth(DEPTH.fx);   // 🆕2026-09-25 批3:開頭 emoji 有對應 icon 且已就緒→icon+文字並排;沒有→原樣整串文字(含 emoji);🈳 en 長字串折行(W-32)
+        { const _bw = t.getBounds().width; if (_bw > 0) t.x = Math.max(_bw / 2 + 8, Math.min(W - _bw / 2 - 8, x)); }   // 🈳 en 浮字比中文寬,敵人靠邊時夾回畫面內(不切邊)
         this.tweens.add({ targets: t, y: y - 40, alpha: 0, duration: 900, ease: 'Quad.out', onComplete: () => t.destroy() });
       }
       // 敵人扣血數字:大紅「-N」彈出後上飄淡出
@@ -6932,6 +7103,7 @@
       knockEnemy(e) {
         if (!e || !e.sprite) return; const sp = e.sprite, ry = (e.restY != null ? e.restY : sp.y), bs = e.baseScale || 1;
         if (e.bob) { e.bob.stop(); e.bob = null; }                       // 暫停上下浮動,避免和擊退 y 衝突
+        this._breathStop(e);                                             // 🫁 受擊也暫停呼吸(擊退同樣動 scale,不停會打架);knockTw 完成後 refreshBob 會恢復
         if (e.knockTw) e.knockTw.stop();
         sp.setScale(bs);
         e.knockTw = this.tweens.add({
@@ -7060,7 +7232,7 @@
         this.shakeCam(200 + pw * 40, 0.009 + pw * 0.003);                  // 震幅隨 HIT 加重(不做 hitstop:凍格會被誤認成 lag)
       }
       tonFloat(str, color) {
-        const t = this.add.text(CX, BY0 - 54, str, { fontFamily: EMOJIFONT, fontSize: '17px', color, fontStyle: 'bold' }).setOrigin(0.5).setDepth(DEPTH.fx);
+        const t = _iconLabel(this, CX, BY0 - 54, str, 17, color, DEPTH.fx) || this.add.text(CX, BY0 - 54, str, { fontFamily: EMOJIFONT, fontSize: '17px', color, fontStyle: 'bold', align: 'center', wordWrap: { width: W - 32 } }).setOrigin(0.5).setDepth(DEPTH.fx);   // 🆕2026-09-25 批3:同 floatText 的 icon 前綴處理;🈳 en 長提示折行(W-32)
         this.tweens.add({ targets: t, y: BY0 - 82, alpha: 0, duration: 1000, ease: 'Quad.out', onComplete: () => t.destroy() });
       }
       comboPopup(n) {
@@ -7122,6 +7294,7 @@
       showJutsu(el, lv, dy) {
         dy = dy || 0; const name = tr(KATA[lv - 1]) + '・' + tr(JUTSU[el][lv - 1]); const col = '#' + EL[el].color.toString(16).padStart(6, '0');
         const t = this.add.text(CX, BOARD_CY + dy, name, { fontFamily: JUTSUFONT, fontSize: (17 + lv * 4) + 'px', color: col, fontStyle: 'bold', stroke: '#000', strokeThickness: 4 }).setOrigin(0.5).setAlpha(0).setScale(0.5).setDepth(DEPTH.fx);   // 毛筆字、置中(和 HIT 同位置,接 HIT 之後出現;dy 供多招上下並列)
+        if (t.width > W - 24) t.setFontSize(Math.max(18, Math.floor((17 + lv * 4) * (W - 24) / t.width)) + 'px');   // 🈳 en 招式名(前綴+名)比中文長,字級依實寬往下調一次(不用 setScale,免與下方彈入 tween 衝突)
         this.tweens.add({
           targets: t, alpha: 1, scaleX: 1, scaleY: 1, duration: 240, ease: 'Back.out',
           onComplete: () => this.tweens.add({ targets: t, alpha: 0, duration: 420, delay: 600 + lv * 110, onComplete: () => t.destroy() })
@@ -7147,17 +7320,30 @@
         else this.tweens.add({ targets: bg, fillAlpha: { from: 0, to: 0.74 }, duration: 200 });   // 背景淡入
         return g;
       }
-      mkBtn(g, y, label, cb, col) {
+      mkBtn(g, y, label, cb, col, iconName) {
         const T = UI(), accent = col != null;   // 亮色設計系統:預設白底藥丸/深字;傳入語意色(T.ok/T.bad/T.gold)→同色框+白字
         g.add(roundRectG(this, CX, y, 300, 50, 25, accent ? col : T.surf, 1, accent ? col : T.divider, accent ? 2 : 1.5));
-        const t = this.add.text(CX, y, label, { fontFamily: EMOJIFONT, fontSize: FS.body, color: accent ? T.onAccent : T.ink, fontStyle: 'bold' }).setOrigin(0.5);
+        const _txtCol = accent ? T.onAccent : T.ink, _ready = iconName && this.textures.exists('lucide_' + iconName);   // 🆕2026-09-25 iconName 選填(lucide_<name>,GameScene 已 eager 預載 lucide_home)→icon+文字置中;未載到 fallback 原樣文字
+        let t;
+        if (_ready) {
+          const _disp = stripEmoji(label), _tmp = this.add.text(0, 0, _disp, { fontFamily: EMOJIFONT, fontSize: FS.body, fontStyle: 'bold' }); const _tw = Math.ceil(_tmp.width); _tmp.destroy();
+          const _ics = 20, _sc = Math.min(1, (300 - 28 - _ics - 6) / Math.max(1, _tw)), _twS = Math.ceil(_tw * _sc), _gw = _ics + 6 + _twS, _left = CX - _gw / 2;   // 🈳 _sc:en 長字串縮進按鈕(300寬)
+          g.add(lucideIcon(this, _left + _ics / 2, y, iconName, _ics, _hex2num(_txtCol)));
+          t = this.add.text(_left + _ics + 6 + _twS / 2, y, _disp, { fontFamily: EMOJIFONT, fontSize: FS.body, color: _txtCol, fontStyle: 'bold' }).setOrigin(0.5).setScale(_sc);
+        } else t = fitText(this.add.text(CX, y, label, { fontFamily: EMOJIFONT, fontSize: FS.body, color: _txtCol, fontStyle: 'bold' }).setOrigin(0.5), 300 - 28);   // 🈳 en 長字串縮進按鈕
         const r = this.add.rectangle(CX, y, 300, 50, 0x000000, 0.001).setInteractive();   // 透明命中區(視覺改圓角後拆開,pointerup 事件不變)
         r.on('pointerup', cb); g.add(r); g.add(t); return r;
       }
-      tutBtn(g, y, label, cb, dim) {
+      tutBtn(g, y, label, cb, dim, iconName) {
         const bw = 300, bh = 52;   // demo .pill.ok.lg(平滑貼圖):主鈕綠、dim=灰 ghost
         g.add(this.add.image(CX, y, _pillBtnTex(this, bw, bh, dim ? 'ghost' : 'ok')).setDisplaySize(bw + 16, bh + 16));
-        const t = this.add.text(CX, y + 2, label, { fontFamily: EMOJIFONT, fontSize: FS.sub, color: dim ? '#8a939b' : '#ffffff', fontStyle: 'bold' }).setOrigin(0.5).setResolution(2); g.add(t);   // 藥丸底圖有「底唇」下沉 3px→視覺中心比幾何中心低;文字往下 2px 才真的上下置中(原本 y-1 看起來偏高)
+        const _tCol = dim ? '#8a939b' : '#ffffff', _ready = iconName && this.textures.exists('lucide_' + iconName);   // 🆕2026-09-25 iconName 選填(見 mkBtn 同款註解)
+        if (_ready) {
+          const _disp = stripEmoji(label), _tmp = this.add.text(0, 0, _disp, { fontFamily: EMOJIFONT, fontSize: FS.sub, fontStyle: 'bold' }); const _tw = Math.ceil(_tmp.width); _tmp.destroy();
+          const _ics = 22, _sc = Math.min(1, (bw - 28 - _ics - 6) / Math.max(1, _tw)), _twS = Math.ceil(_tw * _sc), _gw = _ics + 6 + _twS, _left = CX - _gw / 2;   // 🈳 _sc:en 長字串縮進按鈕
+          g.add(lucideIcon(this, _left + _ics / 2, y + 2, iconName, _ics, _hex2num(_tCol)));
+          g.add(this.add.text(_left + _ics + 6 + _twS / 2, y + 2, _disp, { fontFamily: EMOJIFONT, fontSize: FS.sub, color: _tCol, fontStyle: 'bold' }).setOrigin(0.5).setResolution(2).setScale(_sc));
+        } else { const t = fitText(this.add.text(CX, y + 2, label, { fontFamily: EMOJIFONT, fontSize: FS.sub, color: _tCol, fontStyle: 'bold' }).setOrigin(0.5).setResolution(2), bw - 28); g.add(t); }   // 🈳 en 長字串縮進按鈕   // 藥丸底圖有「底唇」下沉 3px→視覺中心比幾何中心低;文字往下 2px 才真的上下置中(原本 y-1 看起來偏高)
         const hit = this.add.rectangle(CX, y, bw, bh, 0x000000, 0.001).setInteractive(); hit.on('pointerup', cb); g.add(hit); return hit;
       }
       showTutComplete(g) {   // 量測後流式排版:字放大、區塊間距一律 G、按鈕左右/下方留白 = 白板四邊留白 M(全等)
@@ -7181,7 +7367,7 @@
         if (first) {
           this.tutBtn(g, yy + bh / 2, tr('▶ 開始特訓!'), () => { mutSave(s => { s.settings = s.settings || {}; s.settings.newbieStep = 0; }); startNewbieStep(this, 0); });   // 階段二・新手島:教學完不直接發十連,先強制連玩 NEWBIE_SEQ 3 堂課程,全破才 setFree(見 startNewbieStep idx>=3 分支)
         } else {
-          this.tutBtn(g, yy + bh / 2, tr('🏠 回大廳'), back);   // 🔁 已領過十連(複習)→純回大廳(伺服器 free_pull_used 亦會擋)
+          this.tutBtn(g, yy + bh / 2, tr('🏠 回大廳'), back, false, 'home');   // 🔁 已領過十連(複習)→純回大廳(伺服器 free_pull_used 亦會擋)
         }
         g.alpha = 0; this.tweens.add({ targets: g, alpha: 1, duration: 300 });
       }
@@ -7228,11 +7414,11 @@
             if (_newStep < 3) this.tutBtn(g, yy + bh / 2, tr('▶ 下一課 ({n}/3)', { n: _newStep + 1 }), () => startNewbieStep(this, _newStep));   // 接下一堂(NEWBIE_SEQ[_newStep])
             else this.tutBtn(g, yy + bh / 2, tr('▶ 領取新手十連!'), () => startNewbieStep(this, 3));   // 三堂全破→startNewbieStep 內部 setFree+newbieDone+回大廳
           } else {
-            this.tutBtn(g, yy + bh / 2, tr('🏠 回大廳'), back);
+            this.tutBtn(g, yy + bh / 2, tr('🏠 回大廳'), back, false, 'home');
           }
         } else {
           this.tutBtn(g, yy + bh / 2, tr('再試一次'), () => { g.destroy(); this.resultOpen = false; this.playerHP = this.maxHP; this.lesson = { id: this.lesson.id, i: -1, free: false }; this.startStage(); });   // 同關重來:比照 restartStage() 不重啟整個 scene,只重置血量+lesson 狀態
-          this.tutBtn(g, yy + bh + GBTN + bh / 2, tr('🏠 回大廳'), back, true);
+          this.tutBtn(g, yy + bh + GBTN + bh / 2, tr('🏠 回大廳'), back, true, 'home');
         }
         g.alpha = 0; this.tweens.add({ targets: g, alpha: 1, duration: 300 });
       }
@@ -7253,7 +7439,7 @@
         let PH = contentH + PAD * 2, cy = Math.round(H / 2), top = cy - PH / 2;
         if (top < 8) { top = 8; cy = top + PH / 2; }   // 太高→貼上邊防切
         g.add(this.add.image(CX, cy, _softPanelTex(this, BW, PH, 18)).setDisplaySize(BW + 80, PH + 80));   // demo .panel 白面板(柔影,任意 dpi 平滑)
-        const T2 = (yc, s, fs, col, bold, ox, x) => g.add(this.add.text(x == null ? CX : x, yc, s, { fontFamily: EMOJIFONT, fontSize: fs, color: col, fontStyle: bold ? 'bold' : 'normal' }).setOrigin(ox == null ? 0.5 : ox, 0.5).setResolution(2));
+        const T2 = (yc, s, fs, col, bold, ox, x) => { const _t = this.add.text(x == null ? CX : x, yc, s, { fontFamily: EMOJIFONT, fontSize: fs, color: col, fontStyle: bold ? 'bold' : 'normal' }).setOrigin(ox == null ? 0.5 : ox, 0.5).setResolution(2); fitText(_t, innerW); return g.add(_t); };   // 🈳 en 長標題(城名 - 難度)縮進面板內寬
         let y = top + PAD;
         T2(y + Heye / 2, tr('⚠ 敵情簡報'), FS.cap, '#e0663a', true); y += Heye + G;   // eyebrow(警示橘,置中)
         T2(y + Htitle / 2, tr(b.name) + (diffName ? ' - ' + tr(diffName) : ''), FS.title, '#c8912a', true); y += Htitle + G;   // 金標題 + 難度(如「風之峽谷 - 中級」)
@@ -7262,7 +7448,10 @@
         g.add(this.add.rectangle(CX, y + 0.5, innerW, 1, 0xe4ded4)); y += 1 + G;   // divider
         T2(y + Hlbl / 2, tr('⚠ 威脅'), FS.sub, '#e0663a', true, 0, leftX); y += Hlbl + GS;   // 威脅標籤(齊左)
         threatT.setPosition(leftX, y); g.add(threatT); y += th + G;                    // 威脅內文(齊左,18px)
-        T2(y + Hlbl / 2, tr('💡 破法'), FS.sub, '#2f8a5b', true, 0, leftX); y += Hlbl + GS;   // 破法標籤(齊左)
+        { const _ready = _iconReady(this, 'ui_hint');   // 🆕2026-09-25 💡 前綴→icon_hint;GameScene 未預載此圖,首見該面板該局會 fallback 文字,載完下次開就換圖(同 firstClearBadge 慣例)
+          if (_ready) { const _disp = stripEmoji(tr('💡 破法')), _tmp = this.add.text(0, 0, _disp, { fontFamily: EMOJIFONT, fontSize: FS.sub, fontStyle: 'bold' }); const _tw = Math.ceil(_tmp.width); _tmp.destroy(); const _ics = 18; g.add(this.add.image(leftX + _ics / 2, y + Hlbl / 2, 'ui_hint').setDisplaySize(_ics, _ics)); g.add(this.add.text(leftX + _ics + 6, y + Hlbl / 2, _disp, { fontFamily: EMOJIFONT, fontSize: FS.sub, color: '#2f8a5b', fontStyle: 'bold' }).setOrigin(0, 0.5).setResolution(2)); }
+          else T2(y + Hlbl / 2, tr('💡 破法'), FS.sub, '#2f8a5b', true, 0, leftX); }
+        y += Hlbl + GS;   // 破法標籤(齊左)
         counterT.setPosition(leftX, y); g.add(counterT); y += ch + G;                   // 破法內文(齊左,18px)
         const cbcy = y + Hcb / 2; let dismiss = false;   // 勾選框(白底灰框、✓ 綠)
         const cb = this.add.rectangle(leftX + 10, cbcy, 20, 20, 0xffffff, 1).setStrokeStyle(2, 0xc9c0b2).setInteractive(); g.add(cb);
@@ -7304,7 +7493,7 @@
         if (wasTut && win) { this.showTutComplete(g); return; }   // 教學通關 → 專屬綠框完成畫面(導向編隊教學)
         const panel = this.add.container(0, 0); g.add(panel);   // 內容容器:整體滑入淡入
         const PW = Math.min(W - 24, 400);
-        const TX = (yc, s, fs, col, bold) => panel.add(this.add.text(CX, yc, s, { fontFamily: EMOJIFONT, fontSize: fs, color: col, fontStyle: bold ? 'bold' : 'normal' }).setOrigin(0.5).setResolution(2));
+        const TX = (yc, s, fs, col, bold) => { const _t = this.add.text(CX, yc, s, { fontFamily: EMOJIFONT, fontSize: fs, color: col, fontStyle: bold ? 'bold' : 'normal' }).setOrigin(0.5).setResolution(2); fitText(_t, PW - 24); return panel.add(_t); };   // 🈳 en 長標題/戰利品列縮進面板(PW-24)
         const fmtT = (s) => { if (s == null) return '--:--:--'; const x = Math.max(0, Math.floor(s)), p2 = (n) => String(n).padStart(2, '0'); return p2(Math.floor(x / 3600)) + ':' + p2(Math.floor(x % 3600 / 60)) + ':' + p2(x % 60); };   // 秒→00:00:00
         if (win) {
           // ── 流式排版(2026-07-15):PH 依內容算,間距一致;拿掉副標與「看卡冊」;標題帶難度;新增通關時間/最速通關 ──
@@ -7342,14 +7531,14 @@
           const localSec = Math.round((Date.now() - (this._runStartMs || Date.now())) / 1000);   // 離線 fallback:伺服器沒回 clearSec 時用本地起算(僅顯示)
           TX(y + Hts / 2, tr('⏱ 通關時間　{t}', { t: fmtT(this._clearSec != null ? this._clearSec : localSec) }), FS.cap, T.ink, true); y += Hts + 6;
           TX(y + Hts / 2, tr('🏁 最速通關　{t}', { t: fmtT(this._bestSec) }), FS.cap, T.ink2, false); y += Hts + G;   // 全服(該城×該難度)歷來最快;尚無紀錄/離線→--:--:--
-          this.mkBtn(panel, y + Hb / 2, tr('🏠 回大廳'), () => { this.scene.manager.start('home'); this.scene.manager.stop('game'); });
+          this.mkBtn(panel, y + Hb / 2, tr('🏠 回大廳'), () => { this.scene.manager.start('home'); this.scene.manager.stop('game'); }, null, 'home');
         } else {
           const PH = 320, PCY = cy - 26;
           panel.add(roundRectG(this, CX, PCY, PW, PH, 16, T.surf, 1, T.divider, 1.5));
           TX(cy - 152, tr('☠️ 敗北'), FS.title, T.badTx, true);
           TX(cy - 112, tr('第 {n} 關失敗', { n: this.stage }), FS.cap, T.ink, false);
           this.mkBtn(panel, cy + 30, tr('再挑戰本關'), () => { g.destroy(); this.resultOpen = false; this.restartStage(); });
-          this.mkBtn(panel, cy + 90, tr('🏠 回大廳'), () => { this.scene.manager.start('home'); this.scene.manager.stop('game'); });
+          this.mkBtn(panel, cy + 90, tr('🏠 回大廳'), () => { this.scene.manager.start('home'); this.scene.manager.stop('game'); }, null, 'home');
         }
         if (redraw) { panel.y = 0; panel.alpha = 1; }   // 🆕補畫:不重播滑入(暗幕也不重閃),原地把「連線後發放」換成真實戰利品
         else { panel.y = 24; panel.alpha = 0; this.tweens.add({ targets: panel, y: 0, alpha: 1, duration: 380, ease: 'Back.out' }); }   // 首次登場:由下方滑入 + 淡入(Back.out 帶輕微回彈)
@@ -7366,8 +7555,8 @@
         volBar(this, addG, CX, cy - 22, 210, '🔊', () => SFX.sfxVol(), (v) => { SFX.setSfxVol(v); SFX.button(); });                                   // 音效音量(可點可拖)
         g.add(this.add.text(CX, cy + 12, tr('🎵 背景音量'), { fontFamily: EMOJIFONT, fontSize: FS.cap, color: T.ink2 }).setOrigin(0.5));
         volBar(this, addG, CX, cy + 34, 210, '🎵', () => SFX.bgmVol(), (v) => { SFX.setBgmVol(v); if (this.bgmMp3) this.bgmMp3.setVolume((this._bgmBase || 0.45) * v); });   // 背景音量(同步更新教學 BGM)
-        this.mkBtn(g, cy + 88, tr('📖 新手教學'), () => { g.destroy(); this.resultOpen = false; this.showTutorial(true); });
-        this.mkBtn(g, cy + 146, tr('🏠 回大廳(放棄本關)'), () => { SFX.stopBgm(); this._recordFail(); this.creditRun(); this.scene.manager.start('home'); this.scene.manager.stop('game'); }, T.bad);   // 🔐[11]暫停選單放棄跳過 gameOver()/showResult(),原本沒記戰績→比照 L4614/4633 補 _recordFail+creditRun(兩者皆有守衛,重複呼叫不會重複入帳)
+        this.mkBtn(g, cy + 88, tr('📖 新手教學'), () => { g.destroy(); this.resultOpen = false; this.showTutorial(true); }, null, 'graduation-cap');   // 🆕2026-09-25 批3:📖→lucide graduation-cap(沿用村落頁同款教學icon,GameScene 已 eager 預載,恆已就緒)
+        this.mkBtn(g, cy + 146, tr('🏠 回大廳(放棄本關)'), () => { SFX.stopBgm(); this._recordFail(); this.creditRun(); this.scene.manager.start('home'); this.scene.manager.stop('game'); }, T.bad, 'home');   // 🔐[11]暫停選單放棄跳過 gameOver()/showResult(),原本沒記戰績→比照 L4614/4633 補 _recordFail+creditRun(兩者皆有守衛,重複呼叫不會重複入帳)
       }
       // 首次遊玩 3 步教學(replay=true 從選單重看,不影響已看過旗標)
       showTutorial(replay) {
@@ -7385,7 +7574,11 @@
           g.add(this.add.rectangle(CX, H / 2, W, H, 0x0a0805, 0.92).setInteractive());
           const cy = H / 2, s = steps[i], last = i >= steps.length - 1;
           g.add(this.add.text(CX, cy - 198, tr('新手教學   {i} / {n}', { i: i + 1, n: steps.length }), { fontFamily: EMOJIFONT, fontSize: '13px', color: '#ffd56a', fontStyle: 'bold' }).setOrigin(0.5));
-          g.add(this.add.text(CX, cy - 120, s.ic, { fontFamily: EMOJIFONT, fontSize: '58px' }).setOrigin(0.5));
+          { const _bigMap = { '🧩': ['icon_puzzle', 'ui'], '⭐': ['ui_star', 'ui'], '💧': ['el_water', 'el'], '⚡': ['el_thunder', 'el'], '🛡': ['ui_shield', 'ui'] }[s.ic];   // 🆕2026-09-25 批3:教學大圖示(58px)有對應圖就換。🆕批4:🧩(拼塊×打怪)補上 icon_puzzle(art/ui/*.webp,已生圖),不再維持原 emoji
+            const _bigOk = _bigMap && (_bigMap[1] === 'el' ? this.textures.exists(_bigMap[0]) : _iconReady(this, _bigMap[0]));
+            if (_bigOk) { const _bi = this.add.image(CX, cy - 120, _bigMap[0]).setDisplaySize(58, 58); if (_bigMap[1] === 'el' && FLOAT_ICON_EL[_bigMap[0]]) _bi.setTintFill(EL[FLOAT_ICON_EL[_bigMap[0]]].color); g.add(_bi); }
+            else g.add(this.add.text(CX, cy - 120, s.ic, { fontFamily: EMOJIFONT, fontSize: '58px' }).setOrigin(0.5));
+          }
           g.add(this.add.text(CX, cy - 52, s.t, { fontFamily: EMOJIFONT, fontSize: '21px', color: '#ffe08a', fontStyle: 'bold' }).setOrigin(0.5));
           g.add(this.add.text(CX, cy + 30, s.b, { fontFamily: EMOJIFONT, fontSize: '15px', color: '#f3e9d8', align: 'center', lineSpacing: 7 }).setOrigin(0.5));
           let dots = ''; for (let k = 0; k < steps.length; k++)dots += (k === i ? '●' : '○') + '  ';
@@ -7596,7 +7789,7 @@
           // 命中區(透明方形覆蓋整格;圓角只是視覺)
           if (!this.sel) {
             const hit = this.rect(cx, cy, cw, cw, 0x000000, 0.001).setInteractive();
-            tapBind(this, hit, () => { if (this.selMode) { if (!this.dsel) this.dsel = new Set(); this.dsel.has(cd.u) ? this.dsel.delete(cd.u) : this.dsel.add(cd.u); this.rebuild(); } else if (cd._ghost) { this.toast(tr('舊版卡片(已不在卡表)\n可用「整理/分解」回收')); } else { this.sel = cd.id; this.rebuild(); } });
+            tapBind(this, hit, () => { if (this.selMode) { if (!this.dsel) this.dsel = new Set(); this.dsel.has(cd.u) ? this.dsel.delete(cd.u) : this.dsel.add(cd.u); this.rebuild(); } else if (cd._ghost) { this.toast(tr('舊版卡片(已不在卡表)\n可用「整理/分解」回收')); } else { this.sel = cd.u; this.rebuild(); } });   // 🆕個體制:sel 改存這一格個體的 uid(不是卡種 id),drawDetail() 靠 uid 找回這個體的 lv/evo
           }
         });
         this.layer = _realL;   // 還原:分頁/其餘元素回主 layer
@@ -7612,21 +7805,27 @@
         if (this.sel && !this.selMode) this.drawDetail();
       }
       drawDetail() {
-        const cd = ROSTER.find(c => c.id === this.sel); if (!cd) return;
-        _ensureFullArt(this, cd.id, () => { if (this.sel === cd.id) this.rebuild(); });   // 開詳情才補大圖,載好重繪(先顯示 emoji→無縫換圖)
+        // 🆕個體制:this.sel 改存個體 uid(見格子命中處 this.sel = cd.u)。先用 uid 從存檔找回這一個體,再查 ROSTER 拿卡種資料;
+        // 任一步找不到(被解散/被當進化+強化素材吃掉/卡種已從卡表移除)→關閉詳情回格子列表,不留殘影或 undefined 崩潰
+        const inst = loadSave().cards.find(c => c.u === this.sel);
+        const cd = inst && ROSTER.find(c => c.id === inst.id);
+        if (!inst || !cd) { this.sel = null; this.askDis = false; this.askEvo = false; this.rebuild(); return; }
+        const ovLv = inst.lv || 1, ovEvo = inst.evo || 0, ovExp = inst.exp || 0;   // 比照編成頁 showCardDetail 修法:個體缺欄位時預設 lv1/evo0/exp0
+        _ensureFullArt(this, cd.id, () => { if (this.sel === inst.u) this.rebuild(); }, ovEvo);   // 開詳情才補大圖(這個體實際的進化階),載好重繪(先顯示 emoji→無縫換圖)
         const n = (loadOwned()[cd.id] || 0);
-        cardDetailPanel(this, o => this.L(o), cd, {   // 共用詳細頁(卡冊版=manage:true→含強化/進化/解散)
+        cardDetailPanel(this, o => this.L(o), cd, {   // 共用詳細頁(卡冊版=manage:true→含強化/進化/解散);ovLv/ovEvo/ovExp=這個體自己的等級/進化/經驗,manage 按鈕(強化/進化/解散)邏輯不動,仍綁卡種 cd.id
           manage: true,
+          ovLv, ovEvo, ovExp,
           onClose: () => { this.sel = null; this.askDis = false; this.askEvo = false; this.rebuild(); },
           onFuse: () => { this.scene.manager.start('fuse', { target: cd.id }); this.scene.manager.stop('collection'); },
           onDissolve: () => { if (n < 2) { this.toast(tr('只剩 1 張,無法解散')); return; } this.askDis = true; this.rebuild(); },
-          onEvolve: () => { const chk = canEvolve(cd.id); if (!chk.ok) { this.toast(chk.msg); return; } this.askEvo = true; this.rebuild(); },
+          onEvolve: () => { const chk = canEvolve(cd.id, ovLv, ovEvo); if (!chk.ok) { this.toast(chk.msg); return; } this.askEvo = true; this.rebuild(); },   // 🆕2026-09-25 用這個體的 ovLv/ovEvo 驗滿級,不再用卡種最強個體
         });
-        if (this.askDis) this.drawDissolveConfirm(cd, n);
-        if (this.askEvo) this.drawEvoConfirm(cd);
+        if (this.askDis) this.drawDissolveConfirm(cd, n, inst.u);
+        if (this.askEvo) this.drawEvoConfirm(cd, inst.u, ovLv, ovEvo);
       }
-      drawDissolveConfirm(cd, n) {
-        const py = Math.round(H / 2), gain = { genin: 50, chunin: 150, jonin: 400, kage: 800 }[cd.rank] || 50;
+      drawDissolveConfirm(cd, n, uid) {   // 🆕2026-09-25 uid=正在看的個體;解散對準這張(不再是陣列第一張同種)
+        const py = Math.round(H / 2), gain = { genin: 50, chunin: 150, jonin: 400, kage: 800 }[cd.rank] || 50;   // 依卡種 rank 算,與具體個體星級/等級無關,無錯位問題
         this.rect(CX, H / 2, W, H, 0x000000, 0.62).setInteractive();
         this.rect(CX, py, 330, 184, 0x241a10).setStrokeStyle(2, 0x8a6a3a);
         this.txt(CX, py - 58, tr('♻️ 解散這張卡?'), '16px', '#ffd9a0', 0.5, true);
@@ -7635,24 +7834,24 @@
         this.btn(CX - 80, py + 52, 144, 40, tr('✖ 取消'), () => { this.askDis = false; this.rebuild(); }, { col: 0x2a2218, stroke: 0x5a4a32, color: '#cfc0a8', bold: true, fs: '14px' });
         this.btn(CX + 80, py + 52, 144, 40, tr('✔ 確認解散'), () => {   // 🔐 分解改打伺服器,async 期間防連點(_busyDis)
           if (this._busyDis) return; this._busyDis = true; this.askDis = false; this.rebuild();
-          dissolveCard(cd.id).then(r => { this._busyDis = false; this.toast(r.ok ? tr('解散 +{n} 金', { n: r.gain }) : r.msg); this.rebuild(); });
+          dissolveCard(cd.id, uid).then(r => { this._busyDis = false; this.toast(r.ok ? tr('解散 +{n} 金', { n: r.gain }) : r.msg); this.rebuild(); });
         }, { col: 0x3a2a1a, stroke: 0x8a6a3a, color: '#ffd9a0', bold: true, fs: '14px' });
       }
-      drawEvoConfirm(cd) {   // 進化確認框(比照 drawDissolveConfirm 版型;多一行「換名」+ 進化後歸1級提醒)
-        const chk = canEvolve(cd.id);
+      drawEvoConfirm(cd, uid, ovLv, ovEvo) {   // 進化確認框(比照 drawDissolveConfirm 版型;多一行「換名」+ 進化後等級保留提醒)。🆕2026-09-25 uid/ovLv/ovEvo=正在看的個體,進化對準這張
+        const chk = canEvolve(cd.id, ovLv, ovEvo);
         if (!chk.ok) { this.askEvo = false; this.toast(chk.msg); return; }   // 保險:確認框開著時素材/等級被其他途徑變動→重查一次
         const req = chk.req, py = Math.round(H / 2);
-        const nextName = tr((getCardEvo(cd.id) >= 1 && EVO2_CARDS[cd.id]) ? EVO2_CARDS[cd.id] : (EVO_CARDS[cd.id] || (cardName(cd.id) + ' ★' + (cardStars(cd.id) + 1))));   // evo1→evo2 要顯示 evo2 名(不能一直顯示 evo1 名);cardName 本身已 tr(),外層再 tr() 對已譯字串安全 no-op
+        const nextName = tr((getCardEvo(cd.id, ovEvo) >= 1 && EVO2_CARDS[cd.id]) ? EVO2_CARDS[cd.id] : (EVO_CARDS[cd.id] || (cardName(cd.id, ovEvo) + ' ★' + (cardStars(cd.id, ovEvo) + 1))));   // evo1→evo2 要顯示 evo2 名(不能一直顯示 evo1 名);cardName 本身已 tr(),外層再 tr() 對已譯字串安全 no-op;改用 ovEvo 對準這個體目前的進化階;🆕2026-09-25 kage fallback 分支的 cardName 也補 ovEvo
         this.rect(CX, H / 2, W, H, 0x000000, 0.62).setInteractive();
         this.rect(CX, py, 330, 220, 0x241a10).setStrokeStyle(2, 0x8a6a3a);
         this.txt(CX, py - 84, tr('✨ 確認進化?'), '16px', '#ffd9a0', 0.5, true);
-        this.txt(CX, py - 52, cardName(cd.id) + ' → ' + nextName, '13px', '#cfc0a8', 0.5);
+        this.txt(CX, py - 52, cardName(cd.id, ovEvo) + ' → ' + nextName, '13px', '#cfc0a8', 0.5).setAlign('center').setWordWrapWidth(306);   // 🈳 en 兩個長卡名相連→折兩行(330 面板內寬 306,不縮字)   // 🆕2026-09-25 現名補 ovEvo,與這個體目前進化階一致
         this.txt(CX, py - 20, tr('需 1 張「{n}」+ {c} 金幣', { n: jewelName(cd.el), c: req.coins }), '14px', '#ffe08a', 0.5, true);
-        this.txt(CX, py + 6, tr('(等級會歸 1 重練)'), '12px', '#cfc0a8', 0.5);
+        this.txt(CX, py + 6, tr('(進化後等級/經驗保留原值)'), '12px', '#cfc0a8', 0.5);
         this.btn(CX - 80, py + 62, 144, 40, tr('✖ 取消'), () => { this.askEvo = false; this.rebuild(); }, { col: 0x2a2218, stroke: 0x5a4a32, color: '#cfc0a8', bold: true, fs: '14px' });
         this.btn(CX + 80, py + 62, 144, 40, tr('✔ 確定進化'), () => {   // 🔐 進化改打伺服器,async 期間防連點(_busyEvo)
           if (this._busyEvo) return; this._busyEvo = true; this.askEvo = false; this.rebuild();
-          evolveCard(cd.id).then(r => {
+          evolveCard(cd.id, uid).then(r => {
             this._busyEvo = false;
             this.toast(r.ok ? tr('✨ 進化成功!') : (r.msg || tr('進化失敗')));
             this.rebuild();
@@ -7666,7 +7865,7 @@
     class HomeScene extends Phaser.Scene {
       constructor() { super('home'); }
       init(d) { this.tab = (d && d.tab) || this.tab || 'dungeon'; }
-      preload() { _loadCardArt(this, loadTeamIds()); MAP_KEYS.forEach(k => { if (!this.textures.exists(k)) this.load.image(k, 'art/map/' + k + '.webp'); }); UI_ICONS.forEach(([key, file]) => { if (!this.textures.exists(key)) this.load.image(key, 'art/ui/' + file + '.webp'); }); showLoadBar(this); }   // 大廳:當前隊卡圖 + 世界地圖素材 + UI 圖示;bgm_home 非阻塞→大廳秒開
+      preload() { _loadCardArt(this, loadTeamIds()); MAP_KEYS.forEach(k => { if (!this.textures.exists(k)) this.load.image(k, 'art/map/' + k + '.webp'); }); UI_ICONS.forEach(([key, file]) => { if (!this.textures.exists(key)) this.load.image(key, 'art/ui/' + file + '.webp'); }); _loadElSvgs(this); ['settings', 'trash-2', 'copy', 'mail', 'key', 'users', 'chart-column'].forEach(n => { if (!this.textures.exists('lucide_' + n)) this.load.svg('lucide_' + n, 'art/icons/lucide_' + n + '.svg', { width: 96, height: 96 }); }); showLoadBar(this); }   // 大廳:當前隊卡圖 + 世界地圖素材 + UI 圖示 + 元素SVG(世界地圖用) + 常駐/信箱/殿堂/勇者卡會用到的 lucide icon(topbar 齒輪/刪信/複製/綁定信箱/找回/好友上限/紀錄tab);bgm_home 非阻塞→大廳秒開
       create() {
         this.add.rectangle(CX, H / 2, W, H, 0x160f18);
         this._diving = false; try { this.cameras.main.resetFX(); } catch (e) { }   // 🎬回大廳:重置出擊轉場鎖(否則第二次進火城被擋)+ 清相機殘留淡出
@@ -7827,13 +8026,22 @@
         this.L(this.add.circle(28, 42, 17, _l ? EL[_l.el].color : 0xc9c2b8).setStrokeStyle(2, 0xffffff)); this.txt(28, 42, _l ? EL[_l.el].face : '🥷', '18px', '#ffffff', 0.5);
         // 列1:名稱 + 稱號 chip(並排,照 demo:淡雷色底 + 金字)
         const nameT = this.txt(54, 28, (m.name || tr('塊頭勇者')), FS.body, T.ink, 0, true);
-        if (getTitle()) { const tt = this.add.text(0, 0, '🏅 ' + titleName(getTitle()), { fontFamily: EMOJIFONT, fontSize: FS.micro, color: T.goldTx, fontStyle: 'bold' }); const cw = Math.ceil(tt.width) + 16, cx = 54 + Math.ceil(nameT.width) + 8 + cw / 2; this.L(roundRectG(this, cx, 28, cw, 20, 10, T.elTint.thunder, 1, null, 0)); tt.setPosition(cx, 28).setOrigin(0.5); this.L(tt); }
+        if (getTitle()) {   // 🆕2026-09-25 🎖️ 前綴→icon_medal(topbar 常駐,UI_ICONS 已 eager 預載,恆已就緒)
+          const _tn = titleName(getTitle()), _medalReady = this.textures.exists('ui_medal');
+          const _disp = _medalReady ? _tn : ('🏅 ' + _tn), tt = this.add.text(0, 0, _disp, { fontFamily: EMOJIFONT, fontSize: FS.micro, color: T.goldTx, fontStyle: 'bold' });
+          const _ics = 14, _icGap = _medalReady ? _ics + 4 : 0; fitText(tt, Math.max(40, 306 - (54 + Math.ceil(nameT.width) + 8) - 16 - _icGap));   // 🈳 en 稱號 chip 別撞右側💎數字(留到 x≈306)
+          const cw = Math.ceil(tt.displayWidth) + 16 + _icGap, cx = 54 + Math.ceil(nameT.width) + 8 + cw / 2;
+          this.L(roundRectG(this, cx, 28, cw, 20, 10, T.elTint.thunder, 1, null, 0));
+          const _left = cx - (Math.ceil(tt.displayWidth) + _icGap) / 2;
+          if (_medalReady) this.L(this.add.image(_left + _ics / 2, 28, 'ui_medal').setDisplaySize(_ics, _ics));
+          tt.setPosition(_left + _icGap + Math.ceil(tt.displayWidth) / 2, 28).setOrigin(0.5); this.L(tt);
+        }
         // 💎/💰(右欄堆疊,無底,照 demo:鑽石藍字/金幣金字),右緣讓開齒輪
         resR(W - 50, 28, 'ui_gem', '' + m.stones, '#3a9be8');
         resR(W - 50, 60, 'ui_coin', m.coins.toLocaleString(), T.goldTx);
         // ⚙️ 設定齒輪(右,跨兩排置中,照 demo)→switchTab('other') 進設定;📬 信箱已移入村落,頂欄不放(照 demo statusbar)
         this.L(this.add.circle(W - 24, 42, 17, T.surf2, 1).setStrokeStyle(1.5, T.divider, 1.5));
-        this.txt(W - 24, 42, '⚙️', '18px', null, 0.5);
+        { const _gi = lucideIcon(this, W - 24, 42, 'settings', 18, _hex2num(T.ink)); if (_gi) this.L(_gi); else this.txt(W - 24, 42, '⚙️', '18px', null, 0.5); }   // 🆕2026-09-25 ⚙️→lucide settings(HomeScene 已 eager 預載,恆已就緒;保留 fallback 以防萬一)
         const gearHit = this.rect(W - 24, 42, 40, 40, 0x000000, 0.001).setInteractive();
         tapBind(this, gearHit, () => this.switchTab('other'));
         // 列2:Lv + EXP條(窄,照 demo max~120) + ⚡體力(緊接 EXP 條右側,照 demo 併排)
@@ -7866,12 +8074,23 @@
       bRank() {
         const T = UI(), cTop = 84, cBot = H - 60;
         this.rect(CX, (cTop + cBot) / 2, W, cBot - cTop, T.page);   // 亮色 body 底(同卡片/商店)
-        const tabs = [['board', '🏆 排行'], ['rec', '📊 紀錄'], ['ach', '🏅 成就']], tab = this.rankTab || 'board';
+        const tabs = [['board', '🏆 排行', 'ui_trophy'], ['rec', '📊 紀錄', 'lucide:chart-column'], ['ach', '🏅 成就', 'ui_medal']], tab = this.rankTab || 'board';
         const segW = (W - 32) / 3, segY = cTop + 30;   // 分頁控:白底藥丸,選中=金填+深字
         tabs.forEach((t, i) => {
-          const x = 16 + segW * i + segW / 2, on = tab === t[0];
+          const x = 16 + segW * i + segW / 2, on = tab === t[0], _col = on ? T.ink : T.ink2, _maxW = segW - 14;
           this.L(roundRectG(this, x, segY, segW - 6, 40, 12, on ? T.gold : T.surf, 1, on ? T.gold : T.divider, on ? 2 : 1.5));
-          this.txt(x, segY, tr(t[1]), FS.cap, on ? T.ink : T.ink2, 0.5, on);
+          let _drawn = false;
+          if (t[2].indexOf('lucide:') === 0) {
+            const _name = t[2].slice(7);
+            if (this.textures.exists('lucide_' + _name)) {
+              const _disp = stripEmoji(tr(t[1])), _tmp = this.add.text(0, 0, _disp, { fontFamily: EMOJIFONT, fontSize: FS.cap, color: _col, fontStyle: on ? 'bold' : 'normal' }).setOrigin(0.5);
+              fitText(_tmp, Math.max(16, _maxW - 16 - 4));
+              const _tw = _tmp.displayWidth, _ics = 15, _gw = _ics + 4 + _tw, _left = x - _gw / 2;
+              this.L(lucideIcon(this, _left + _ics / 2, segY, _name, _ics, _hex2num(_col))); _tmp.setPosition(_left + _ics + 4 + _tw / 2, segY); this.L(_tmp);
+              _drawn = true;
+            }
+          } else { _drawn = !!menuLabelIcon(this, o2 => this.L(o2), x, segY, t[2], tr(t[1]), { fs: FS.cap, col: _col, bold: on, ics: 15, gap: 4, maxW: _maxW }); }
+          if (!_drawn) fitText(this.txt(x, segY, tr(t[1]), FS.cap, _col, 0.5, on), _maxW);
           const hit = this.rect(x, segY, segW - 6, 40, 0x000000, 0.001).setInteractive(); tapBind(this, hit, () => { if (tab !== t[0]) this.setRankTab(t[0]); });
         });
         if (tab === 'rec') this.bRankRecords(); else if (tab === 'ach') this.bRankAch(); else this.bRankBoard();
@@ -7909,7 +8128,9 @@
             if (ri > 0) y += ROWH + GAP;   // 進到下一列中心
             sc.add(roundRectG(this, CX, y, W - PAD * 2, ROWH, 10, T.surf, 1, T.gold, 1.5));
             mkT(PAD + 16, y, (dq.emoji || '') + ' ' + tr(dq.name), FS.sub, T.ink, 0, true);   // 難度圖示+名
-            mkT(W - PAD - 12, y - 8, '🏁 ' + fmt(b.sec), FS.sub, T.goldTx, 1, true);   // 最速時間
+            { const _ready = this.textures.exists('ui_flag'), _txt = fmt(b.sec);   // 🆕2026-09-25 🏁 前綴→icon_flag(最速時間;UI_ICONS 已 eager 預載,恆已就緒)
+              if (_ready) { const _tmp = this.add.text(0, 0, _txt, { fontFamily: EMOJIFONT, fontSize: FS.sub, fontStyle: 'bold' }); const _tw = Math.ceil(_tmp.width); _tmp.destroy(); const _ics = 14, _gap = 4, _right = W - PAD - 12, _left = _right - _tw - _gap - _ics; sc.add(this.add.image(_left + _ics / 2, y - 8, 'ui_flag').setDisplaySize(_ics, _ics)); sc.add(this.add.text(_left + _ics + _gap, y - 8, _txt, { fontFamily: EMOJIFONT, fontSize: FS.sub, color: T.goldTx, fontStyle: 'bold' }).setOrigin(0, 0.5)); }
+              else mkT(W - PAD - 12, y - 8, '🏁 ' + _txt, FS.sub, T.goldTx, 1, true); }   // 最速時間
             mkT(W - PAD - 12, y + 10, '👑 ' + (b.name || tr('無名英雄')), FS.micro, T.ink2, 1);   // 記錄保持者
             if (ri === diffs.length - 1) y += ROWH / 2;   // 最後一列:補到列底
           });
@@ -7933,7 +8154,8 @@
         row('💥', tr('最大單手 HIT'), rec.bestHit || 0);
         row('🔗', tr('最長 combo'), rec.bestCombo || 0);
         this.L(roundRectG(this, CX, y + 6, W - PAD * 2, ROWH, 12, T.elTint.thunder, 1, T.gold, 1.5));   // 稱號=金框淡黃卡(同寬同高)
-        this.txt(CX, y + 6, tr('🏅 目前稱號:{n}', { n: tt ? titleName(tt) : tr('(未裝備)') }), FS.body, T.goldTx, 0.5, true);
+        { const _lbl = menuLabelIcon(this, o2 => this.L(o2), CX, y + 6, 'ui_medal', tr('🏅 目前稱號:{n}', { n: tt ? titleName(tt) : tr('(未裝備)') }), { fs: FS.body, col: T.goldTx, ics: 18 });
+          if (!_lbl) this.txt(CX, y + 6, tr('🏅 目前稱號:{n}', { n: tt ? titleName(tt) : tr('(未裝備)') }), FS.body, T.goldTx, 0.5, true); }
       }
       bRankAch() {   // 成就:拿掉說明字、間隔加大、放進可捲動容器(成就多到超出畫面→拖曳/滾輪看下面)
         const T = UI(), cTop = 84;
@@ -7981,7 +8203,8 @@
           const T = UI(), bx = 68, by = H - 100;   // 編隊鈕:白色浮動藥丸(火色點)
           this.L(roundRectG(this, bx, by, 118, 44, 22, T.surf, 1, T.divider, 1.5));
           this.L(this.add.circle(bx - 38, by, 5, EL.fire.color));
-          this.txt(bx + 6, by, tr('🛡️ 編隊'), FS.cap, T.ink, 0.5, true);
+          { const _lbl = menuLabelIcon(this, o2 => this.L(o2), bx + 6, by, 'ui_shield', tr('🛡️ 編隊'), { fs: FS.cap, col: T.ink, ics: 18, gap: 5 });
+            if (!_lbl) this.txt(bx + 6, by, tr('🛡️ 編隊'), FS.cap, T.ink, 0.5, true); }
           const hit = this.rect(bx, by, 118, 44, 0x000000, 0.001).setInteractive(); tapBind(this, hit, () => this.go('team'));
         }   // 編隊鈕(保留)
       }
@@ -8050,9 +8273,21 @@
         const bg = this.add.rectangle(CX, H / 2, W, H, 0x0e0a16, 0).setInteractive().on('pointerup', () => { if (ready) close(); });
         g.add(bg); this.tweens.add({ targets: bg, fillAlpha: { from: 0, to: 0.72 }, duration: 170 });   // 半暗底(亮色列在上更跳)
         this._panelCloseX(g, close, () => ready);   // 🆕右上角✕(暗底可點+✕統一手勢)
-        const title = this.add.text(CX, H * 0.075, d.emoji + ' ' + tr(d.name), { fontFamily: EMOJIFONT, fontSize: FS.title, color: '#ffffff', fontStyle: 'bold' }).setOrigin(0.5).setStroke('#000000', 4);
+        let title;
+        if (d.el && this.textures.exists('el_' + d.el)) {   // 🆕2026-09-25 五屬城標題:🔥💧⚡🪨🌪️ 前綴→el_* 元素 SVG(白色剪影,同 team/dex 徽章風格);序章/塔無 d.el→維持原 emoji
+          const _nameStr = tr(d.name);
+          title = this.add.text(0, 0, _nameStr, { fontFamily: EMOJIFONT, fontSize: FS.title, color: '#ffffff', fontStyle: 'bold' }).setOrigin(0.5).setStroke('#000000', 4);
+          const _ics = 32, _gap = 8;
+          fitText(title, Math.max(40, W - 40 - _ics - _gap));
+          const _tw = title.displayWidth, _left = CX - (_ics + _gap + _tw) / 2;
+          g.add(this.add.image(_left + _ics / 2, H * 0.075, 'el_' + d.el).setDisplaySize(_ics, _ics).setTintFill(0xffffff));
+          title.setPosition(_left + _ics + _gap + _tw / 2, H * 0.075);
+        } else {
+          title = this.add.text(CX, H * 0.075, d.emoji + ' ' + tr(d.name), { fontFamily: EMOJIFONT, fontSize: FS.title, color: '#ffffff', fontStyle: 'bold' }).setOrigin(0.5).setStroke('#000000', 4);
+          fitText(title, W - 40);
+        }
         const sub = this.add.text(CX, H * 0.075 + 30, tr(DUNGEON_TIP[d.id] || '選擇難度 — 體力越高、關數與獎勵越多'), { fontFamily: EMOJIFONT, fontSize: FS.cap, color: '#e2ddd4' }).setOrigin(0.5).setStroke('#000000', 3);
-        fitText(title, W - 40); fitText(sub, W - 32);   // 🈳 en 標題/副標防切邊/貼邊
+        fitText(sub, W - 32);   // 🈳 en 標題/副標防切邊/貼邊
         g.add(title); g.add(sub);
         const backH = 50, backY = H - 38;
         const list = (id === 'tower') ? DIFFS.filter(df => df.key !== 'baby') : DIFFS;   // 塔=最終關,難度同五屬關但不開嬰兒級
@@ -8428,18 +8663,18 @@
         const bagN = loadSave().cards.length, bagCap = boxCap(), bagFull2 = bagN >= bagCap;   // 🎒 背包滿→BOX 鈕紅字+⚠️提醒(掉落會收不到)
         const items = [
           [tr('🎴 卡片 BOX（{n} / {c} 格）', { n: bagN, c: bagCap }) + (bagFull2 ? tr('  ⚠️ 滿') : ''), () => this.go('collection'), false, bagFull2 ? '#d0574a' : null, 'ui_card'],
-          [tr('🛡️ 隊伍編成'), () => this.go('team'), false],
-          [tr('📖 卡片圖鑑'), () => this.go('dex'), false],
-          [tr('💰 卡片售出 — 待做'), () => this.toast(tr('卡片售出 — 待做')), true],
+          [tr('🛡️ 隊伍編成'), () => this.go('team'), false, null, 'ui_shield'],
+          [tr('📖 卡片圖鑑'), () => this.go('dex'), false, null, 'ui_dex'],
+          [tr('💰 卡片售出 — 待做'), () => this.toast(tr('卡片售出 — 待做')), true, null, 'ui_coin'],
         ];
         let y = cTop + 96;
+        const _maxTxtW = W - 44 - 32;   // 🆕2026-09-25 按鈕內可用寬,fitText 防長字(en)爆版
         items.forEach(([label, action, todo, colOverride, iconKey]) => {
           const lip = todo ? 0xddd7cd : 0xdc7c66, border = todo ? (bagFull2 && colOverride ? 0xe0a090 : T.divider) : (colOverride ? 0xe0a090 : 0xee9c8a), face = todo ? T.surf2 : T.surf, tcol = colOverride || (todo ? T.ink3 : T.ink);
           this.L(roundRectG(this, CX, y + 3, W - 44, 56, 28, lip, 1, null, 0));   // 底部唇邊(3D 立體感)
           this.L(roundRectG(this, CX, y, W - 44, 56, 28, face, 1, border, 2));     // 白面 + 紅框
-          const _icReady = iconKey && _iconReady(this, iconKey);   // 🆕2026-09-23 開頭 emoji 前綴(目前僅「🎴 卡片 BOX」)→icon;未載到/無 iconKey→原樣文字
-          if (_icReady) { const _disp = stripEmoji(label), _tmp = this.add.text(0, 0, _disp, { fontFamily: EMOJIFONT, fontSize: FS.sub, fontStyle: 'bold' }); const _tw = Math.ceil(_tmp.width); _tmp.destroy(); const _ics = 26, _gw = _ics + 8 + _tw, _left = CX - _gw / 2; this.L(this.add.image(_left + _ics / 2, y, iconKey).setDisplaySize(_ics, _ics)); this.txt(_left + _ics + 8 + _tw / 2, y, _disp, FS.sub, tcol, 0.5, true); }
-          else this.txt(CX, y, label, FS.sub, tcol, 0.5, true);
+          const _lbl = menuLabelIcon(this, o2 => this.L(o2), CX, y, iconKey, label, { fs: FS.sub, col: tcol, maxW: _maxTxtW });   // 🆕2026-09-25 沿用共用 helper(內建 fitText);未載到→fallback 原樣文字
+          if (!_lbl) fitText(this.txt(CX, y, label, FS.sub, tcol, 0.5, true), _maxTxtW);
           const hit = this.rect(CX, y, W - 44, 60, 0x000000, 0.001).setInteractive();
           tapBind(this, hit, action);
           y += 78;
@@ -8454,10 +8689,24 @@
           this.L(this.add.image(left + iw / 2, cTop + 34, 'ui_shop').setDisplaySize(iw, iw));
           t.setPosition(left + iw + 8 + tw / 2, cTop + 34).setOrigin(0.5); this.L(t); }
         // 按鈕全用村落式白面綠框 3D 藥丸(.menu-btn;含待做也是白綠,樣子與村落一致);幾何/唇邊全抄 bVillage
-        const menuBtn = (y, label, cb) => {
+        const _maxTxtW = W - 44 - 32;   // 🆕2026-09-25 按鈕內可用寬,fitText 防長字(en)爆版
+        const menuBtn = (y, label, cb, iconKey) => {   // 🆕2026-09-25 iconKey 支援兩種:'ui_xxx'(webp,走 menuLabelIcon)/'lucide:xxx'(SVG,按需 lazy load)
           this.L(roundRectG(this, CX, y + 3, W - 44, 56, 28, 0x57a877, 1, null, 0));   // 綠唇邊(3D)
           this.L(roundRectG(this, CX, y, W - 44, 56, 28, T.surf, 1, 0x7fc99a, 2));       // 白面 + 綠框
-          this.txt(CX, y, label, FS.sub, T.ink, 0.5, true);
+          let _drawn = false;
+          if (iconKey && iconKey.indexOf('lucide:') === 0) {
+            const _name = iconKey.slice(7);
+            if (this.textures.exists('lucide_' + _name)) {
+              const _disp = stripEmoji(label), _t = this.add.text(0, 0, _disp, { fontFamily: EMOJIFONT, fontSize: FS.sub, color: T.ink, fontStyle: 'bold' }).setOrigin(0.5);
+              fitText(_t, Math.max(20, _maxTxtW - 26 - 8));
+              const _tw = _t.displayWidth, _ics = 26, _gw = _ics + 8 + _tw, _left = CX - _gw / 2;
+              this.L(lucideIcon(this, _left + _ics / 2, y, _name, _ics, _hex2num(T.ink))); _t.setPosition(_left + _ics + 8 + _tw / 2, y); this.L(_t);
+              _drawn = true;
+            } else { _loadIcon(this, _name); this.load.once('complete', () => { if (this.scene.isActive() && this.tab === 'shop') this.rebuild(); }); try { this.load.start(); } catch (e) { } }
+          } else if (iconKey) {
+            _drawn = !!menuLabelIcon(this, o2 => this.L(o2), CX, y, iconKey, label, { fs: FS.sub, col: T.ink, maxW: _maxTxtW });
+          }
+          if (!_drawn) fitText(this.txt(CX, y, label, FS.sub, T.ink, 0.5, true), _maxTxtW);
           const hit = this.rect(CX, y, W - 44, 60, 0x000000, 0.001).setInteractive();
           tapBind(this, hit, cb);
         };
@@ -8472,10 +8721,10 @@
           if (r.status === 402) { this._busyStamina = false; this.toast(tr('魔法石不足')); return; }
           if (!r.ok) { this._busyStamina = false; this.toast(tr('需要連線,請稍後再試')); return; }
           const d = await r.json(); syncWallet(d); refillStamina(); this._busyStamina = false; this.toast(tr('體力回滿!')); this.rebuild();
-        });
+        }, 'ui_energy');
         y += 78;
-        [['💎 魔法石商店', '魔法石商店'], ['📦 BOX 擴張', 'BOX 擴張'], ['👥 好友上限', '好友上限']].forEach((it) => {
-          menuBtn(y, tr('{n} — 待做', { n: tr(it[0]) }), () => this.toast(tr('{n} — 待做', { n: tr(it[1]) })));
+        [['💎 魔法石商店', '魔法石商店', 'ui_gem'], ['📦 BOX 擴張', 'BOX 擴張', 'ui_crate'], ['👥 好友上限', '好友上限', 'lucide:users']].forEach((it) => {
+          menuBtn(y, tr('{n} — 待做', { n: tr(it[0]) }), () => this.toast(tr('{n} — 待做', { n: tr(it[1]) })), it[2]);
           y += 78;
         });
       }
@@ -8492,33 +8741,77 @@
         // 📐 上下節奏對齊「卡片管理」(bMonster):第一張卡頂緣 = cTop+68(=卡片管理第一顆按鈕頂緣,不再緊貼標題),卡間隔 = 22(=卡片管理 GAP)。卡高 168→第一張中心 cTop+68+84=cTop+152、第二張 = 上一張底(cTop+236)+22+84 = cTop+342
         this.gachaBanner(cTop + 152, 'premium', tr('✨ 六星 限定 · 機率 3%'), 0x7c5cd0, 0xf3eefc, 'purple');   // 結印:紫框 + 淡紫卡 + 紫鈕
         this.gachaBanner(cTop + 342, 'normal', tr('金錢轉蛋（無六星）'), 0x35a866, 0xecf8ee, 'ok');   // 一般:綠框 + 淡綠卡 + 綠鈕
-        if (this._freeGuide) this._freePullFinger(CX + 90, cTop + 152 + 40);   // 🎁 引導改「手指指向免費十連鈕」,不再放底部文字(座標=premium 橫幅 y + 40 = 該鈕中心,同 gachaBanner 的 mk(CX+90,...,10))
+        if (this._freeGuide && !this._poolInactive('premium')) this._freePullFinger(CX + 90, cTop + 152 + 40);   // 🎁 引導改「手指指向免費十連鈕」,不再放底部文字(座標=premium 橫幅 y + 40 = 該鈕中心,同 gachaBanner 的 mk(CX+90,...,10));🆕2026-09-25 池 _inactive(時間窗外)時該鈕根本不會建,別讓手指指著不能按的東西
         else this.txt(CX, H - 74, tr('※ 機率已公示;六星僅「召喚勇者」可得'), FS.micro, '#c9c3ba', 0.5);   // 深底→淺灰註解
         if (this.gachaResult) this.drawGachaResult();
       }
+      _poolInactive(bankey) {   // 🆕2026-09-25 抽出 gachaBanner 內同一套「池時間窗外」判斷,供 bGacha() 的 _freePullFinger 呼叫前先查(灰化池不建抽卡鈕,手指別指過去)
+        const srv = window._nbGachaRates && Array.isArray(window._nbGachaRates.pools) && window._nbGachaRates.pools.find(p => p.id === bankey);
+        if (!srv) return false;
+        const now = Math.floor(Date.now() / 1000);
+        return !!((typeof srv.endsAt === 'number' && now >= srv.endsAt) || (typeof srv.startsAt === 'number' && now < srv.startsAt));
+      }
       gachaBanner(y, bankey, tagline, accent, cardBg, btnVariant) {
-        const T = UI(), b = GACHA[bankey], aTx = '#' + accent.toString(16).padStart(6, '0');
+        const T = UI(), b = GACHA[bankey];
         const srv = window._nbGachaRates && Array.isArray(window._nbGachaRates.pools) && window._nbGachaRates.pools.find(p => p.id === bankey);   // 機率公示優先讀伺服器(/api/gacha/rates 回的 pools 是陣列,用 id 找),查無才 fallback 前端常數
         const rates = (srv && srv.rates) || b.rates.map(r => ({ rank: r[0], rate: r[1] }));
         const cost1 = (srv && srv.cost1 != null) ? srv.cost1 : b.cost1;
         const cost10 = (srv && srv.cost10 != null) ? srv.cost10 : b.cost10;
+        // 🔐 池時間窗(0035):/api/gacha/rates 回應帶 startsAt/endsAt(unix 秒);查無伺服器資料(離線/fallback)時不擋,
+        // 真正的擋是伺服器 pull.ts(時間窗外回 404 pool_not_found)——這裡純粹是抽卡前先讓玩家看到灰態,省一次白跑的請求。
+        const _now = Math.floor(Date.now() / 1000);
+        const _closed = !!(srv && typeof srv.endsAt === 'number' && _now >= srv.endsAt);
+        const _notStarted = !!(srv && typeof srv.startsAt === 'number' && _now < srv.startsAt);
+        const _inactive = _closed || _notStarted;
+        if (_inactive) { accent = 0x6b7280; cardBg = 0x3a3d42; }   // 灰化:框線+卡底改中性灰,蓋掉呼叫端傳入的紫/綠配色
+        const aTx = '#' + accent.toString(16).padStart(6, '0');   // 🆕2026-09-25 移到 _inactive 覆蓋之後算,灰化時標語色(aTx)才會跟著變灰,不再殘留原紫/綠
         this.L(roundRectG(this, CX, y, 380, 168, 22, cardBg, 1, accent, 2));   // 淡色機台卡 + accent 框(demo .summon-card;加高讓內容/按鈕不擠邊)
         { const _rk = b.cur === 'stones' ? 'ui_gem' : 'ui_coin', _ready = _iconReady(this, _rk), _label = tr(b.name);   // 🆕2026-09-23 標題貨幣 icon(res_gem/res_coin)取代 💎/💰 前綴;未載到 fallback 原 emoji+文字
           if (_ready) { const _tmp = this.add.text(0, 0, _label, { fontFamily: EMOJIFONT, fontSize: FS.sub, fontStyle: 'bold' }); const _tw = Math.ceil(_tmp.width); _tmp.destroy(); const _ics = 20, _gw = _ics + 6 + _tw, _left = CX - _gw / 2; this.L(this.add.image(_left + _ics / 2, y - 61, _rk).setDisplaySize(_ics, _ics)); this.txt(_left + _ics + 6 + _tw / 2, y - 61, _label, FS.sub, T.ink, 0.5, true); }
           else this.txt(CX, y - 61, b.icon + ' ' + _label, FS.sub, T.ink, 0.5, true); }
-        this.txt(CX, y - 37, tagline, FS.cap, aTx, 0.5, true);
-        this.txt(CX, y - 13, rates.map(r => RANKSTAR[r.rank] + ' ' + Math.round(r.rate * 100) + '%').join('  ·  '), '13px', T.ink2, 0.5);
+        if (bankey === 'premium') {   // 🆕2026-09-25 「✨ 六星 限定」的 ✨→icon_evo(進化火花,風格一致);未載到/非 premium→原樣文字
+          const _tl = menuLabelIcon(this, o2 => this.L(o2), CX, y - 37, 'ui_evo', tagline, { fs: FS.cap, col: aTx, ics: 16, gap: 5 });
+          if (!_tl) this.txt(CX, y - 37, tagline, FS.cap, aTx, 0.5, true);
+        } else this.txt(CX, y - 37, tagline, FS.cap, aTx, 0.5, true);
+        { // 🆕2026-09-25 機率行:★串→icon_star 小尺寸(13px)橫排 + 百分比文字交錯,取代整串文字星號
+          const _RN = { genin: 1, chunin: 2, jonin: 3, kage: 4 }, _sz = 13, _sgap = 1, _pgap = 5, _ggap = 14, _rowY = y - 13;
+          const _groups = rates.map(r => {
+            const n = _RN[r.rank] || 1, starsW = n * _sz + (n - 1) * _sgap, pctTxt = Math.round(r.rate * 100) + '%';
+            const _tmp = this.add.text(0, 0, pctTxt, { fontFamily: EMOJIFONT, fontSize: '13px' }); const tw = Math.ceil(_tmp.width); _tmp.destroy();
+            return { n, starsW, pctTxt, tw, w: starsW + _pgap + tw };
+          });
+          const totalW = _groups.reduce((s, g) => s + g.w, 0) + _ggap * (_groups.length - 1);
+          let cursor = CX - totalW / 2;
+          _groups.forEach((g, gi) => {
+            for (let i = 0; i < g.n; i++) { this.L(this.add.image(cursor + _sz / 2, _rowY, 'ui_star').setDisplaySize(_sz, _sz)); cursor += _sz + _sgap; }
+            cursor += _pgap - _sgap;
+            this.txt(cursor + g.tw / 2, _rowY, g.pctTxt, '13px', T.ink2, 0.5);
+            cursor += g.tw + (gi < _groups.length - 1 ? _ggap : 0);
+          });
+        }
         const unit = b.cur === 'stones' ? '💎' : '💰', busy = !!this._busyPull;   // 🔐 抽卡防連點(_busyPull)期間按鈕變灰+停用
         // 抽卡鈕=編成確定鈕精緻款(DOM overlay + stylePillBtn,任意 dpi 銳利;canvas 畫的會被 420 framebuffer 鋸齒)。
         // DOM 永遠浮在 canvas 上→結果彈窗(canvas)蓋不住它:顯示結果時不建鈕(關閉會 rebuild 重建)。DOM 掛 scene 級,存 _tabDom 供 rebuild 清。
-        if (!this.gachaResult) {
+        if (_inactive) {   // 🔐 時間窗外:灰態文字取代抽卡鈕(不建 DOM 鈕),文案區分「未開始/已結束」
+          this.txt(CX, y + 40, tr(_notStarted ? '⏳ 尚未開放' : '⌛ 活動已結束'), FS.sub, '#9aa1ab', 0.5, true);
+        } else if (!this.gachaResult) {
           const guide = !!this._freeGuide;   // 🎁 引導式新手十連:只有召喚勇者「十連」可按+脈動,其餘一律禁用
           const mk = (bx, label, count) => {
             const isFree = guide && bankey === 'premium' && count === 10;   // 免費十連目標鈕
             const off = busy || (guide && !isFree);   // 引導期非目標鈕全禁用(灰)
             const el = document.createElement('button');
             stylePillBtn(el, '162px', off ? 'ghost' : btnVariant);
-            el.textContent = isFree ? tr('🎁 免費十連') : label;   // 引導時目標鈕改字強調免費
+            if (isFree) el.textContent = tr('🎁 免費十連');   // 引導時目標鈕改字強調免費
+            else {   // 🆕2026-09-25 單抽/十連鈕內 💎/💰 換成 inline <img>(DOM 按鈕,stylePillBtn 本身 inline-flex+gap,天然對齊);找不到 unit 字元(理論不會)→退回純文字
+              const _idx = label.indexOf(unit);
+              if (_idx >= 0) {
+                el.appendChild(document.createTextNode(label.slice(0, _idx)));
+                const _img = document.createElement('img'); _img.src = 'art/ui/' + (b.cur === 'stones' ? 'res_gem' : 'res_coin') + '.webp'; _img.alt = '';
+                _img.style.cssText = 'height:1em;vertical-align:-0.15em;margin:0 2px;';
+                el.appendChild(_img);
+                el.appendChild(document.createTextNode(label.slice(_idx + unit.length)));
+              } else el.textContent = label;
+            }
             if (isFree) el.addEventListener('click', () => this._doFreePull());   // 按下才抽免費十連
             else if (guide) el.addEventListener('click', () => this.toast(tr('先領取免費新手十連!')));   // 其餘引導期禁用鈕→提示
             else if (!busy) el.addEventListener('click', () => this.pull(bankey, count));
@@ -8834,20 +9127,25 @@
         const full = m.stamina >= m.staminaMax;
         const mailN = this._mailUnread || 0, dailyOn = dailyAvailable();
         const items = [
-          [tr('🛏️ 宿屋（恢復體力）') + (full ? '' : '　💎1'), () => this.villageRest()],
-          [tr('📬 信箱（通知・獎勵）'), () => this.openMailPanel(), { badge: mailN > 0 }],   // 有未讀信→右上驚嘆號
-          [tr('🏆 殿堂（排行・成就・紀錄）'), () => this.switchTab('friend')],
-          [tr('⛩️ 神社（每日參拜）'), () => this.showDaily(), { dim: !dailyOn, badge: dailyOn }],   // 今日已領→灰階不可按;可領→右上驚嘆號(對齊底部導覽列的事件提示,讓玩家知道要點哪個)
+          [tr('🛏️ 宿屋（恢復體力）') + (full ? '' : '　💎1'), () => this.villageRest(), { icon: 'ui_inn' }],
+          [tr('📬 信箱（通知・獎勵）'), () => this.openMailPanel(), { badge: mailN > 0, icon: 'ui_mailbox' }],   // 有未讀信→右上驚嘆號
+          [tr('🏆 殿堂（排行・成就・紀錄）'), () => this.switchTab('friend'), { icon: 'ui_trophy' }],
+          [tr('⛩️ 神社（每日參拜）'), () => this.showDaily(), { dim: !dailyOn, badge: dailyOn, icon: 'ui_torii' }],   // 今日已領→灰階不可按;可領→右上驚嘆號(對齊底部導覽列的事件提示,讓玩家知道要點哪個)
+          [tr('🎁 邀請好友（領魔法石）'), () => this.openReferralPanel(), { icon: 'ui_gift' }],   // 🎁 邀請好友:面板顯示邀請碼/進度/里程碑,獎勵走信箱自動發(零領獎 UI)
         ];
         let y = cTop + 96;
+        // 🆕2026-10-01 按鈕間距依可用高度自適應:最後一顆底緣(含3px唇邊)須在 cBot-8 內;步距上限 78(高螢幕/顆數少時維持原樣)、下限 64(不低於 hit 高 60,字級不縮)
+        const _step = Math.max(64, Math.min(78, Math.floor((cBot - 8 - (y - 28) - 59) / Math.max(1, items.length - 1))));
+        const _maxTxtW = W - 44 - 32;   // 🆕2026-09-25 按鈕內可用寬(扣左右內距),icon 版另扣 icon+gap;fitText 防長字(en)爆版
         items.forEach(it => {
           const o = it[2] || {}, dim = !!o.dim;
           this.L(roundRectG(this, CX, y + 3, W - 44, 56, 28, dim ? 0x9aa0a0 : 0x57a877, 1, null, 0));   // 底部唇邊(3D;已領神社=灰、否則綠)
           this.L(roundRectG(this, CX, y, W - 44, 56, 28, dim ? T.surf2 : T.surf, 1, dim ? T.divider : 0x7fc99a, 2));   // 白/灰面 + 框
-          this.txt(CX, y, it[0], FS.sub, dim ? T.ink3 : T.ink, 0.5, true);
+          const _lbl = menuLabelIcon(this, o2 => this.L(o2), CX, y, o.icon, it[0], { fs: FS.sub, col: dim ? T.ink3 : T.ink, maxW: _maxTxtW });   // 🆕2026-09-25 icon+文字(宿屋/信箱/殿堂/神社);未載到→fallback 原樣文字
+          if (!_lbl) fitText(this.txt(CX, y, it[0], FS.sub, dim ? T.ink3 : T.ink, 0.5, true), _maxTxtW);
           if (!dim) { const hit = this.rect(CX, y, W - 44, 60, 0x000000, 0.001).setInteractive(); tapBind(this, hit, it[1]); }   // 灰階(今日已領)→不綁點擊
           if (o.badge) this._eventBadge(CX + (W - 44) / 2 - 14, y - 18);   // 📬 有未讀信→右上事件驚嘆號動畫
-          y += 78;
+          y += _step;
         });
       }
       async villageRest() {   // 🛏️ 宿屋=商店同一條補體力邏輯(POST /api/wallet/spend stamina_refill,💎1,_busyStamina 防連點)
@@ -8877,9 +9175,15 @@
         { const _label = tr('🎴 我的勇者卡'), _ready = _iconReady(this, 'ui_card'), _disp = _ready ? stripEmoji(_label) : _label;   // 🆕2026-09-23 開頭 🎴 前綴→icon_card;未載到 fallback 原文字
           if (_ready) { const _tmp = this.add.text(0, 0, _disp, { fontFamily: EMOJIFONT, fontSize: FS.title, fontStyle: 'bold' }); const _tw = Math.ceil(_tmp.width); _tmp.destroy(); const _ics = 26, _gw = _ics + 8 + _tw, _left = CX - _gw / 2; g.add(this.add.image(_left + _ics / 2, H / 2 - 165, 'ui_card').setDisplaySize(_ics, _ics)); g.add(this.add.text(_left + _ics + 8 + _tw / 2, H / 2 - 165, _disp, { fontFamily: EMOJIFONT, fontSize: FS.title, color: T.ink, fontStyle: 'bold' }).setOrigin(0.5)); }
           else g.add(this.add.text(CX, H / 2 - 165, _disp, { fontFamily: EMOJIFONT, fontSize: FS.title, color: T.ink, fontStyle: 'bold' }).setOrigin(0.5)); }
-        const mkB = (y, w2, h2, label, fill, cb) => {   // 彈窗內按鈕(不能用 this.btn:那會進 rebuild 的 layer,深度會錯)
+        const mkB = (y, w2, h2, label, fill, cb, iconName) => {   // 彈窗內按鈕(不能用 this.btn:那會進 rebuild 的 layer,深度會錯);🆕2026-09-25 iconName 選填(lucide_<name>,HomeScene 已 eager 預載)→icon+文字置中
           g.add(roundRectG(this, CX, y, w2, h2, h2 / 2, fill, 1, null, 0));
-          g.add(this.add.text(CX, y, label, { fontFamily: EMOJIFONT, fontSize: FS.body, color: '#ffffff', fontStyle: 'bold' }).setOrigin(0.5));
+          const _ready = iconName && this.textures.exists('lucide_' + iconName);
+          if (_ready) {
+            const _disp = stripEmoji(label), _tmp = this.add.text(0, 0, _disp, { fontFamily: EMOJIFONT, fontSize: FS.body, fontStyle: 'bold' }); const _tw = Math.ceil(_tmp.width); _tmp.destroy();
+            const _ics = 20, _sc = Math.min(1, (w2 - 24 - _ics - 6) / Math.max(1, _tw)), _twS = Math.ceil(_tw * _sc), _gw = _ics + 6 + _twS, _left = CX - _gw / 2;   // 🈳 _sc:en 長字串縮進按鈕
+            g.add(lucideIcon(this, _left + _ics / 2, y, iconName, _ics, 0xffffff));
+            g.add(this.add.text(_left + _ics + 6 + _twS / 2, y, _disp, { fontFamily: EMOJIFONT, fontSize: FS.body, color: '#ffffff', fontStyle: 'bold' }).setOrigin(0.5).setScale(_sc));
+          } else g.add(fitText(this.add.text(CX, y, label, { fontFamily: EMOJIFONT, fontSize: FS.body, color: '#ffffff', fontStyle: 'bold' }).setOrigin(0.5), w2 - 24));   // 🈳 en 長字串縮進按鈕
           const hb = this.add.rectangle(CX, y, w2, h2, 0x000000, 0.001).setInteractive(); g.add(hb); hb.on('pointerup', cb);
         };
         const code = cloudState().guestCode || '';
@@ -8890,16 +9194,24 @@
             const done = () => this.toast(tr('已複製!'));
             if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(code).then(done, () => uiPrompt({ title: tr('手動複製代碼'), message: tr('長按選取後複製'), value: code }));   // 失敗 fallback:頁內框顯示,長按選取複製
             else uiPrompt({ title: tr('手動複製代碼'), message: tr('長按選取後複製'), value: code });
-          });
+          }, 'copy');
         } else {   // 帳號還沒建成(離線/初次連線中)→ 背景補建,建好且視窗還開著就自動重開
           g.add(this.add.text(CX, H / 2 - 100, tr('連線中…'), { fontFamily: EMOJIFONT, fontSize: FS.title, color: T.ink2 }).setOrigin(0.5));
           g.add(this.add.text(CX, H / 2 - 38, tr('目前離線或連線中,\n連上後就會自動發卡'), { fontFamily: EMOJIFONT, fontSize: FS.body, color: T.ink2, align: 'center', lineSpacing: 8 }).setOrigin(0.5));
           ensureGuest().then(() => { if (this._heroG === g && g.active) this.showHeroCard(); }).catch(() => { });
         }
         const _em = cloudState().googleEmail;   // 📧 客服比對用:玩家打客服唸「勇者卡碼+綁定信箱」,後台一查就對上
-        g.add(this.add.text(CX, H / 2, _em ? tr('📧 綁定信箱: {n}', { n: _em }) : tr('📧 尚未綁定 Google'), { fontFamily: EMOJIFONT, fontSize: FS.cap, color: _em ? '#35a866' : T.ink3, align: 'center', wordWrap: { width: pw - 40 } }).setOrigin(0.5));   // y=H/2:上距複製鈕下緣(-14)與下距說明文字上緣(約+22)各留 >6px,不擠;🔐[37] 綁定信箱過長會撐破卡片(單行爆出金框)→補 wordWrap 限寬(pw=面板寬,見 L5952)
+        { const _label = _em ? tr('📧 綁定信箱: {n}', { n: _em }) : tr('📧 尚未綁定 Google'), _col = _em ? '#35a866' : T.ink3;
+          const _ready = this.textures.exists('lucide_mail'), _disp = _ready ? stripEmoji(_label) : _label;
+          const _measure = this.add.text(0, 0, _disp, { fontFamily: EMOJIFONT, fontSize: FS.cap, fontStyle: 'normal' }); const _tw = Math.ceil(_measure.width); _measure.destroy();
+          if (_ready && _tw + 22 <= pw - 40) {   // 🆕2026-09-25 📧 前綴→lucide mail;單行放得下才加 icon(過長維持原 wordWrap 純文字,避免多行擠版)
+            const _ics = 16, _gw = _ics + 6 + _tw, _left = CX - _gw / 2;
+            g.add(lucideIcon(this, _left + _ics / 2, H / 2, 'mail', _ics, _hex2num(_col)));
+            g.add(this.add.text(_left + _ics + 6 + _tw / 2, H / 2, _disp, { fontFamily: EMOJIFONT, fontSize: FS.cap, color: _col }).setOrigin(0.5));
+          } else g.add(this.add.text(CX, H / 2, _label, { fontFamily: EMOJIFONT, fontSize: FS.cap, color: _col, align: 'center', wordWrap: { width: pw - 40 } }).setOrigin(0.5));
+        }   // y=H/2:上距複製鈕下緣(-14)與下距說明文字上緣(約+22)各留 >6px,不擠;🔐[37] 綁定信箱過長會撐破卡片(單行爆出金框)→補 wordWrap 限寬(pw=面板寬,見 L5952)
         g.add(this.add.text(CX, H / 2 + 38, tr('換裝置時輸入這組代碼即可找回進度,\n請截圖保存'), { fontFamily: EMOJIFONT, fontSize: FS.body, color: T.ink2, align: 'center', lineSpacing: 8 }).setOrigin(0.5));
-        mkB(H / 2 + 122, 310, 52, tr('🔑 用勇者卡找回進度'), 0x5a76e0, () => { close(); heroCardRestore(this); });
+        mkB(H / 2 + 122, 310, 52, tr('🔑 用勇者卡找回進度'), 0x5a76e0, () => { close(); heroCardRestore(this); }, 'key');
         g.add(this.add.text(CX, H / 2 + 182, tr('點視窗外可關閉'), { fontFamily: EMOJIFONT, fontSize: FS.cap, color: T.ink3 }).setOrigin(0.5));
       }
       /* ── 📬 遊戲內信箱(頂欄入口/未讀紅點 + 全螢幕面板 + 領取) ── */
@@ -8914,7 +9226,7 @@
       mailBtn(x, y) {   // 頂欄入口鈕:圓底 📬 + 未讀數紅點(topBar() 已量測好安全 x,不會撞名字/稱號/💎💰 chip)
         const T = UI(), r = 18, n = this._mailUnread || 0;
         this.L(this.add.circle(x, y, r, T.surf2, 1).setStrokeStyle(1.5, T.gold, 1.5));
-        this.txt(x, y, '📬', '20px', null, 0.5);
+        { const _mi = gameIcon(this, x, y, 'ui_mailbox', 20); if (_mi) this.L(_mi); else this.txt(x, y, '📬', '20px', null, 0.5); }   // 🆕2026-09-25 📬→icon_mailbox(UI_ICONS 已 eager 預載,恆已就緒;保留 fallback)
         const hit = this.rect(x, y, r * 2 + 8, r * 2 + 8, 0x000000, 0.001).setInteractive();
         tapBind(this, hit, () => this.openMailPanel());
         if (n > 0) {   // 紅點:未讀數,>99 顯示 99+(顯眼觸達點,禮包用)
@@ -8956,7 +9268,8 @@
         const pw = W - 16, ph = H - 32, py = H / 2, top = py - ph / 2;
         g.add(roundRectG(this, CX, py, pw, ph, 20, T.surf, 1, T.gold, 2));
         g.add(this.add.rectangle(CX, py, pw, ph, 0x000000, 0.001).setInteractive());   // 面板擋點穿(點卡片內不會關)
-        g.add(this.add.text(CX, top + 34, tr('📬 信箱'), { fontFamily: EMOJIFONT, fontSize: FS.title, color: T.ink, fontStyle: 'bold' }).setOrigin(0.5));
+        { const _lbl = menuLabelIcon(this, o2 => g.add(o2), CX, top + 34, 'ui_mailbox', tr('📬 信箱'), { fs: FS.title, col: T.ink, ics: 26 });
+          if (!_lbl) g.add(this.add.text(CX, top + 34, tr('📬 信箱'), { fontFamily: EMOJIFONT, fontSize: FS.title, color: T.ink, fontStyle: 'bold' }).setOrigin(0.5)); }
         const clc = this.add.circle(CX + pw / 2 - 26, top + 30, 18, T.surf2, 0.95).setStrokeStyle(1.5, T.divider).setInteractive(); g.add(clc);
         g.add(this.add.text(CX + pw / 2 - 26, top + 30, '✕', { fontFamily: EMOJIFONT, fontSize: '18px', color: T.ink2, fontStyle: 'bold' }).setOrigin(0.5));
         clc.on('pointerup', close);
@@ -8978,7 +9291,7 @@
         // 🗑️ 刪除鈕(右上角小圓):任何信都可刪;未領取且有附件→deleteMail 內先 uiConfirm 免手滑丟獎勵
         const _dx = L + w - 20, _dy = y + 18;
         g.add(roundRectG(this, _dx, _dy, 27, 27, 13, T.surf2, 1, T.divider, 1.5));
-        g.add(this.add.text(_dx, _dy, '🗑️', { fontFamily: EMOJIFONT, fontSize: '13px' }).setOrigin(0.5));
+        { const _di = lucideIcon(this, _dx, _dy, 'trash-2', 15, _hex2num(T.ink2)); if (_di) g.add(_di); else g.add(this.add.text(_dx, _dy, '🗑️', { fontFamily: EMOJIFONT, fontSize: '13px' }).setOrigin(0.5)); }   // 🆕2026-09-25 🗑️→lucide trash-2(HomeScene 已 eager 預載)
         const _dhit = this.add.rectangle(_dx, _dy, 32, 32, 0x000000, 0.001).setInteractive(); g.add(_dhit);
         _dhit.on('pointerup', () => this.deleteMail(m));
         ty += 28;
@@ -9048,6 +9361,103 @@
           this.toast(tr('刪除失敗,請檢查連線'));
         });
       }
+      /* ── 🎁 邀請好友面板(村落入口 bVillage;只顯示邀請碼/進度/里程碑+綁定他人邀請碼,獎勵由伺服器寄信箱,此處零領獎 UI)── */
+      openReferralPanel() {   // 打開=先畫「載入中」→GET /api/referral/me;_refSeq 防過期回應(關掉/重開後舊請求回來不重畫);任何失敗→error 態+重試鈕,不拋出、不影響村落頁
+        if (this._refG) { this._refG.destroy(); this._refG = null; }
+        const seq = this._refSeq = (this._refSeq || 0) + 1;
+        this.renderReferralPanel(null, 'loading');
+        (async () => {
+          const r = await authedFetch('/api/referral/me');
+          if (!r.ok) throw new Error('referral/me ' + r.status);
+          const d = await r.json();
+          if (!d || typeof d.code !== 'string' || !d.code) throw new Error('referral/me bad body');
+          return d;
+        })().then(d => {
+          if (this._homeLeft || this._refSeq !== seq || !this._refG) return;
+          this._refData = d; this.renderReferralPanel(d, null);
+        }).catch(e => {
+          console.warn('[referral] me failed', e);
+          if (this._homeLeft || this._refSeq !== seq || !this._refG) return;
+          this.renderReferralPanel(null, 'error');
+        });
+      }
+      renderReferralPanel(d, state) {   // state: 'loading' | 'error' | null(d 有資料);版型仿 renderMailPanel(全螢幕深底+圓角白卡,點外面/✕ 關閉),字級全 FS.sub(18px)起跳、邀請碼 FS.display(34px)
+        if (this._refG) { this._refG.destroy(); this._refG = null; }
+        const T = UI(), g = this.add.container(0, 0).setDepth(1850); this._refG = g;   // 1850:同信箱面板,低於 toast(2000)
+        const close = () => { g.destroy(); if (this._refG === g) this._refG = null; };
+        const bg = this.add.rectangle(CX, H / 2, W, H, 0x0e0a16, 0.86).setInteractive(); g.add(bg); bg.on('pointerup', close);
+        const pw = W - 16, ph = H - 32, py = H / 2, top = py - ph / 2, listW = pw - 32, L = CX - listW / 2;
+        g.add(roundRectG(this, CX, py, pw, ph, 20, T.surf, 1, T.gold, 2));
+        g.add(this.add.rectangle(CX, py, pw, ph, 0x000000, 0.001).setInteractive());   // 面板擋點穿
+        { const _lbl = menuLabelIcon(this, o2 => g.add(o2), CX, top + 34, 'ui_gift', tr('🎁 邀請好友'), { fs: FS.title, col: T.ink, ics: 26 });
+          if (!_lbl) g.add(this.add.text(CX, top + 34, tr('🎁 邀請好友'), { fontFamily: EMOJIFONT, fontSize: FS.title, color: T.ink, fontStyle: 'bold' }).setOrigin(0.5)); }
+        const clc = this.add.circle(CX + pw / 2 - 26, top + 30, 18, T.surf2, 0.95).setStrokeStyle(1.5, T.divider).setInteractive(); g.add(clc);
+        g.add(this.add.text(CX + pw / 2 - 26, top + 30, '✕', { fontFamily: EMOJIFONT, fontSize: '18px', color: T.ink2, fontStyle: 'bold' }).setOrigin(0.5));
+        clc.on('pointerup', close);
+        const tx = (x, y, s, size, col, bold, ox, wrapW, extra) => { const t = this.add.text(x, y, s, Object.assign({ fontFamily: EMOJIFONT, fontSize: size, color: col, fontStyle: bold ? 'bold' : 'normal', align: 'center' }, wrapW ? { wordWrap: { width: wrapW }, lineSpacing: 6 } : {}, extra || {})).setOrigin(ox == null ? 0.5 : ox, 0.5); g.add(t); return t; };
+        const mkB = (y, w2, h2, label, fill, cb, iconName) => {   // 面板內按鈕(同 showHeroCard.mkB):icon 已載→icon+去 emoji 文字,否則退回原 emoji 文字
+          g.add(roundRectG(this, CX, y, w2, h2, h2 / 2, fill, 1, null, 0));
+          if (iconName && this.textures.exists('lucide_' + iconName)) {
+            const _disp = stripEmoji(label), _tmp = this.add.text(0, 0, _disp, { fontFamily: EMOJIFONT, fontSize: FS.sub, fontStyle: 'bold' }); const _tw = Math.ceil(_tmp.width); _tmp.destroy();
+            const _ics = 22, _sc = Math.min(1, (w2 - 24 - _ics - 8) / Math.max(1, _tw)), _twS = Math.ceil(_tw * _sc), _gw = _ics + 8 + _twS, _left = CX - _gw / 2;   // 🈳 _sc:en 長字串縮進按鈕
+            g.add(lucideIcon(this, _left + _ics / 2, y, iconName, _ics, 0xffffff));
+            g.add(this.add.text(_left + _ics + 8 + _twS / 2, y, _disp, { fontFamily: EMOJIFONT, fontSize: FS.sub, color: '#ffffff', fontStyle: 'bold' }).setOrigin(0.5).setScale(_sc));
+          } else g.add(fitText(this.add.text(CX, y, label, { fontFamily: EMOJIFONT, fontSize: FS.sub, color: '#ffffff', fontStyle: 'bold' }).setOrigin(0.5), w2 - 20));
+          const hb = this.add.rectangle(CX, y, w2, h2, 0x000000, 0.001).setInteractive(); g.add(hb); hb.on('pointerup', cb);
+        };
+        if (state === 'loading') { tx(CX, py, tr('載入中…'), FS.sub, T.ink2); return; }
+        if (state === 'error' || !d) {   // /me 失敗(離線/逾時/5xx/端點未上線):提示+重試鈕
+          tx(CX, py - 50, tr('邀請資料載入失敗,\n請檢查連線後重試'), FS.sub, T.ink2, false, 0.5, listW);
+          mkB(py + 30, 200, 52, tr('重試'), 0x35a866, () => this.openReferralPanel());
+          return;
+        }
+        const rw = d.rewards || {};
+        if (rw.enabled === false) {   // 後台關閉活動
+          tx(CX, py - 30, tr('活動暫停中'), FS.title, T.ink, true);
+          tx(CX, py + 24, tr('邀請活動暫時關閉,\n敬請期待'), FS.sub, T.ink2, false, 0.5, listW);
+          return;
+        }
+        tx(CX, top + 82, tr('我的邀請碼'), FS.sub, T.ink2);
+        { const ct = tx(CX, top + 124, String(d.code), FS.display, T.goldTx, true, 0.5, 0, { fontFamily: 'Consolas,"Courier New",monospace' }); fitText(ct, listW); }   // 邀請碼 34px 等寬粗體,好唸給朋友
+        const link = REF_LINK_BASE + encodeURIComponent(d.code);
+        mkB(top + 190, 320, 52, tr('📋 複製邀請連結'), 0x35a866, () => {
+          const manual = () => uiPrompt({ title: tr('手動複製連結'), message: tr('長按選取後複製'), value: link });   // 失敗 fallback:頁內 DOM 框顯示連結讓玩家自己選取(禁用原生對話框)
+          const done = () => this.toast(tr('已複製邀請連結!'));
+          try { if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(link).then(done, manual); else manual(); } catch (e) { manual(); }
+        }, 'copy');
+        tx(CX, top + 252, tr('已有 {n} 位好友達成（破序章）', { n: d.qualifiedCount | 0 }), FS.sub, T.ink, true, 0.5, listW);
+        const DEF = { '1': 5, '3': 15, '5': 30 }, ms = rw.milestones || DEF, got = d.milestones || {};
+        ['1', '3', '5'].forEach((k, i) => {   // 里程碑三行:左=N 人→M 石,右=✓已發放/未達成
+          const cy = top + 306 + i * 56, done = !!got[k];
+          g.add(roundRectG(this, CX, cy, listW, 48, 14, done ? T.surf2 : T.surf, 1, done ? 0x35a866 : T.divider, 2));
+          const lt = tx(L + 14, cy, tr('邀請 {n} 位 → {s} 魔法石', { n: k, s: ms[k] != null ? ms[k] : DEF[k] }), FS.sub, T.ink, true, 0); fitText(lt, listW - 28 - 92);
+          tx(L + listW - 14, cy, done ? tr('✓ 已發放') : tr('未達成'), FS.sub, done ? '#35a866' : T.ink3, true, 1);
+        });
+        const notes = tx(CX, top + 452, tr('獎勵會寄到信箱') + '\n' + tr('與好友相同網路環境不計數') + '\n' + tr('被邀請的好友破序章後,可得 {n} 魔法石', { n: rw.invitee != null ? rw.invitee : 5 }), FS.sub, T.ink2, false, 0.5, listW, { } );
+        notes.setOrigin(0.5, 0);
+        const by = notes.y + notes.height + 38;   // 按鈕/已綁定提示接在說明文字下方(英文折行變高也不會疊)
+        if (d.invitedBy) tx(CX, by - 6, tr('✓ 你已綁定好友的邀請碼'), FS.sub, '#35a866', true, 0.5, listW);
+        else mkB(by, 260, 50, tr('🔑 輸入邀請碼'), 0x5a76e0, () => this.referralBindManual(), 'key');
+      }
+      async referralBindManual() {   // 手動輸入朋友的邀請碼(帳齡 72h 判斷交伺服器):uiPrompt 取碼→POST /api/referral/bind→toast 對應訊息;成功/already_bound 順手清掉 ?ref pending
+        if (this._busyRefBind) return;
+        const v = await uiPrompt({ title: tr('輸入邀請碼'), message: tr('輸入朋友給你的邀請碼'), placeholder: tr('邀請碼'), maxLen: 32 });
+        if (v == null) return;
+        const code = refSanitize(v); if (!code) { this._refToast(tr('請輸入邀請碼')); return; }
+        this._busyRefBind = true;
+        let res; try { res = await refBind(code); } finally { this._busyRefBind = false; }
+        if (res.ok) { refClearPending(); this._refToast(tr('綁定成功!破序章後你和好友都會拿到獎勵')); if (this._refG && !this._homeLeft) this.openReferralPanel(); return; }
+        if (res.error === 'already_bound') { refClearPending(); if (this._refG && !this._homeLeft) this.openReferralPanel(); }   // 伺服器說已綁過→面板改顯示「已綁定」
+        let msg;
+        if (res.error === 'not_found') msg = tr('找不到這組邀請碼,請確認後再試');
+        else if (res.error === 'self_code') msg = tr('不能輸入自己的邀請碼');
+        else if (res.error === 'already_bound') msg = tr('你已經綁定過邀請碼了');
+        else if (res.error === 'too_old') msg = tr('帳號建立超過 72 小時,無法再綁定');
+        else if (res.error === 'network') msg = tr('需要連線,請稍後再試');
+        else msg = tr('綁定失敗,請稍後再試');
+        this._refToast(msg);
+      }
+      _refToast(msg) { showWhiteToast(this, msg, { fs: '22px', big: true, hold: 2600 }); }   // 邀請面板專用:訊息較長→停留 2.6 秒(一般 toast 1.2 秒來不及讀)
     }
 
     /* ===== 強化合成(養成) ===== */
@@ -9091,7 +9501,7 @@
         this.L(roundRectG(this, CX, 122, 360, 96, 14, EL[t.el].color, 1, T.gold, 2));
         cardImgOn(this, 356, 108, 66, t.id, 'thumb');   // 對象卡狗圖(右上)
         const ct = (x, y, s, size, col, ox) => this.L(this.add.text(x, y, s, { fontFamily: EMOJIFONT, fontSize: Math.max(13, size || 14) + 'px', color: col || '#ffffff', fontStyle: 'bold' }).setOrigin(ox == null ? 0 : ox, 0.5).setStroke('#1a1208', 4).setResolution(2));
-        ct(40, 92, tr(t.name) + '  Lv.' + (pv ? pv.toLv : lv) + (mx ? ' MAX' : (pv && pv.ups > 0 ? '  ↑' + pv.ups : '')), 16, '#ffffff', 0);
+        fitText(ct(40, 92, tr(t.name) + '  Lv.' + (pv ? pv.toLv : lv) + (mx ? ' MAX' : (pv && pv.ups > 0 ? '  ↑' + pv.ups : '')), 16, '#ffffff', 0), 272);   // 🈳 en 卡名最長 24 字→不撞右側卡圖(x≥323)
         ct(40, 112, tr(EL[t.el].name) + ' · ' + RANKSTAR[t.rank], 13, '#ffe08a', 0);   // 屬性+星:亮金,清楚
         const _d = (cur, nw) => '' + cur + (pv && nw > cur ? '→' + nw : '');   // 選了素材→顯示 before→after
         ct(40, 132, '⚔' + _d(atk, nAtk) + '   ♥' + _d(hp, nHp) + '   ✚' + _d(rcv, nRcv), 13, pv ? '#9dffbe' : '#ffffff', 0);   // 三圍(升值時整行轉亮綠)
@@ -9209,7 +9619,8 @@
         this.add.rectangle(CX, H / 2, W, H, T.page);
         this.scrollY = 0; this.contentH = 0; this.dragFrom = null; this.dragMoved = 0;
         this.build();
-        const backEl = document.createElement('button'); stylePillBtn(backEl, '46%', 'ghost'); backEl.textContent = tr('🏠 返回大廳');   // 返回鈕=卡冊 footbar 的返回款(ghost 46%,靠右)
+        const backEl = document.createElement('button'); stylePillBtn(backEl, '46%', 'ghost');   // 返回鈕=卡冊 footbar 的返回款(ghost 46%,靠右)
+        { const _img = document.createElement('img'); _img.src = 'art/icons/lucide_home.svg'; _img.alt = ''; _img.style.cssText = 'width:18px;height:18px;'; backEl.appendChild(_img); backEl.appendChild(document.createTextNode(tr('返回大廳'))); }   // 🆕2026-09-25 DOM 按鈕直接引用 SVG 檔,不受 Phaser 貼圖是否已載影響
         backEl.addEventListener('click', () => { this.scene.manager.start('home'); this.scene.manager.stop('dex'); });
         // ⚠️照卡冊結構:外層 div 定寬高(給 Phaser add.dom 量測置中用),內層 flex 才做靠右;flex 放根 div 會讓 Phaser 定位錯亂→鈕跑左邊
         const backWrap = document.createElement('div'); backWrap.style.cssText = 'width:' + (W - 28) + 'px;height:52px;';
@@ -9317,8 +9728,10 @@
     // ☁️ 開場閘門:new Phaser.Game 前先做雲端調和(hydrateFromCloud,硬上限 2.5 秒),逾時/失敗照常開場絕不卡玩家
     async function gatedBoot() {
       checkConfig();   // 公告/維護(fire-and-forget,不 await)
+      captureRefParam();   // 🎁 ?ref=邀請碼→存 nb_pending_ref(同步、不碰網路;須在任何 await 之前,免被 reload/切帳搶先)
       try { await Promise.race([hydrateFromCloud(), new Promise(function (res) { setTimeout(res, 2500); })]); } catch (e) { }
       window._nbBootDone = true;   // 此後 hydrateFromCloud 不得再套雲端資料(本輪放棄,下次開場再調和)
+      tryBindPendingRef();   // 🎁 有待綁邀請碼→背景綁定(靜默,失敗留著下次再試;authedFetch 內 ensureGuest 已建好/建帳中有併發鎖)
       walletFetch(); flushPendingRuns(); cardsFetch();   // 🔐 伺服器錢包/待補通關獎勵/收藏校正(fire-and-forget,不阻塞開場)
       cloudFetch('/api/gacha/rates').then(r => r.ok ? r.json() : null).then(d => { if (d && d.pools) window._nbGachaRates = d; }).catch(() => { });   // 轉蛋機率公示改讀伺服器(失敗 fallback 前端常數,見 gachaBanner)
       bootGame();
