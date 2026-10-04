@@ -1267,6 +1267,13 @@
     function checkConfig() {   // 公告/維護(免認證,fire-and-forget):存 window._nbConfig,首次進大廳時 toast
       cloudFetch('/api/config').then(r => (r && r.ok) ? r.json() : null).then(d => { if (d) window._nbConfig = d; }).catch(() => { });
     }
+    // 🔗同屬共鳴(2026-10-05,sim 定案 c=0.10):清屬性宮時,隊上每多一隻「其他」同屬卡,該宮攻擊項 ×(1+c×k),k 上限 4。
+    //   c 來自 /api/config 的 econ.resonanceRate(window._nbConfig),夾 0~0.5;讀不到(離線/舊後端)fallback 0.10。引擎 battle-core 不動:共鳴烘進 boxCard.atk(見 GameScene.newGame)。
+    function resonanceRate() {
+      try { const v = window._nbConfig && window._nbConfig.econ && window._nbConfig.econ.resonanceRate, n = Number(v); if (v != null && v !== '' && isFinite(n)) return Math.min(0.5, Math.max(0, n)); } catch (e) { }
+      return 0.10;
+    }
+    function resonanceK(els, i) { if (!els[i]) return 0; let k = 0; for (let j = 0; j < els.length; j++) if (j !== i && els[j] === els[i]) k++; return Math.min(4, k); }   // 隊上「其他」同屬卡數(cap 4)
     function maybeConfigToast(scene) {   // 大廳 create 呼叫:公告/維護各 toast 一次(每 session);維護不鎖,仍可離線遊玩
       const cfg = window._nbConfig; if (!cfg) return; let dly = 700;
       if (cfg.announcement && !window._nbAnnShown) { window._nbAnnShown = true; scene.time.delayedCall(dly, () => scene.toast('📢 ' + cfg.announcement)); dly += 5600; }
@@ -1984,7 +1991,8 @@
         const LEADER_Y = (ROW1_Y + ROW2_Y) / 2;   // 隊長:絕對置中在兩排縫隙、疊最上層(leaderG)
         const STATS_Y = ROW2_Y + FC_H / 2 + 18;   // §90:佈陣與總數值間不放分隔線(直接接)
         const LEAD_Y = STATS_Y + 26;
-        const CARD_BOT = LEAD_Y + 16;
+        const RES_Y = LEAD_Y + 24;   // 🔗同屬共鳴行(隊長技下方;無共鳴時留白不顯示,版面固定不跳動)
+        const CARD_BOT = RES_Y + 16;
         const SORT_Y = CARD_BOT + 30;
         this.headBot = SORT_Y + 20;   // 上方互動區下緣(卡片拖曳切隊/宮位命中判定用;排序列本就落在此區內,和原設計一樣互不干擾)
         this.vpTop = this.headBot + 10; this.vpBot = H - 70; const vpH = this.vpBot - this.vpTop;
@@ -2087,6 +2095,8 @@
         this.statPwr = mkStat(CX - 100, 'PWR', T.goldTx); this.statHp = mkStat(CX, 'HP', T.badTx); this.statRcv = mkStat(CX + 100, 'RCV', T.okTx);
         // ── tc-lead:隊長技效果(只留效果,不放技名)──
         this.leadTxt = this.add.text(CX, LEAD_Y, tr('👑 隊長技 · —'), { fontFamily: EMOJIFONT, fontSize: FS.cap, color: T.ink2 }).setOrigin(0.5).setDepth(6);
+
+        this.resTxt = this.add.text(CX, RES_Y, '', { fontFamily: EMOJIFONT, fontSize: FS.body, color: '#c8912a', fontStyle: 'bold' }).setOrigin(0.5).setDepth(6);   // 🔗同屬共鳴(16px 金字;updateStats 填字+fitText)
 
         // ===== 排序/篩選列(固定;沿用原 buildSortFilter 邏輯,只搬到卡片下方)=====
         this.sortKey = 'species'; this.filterEl = null; this.buildSortFilter(SORT_Y);   // 預設種族排序(排序選項:種族/LV/PWR/HP/RCV,無屬性)
@@ -2317,6 +2327,11 @@
         if (this.statRcv) this.statRcv.setText(rcv.toLocaleString());
         const leaderId = this.slots[2] && this.slots[2].cardId, ls = leaderId ? leadSkill(leaderId) : null;
         if (this.leadTxt) { this.leadTxt.setText(ls ? tr('👑 隊長技 · {d}', { d: tr(ls.desc) }) : tr('👑 隊長技 · —')); this.leadTxt.setScale(1); fitText(this.leadTxt, W - 24); }   // 🈳 en 隊長技說明長度不一→每次先還原再縮進畫面
+        if (this.resTxt) {   // 🔗同屬共鳴:任一屬 ≥2 張→列出「屬 +加成%」(加成=c×(同屬數-1),與戰鬥內 boxCard 烘焙同一條規則);無共鳴→清空不顯示
+          const els = this.slots.map(s => s.cardId ? s.el : null), rc = resonanceRate(), seen = {}, parts = [];
+          els.forEach((e, i) => { if (!e || seen[e]) return; seen[e] = 1; const k = resonanceK(els, i); if (k > 0 && rc > 0) parts.push(tr(EL[e].name) + ' +' + Math.round(rc * k * 100) + '%'); });
+          this.resTxt.setText(parts.length ? tr('🔗 同屬共鳴:{list}', { list: parts.join('  ') }) : ''); this.resTxt.setScale(1); fitText(this.resTxt, W - 24);   // 🈳 en/多屬並列→先還原再縮進畫面
+        }
       }
       async doRename() { const i = getTeamIdx(), v = await uiPrompt({ title: tr('隊伍名稱'), message: tr('最多 6 字,留空=隊{n}', { n: i + 1 }), value: teamCustomName(i), maxLen: 6 }); if (v != null) { renameTeam(i, v); this.updateSwitcher(); } }
       confirm() { saveTeamAt(getTeamIdx(), this.slots.map(s => s.uid || null)); this.scene.manager.start('home', this.tutTeam ? { tab: 'dungeon' } : undefined); this.scene.manager.stop('team'); }   // 存當前隊 + 回大廳(未滿也可離開,出戰時再擋);🗺️ 教學編隊完成→強制落在地圖(dungeon)分頁(否則沿用 persisted 的 gacha tab,看不到序章島指引)
@@ -3096,6 +3111,10 @@
         this.boxElement = {}; this.boxCard = {};
         if (this.presetTeam) ELEMENT_BOXES.forEach((b, i) => { const card = this.presetTeam[i]; this.boxCard[b] = card; this.boxElement[b] = card.el; });
         else ELEMENT_BOXES.forEach(b => { const card = ROSTER[rnd(ROSTER.length)]; this.boxCard[b] = card; this.boxElement[b] = card.el; });
+        // 🔗同屬共鳴:每宮的卡算 k=隊上其他同屬卡數(cap 4),餵給引擎的 boxCard.atk ×(1+c×k)(浮點四捨五入);_atk0 留原始攻擊(主動技用)。
+        //   預覽(_prospectiveDmg)與結算(resolve)都吃 this.boxCard→同源;neutralAtkBase 下方仍用 presetTeam 的原始 c.atk,共鳴只作用屬性宮、不 double-dip 無屬基準。
+        { const _rc = resonanceRate(), _els = ELEMENT_BOXES.map(b => this.boxCard[b] && this.boxCard[b].el); this._resK = {};
+          ELEMENT_BOXES.forEach((b, i) => { const card = this.boxCard[b], k = resonanceK(_els, i); this._resK[b] = (_rc > 0 ? k : 0); if (card && k > 0 && _rc > 0) this.boxCard[b] = Object.assign({}, card, { atk: Math.round(card.atk * (1 + _rc * k)), _atk0: card.atk }); }); }
         this.lead = (this.presetTeam && this.presetTeam[2] && leadSkill(this.presetTeam[2].id)) || null;   // 隊長技=中央位卡(編隊正中央=隊長);走 leadSkill→家族/台灣
         this.leadEvo = (this.presetTeam && this.presetTeam[2] && this.presetTeam[2].evo) || 0;   // 隊長卡個體進化階(leveledTeam 已解好個體制);傳給 planResolve→leadDamageMult,給 lead.vByEvo(目前只有🐱貓·自我爆發用)取值
         if (this.lead && this.lead.type === 'famAtk') { const fam = this.lead.fam, n = (this.presetTeam || []).filter(c => CARD_FAMILY[c.id] === fam).length; this.lead.famFrac = n / 5; }   // 同家族比例(純家族隊=1=吃滿;台灣同家族卡也算進)
@@ -4443,7 +4462,7 @@
         this.charge[i] = 0; SFX.skill(); if (!(card.el === 'wind' && !CARD_ACTIVE[cid] && !CARD_FAMILY[cid])) this.labSnd('s_clear18', 0.7); if (this.tut) this.tutEvent('active'); if (this.lesson) this.lessonEvent('active');   // 主動技發動音(powerup08);純風技(無專屬/無家族)例外→改在 windDoPick 播解宮音
         const colHex = '#' + EL[card.el].color.toString(16).padStart(6, '0');
         this.tonFloat(tr('★ {n}', { n: tr(a.name) }), colHex);
-        const cardObj = this.boxCard[ELEMENT_BOXES[i]], atk = cardObj ? cardObj.atk : 200, ox = card.rect.x, oy = card.rect.y;
+        const cardObj = this.boxCard[ELEMENT_BOXES[i]], atk = cardObj ? (cardObj._atk0 != null ? cardObj._atk0 : cardObj.atk) : 200, ox = card.rect.x, oy = card.rect.y;
         if (this.hitLab) {   // 🧪實驗室:只演「該屬集氣→發動時射一發該屬彈命中敵人」看發動節奏順不順,不跑實際效果(回血/重生/家族技);五屬統一一發彈、純視覺不扣血
           this.chargeEl(card.el, ox, oy, 400);
           const _bt = this.targetEnemy() || this.enemies.find(e => !e.dead);
@@ -4578,7 +4597,7 @@
           this._fishHeal = { el: el, turns: 6 };
           this.chargeEl(el, ox, oy, 300);
           const au = this.add.circle(ox, oy, 16, col, 0.5).setBlendMode(Phaser.BlendModes.ADD).setDepth(DEPTH.proj); this.tweens.add({ targets: au, scale: 2.8, alpha: 0, duration: 560, onComplete: () => au.destroy() });
-          this.floatText(CX, PHP_Y - 30, tr('🐟 活水!{el}宮清除回血 6 手', { el: EL[el].n }), '#7fe0ff');
+          this.floatText(CX, PHP_Y - 30, tr('🐟 活水!{el}宮清除回血 6 手', { el: tr(EL[el].name) }), '#7fe0ff');   // 🩹EL 表沒有 .n 欄位,原寫法顯示 undefined(verifier 2026-10-05 查證的既有bug)
           return;
         }
         if (fam === 'rabbit') {   // 🐰化境:全盤「有屬的宮」1 回合內變成自己同屬→相剋爆發 setup(高 CD)
@@ -4587,7 +4606,7 @@
           this.renderTeam(); this.refreshBoard();
           this.chargeEl(el, ox, oy, 300);
           this.shakeCam(220, 0.008);
-          this.tonFloat(tr('★ 化境 · 全盤化{el}', { el: EL[el].n }), '#e89ab0');
+          this.tonFloat(tr('★ 化境 · 全盤化{el}', { el: tr(EL[el].name) }), '#e89ab0');   // 🩹同上,.n→.name
           return;
         }
       }
@@ -6527,6 +6546,7 @@
           const fireAt = LEAD + i * 150 + Math.random() * 120; lastFire = Math.max(lastFire, fireAt);
           this.time.delayedCall(fireAt, () => {
             this.labSnd(['s_fire1', 's_fire2', 's_fire3'][Math.floor(Math.random() * 3)], 0.55); this.labCardHop(h.el); this.zoneStrike(cen.x, cen.y, cellsB, col, dmg, victims, aoe && i === 0, h.el, (n >= 18 && i === 0));   // 發射音(隨機)+ 對應卡小跳 + 傳屬性/≥18重擊旗標(彈著配音)
+            if (h.el !== 'neutral' && this._resK && this._resK[h.b] > 0 && this.floatText) this.time.delayedCall(140, () => { try { this.floatText(cen.x, cen.y - 30, tr('共鳴!'), '#ffd86b'); } catch (e) { } });   // 🔗該宮有同屬共鳴加成→宮中心上方浮小字「共鳴!」(沿用 floatText,沒有就略過;傷害照算不受影響)
             if (h.el === 'neutral' && this.teamRcv > 0) {   // 清無屬區→回血「演出」(數字已在 healPlan 同步入帳)
               this.time.delayedCall(330, () => { const hv = healPlan[i] || 0; this.labSnd('s_heal', 0.7); this.animPlayerHP(true, !!this.tut); this.floatText(cen.x, cen.y, '💚+' + hv, '#74e09a'); });   // 教學⑤:slow=true→血條慢而明顯爬升(780ms,像迴生/終結技回血);一般戰鬥維持快版(380ms)
             }

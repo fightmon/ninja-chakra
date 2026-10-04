@@ -846,6 +846,9 @@ const I18N_DICT = {
     '返回大廳': 'Back to Lobby',
     '卡片售出 — 待做': 'Sell Cards · Soon',
     '(進化後等級/經驗保留原值)': '(Level & EXP kept)',
+    // 2026-10-05 同屬共鳴(隊上每多一隻其他同屬卡,該屬宮攻擊 +c)
+    '🔗 同屬共鳴:{list}': '🔗 Synergy: {list}',
+    '共鳴!': 'Synergy!',
   },
 };
 
