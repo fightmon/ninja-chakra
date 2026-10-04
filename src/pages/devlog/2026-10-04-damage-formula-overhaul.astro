@@ -1,0 +1,150 @@
+---
+import Base from '../../layouts/Base.astro';
+---
+<Base title="獼猴練到 80 級，打起來跟 1 級差不多？我把傷害公式拆了重做 — 塊頭勇者 開發日誌" path="/devlog/2026-10-04-damage-formula-overhaul/" navActive="devlog"
+  image="/devlog/2026-10-04-damage-growth.webp"
+  description="我自己把獼猴練到滿級 80，面板攻擊暴增 185%，實戰傷害卻只多了 5.8%。原來是傷害公式裡固定底傷太重、攻擊力又只作用在自己那一宮。這篇講我怎麼拆公式、讓練誰都有感，還有那套「改版前後用同一批種子對打」的模擬校準。">
+
+<article class="dp">
+  <div class="dp-wrap">
+    <a class="back" href="/devlog/">← 開發日誌</a>
+    <h1 class="title">獼猴練到滿級 80，打起來跟 1 級差不多？我把傷害公式拆了重做（練等終於有感了）</h1>
+    <div class="meta">
+      <span>2026-10-04</span>
+      <span class="tag">#塊頭勇者</span><span class="tag">#傷害公式</span>
+      <span class="tag">#數值平衡</span><span class="tag">#模擬校準</span><span class="tag">#心得</span>
+    </div>
+
+    <div class="body">
+      <p class="lead">事情是這樣的：我自己把獼猴從 Lv1 一路練到 Lv80，面板攻擊力 119 → 339，<strong>暴增 185%</strong>。我滿心期待地進去打——結果感覺跟 Lv1 差不多。拿模擬器去量，實戰傷害只多了 <strong>5.8%</strong>。我花那麼多時間餵卡練等，到頭來等於沒練？這篇講為什麼會這樣、我怎麼把傷害公式拆了重做，以及我用什麼方法確保「改完不會把別的東西弄壞」。</p>
+
+      <figure class="fig">
+        <img src="/devlog/2026-10-04-damage-growth.webp" width="1200" height="630" alt="改版前後的練等實戰傷害成長對比長條圖：單卡 Lv1 到 80 從 5.8% 提升到 12.2%，整隊 Lv40 到 80 從 15.7% 提升到 21.3%，整隊 Lv1 到 80 從 75% 提升到 121%" loading="eager">
+        <figcaption>同樣是練到 Lv80，改版前（灰）跟改版後（橘）的實戰傷害成長。最右邊那組是整隊一起練的情況。</figcaption>
+      </figure>
+
+      <h2>一、發現問題：面板很漂亮，實戰沒感覺</h2>
+      <p>先講我怎麼發現的。這不是哪個玩家來投訴，其實是我自己——站長自己玩都覺得「練等沒用」，那玩家一定更有感。</p>
+      <p>為了確定這是「我的錯覺」還是「結構性問題」，我拿真正的戰鬥引擎去跑：同一關、同一批隨機種子，一次用 Lv1 的獼猴、一次用 Lv80 的獼猴，每種跑 300 場，比較<strong>每次清除方塊平均打出多少傷害</strong>。</p>
+      <p>結果很殘酷：</p>
+      <ul>
+        <li>面板攻擊力：<strong>+185%</strong>（119 → 339）</li>
+        <li>實戰傷害：<strong>+5.8%</strong></li>
+      </ul>
+      <p>不是 bug，是公式本來就長這樣。這就是為什麼我說它是「結構性」的——不是調個數字就能救。</p>
+
+      <h2>二、為什麼會這樣：兩個稀釋的元兇</h2>
+      <p>先簡單說明規則：盤面被切成九個「宮」，其中五宮各有一個屬性、四宮是無屬。你清掉某一宮時，傷害大概是這樣算的：</p>
+      <blockquote><strong>傷害 ＝ 清除格數 ×（固定底傷 ＋ 攻擊力 × 相剋 × 係數）</strong><br>改版前：底傷 16、係數 0.08</blockquote>
+      <p>問題就藏在這個式子裡，有兩個：</p>
+      <ul>
+        <li><strong>固定底傷佔太重。</strong>每格不管你練了沒，先送你 16 點。連 Lv80 的獼猴，底傷都還占一格傷害的 <strong>37%</strong>——你把攻擊力練到爆，也只是在剩下那 63% 裡面長。</li>
+        <li><strong>攻擊力只作用在「自己那一宮」。</strong>獼猴是火屬，它的攻擊力只有在你清「火宮」的時候才算數。盤面九個宮，它只管其中一個。其他無屬的宮，吃的是別的算法，練這隻獼猴跟它完全沒關係。</li>
+      </ul>
+      <p>兩個一疊，就變成：<strong>你練一張卡，只影響九分之一的盤面，而且還被一大塊固定底傷稀釋。</strong>面板上 +185%，攤到整場戰鬥，只剩個位數。</p>
+
+      <div class="demo">
+        <div class="steps">
+          <div class="step"><div class="e">①</div><b>底傷太重</b><div class="d">Lv80 時固定底傷仍占 37%，攻擊成長被稀釋</div></div>
+          <div class="step"><div class="e">②</div><b>只管自己的宮</b><div class="d">一張卡的攻擊力只影響九宮之一</div></div>
+          <div class="step"><div class="e">③</div><b>結果</b><div class="d">面板 +185%，實戰 +5.8%</div></div>
+        </div>
+        <div class="demo-cap">練等「沒感覺」是公式結構造成的，不是錯覺</div>
+      </div>
+
+      <h2>三、我改了什麼（玩家視角）</h2>
+      <p>三件事：</p>
+      <p><strong>① 底傷調降、攻擊佔比提高。</strong>固定底傷從 16 砍到 8，同時把攻擊力的係數從 0.08 拉到 0.107。意思是：<strong>你練的那部分，在總傷害裡的份量變大了</strong>。</p>
+
+      <figure class="fig">
+        <img src="/devlog/2026-10-04-damage-formula.webp" width="1200" height="660" alt="每格傷害拆解圖：改版前 Lv1 為 25.5、Lv80 為 43.1；改版後 Lv1 為 20.8、Lv80 為 44.4，Lv80 時底傷占比由 37% 降到 18%" loading="lazy">
+        <figcaption>獼猴 Lv1 與 Lv80 在「自己屬性那一宮」每格傷害的組成（無相剋）。灰色是固定底傷，橘色是靠攻擊力賺來的部分。</figcaption>
+      </figure>
+
+      <p>看圖就很清楚：Lv80 的傷害幾乎沒變（43.1 → 44.4），但 Lv1 的傷害少了一點（25.5 → 20.8）。也就是說——<strong>天花板不動，地板往下挪，成長曲線就變陡了</strong>。以前從 Lv1 到 Lv80，這一宮每格傷害只長 69%，現在長 113%。（這張圖只看「自己屬性那一宮」；整場戰鬥還有下面第②點的無屬宮補上，所以實際低等的總傷害我是校準成幾乎不變的，後面數據會講。）</p>
+
+      <p><strong>② 無屬區域改成「全隊合力」。</strong>這是最關鍵的一刀。以前無屬的四個宮，吃的是「隊上最高那張卡」的攻擊力；現在改成<strong>全隊所有卡的攻擊力加總</strong>來算。換句話說，隊上五張卡，<strong>每一張練等都會推高你的無屬傷害</strong>。不管你練的是隊長、是輔助、還是只是想把喜歡的角色養起來，練了就有貢獻。</p>
+      <p>這個設計是我參考「整體感」的概念：打得好不好，看的是整支隊伍的實力，不是單一神卡一個人 carry。</p>
+
+      <p><strong>③ 留了保底：一張強卡帶新隊伍還是可行。</strong>這點我猶豫過。全隊加總很公平，但副作用是：<strong>你用一張超強的卡帶四張 Lv1 新卡，傷害會被「平均」拖累</strong>。我不想把這種玩法直接判死刑，所以加了保底——無屬傷害至少會有「全隊最高攻擊力的 80%」。強卡帶新隊伍依然能打，只是練隊友之後會更強。</p>
+
+      <h2>四、數據：誠實攤開來給你看</h2>
+      <p>改版前後，用同一套方法重量一次：</p>
+      <div class="demo">
+        <div class="steps">
+          <div class="step"><div class="e">單卡</div><b>Lv1 → 80</b><div class="d">5.8% → <strong>12.2%</strong></div></div>
+          <div class="step"><div class="e">整隊</div><b>Lv40 → 80</b><div class="d">15.7% → <strong>21.3%</strong></div></div>
+          <div class="step"><div class="e">整隊</div><b>Lv1 → 80</b><div class="d">+75% → <strong>+121%</strong></div></div>
+        </div>
+        <div class="demo-cap">練到 Lv80 的實戰傷害成長（每次清除的平均傷害，改版前 → 改版後）</div>
+      </div>
+      <p>我要老實說：<strong>單卡 +12.2% 其實還是不算很大。</strong>一張卡就是一張卡，隊上還有四個人，一個人再怎麼強，也不可能憑一己之力讓整場戰鬥翻倍。但它從 5.8% 變成 12.2%，成長翻了一倍多；而當你整隊一起練，Lv1 到 Lv80 的實戰傷害是<strong>多出 121%</strong>——幾乎是兩倍，這個才是「練等有感」該有的樣子。</p>
+      <p>還有一件我刻意做的事：<strong>低等玩家的傷害，幾乎沒動。</strong>我把校準的基準點定在中等（Lv30 左右），所以剛起步的新手，打起來跟改版前差不多。這次不是要讓你的角色突然變強或變弱，只是讓「練了」這件事被看見。</p>
+
+      <h2>五、開發幕後：怎麼確保我沒把遊戲搞壞</h2>
+      <p>改傷害公式，是那種「動一點，全遊戲都跟著震」的改動。公式一變，每一關的難度、每一隊的過關率，全都會偏移。要是改完發現「入門關突然變超難」或是「某座城一下子送分」，那就糟了。</p>
+      <p>所以這次我用的是<strong>模擬校準</strong>，做法很土但很有效：</p>
+      <ul>
+        <li><strong>26 關 × 好幾種隊伍 × 每組 300 場。</strong>把遊戲裡的關卡拉出來，每一關都用多種不同強度的隊伍各打 300 場，統計過關率。</li>
+        <li><strong>改版前後，用同一批種子對打。</strong>這是我最得意的一招。戰鬥有隨機性（方塊怎麼出、怪怎麼動），如果兩邊各用各的亂數，過關率差 3% 你根本分不清是公式的影響，還是運氣。所以我讓「改版前」和「改版後」<strong>吃同一批隨機種子</strong>——就像讓兩個人擲同一組骰子，骰運一樣，剩下的差別就只能是公式造成的。</li>
+        <li><strong>逐步微調。</strong>底傷砍多少、係數拉多少、保底抓幾成，每個數字我都跑一輪，看入門到上級那 25 關的過關率有沒有跑掉。最後選的這組，<strong>入門到上級的過關率幾乎零偏移</strong>。</li>
+      </ul>
+      <p>順帶一提，模擬的過程中還抓到一個小 bug：負責「回放驗證」的戰鬥模擬器，算無屬宮傷害時漏傳了一個參數，導致它少算。要不是為了做這次校準把兩邊對起來看，這個漏洞可能還躲在那裡很久。</p>
+      <blockquote>改平衡最怕的不是「改錯」，而是「不知道自己改錯」。<strong>先把量測的尺做準（同批種子、夠多場數），再動刀</strong>——不然你連自己是變好還是變壞，都分不出來。</blockquote>
+
+      <hr>
+      <p>這次的改動已經上線了。如果你本來就在練等，現在打起來應該會比以前「有手感」一點——特別是整隊一起練的時候。如果你玩下來覺得<strong>哪裡反而變難了、或是練了還是沒感覺</strong>，請務必跟我說，我會拿你的回報再回去跑模擬。</p>
+      <p>更多開發碎念都在 <a href="/devlog/">開發日誌</a>。進去練幾張卡，然後告訴我手感如何吧。下次見。</p>
+    </div>
+
+    <div class="foot">— 開發日誌 · 塊頭勇者</div>
+  </div>
+</article>
+
+<style is:global>
+.dp-wrap{max-width:720px;margin:0 auto;padding:clamp(28px,5vw,56px) 18px clamp(56px,8vw,90px)}
+.dp .back{display:inline-block;color:var(--ink2);text-decoration:none;font-size:14px;margin-bottom:20px}
+.dp .back:hover{color:var(--fire)}
+.dp .title{font-size:clamp(24px,4.6vw,35px);font-weight:900;line-height:1.34;margin:0 0 14px;letter-spacing:-.5px;color:var(--ink)}
+.dp .meta{display:flex;flex-wrap:wrap;align-items:center;gap:8px;font-size:13px;color:var(--ink2);margin-bottom:30px}
+.dp .tag{background:rgba(255,178,32,.12);border:1px solid rgba(200,140,40,.25);border-radius:999px;padding:2px 10px;color:var(--ink2)}
+.dp .body{font-size:16px;line-height:1.85;color:var(--ink)}
+.dp .body h2{font-size:clamp(19px,3.2vw,24px);font-weight:900;margin:40px 0 14px;letter-spacing:-.3px;color:var(--ink)}
+.dp .body p{margin:0 0 16px}
+.dp .body strong{color:var(--sun2)}
+.dp .body code{background:rgba(255,178,32,.14);border:1px solid rgba(200,140,40,.2);border-radius:6px;padding:1px 6px;font-size:13.5px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;color:var(--ink)}
+.dp .body ul{margin:0 0 16px;padding-left:22px}
+.dp .body li{margin:0 0 8px}
+.dp .body blockquote{margin:20px 0;padding:12px 18px;border-left:3px solid var(--sun2);background:rgba(255,178,32,.08);border-radius:0 10px 10px 0;color:var(--ink)}
+.dp .body hr{border:none;border-top:1px solid rgba(200,140,40,.2);margin:34px 0}
+.dp .body a{color:var(--fire);text-decoration:underline;text-underline-offset:2px}
+.dp .lead{font-size:17px;color:var(--ink2)}
+
+/* 配圖 */
+.dp .fig{margin:26px 0}
+.dp .fig img{display:block;width:100%;height:auto;border-radius:16px;box-shadow:var(--shadow)}
+.dp .fig figcaption{text-align:center;font-size:13px;color:var(--ink2);margin-top:10px;line-height:1.6}
+
+/* demo 框 */
+.dp .demo{margin:26px auto;background:#fff;border:1px solid rgba(200,140,40,.2);border-radius:18px;padding:20px 16px 14px;box-shadow:var(--shadow)}
+.dp .demo-cap{text-align:center;font-size:12px;color:var(--ink2);margin-top:14px;letter-spacing:.3px}
+
+/* 三格區塊 */
+.dp .steps{display:flex;gap:8px;align-items:stretch;justify-content:center;flex-wrap:wrap}
+.dp .step{flex:1;min-width:150px;background:rgba(255,178,32,.06);border:1px solid rgba(200,140,40,.2);border-radius:12px;padding:14px 12px;text-align:center}
+.dp .step .e{font-size:22px;line-height:1.2;font-weight:900;color:var(--sun2)}
+.dp .step b{display:block;margin-top:6px;font-size:15px;color:var(--ink)}
+.dp .step .d{font-size:12.5px;color:var(--ink2);line-height:1.6;margin-top:4px}
+
+.dp .foot{margin-top:46px;padding-top:22px;border-top:1px solid rgba(200,140,40,.2);font-size:14px;color:var(--ink2)}
+
+/* dark */
+[data-theme="dark"] .dp .tag{background:rgba(255,255,255,.08);border-color:rgba(255,178,32,.2);color:#e8d4a8}
+[data-theme="dark"] .dp .body code{background:rgba(255,255,255,.08);border-color:rgba(255,178,32,.2);color:#e8d4a8}
+[data-theme="dark"] .dp .body blockquote{background:rgba(255,178,32,.1)}
+[data-theme="dark"] .dp .body hr{border-top-color:rgba(255,178,32,.16)}
+[data-theme="dark"] .dp .demo{background:#231d14;border-color:rgba(255,178,32,.16)}
+[data-theme="dark"] .dp .step{background:rgba(255,255,255,.05);border-color:rgba(255,178,32,.16)}
+[data-theme="dark"] .dp .foot{border-top-color:rgba(255,178,32,.16)}
+</style>
+</Base>
