@@ -3103,7 +3103,11 @@
         const teamHp = (this.presetTeam || []).reduce((s, c) => s + (c.hp || 0), 0) || CONFIG.PLAYER_HP_BASE;   // 隊伍血量=隊員 HP 三圍加總
         this.maxHP = Math.round(teamHp * ((this.lead && (this.lead.type === 'hp' || this.lead.type === 'dog')) ? this.lead.v : 1));   // 🐶犬攻守雙修:也吃 HP×v
         this.teamRcv = (this.presetTeam || []).reduce((s, c) => s + (c.rcv || 0), 0) || 0;   // 隊伍回復力總和(清無屬區回血用)
-        this.teamMaxAtk = (this.presetTeam || []).reduce((m, c) => Math.max(m, c.atk || 0), 0) || 0;   // 隊伍最高攻擊(無屬傷害基準=此值×普通×0.08,= 屬·普通)
+        // 無屬宮攻擊基準 neutralAtkBase(2026-10-04 傷害結構改革,sim 驗證):= max( round(0.24×全隊ATK合計), round(0.8×隊伍最高攻) )。
+        //   ①0.24×合計:平衡隊(5 張差不多)≈ 最高攻×1.0 → 與舊「最高攻」基準等價;單卡成長會抬高合計→實戰有感。②0.8×最高攻=carry 保底:一神四白板仍保 8 成無屬威力。
+        //   c.atk 來自 leveledTeam→cardAtk=純面板(不含隊長技/amp;隊長技走 planResolve→leadDamageMult 另乘),故此處不會把隊長技重複算兩次。
+        { const _atks = (this.presetTeam || []).map(c => (c && c.atk) || 0), _sum = _atks.reduce((s, a) => s + a, 0), _mx = _atks.reduce((m, a) => Math.max(m, a), 0);
+          this.neutralAtkBase = Math.max(Math.round(0.24 * _sum), Math.round(0.8 * _mx)) || 0; }
         this.playerHP = this.maxHP; this.stage = 1; this.resultOpen = false; this.chests = 0; this.gold = 0; this.runDrops = []; this._runDropsPending = false; this._runDropsMsg = ''; this._runDropsBagFull = false; this._resultWin = false; this._resultG = null; this.runExp = 0; this.runCoins = 0; this._runGranted = false; this._runRw = null; this._firstClearStones = 0; this._clearSec = null; this._bestSec = null;   // 🔐 掉落/寶玉改伺服器 run/complete 決定,不再前端 runGems 預累積;🔐[首通石]每場重置,避免殘留上一場的值;⏱ 通關時間/最速同理每場重置
         this.charge = [0, 0, 0, 0, 0];   // 主動技蓄力(整場累積、跨關保留)
         this.stored = [null, null, null, null, null];   // 每卡存放的屬塊 {el,lv}(跨關保留,新局/重挑才清)
@@ -5802,7 +5806,7 @@
           if (!sim[rr][cc] || k === 'wild') sim[rr][cc] = { el: this.boxElement[boxOf(rr, cc)] || 'neutral' };
         });
         const tgt = this.targetEnemy(); if (!tgt) return null;
-        const data = computeClears(sim, this.boxElement, this.boxCard, tgt.el, this.amp, this.teamMaxAtk);
+        const data = computeClears(sim, this.boxElement, this.boxCard, tgt.el, this.amp, this.neutralAtkBase);   // 預覽與實際結算同一個無屬基準(neutralAtkBase)
         if (!data) return null;   // 這個落點不會產生任何清除(清線或清宮皆算)→不預覽
         const previewCombo = this.combo + 1;   // 這一手放下會到的 combo 值(照 resolve() 的真實遞增規則:這手有清→combo+1)
         const plan = planResolve(data, this.lead, this.teamRcv, previewCombo, this.leadEvo);
@@ -6446,7 +6450,7 @@
       }   // 回血音
       resolve() {
         const tgt = this.targetEnemy(); if (!tgt) return;
-        const data = computeClears(this.board, this.boxElement, this.boxCard, tgt.el, this.amp, this.teamMaxAtk);   // 傳隊伍最高攻→無屬宮也吃「= 屬·普通」傷害
+        const data = computeClears(this.board, this.boxElement, this.boxCard, tgt.el, this.amp, this.neutralAtkBase);   // 傳無屬基準 neutralAtkBase(max(0.24×合計,0.8×最高攻))→無屬宮也吃「= 屬·普通」傷害
         if (!data) return;
         if (this._bombBox) { const bb = this._bombBox.b, br = Math.floor(bb / 3) * 3, bc = (bb % 3) * 3; let fc = 0; for (let r = br; r < br + 3; r++)for (let c = bc; c < bc + 3; c++)if (this.board[r][c]) fc++; const hit = data.hits && data.hits.find(h => h.b === bb); if (hit && fc > 0 && hit.cells >= fc) this._defuseBomb(); }
         if (this._finisher) this._breakFinisher();   // 充能中被清行(搶殺)→ 終結招打斷

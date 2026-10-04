@@ -33,7 +33,7 @@ const WSUM_SOFT = SHAPES.reduce((a,s)=>a+(s.hard?0:s.w),0);   // 排除 hard(1×
 const CONFIG = {
   ADV_MULT:1.6, WEAK_MULT:0.7, NORM_MULT:1.0,   // 相剋軟化(原2.0/0.5硬牆→1.6/0.7,讓手控能逆轉小劣勢)
   NEUTRAL_BOX_BASE:40, LINE_BASE:30, LINE_SAME_RATE:0.5,
-  HIT_BASE:16, ELEM_RATE:0.08,   // 逐格傷害:每個被清的格(含中性)都給 HIT_BASE;屬區格再額外 +卡攻擊×相剋×ELEM_RATE。※底傷×1.33 補回「拿掉鬥志(舊平均×1.465)」的缺口,combo 改當技術加成
+  HIT_BASE:8, ELEM_RATE:0.1073,   // 【2026-10-04 傷害結構改革(sim 出處:scratchpad f9_floor/f11_floor2,300 種子×26 關)】原 HIT_BASE16/ELEM_RATE0.08 → 底傷減半、屬傷率↑(Lv30 台灣隊錨點校準,基準隊風城中級每清除均傷 +1.7% 內),讓「等級/卡力」成長實戰有感(整隊 Lv20→80 +34%、單卡 Lv1→80 +13%,原僅 +25%/+6%)。無屬宮基準改 neutralAtkBase=max(round(0.24×全隊ATK合計),round(0.8×最高攻))(見 index.html 場景 neutralAtkBase),保底項保 carry 隊威力(一神四白板每清除均傷 0.91 vs 現行)。【舊註解】逐格傷害:每個被清的格(含中性)都給 HIT_BASE;屬區格再額外 +卡攻擊×相剋×ELEM_RATE。※底傷×1.33 補回「拿掉鬥志(舊平均×1.465)」的缺口,combo 改當技術加成
   PLAYER_HP_BASE:1000, RESHUFFLE_COST:120,
   ATTR:{ fire_burn_rate:0.4, wind_immune:1, earth_dr:0.3, yang_heal_rate:0.25, yin_amp:1.5 },   // 陽回血砍到已驗證平衡值(1.2→0.5→0.25);陰改傷害×2(見 fireAttr)
 };
@@ -108,7 +108,7 @@ function canPlace(board,cells,r,c,kind,allowJunk){
   return cells.every(([dr,dc])=>{const cell=board[r+dr][c+dc];return !cell||(allowJunk&&cell.el==='junk');});   // 一般塊:每格空;只有屬塊(allowJunk)才可蓋鐵塊(放上去抵銷碰到的那格)
 }
 function computeClears(board, boxElement, boxCard, enemyEl, ampMult, neutralAtk){
-  neutralAtk = neutralAtk||0;   // 無屬攻擊基準(= 隊伍最高攻);0=不給無屬傷害(向後相容/偵測用)
+  neutralAtk = neutralAtk||0;   // 無屬攻擊基準(= 場景算好的 neutralAtkBase=max(0.24×全隊ATK合計, 0.8×最高攻),2026-10-04 改革;舊=隊伍最高攻);0=不給無屬傷害(向後相容/偵測用)
   let rows=[],cols=[],boxes=[];
   const filled=(x)=>x&&x.el!=='junk';   // 鐵塊(封鎖)不算「填滿」→ 含鐵塊的線/宮永遠不能消(不給玩家攻擊)
   for(let r=0;r<N;r++)if(board[r].every(filled))rows.push(r);
@@ -133,7 +133,7 @@ function computeClears(board, boxElement, boxCard, enemyEl, ampMult, neutralAtk)
     if(EL[e].beats===enemyEl)hitWeak=true;
     const br=Math.floor(b/3)*3,bc=(b%3)*3; parts.push({el:e,d,r:br+1,c:bc+1});});
   if(neutralAtk>0){ const nC=cellSet.size-ironN-Object.values(elemCells).reduce((a,b)=>a+b,0);   // 無屬格數=清除總格-鐵塊-屬區格
-    if(nC>0)total+=Math.round(neutralAtk*CONFIG.NORM_MULT*ampMult*CONFIG.ELEM_RATE*nC); }   // 無屬傷害 = 隊伍最高攻×普通×0.08(=屬·普通公式)
+    if(nC>0)total+=Math.round(neutralAtk*CONFIG.NORM_MULT*ampMult*CONFIG.ELEM_RATE*nC); }   // 無屬傷害 = neutralAtkBase×普通×ELEM_RATE(=屬·普通公式;neutralAtkBase 見 index.html)
   const fx={};
   ELEMENT_BOXES.forEach(b=>{const card=boxCard[b];if(!card)return;const br=Math.floor(b/3)*3,bc=(b%3)*3;
     let hit=false;for(let r=br;r<br+3&&!hit;r++)for(let c=bc;c<bc+3;c++)if(cellSet.has(r+'_'+c))hit=true;
@@ -146,7 +146,7 @@ function computeClears(board, boxElement, boxCard, enemyEl, ampMult, neutralAtk)
     if(!cn)continue;
     const el=boxElement[b],card=boxCard[b];let d=cn*CONFIG.HIT_BASE,hel='neutral';
     if(el!=null&&card){d+=Math.round(card.atk*mult(el)*ampMult*CONFIG.ELEM_RATE*cn);hel=el;}
-    else if(neutralAtk>0){d+=Math.round(neutralAtk*CONFIG.NORM_MULT*ampMult*CONFIG.ELEM_RATE*cn);}   // 無屬宮:= 屬·普通(隊伍最高攻×1.0)
+    else if(neutralAtk>0){d+=Math.round(neutralAtk*CONFIG.NORM_MULT*ampMult*CONFIG.ELEM_RATE*cn);}   // 無屬宮:= 屬·普通(neutralAtkBase×1.0)
     hits.push({b,el:hel,cells:cn,dmg:Math.round(d)});}
   // 🔒分層鐵塊:lock>1 的 iron 格「留下扣層」不進 cells(待移除),另收進 lockDec 給呼叫端扣層;
   //   沒有 lock(或 lock<=1)的 iron/一般格照舊進 cells(待移除)→ 零回歸(閘門= cell.lock>1)。
@@ -176,6 +176,7 @@ class BattleSim {
     this.lead = s.lead || null;
     this.leadEvo = s.leadEvo || 0;        // 隊長卡個體進化階(0~3);目前只有貓·自我爆發 vByEvo 吃
     this.amp = s.amp || 1;
+    this.neutralAtk = s.neutralAtk || 0;      // 無屬宮攻擊基準(=neutralAtkBase:max(round(0.24×全隊ATK合計),round(0.8×最高攻)),純面板ATK不含隊長技);2026-10-04 修:原漏傳導致回放/模擬無屬宮少算屬傷(場景 6449 有傳)
     this.combo = s.combo || 0;
   }
   targetEnemy(){
@@ -187,7 +188,7 @@ class BattleSim {
   // 同步套用一次「放塊後的清除」。回傳事件包(給 view 演動畫);無清除回 null。與場景 resolve() 的狀態效果等價。
   applyResolve(){
     const tgt = this.targetEnemy(); if(!tgt) return null;
-    const data = computeClears(this.board, this.boxElement, this.boxCard, tgt.el, this.amp);
+    const data = computeClears(this.board, this.boxElement, this.boxCard, tgt.el, this.amp, this.neutralAtk);
     if(!data) return null;
     this.combo += 1;                                            // 逐塊 combo:這塊有清→+1
     const plan = planResolve(data, this.lead, this.teamRcv, this.combo, this.leadEvo);
