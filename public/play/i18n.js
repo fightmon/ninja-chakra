@@ -542,6 +542,10 @@ const I18N_DICT = {
     '✖ 取消': '✖ Cancel',
     '✓ 售出 {n} 張': '✓ Sell {n}',
     '還沒勾選卡': 'No cards selected',
+    '保留': 'Kept',
+    '已鎖定為最愛\n請先取消鎖定': 'Locked as favorite\nUnlock it first',   // 🆕2026-10-08 最愛鎖
+    '連線失敗': 'Connection failed',
+    '{g} 金': '{g} coins',
     '售出 {n} 張,+{g} 金': 'Sold {n}, +{g} coins',
     '\n(每種保留最後 {n} 張)': '\n(1 of each kept, {n} kept)',
     '✨ 背包 +5 ✨': '✨ Bag +5 ✨',
@@ -842,6 +846,11 @@ const I18N_DICT = {
     '你已經綁定過邀請碼了': 'You have already linked an invite code',
     '帳號建立超過 72 小時,無法再綁定': 'Account is older than 72 hours, linking is no longer possible',
     '綁定失敗,請稍後再試': 'Linking failed, please try again later',
+    // 2026-10-08 最愛鎖收尾文案
+    '編隊中的卡無法賣出\n請先從隊伍移除': 'Card is in a team\nRemove it from the team first',
+    '編隊中的卡無法當素材\n請先從隊伍移除': 'Card is in a team\nRemove it from the team first',
+    '卡片狀態已變更,請重試': 'Card status changed, please retry',
+    '寶玉卡已鎖定為最愛\n請先取消鎖定': 'Jewel card is locked as favorite\nUnlock it first',
     // 2026-10-01 EN 總體檢補翻(worker 抓的 3 條缺譯)
     '返回大廳': 'Back to Lobby',
     '卡片售出 — 待做': 'Sell Cards · Soon',

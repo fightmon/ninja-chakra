@@ -179,10 +179,12 @@ class BattleSim {
     this.neutralAtk = s.neutralAtk || 0;      // 無屬宮攻擊基準(=neutralAtkBase:max(round(0.24×全隊ATK合計),round(0.8×最高攻)),純面板ATK不含隊長技);2026-10-04 修:原漏傳導致回放/模擬無屬宮少算屬傷(場景 6449 有傳)
     this.combo = s.combo || 0;
   }
-  targetEnemy(){
+  targetEnemy(){   // 🔒2026-10-09 瀕死(hp<=0 未 dead)視同陣亡,優先轉向活敵(與場景 targetEnemy 同源);全員瀕死才 fallback 回 !dead 的敵。sim/回放:applyResolve 內死亡即時標 dead,故此改動只讓邊角更正確
     let e = this.enemies[this.target];
-    if (e && !e.dead) return e;
-    const i = this.enemies.findIndex(x=>!x.dead); this.target = i;
+    if (e && !e.dead && e.hp > 0) return e;
+    let i = this.enemies.findIndex(x=>!x.dead && x.hp > 0);
+    if (i < 0) i = (e && !e.dead) ? this.target : this.enemies.findIndex(x=>!x.dead);
+    this.target = i;
     return i < 0 ? null : this.enemies[i];
   }
   // 同步套用一次「放塊後的清除」。回傳事件包(給 view 演動畫);無清除回 null。與場景 resolve() 的狀態效果等價。
@@ -193,7 +195,7 @@ class BattleSim {
     this.combo += 1;                                            // 逐塊 combo:這塊有清→+1
     const plan = planResolve(data, this.lead, this.teamRcv, this.combo, this.leadEvo);
     const n = data.cells.length, aoe = plan.aoe;
-    const victims = aoe ? this.enemies.filter(e=>!e.dead) : [tgt];
+    const victims = aoe ? this.enemies.filter(e=>!e.dead && e.hp>0) : [tgt];
     // 陰陽子屬性(fireAttr):yang 回血、yin 本手起傷害×2(amp 給下一手用)
     let yangHeal = 0;
     Object.keys(data.fx).forEach(el=>{ const f = data.fx[el]; (f.attrs||[]).forEach(a=>{
