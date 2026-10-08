@@ -580,6 +580,8 @@ const I18N_DICT = {
     '連線失敗,再按一次領取': 'Connection failed — tap again to claim',
     '🎁 每日登入獎勵': '🎁 Daily Reward',
     '連續登入第 {n} 天 · 每天可領一次': 'Day {n} streak · claim once a day',
+    '🔥 連續 {n} 天': '🔥 {n}-day streak',
+    '連續中斷,從第 1 天重新開始': 'Streak broken — starting again from Day 1',
     'D7 · 週滿獎': 'D7 · Weekly Bonus',
     '魔法石 ×{n}': 'Magic Stone ×{n}',
     '今日': 'Today',
@@ -858,6 +860,14 @@ const I18N_DICT = {
     // 2026-10-05 同屬共鳴(隊上每多一隻其他同屬卡,該屬宮攻擊 +c)
     '🔗 同屬共鳴:{list}': '🔗 Synergy: {list}',
     '共鳴!': 'Synergy!',
+    // 2026-10-10 售卡 90 張上限 / 強化金幣預檢 / 錯誤碼轉人話
+    '一次最多售出 {n} 張': 'Sell up to {n} cards at a time',
+    '請求無效,請重新整理後再試': 'Invalid request, please refresh and try again',
+    '伺服器忙碌,請稍後再試': 'Server busy, please try again later',
+    '金幣不足': 'Not enough coins',
+    '素材無效': 'Invalid fodder cards',
+    '卡片狀態已變更': 'Card status has changed',
+    '狀態已更新,請再試一次': 'Status updated, please try again',
   },
 };
 

@@ -260,8 +260,8 @@
       }
     }
     // 在 scene 的 (x,y) 疊上卡片角色圖(size 邊長;kind thumb/full)。有圖回 image(掛 scene.L 層,rebuild 會清)、無圖回 null。
-    function cardImgOn(scene, x, y, size, cardId, kind) {
-      const ak = cardArtKey(cardId, kind || 'thumb');
+    function cardImgOn(scene, x, y, size, cardId, kind, ovEvo) {   // 🆕2026-10-10 B3:選填第 7 參 ovEvo=個體自己的進化階(不傳=舊行為,取 type-level 最強快取)
+      const ak = cardArtKey(cardId, kind || 'thumb', ovEvo);
       if (ak && scene.textures.exists(ak)) { const im = scene.add.image(x, y, ak).setDisplaySize(size, size).setOrigin(0.5); return scene.L ? scene.L(im) : im; }
       return null;
     }
@@ -867,16 +867,17 @@
     const SORT_MODES = [   // 卡冊排序鍵(demo collection.html cb-sort:編號/種族/LV/PWR/HP/RCV;屬性交給篩選列不重複)
       { name: tr('編號'), fn: () => 0 },   // 純卡號序→整個交給下面的統一 tiebreaker(舊版排的是入手序_i,不是卡號)
       { name: tr('種族'), fn: (a, b) => (_spOrd(a.id) - _spOrd(b.id)) || (EL_ORDER[a.el] - EL_ORDER[b.el]) },
-      { name: 'LV', fn: (a, b) => getCardLv(b.id) - getCardLv(a.id) },
-      { name: 'PWR', fn: (a, b) => cardAtk(b.id) - cardAtk(a.id) },
-      { name: 'HP', fn: (a, b) => cardHp(b.id) - cardHp(a.id) },
-      { name: 'RCV', fn: (a, b) => cardRcv(b.id) - cardRcv(a.id) },
+      // 🆕2026-10-10 B5:LV/PWR/HP/RCV 改吃列表項個體自己的 _lv/_evo(個體制;原讀 type-level 最強快取→同種多張各自不同 Lv 時排序不動)。方向不變:高→低。
+      { name: 'LV', fn: (a, b) => (b._lv || 1) - (a._lv || 1) },
+      { name: 'PWR', fn: (a, b) => cardAtk(b.id, b._lv || 1, b._evo || 0) - cardAtk(a.id, a._lv || 1, a._evo || 0) },
+      { name: 'HP', fn: (a, b) => cardHp(b.id, b._lv || 1, b._evo || 0) - cardHp(a.id, a._lv || 1, a._evo || 0) },
+      { name: 'RCV', fn: (a, b) => cardRcv(b.id, b._lv || 1, b._evo || 0) - cardRcv(a.id, a._lv || 1, a._evo || 0) },
     ];
-    // 統一 tiebreaker:不管哪種排序,「相同卡(id)一定相鄰」,同 id 內 LV 高的在前,最後才依入手序。
+    // 統一 tiebreaker:主鍵相同時「相同卡(id)相鄰」,同 id 內個體 LV 高的在前,最後才依入手序。
     // ⚠️ 各比較器尾端不可再自己接 (a._i-b._i)——_i 唯一會讓下面的 id 分組永遠跑不到。
-    // ⚠️ getCardLv 目前是「每卡種」一個 LV(雲端同步把同 id 個體塌成最高的),故 LV 段現為 no-op;日後改 per-instance LV 會自動生效。
+    // 🆕2026-10-10 B5:同 id 內的 LV 次序改吃列表項 _lv(個體);注意 LV/PWR/HP/RCV 四種現在主鍵本身就吃個體數值→同卡種不同 Lv 的個體會依數值分開排,不再保證同 id 相鄰(編號/種族排序仍相鄰)。
     const _byIdLv = (aid, bid) => (aid < bid ? -1 : aid > bid ? 1 : 0) || (getCardLv(bid) - getCardLv(aid));
-    SORT_MODES.forEach(m => { const f = m.fn; m.fn = (a, b) => f(a, b) || _byIdLv(a.id, b.id) || (a._i - b._i); });
+    SORT_MODES.forEach(m => { const f = m.fn; m.fn = (a, b) => f(a, b) || _byIdLv(a.id, b.id) || ((b._lv || 1) - (a._lv || 1)) || (a._i - b._i); });
     /* 隊長技:隊伍首位(隊長)的常駐被動,塑造流派 */
     const LEADER_SKILLS = {
       c01: { name: '業火統領', desc: '清到火印那手 全傷害 ×1.5', type: 'elemAtk', el: 'fire', v: 1.5 },
@@ -1465,6 +1466,7 @@
       if (!d) return;
       mutSave(s => {
         const m = s.meta; if (typeof d.stones === 'number') m.stones = d.stones; if (typeof d.coins === 'number') m.coins = d.coins; if (typeof d.pity === 'number') m.pity = d.pity; if (typeof d.boxBuy === 'number') m.boxBuy = d.boxBuy;
+        if (typeof d.dailyStreak === 'number') m.dailyStreak = d.dailyStreak;   // 🔥每日登入連續天數(GET /api/wallet;斷簽=0)→神社面板「連續 N 天」+ 下次領取格
         if (typeof d.freePullUsed === 'number') m.freePullUsed = d.freePullUsed;   // 🎁 免費十連已領旗標(伺服器權威 free_pull_used 落地)→教學重玩靠 freePullDone() 判斷不再提供十連
         // 🔐 體力真相搬伺服器:staminaMax/stamina 直接覆蓋(絕對值);staTs=regen 顯示基準——有 d.staminaTs(GET /api/wallet,單位秒)就轉 ms 落地,
         // 沒有(run/start、wallet/spend 等變更端點只回目前值,不回 ts)就用 Date.now() 當基準,避免拿舊 ts 疊加多算 regen(前端只做顯示層 regen,不再本地權威遞減)
@@ -1631,9 +1633,11 @@
       scene[pageKey] = np; scene.rebuild(); if (scene.gridG) { scene.gridG.x = dir * W; scene.tweens.add({ targets: scene.gridG, x: 0, duration: 240, ease: 'Quad.out' }); }
     }
     function bindGridSwipe(scene, top, bot, pageKey) {   // 在格子區左右拖曳→跟手移動 gridG,放開過閾值換頁(慣性滑動)
-      scene.input.on('pointerdown', (p) => { if (p.y > top && p.y < bot) { scene._sw = true; scene._swx = p.x; scene._swDrag = false; } });
+      // 🆕2026-10-10 B6:top/pageKey 可傳函式(每次事件才求值)→同一場景有多種格子頁(例:FuseScene 的素材頁/選對象頁)時依當下模式分流;傳字串/數字=舊行為
+      const _top = () => typeof top === 'function' ? top() : top, _pk = () => typeof pageKey === 'function' ? pageKey() : pageKey;
+      scene.input.on('pointerdown', (p) => { if (p.y > _top() && p.y < bot) { scene._sw = true; scene._swx = p.x; scene._swDrag = false; } });
       scene.input.on('pointermove', (p) => { if (scene._sw && p.isDown) { const dx = p.x - scene._swx; if (Math.abs(dx) > 8) scene._swDrag = true; if (scene._swDrag && scene.gridG) scene.gridG.x = dx * 0.6; } });
-      scene.input.on('pointerup', (p) => { if (scene._sw) { scene._sw = false; if (scene._swDrag) { const dx = p.x - scene._swx; scene._swDrag = false; if (Math.abs(dx) > 46) changeGridPage(scene, pageKey, dx < 0 ? 1 : -1); else if (scene.gridG) scene.tweens.add({ targets: scene.gridG, x: 0, duration: 180, ease: 'Back.out' }); } } });
+      scene.input.on('pointerup', (p) => { if (scene._sw) { scene._sw = false; if (scene._swDrag) { const dx = p.x - scene._swx; scene._swDrag = false; if (Math.abs(dx) > 46) changeGridPage(scene, _pk(), dx < 0 ? 1 : -1); else if (scene.gridG) scene.tweens.add({ targets: scene.gridG, x: 0, duration: 180, ease: 'Back.out' }); } } });
     }
     function bindSceneResize(scene, handler) {   // 場景級 resize:this.scale 是全域 ScaleManager,場景 shutdown 不會自動清 → 必須手動 off,否則每進一次場景疊一個監聽器,死場景還會被 resize 叫醒(restart/rebuild 疊回當前場景上)
       const h = (...a) => { if (scene.sys.isActive()) handler(...a); };
@@ -1720,7 +1724,12 @@
     }
     // 餵卡金幣成本(spec-progression-economy.md §4,2026-08-16 取代固定 FEED_COST=100/張):
     // 花的金幣＝這次獲得經驗×5%(四捨五入)。鏡射後端 _lib/gamedata.ts feedCoinCost,數值須一致。
-    function feedCoinCost(expGained) { return Math.round(Math.max(0, expGained || 0) * 0.05); }
+    //   🆕2026-10-10 S7:比率改讀 window._nbConfig.econ.feedCostRate(後台 econ.feed_cost_rate 可調;後端 parseNum 不夾範圍→這裡只擋非有限/負值),讀不到→0.05(比照 sellExpRate 模式)。
+    function feedCostRate() {
+      try { const v = window._nbConfig && window._nbConfig.econ && window._nbConfig.econ.feedCostRate, n = Number(v); if (v != null && v !== '' && isFinite(n) && n >= 0) return n; } catch (e) { }
+      return 0.05;
+    }
+    function feedCoinCost(expGained) { return Math.round(Math.max(0, expGained || 0) * feedCostRate()); }
     function getCardLv(id, ovLv) { if (ovLv != null) return ovLv; const c = loadSave().cardLv[id]; return c ? c.lv : 1; }   // ovLv 傳入=用個體自己的等級(個體制);不傳=per-type 最強快取
     function getCardExp(id) { const c = loadSave().cardLv[id]; return c ? c.exp : 0; }
     // 三圍成長曲線分段(spec-progression-economy.md §2,2026-08-16):LV1-20 沿用 +5%/級(現況不變,零震撼);
@@ -1731,30 +1740,16 @@
     function cardHp(id, ovLv, ovEvo) { const base = (ROSTER.find(c => c.id === id) || {}).hp || 0; return Math.round(base * _statMul(id, ovLv, ovEvo)); }
     function cardRcv(id, ovLv, ovEvo) { const base = (ROSTER.find(c => c.id === id) || {}).rcv || 0; return Math.round(base * _statMul(id, ovLv, ovEvo)); }
     function leveledTeam(entries) { return (entries || []).map(e => { const inst = resolveTeamEntry(e); if (!inst) return null; const c = ROSTER.find(x => x.id === inst.id); return c ? Object.assign({}, c, { u: inst.u, atk: cardAtk(inst.id, inst.lv, inst.evo), hp: cardHp(inst.id, inst.lv, inst.evo), rcv: cardRcv(inst.id, inst.lv, inst.evo), lv: inst.lv, evo: inst.evo }) : null; }).filter(Boolean); }   // 🆕個體制:entries=隊伍格(uid 或舊卡種id)→解析成個體,用個體 lv/evo 算戰力
-    function feedFodder(targetId, fodderId) {
-      let res = { ok: false, msg: '' };
-      mutSave(s => {
-        if (s.cards.filter(c => c.id === fodderId).length < 2) { res.msg = tr('需要多餘的素材卡(同一張至少2張)'); return; }
-        if (!s.cardLv[targetId]) s.cardLv[targetId] = { lv: 1, exp: 0 };
-        const cl = s.cardLv[targetId]; const maxLv = maxLvForCard(targetId); if (cl.lv >= maxLv) { res.msg = tr('已達滿級 Lv.{n}', { n: maxLv }); return; }
-        const f = ROSTER.find(c => c.id === fodderId), t = ROSTER.find(c => c.id === targetId);
-        if (!f || !t) { res.msg = tr('卡片資料不存在'); return; }   // 存檔裡有、卡表已移除的 id(改表後的舊存檔)→安全拒絕,不崩
-        const reward = Math.round(({ genin: 60, chunin: 150, jonin: 400, kage: 900 }[f.rank] || 60) * (f.el === t.el ? 1.5 : 1));
-        const cost = feedCoinCost(reward);   // §4:花的金幣＝這次獲得經驗×5%(取代舊固定 FEED_COST)
-        if ((s.meta.coins || 0) < cost) { res.msg = tr('金錢不足(需{n})', { n: cost }); return; }
-        const fi = s.cards.findIndex(c => c.id === fodderId); if (fi >= 0) s.cards.splice(fi, 1);   // 吃掉一個素材個體(空出一格)
-        s.meta.coins -= cost; cl.exp += reward;
-        let ups = 0; while (cl.lv < maxLv && cl.exp >= expToNext(cl.lv)) { cl.exp -= expToNext(cl.lv); cl.lv++; ups++; }
-        if (cl.lv >= maxLv) cl.exp = 0;
-        res = { ok: true, reward: reward, lv: cl.lv, ups: ups, same: f.el === t.el };
-      });
-      return res;
-    }
+    // (2026-10-10 S8 刪除死碼 feedFodder:單張本地餵卡舊版,無呼叫端;現行走 feedFodderMany 打伺服器)
     const FEED_EXP = { genin: 60, chunin: 150, jonin: 400, kage: 900 };   // 各稀有度素材"基礎值"(per-instance level 後:實際經驗還要加上素材自己已投入的經驗,見 fodderFeedExp)
     const FEED_RETURN_RATIO = 1.0;   // 素材吃回自己已投入經驗的比例(1.0=全額吐回,練過的素材餵下去不虧,同龍族);數值與後端 _lib/gamedata.ts FEED_RETURN_RATIO 一致
     const METAL_FEED = { c71: 3000, c72: 10000, c73: 40000 };   // 🔩 金屬系餵卡經驗覆寫(2026-08-02 加):無屬→無同屬加成,平值直接回,不套 level/sameEl。鏡射後端 _lib/gamedata.ts METAL_FEED,cardFeedExp 同一份數值
+    function metalFeedExp(id) {   // 🆕2026-10-10 S7:只覆蓋 METAL_FEED 既有 key(與後端 parseNumMap 一致);config 值非有限數→回預設
+      try { const v = window._nbConfig && window._nbConfig.econ && window._nbConfig.econ.metalFeed && window._nbConfig.econ.metalFeed[id], n = Number(v); if (v != null && v !== '' && isFinite(n)) return n; } catch (e) { }
+      return METAL_FEED[id];
+    }
     function fodderFeedExp(id, rank, level, sameEl) {   // 🆕 per-instance level:素材給的經驗看素材自己幾級(不再只看稀有度)。accInvested=素材已投入總經驗=25×(lv-1)×lv(封閉式,等價 expToNext(1..lv-1)累加);exp=round(base+accInvested×0.6)×(同屬?1.5:1)。公式須與後端 _lib/cards.ts cardFeedExp 一致。⚠️2026-08-02 加 id 參數:金屬系(METAL_FEED)覆寫,先查覆寫再走一般公式
-      if (id && METAL_FEED[id] != null) return METAL_FEED[id];
+      if (id && METAL_FEED[id] != null) return metalFeedExp(id);   // 🆕2026-10-10 S7:金屬系經驗讀 _nbConfig.econ.metalFeed[id](後台 econ.metal_feed),缺→METAL_FEED 預設
       const lv = (level || 1) < 1 ? 1 : (level || 1);
       const base = FEED_EXP[rank] || FEED_EXP.genin;
       const accInvested = 25 * (lv - 1) * lv;
@@ -1770,7 +1765,17 @@
       let r;
       try { r = await authedFetch('/api/cards/feed', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ targetUid: inst.u, fodderUids: us }) }); }
       catch (e) { return { ok: false, msg: tr('需要連線,請稍後再試') }; }
-      if (!r.ok) { let body = {}; try { body = await r.json(); } catch (e2) { } return { ok: false, msg: body.error === 'fav_protected' ? tr('已鎖定為最愛\n請先取消鎖定') : (body.error || tr('合成失敗')) }; }   // 🆕2026-10-08 fav_protected 轉人話(前端已擋,保險)
+      if (!r.ok) {
+        let body = {}; try { body = await r.json(); } catch (e2) { }
+        // 🆕2026-10-10 B2:錯誤碼表→人話(後端 cards/feed.ts);未知碼不再直出英文碼,統一「合成失敗」
+        const FEED_ERR = { fav_protected: '已鎖定為最愛\n請先取消鎖定', insufficient_funds: '金幣不足', already_max: '已達滿級', no_fodder: '素材無效', no_valid_fodder: '素材無效', not_owned: '卡片狀態已變更' };
+        if (r.status === 409 && body.error === 'conflict_retry') {   // 競態:後端回最新 collection/coins → 比照成功路徑落地,讓玩家看到最新狀態再重試
+          if (typeof body.coins === 'number') syncWallet({ coins: body.coins });
+          if (body.collection) syncCards(body.collection); else cardsFetch();
+          return { ok: false, msg: tr('狀態已更新,請再試一次') };
+        }
+        return { ok: false, msg: FEED_ERR[body.error] ? tr(FEED_ERR[body.error]) : tr('合成失敗') };
+      }
       const d = await r.json();   // {coins, target:{u,lv,exp}, removed:[uid], collection}
       if (typeof d.coins === 'number') syncWallet({ coins: d.coins });
       if (d.collection) syncCards(d.collection); else cardsFetch();
@@ -1839,7 +1844,17 @@
       } catch (e) { put(prev); return false; }
     }
     // 🔐 批次分解(個體 uid 陣列)改打伺服器 POST /api/cards/dissolve;🆕2026-10-08 伺服器不再保留最後一張,但 fav=1 的個體會回 400 {error:'fav_protected'}(前端已擋,保險);回 {coins, removed:[uid], collection};離線/失敗→丟錯給呼叫端(e.code 帶伺服器 error 字串;呼叫端 toast)
+    const DISSOLVE_MAX = 90;   // 🆕2026-10-10 B1:鏡射後端 dissolve.ts 單次上限(D1 bound 參數上限),>90 後端回 400 invalid_request
+    function dissolveErrMsg(e) {   // 🆕2026-10-10 B1:售卡錯誤碼→人話(沒 code=網路/離線)
+      const c = e && e.code;
+      if (c === 'fav_protected') return tr('已鎖定為最愛\n請先取消鎖定');
+      if (c === 'too_many') return tr('一次最多售出 {n} 張', { n: DISSOLVE_MAX });
+      if (c === 'invalid_request' || c === 'invalid_json') return tr('請求無效,請重新整理後再試');
+      if (c === 'internal_error') return tr('伺服器忙碌,請稍後再試');
+      return tr('需要連線,請稍後再試');
+    }
     async function dissolveUids(uids) {
+      if (uids.length > DISSOLVE_MAX) { const e0 = new Error('dissolve too_many'); e0.code = 'too_many'; throw e0; }   // 🆕2026-10-10 B1 送單保險:超量拒送(UI 已擋在 90 張,此為保險)
       const r = await authedFetch('/api/cards/dissolve', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ uids: uids }) });
       if (!r.ok) { const e = new Error('dissolve ' + r.status); e.status = r.status; try { e.code = (await r.json()).error; } catch (e2) { } throw e; }
       const d = await r.json();
@@ -1854,7 +1869,7 @@
       if (!c) return { ok: false, msg: tr('卡片不存在') };   // 🆕2026-09-25 uid 找不到個體(已被解散/吃掉等)是「卡不存在」,不是「只剩1張」,訊息改準確
       const before = getMeta().coins || 0;
       let d;
-      try { d = await dissolveUids([c.u]); } catch (e) { return { ok: false, msg: e && e.code === 'fav_protected' ? tr('已鎖定為最愛\n請先取消鎖定') : tr('需要連線,請稍後再試') }; }
+      try { d = await dissolveUids([c.u]); } catch (e) { return { ok: false, msg: dissolveErrMsg(e) }; }
       const removed = Array.isArray(d.removed) ? d.removed.length : 0;
       if (!removed) return { ok: false, msg: tr('卡片狀態已變更,請重試') };   // 🩹keep-last 已移除,removed=0 只剩競態情境(剛被鎖/已被刪),舊文案「只剩1張」誤導(2026-10-08)
       return { ok: true, gain: Math.max(0, (d.coins || 0) - before) };
@@ -1938,7 +1953,10 @@
     ];
     function todayKey() { const d = new Date(); return d.getFullYear() + '-' + (d.getMonth() + 1) + '-' + d.getDate(); }
     function dailyAvailable() { return loadSave().meta.dayKey !== todayKey(); }
-    function dailyIndex() { return (loadSave().meta.dailyN || 0) % 7; }
+    // 🔥每日登入「連續制」(2026-10-11):伺服器權威 wallets.daily_key/daily_n。meta.dailyStreak=此刻有效連續天數(GET /api/wallet 的 dailyStreak:斷簽=0;或 claim 回應 streak);
+    //   還沒拿到(離線/舊後端)→ 退回舊 dailyN(累計次數)映射:0→0、否則 ((n-1)%7)+1,與後端過渡映射同式。下次領取格 = streak % 7(斷簽 streak=0 → D1)。
+    function dailyStreakNow() { const m = loadSave().meta; if (typeof m.dailyStreak === 'number') return m.dailyStreak; const n = m.dailyN || 0; return n > 0 ? ((n - 1) % 7) + 1 : 0; }
+    function dailyIndex() { return dailyStreakNow() % 7; }
     function claimDaily() {
       let res = null; mutSave(s => {
         const m = s.meta; if (m.dayKey === todayKey()) return;
@@ -1956,11 +1974,11 @@
       let r;
       try { r = await authedFetch('/api/daily/claim', { method: 'POST', headers: { 'Content-Type': 'application/json' } }); }
       catch (e) { return undefined; }   // 網路失敗:今天先不彈,下次上線再領(不寫 dayKey)
-      if (r.status === 409) { mutSave(s => { s.meta.dayKey = todayKey(); }); return null; }   // 伺服器說今天領過了→當作今天領過(本地快取跟上)
+      if (r.status === 409) { mutSave(s => { s.meta.dayKey = todayKey(); }); walletFetch(); return null; }   // 伺服器說今天領過了→當作今天領過(本地快取跟上);順手重拉錢包校正 dailyStreak
       if (!r.ok) return undefined;
       const d = await r.json(); syncWallet(d);
-      mutSave(s => { s.meta.dayKey = todayKey(); s.meta.dailyN = d.dailyN; });
-      return { day: d.reward.day, ic: d.reward.ic, label: d.reward.label, gemEl: null };
+      mutSave(s => { s.meta.dayKey = todayKey(); s.meta.dailyN = d.dailyN; if (typeof d.streak === 'number') s.meta.dailyStreak = d.streak; });
+      return { day: d.reward.day, ic: d.reward.ic, label: d.reward.label, gemEl: null, reset: !!d.reset, streak: d.streak };   // reset=斷簽歸 1(後端旗標)→面板 toast 一次性提示
     }
     // ===== 🆕2026-08-17 初始島「每日修煉」(spec-daily-island.md §6):與上面的「每日登入」(claimDaily 系列)完全不同的功能,
     //   只是剛好共用同一個 POST /api/daily/claim 路徑(body 帶 task 欄位才會走這條,見 claim.ts 檔頭「命名空間備註」)。=====
@@ -3161,6 +3179,7 @@
       newGame() {
         track('battle_start');
         this.locked = false;   // 鎖輸入旗標:敵方出手展演期間禁止下一手動作(避免插隊/重覆觸發)
+        this._atkLockReset();   // 🔒攻擊演出鎖歸位(newGame 也是 scene 重進的必經路徑)
         this.boxElement = {}; this.boxCard = {};
         if (this.presetTeam) ELEMENT_BOXES.forEach((b, i) => { const card = this.presetTeam[i]; this.boxCard[b] = card; this.boxElement[b] = card.el; });
         else ELEMENT_BOXES.forEach(b => { const card = ROSTER[rnd(ROSTER.length)]; this.boxCard[b] = card; this.boxElement[b] = card.el; });
@@ -3171,7 +3190,7 @@
         this.lead = (this.presetTeam && this.presetTeam[2] && leadSkill(this.presetTeam[2].id)) || null;   // 隊長技=中央位卡(編隊正中央=隊長);走 leadSkill→家族/台灣
         this.leadEvo = (this.presetTeam && this.presetTeam[2] && this.presetTeam[2].evo) || 0;   // 隊長卡個體進化階(leveledTeam 已解好個體制);傳給 planResolve→leadDamageMult,給 lead.vByEvo(目前只有🐱貓·自我爆發用)取值
         if (this.lead && this.lead.type === 'famAtk') { const fam = this.lead.fam, n = (this.presetTeam || []).filter(c => CARD_FAMILY[c.id] === fam).length; this.lead.famFrac = n / 5; }   // 同家族比例(純家族隊=1=吃滿;台灣同家族卡也算進)
-        this._reviveReady = true; this._reviveCD = 0; this._shield = !!(this.lead && this.lead.type === 'shield'); this._shieldReady = this._shield; this._shieldCD = 0; this._shieldHandActive = false; this._salmonHeal = false; this._salmonHealed = 0; this._fishHeal = null; this._huajing = null;   // 隊長技/主動技狀態(救命/護盾/溯流/魚活水/兔化境)
+        this._reviveReady = true; this._reviveCD = 0; this._shield = !!(this.lead && this.lead.type === 'shield'); this._shieldReady = this._shield; this._shieldCD = 0; this._shieldHandActive = false; this._salmonHeal = false; this._salmonHealed = 0; this._fishHeal = null; this._huajing = null; this._skillLandAt = 0;   // 隊長技/主動技狀態(救命/護盾/溯流/魚活水/兔化境)
         const teamHp = (this.presetTeam || []).reduce((s, c) => s + (c.hp || 0), 0) || CONFIG.PLAYER_HP_BASE;   // 隊伍血量=隊員 HP 三圍加總
         this.maxHP = Math.round(teamHp * ((this.lead && (this.lead.type === 'hp' || this.lead.type === 'dog')) ? this.lead.v : 1));   // 🐶犬攻守雙修:也吃 HP×v
         this.teamRcv = (this.presetTeam || []).reduce((s, c) => s + (c.rcv || 0), 0) || 0;   // 隊伍回復力總和(清無屬區回血用)
@@ -3823,6 +3842,7 @@
       resetWave() { this.immune = 0; this.armor = 0; this.amp = 1; }   // combo 不在此重置(敵攻擊不打斷連段);改為「整手沒清才歸零」(見 endHand)+新關歸零(startStage)
       startStage(keepBoard) {
         this.stopStuckFX && this.stopStuckFX();   // 新關/新局清掉殘留的卡死提示
+        this._atkLockReset();   // 🔒攻擊演出鎖:換場/重來一律歸位(epoch 作廢舊關殘留的解鎖回呼)
         this.camCine = false; if (this.cameras && this.cameras.main) { this.cameras.main.setZoom(1); this.cameras.main.centerOn(CX, Math.round(H / 2)); }   // 防護:確保鏡頭特寫不會卡住跨關
         if (!keepBoard) { this.board = Array.from({ length: N }, () => Array(N).fill(null)); this.stored = [null, null, null, null, null]; }   // 跨關保留盤面+屬塊:只有新局/重挑才清,過關時累積到下一關的怪
         this.resetWave(); this.combo = 0; this.handCleared = false; if (!keepBoard) this.refill();   // 新關/新局 combo 歸零;托盤跨關保留(只新局/重挑才重置)
@@ -3846,8 +3866,20 @@
         if (this.stage === 1 && !this.hitLab && !this.enemyLab) { if (this.tut) this.time.delayedCall(550, () => this.tutStart()); else if (this.lesson) this.time.delayedCall(550, () => this.lessonStart()); else if (!tutSeen()) this.showTutorial(); else if (!this.dive && ENEMY_BRIEF[this.dungeonId] && ['normal', 'advanced', 'super', 'hell'].includes((this.diff && this.diff.key) || '') && !this._briefSeen(this.dungeonId)) this.time.delayedCall(400, () => this.showEnemyBrief(this.dungeonId)); }   // 教學模式→教練;練習課程→lesson教練;首次遊玩→3步彈卡;否則五城中級+首進→敵情簡報(可勾本關不再顯示)
         if (this.counterTeach && this.stage === 1 && !this._counterHintShown && !loadSave().settings.counterTaught) this.time.delayedCall(600, () => { if (!this._counterHintShown) this._counterHintShow(); });   // 🩹序章剋屬提醒:一次性文字(同場只彈一次+存檔沒教過才彈),常駐弱點徽章見 spawnEnemies
       }
+      // 🔒2026-10-11 攻擊演出鎖 _atkLock(與 locked=敵回合展演、camCine=特寫/交接/致命鎖語意不同,三者 OR 並存、互不覆寫):
+      //   「清除發生→攻擊彈飛行→命中」整段不給拖塊/放技/補掃。combo 無時間限制(放塊持續達成清除就疊,不靠手速)→鎖演出期零手感損失;
+      //   用一道統一的門蓋掉逐點修的時序窗(瀕死目標/鎖縫)。計數式(每個鎖各有一個一次性解鎖函式,多個重疊演出要全部解完才放開)+
+      //   epoch(newGame/startStage 重置後,舊回呼不得誤解新鎖)+看門狗(ms+1500 兜底,杜絕軟鎖)。回傳解鎖函式,呼叫端放 finally。
+      _atkLockOn(ms) {
+        this._atkLockN = (this._atkLockN || 0) + 1; this._atkLock = true;
+        const ep = this._atkLockEp || 0; let done = false;
+        const rel = () => { if (done) return; done = true; if ((this._atkLockEp || 0) !== ep) return; this._atkLockN = Math.max(0, (this._atkLockN || 0) - 1); if (this._atkLockN === 0) this._atkLock = false; };
+        this.time.delayedCall(ms + 1500, rel);   // 看門狗:正常解鎖點沒跑到(例外/被中斷)也必放
+        return rel;
+      }
+      _atkLockReset() { this._atkLockEp = (this._atkLockEp || 0) + 1; this._atkLockN = 0; this._atkLock = false; }
       _sweepBoardClears(n) {   // 🧹防禦性補掃:新波敵人登場後,盤面若已有可清的滿行/滿宮(波次交接漏結算、舊卡住盤面)→走一次正常 resolve(傷害打新敵)。用一般 resolve 路徑(fromBlock=false,同玩家放塊)
-        if (this.resultOpen || this.locked || this.camCine || this.drag || this.earthSel || this.earthDrag || this.windPick) { if (n < 6) this.time.delayedCall(500, () => this._sweepBoardClears(n + 1)); return; }   // 忙(彈窗/敵回合展演/拖曳/土風技選取中)→稍後重試,最多 6 次;放棄也無妨(下次任何放塊的 resolve 本就全盤掃描);🩹補 earthSel/earthDrag/windPick(verifier 2026-10-07,與 startDrag 的擋法對齊)
+        if (this.resultOpen || this.locked || this.camCine || this._atkLock || this.drag || this.earthSel || this.earthDrag || this.windPick) { if (n < 6) this.time.delayedCall(500, () => this._sweepBoardClears(n + 1)); return; }   // 忙(彈窗/敵回合展演/拖曳/土風技選取中)→稍後重試,最多 6 次;放棄也無妨(下次任何放塊的 resolve 本就全盤掃描);🩹補 earthSel/earthDrag/windPick(verifier 2026-10-07,與 startDrag 的擋法對齊)
         const tgt = this.targetEnemy(); if (!tgt || !this.boxCard) return;
         const data = computeClears(this.board, this.boxElement, this.boxCard, tgt.el, this.amp, this.neutralAtkBase); if (!data) return;   // 沒有可清→什麼都不做
         this.fromBlock = false; this._placeCleared = false; try { this.resolve(); } catch (err) { console.error('sweep resolve', err); }
@@ -4518,7 +4550,7 @@
       }
       // 發動主動技
       fireActive(i) {
-        if (this.resultOpen || this.locked || this.camCine || this.drag || this.earthSel || this.earthDrag || this.windPick) return;
+        if (this.resultOpen || this.locked || this.camCine || this._atkLock || this.drag || this.earthSel || this.earthDrag || this.windPick) return;
         this.stopStuckFX();
         const card = this.teamCards[i], cid = (this.presetTeam && this.presetTeam[i]) ? this.presetTeam[i].id : null, a = activeSkill(card.el, cid); if (!a) return;
         if ((this.charge[i] || 0) < a.cd) { this.tonFloat(tr('蓄力中 {n}/{cd}', { n: (this.charge[i] || 0), cd: a.cd }), '#9fb0c0'); return; }
@@ -4582,6 +4614,15 @@
             break;
           }
           case 'wind': this.chargeWind(ox, oy, EL.wind.color, 420); this.time.delayedCall(this.chargeClimaxMs('wind'), () => this.windSelect(i, atk)); break;   // 風:集氣→暴風圈爆發(攻擊發動)才進「點選宮」模式 → 點一宮全清化風刃單體(算 combo)
+        }
+        if (!this.hitLab && !this.tut && !this.lesson) {   // ⏱️2026-10-10 審計:主動技效果在集氣高潮(火800/水780/雷950/土850ms…)+彈著後才入帳,但發動當下不鎖輸入→施放後馬上把本手最後一塊放掉,endHand 的敵方回合(空手 200ms)會先出手,延遲/回血/擊殺全都「晚到」(延遲技擋不住該手那一刀、回血晚於致死、該死的敵人先打你一下)。記下預計落地時間,endHand 的敵方出手等它(上限約 1.5~1.9s;同步型技能不記)
+          const _act = cid && CARD_ACTIVE[cid], _fam = (!_act && cid) ? CARD_FAMILY[cid] : null;
+          const _syncSkill = _act ? (cid === 'c18' || cid === 'c26' || cid === 'c30') : (_fam === 'fish' || _fam === 'rabbit');   // 溯流/巨塊/造塊/活水/化境=施放當下就改狀態,沒有延後落地
+          const _pureWind = !_act && !_fam && card.el === 'wind';   // 純風技:落地時間由 windDoPick 記(點選宮之前不能放塊)
+          if (!_syncSkill && !_pureWind) {
+            const _evo = (this.presetTeam && this.presetTeam[i] && this.presetTeam[i].evo) || 0, _tail = (_fam === 'cat') ? 320 + (1 + _evo) * 170 : 700;   // 貓連打:最後一下 = 高潮 +(hits-1)×170 + 彈著 300;其餘 = 彈著/鼠潮掉落+清除約 700
+            this._skillLandAt = Math.max(this._skillLandAt || 0, (this.time.now || 0) + this.chargeClimaxMs(card.el) + _tail);
+          }
         }
         if (this.hitLab) this.charge = this.teamCards.map((c, k) => { const a = activeSkill(c.el, this.presetTeam && this.presetTeam[k] && this.presetTeam[k].id); return a ? a.cd : 0; });   // 實驗室:主動技恆滿
         this.updateAll(); this.renderCharges();
@@ -4664,7 +4705,7 @@
           return;
         }
         if (fam === 'rabbit') {   // 🐰化境:全盤「有屬的宮」1 回合內變成自己同屬→相剋爆發 setup(高 CD)
-          this._huajing = { turns: 1, saved: { ...this.boxElement } };
+          this._huajing = { turns: 1, saved: (this._huajing && this._huajing.saved) ? this._huajing.saved : { ...this.boxElement } };   // 🩹2026-10-10 審計:同手第二張兔(CD 同步滿蓄很容易)再發化境時,boxElement 已是第一次變過的→原寫法把「已變形」當原貌存下,endHand 還原就永久卡在變形屬性。已有進行中的化境→沿用最初的 saved
           ELEMENT_BOXES.forEach(b => { if (this.boxElement[b] != null) this.boxElement[b] = el; });
           this.renderTeam(); this.refreshBoard();
           this.chargeEl(el, ox, oy, 300);
@@ -4849,7 +4890,9 @@
         this.labSnd('s_clear_n', 0.65);   // 風技就是解宮 → 用解宮 9hit 音(powerup10 一次),不用通用主動技音
         const cen = this.cellCenter(br + 1, bc + 1), col = EL.wind.color;
         this.chargeAt(cen.x, cen.y, col, 280);
-        if (tgt) { tgt._blocked = false; this.time.delayedCall(240, () => { this.zoneStrike(cen.x, cen.y, cellsB, col, dmg, [tgt], false); this.time.delayedCall(360, () => { if (tgt.hp <= 0) this.killEnemy(tgt); }); }); }
+        if (!this.tut && !this.lesson) this._skillLandAt = Math.max(this._skillLandAt || 0, (this.time.now || 0) + 240 + 360 + 100);   // ⏱️2026-10-10 審計:風技落地(240+360ms)前若本手剛好收尾→endHand 敵方等它落地(見 endHand _skW)
+        if (tgt) { tgt._blocked = false; const _relW = (!this.tut && !this.lesson && !this.hitLab && !this.enemyLab && dmg >= tgt.hp) ? this._atkLockOn(240 + 360) : null;   // 🔒2026-10-11 條件式鎖:只有「本技會殺」(施放時算定的 dmg >= 目標真 hp)才鎖;不殺→不鎖、玩家照常連放   // 🔒攻擊演出鎖(風技清宮不走 resolve,自成一段 strike 600ms):鎖到彈著收尾 killEnemy 後,與 resolve 同一旗標(計數式可重疊)
+          this.time.delayedCall(240, () => { this.zoneStrike(cen.x, cen.y, cellsB, col, dmg, [tgt], false); this.time.delayedCall(360, () => { try { if (!tgt.dead) { tgt.hp = Math.max(0, tgt.hp - dmg); if (tgt.hp > 0) this._activeCounter(tgt, 'wind'); this.updateEnemies(); } if (tgt.hp <= 0) this.killEnemy(tgt); } finally { if (_relW) _relW(); } }); }); }   // 🩹2026-10-10 審計:風技原本全程沒有任何一處扣 tgt.hp(zoneStrike 只扣顯示血量 dispHp、真 hp 已在 resolve 同步結清——風技不走 resolve)→ 清了宮、耗了蓄力、combo+1 但敵人毫髮無傷。補:彈著收尾時扣真 hp(同火/怨擊主動技寫法:dead 防呆→扣→存活剋屬→_activeCounter→updateEnemies→hp<=0 才 killEnemy)
         this.updateAll();
       }
       renderTray() {
@@ -5742,7 +5785,7 @@
             this.time.delayedCall(fireAt, () => { this.labSnd(['s_fire1', 's_fire2', 's_fire3'][Math.floor(Math.random() * 3)], 0.55); this.zoneStrike(cen.x, cen.y, byBox[b], col, per, victims, big && first, seg.el, soundBig); if (segFirst) this.labCardHop(seg.el); });
           });
         });   // 發射隨機音 + 傳屬性/≥18重擊旗標給 zoneStrike(彈著配音)   // 該宮射出→對應屬性卡小跳一下
-        this.time.delayedCall(last + 240 + 330 + 260, () => { this.updateEnemies(); victims.forEach(v => { if (v.hp <= 0) this.killEnemy(v); }); });
+        this.time.delayedCall(last + 150 + 240 + 260, () => { this.updateEnemies(); victims.forEach(v => { if (v.hp <= 0) this.killEnemy(v); }); });
         return last;
       }
       labCardHop(el) {
@@ -5790,7 +5833,7 @@
         this.tweens.add({ targets: ring, scale: 2.4, alpha: 0, duration: 300, ease: 'Quad.out', onComplete: () => ring.destroy() });
       }
       startDrag(i, p) {
-        if (this.resultOpen || this.locked || this.camCine || this.earthSel || this.earthDrag || this.windPick) return;
+        if (this.resultOpen || this.locked || this.camCine || this._atkLock || this.earthSel || this.earthDrag || this.windPick) return;
         if (this.drag) { if (this.drag.prev) this.drag.prev.destroy(); this.clearGhost(); this._hotKey = ''; this._clearHotFX(); this.drag = null; this._clearCounterPreview(); }   // 🐛 防重入:上一個 drag 沒清乾淨(如拖出畫面外放開)→先清掉舊影像,免疊出殘影;順便收掉可能殘留的相剋預覽
         const cells = this.tray[i].c, kind = this.tray[i].kind;
         const kc = kind === 'wild' ? 0xffe066 : kind === 'water' ? 0x62b8f0 : kind === 'wind' ? 0x6ad06a : kind === 'earth' ? 0xd49a4a : 0xffffff;
@@ -5799,7 +5842,7 @@
       }
       // 從卡拖「存放的屬塊」(萬用塊填空格;不佔托盤格→不推進敵,是連擊引擎)
       startStoredDrag(i, p) {
-        if (this.resultOpen || this.locked || this.camCine || this.drag || this.earthSel || this.earthDrag || this.windPick) return;
+        if (this.resultOpen || this.locked || this.camCine || this._atkLock || this.drag || this.earthSel || this.earthDrag || this.windPick) return;
         const s = this.stored[i]; if (!s) return;
         // ▶ 新手教學強化(屬塊):玩家真的拖用屬塊了→記存檔旗標(永久不再教)+清掉本場 JIT 提示(若有)
         if (this._storeHintObjs || this._storeHintShown) { this._storeHintClearObjs(); this._storeHintShown = false; }
@@ -5864,7 +5907,7 @@
         if (!this.drag) return; let cell = this.pointerToCell(p.x, p.y - DRAG_LIFT); const d = this.drag;
         if (cell && d.kind === 'wild') cell = { r: Math.floor(cell.r / 3) * 3, c: Math.floor(cell.c / 3) * 3 };   // 🃏萬用塊:落點吸附整宮(與 updateDrag 預覽一致)
         d.prev.destroy(); this.clearGhost(); this._hotKey = ''; this._clearHotFX(); this.drag = null; this._clearCounterPreview();   // 放手→收掉落子預告光效+相剋預覽
-        if (this.camCine) return;   // 🔒波次交接/特寫鎖:拖曳中途才進入鎖定期→放手視同非法放置(塊留在托盤、無提示);startDrag 擋不到「鎖前已抓起」的塊
+        if (this.camCine || this._atkLock) return;   // 🔒波次交接/特寫鎖(+🔒攻擊演出鎖 _atkLock):拖曳中途才進入鎖定期→放手視同非法放置(塊留在托盤、無提示);startDrag 擋不到「鎖前已抓起」的塊
         if (this.enemyLab && cell && d.cells.some(([dr, dc]) => cell.r + dr >= 6)) { this.tonFloat(tr('實驗室只用上 2 排宮'), '#9fb0c0'); this.renderTray && this.renderTray(); return; }   // 敵技實驗室:盤面只到 row5(下 3 排是按鈕區)
         if (cell && (d.kind === 'wild' || canPlace(this.board, d.cells, cell.r, cell.c, d.kind, d.store != null))) {   // 🃏萬用塊覆蓋一切→不受 canPlace 的「格要空」限制
           if ((this.tut || this.lesson) && (this.tutTarget || this.tutTargets) && !this.tutCovers(d, cell.r, cell.c)) { this.tutReject(); return; }   // 教學/課程防呆:放到非指定位置→擋下提示,塊退回不消耗(放手模式 tutTarget/tutTargets 皆 null→不擋)。🐛修:原本只檢查 tutTarget(單目標),dual_gate 用 tutTargets(多目標)時這個 guard 整個短路失效→亂放不擋,盤面塞滿卡死;現在兩者任一有值都要過 tutCovers
@@ -6046,7 +6089,8 @@
         });
         this.updateAll();   // 立即反映combo字/燒傷後血量(別等延遲回呼)
         this.locked = true;   // 鎖輸入:等我方這手展演完,敵方才出手(玩家才看得到上面的表現),再補新手解鎖
-        this.time.delayedCall(showed ? 1200 : 200, () => {   // 等我方華麗展演(HIT 數到底)演完,敵方才出手
+        const _skW = ((this._skillLandAt || 0) - (this.time.now || 0) + 150) || 0;   // ⏱️2026-10-10 審計:本手內剛發動、還沒落地的主動技(見 fireActive 記的 _skillLandAt)→敵方出手等它落地+150ms,否則延遲技/回血/擊殺全晚於敵攻;沒有進行中的技能→_skW<=0,不影響原本 1200/200 節奏
+        this.time.delayedCall(Math.max(showed ? 1200 : 200, _skW), () => {   // 等我方華麗展演(HIT 數到底)演完,敵方才出手
           if (this.resultOpen) { this.locked = false; return; }   // 期間已開結算/勝敗畫面→不再推進
           try {
             this._shieldHandActive = false; this._shieldBreakShown = false; this._lockedStore = {}; this._clearAllLockBadges();   // 🐻本手護盾旗標重置(首擋→轉true→全手擋);🌀封卡旗標每敵回合開始清+清殘留🔒徽章(魔王設→套用到玩家下一手)
@@ -6469,21 +6513,21 @@
               const d = this.add.rectangle(o.x, o.y, 5.5, 5.5, color, 0.95).setAngle(Math.random() * 90);   // 集氣顆粒=方塊(旋轉)
               d.setBlendMode(ADD).setDepth(DEPTH.proj - 1);
               this.tweens.add({
-                targets: d, x: ex, y: ey, scale: 1.15, angle: '+=120', duration: 120, ease: 'Quad.out', onComplete: () => {   // ①花火爆出
-                  this.tweens.add({ targets: d, x: cx, y: cy, scale: 0.25, angle: '+=160', duration: 200 + Math.random() * 100, ease: 'Quad.in', onComplete: () => d.destroy() });
+                targets: d, x: ex, y: ey, scale: 1.15, angle: '+=120', duration: 75, ease: 'Quad.out', onComplete: () => {   // ①花火爆出
+                  this.tweens.add({ targets: d, x: cx, y: cy, scale: 0.25, angle: '+=160', duration: 125 + Math.random() * 62, ease: 'Quad.in', onComplete: () => d.destroy() });
                 }
               });
             }   // ②再往宮中心集中(angle 對圓無效、對方塊=旋轉)
           });
         });
-        const core = this.add.circle(cx, cy, 3, hot, 1).setBlendMode(ADD).setDepth(DEPTH.proj); this.tweens.add({ targets: core, scale: 4, duration: 240, ease: 'Quad.in' });
-        const glow = this.add.circle(cx, cy, 7, color, 0.55).setBlendMode(ADD).setDepth(DEPTH.proj); this.tweens.add({ targets: glow, scale: 4.5, duration: 240, ease: 'Quad.in' });
-        this.time.delayedCall(240, () => {
+        const core = this.add.circle(cx, cy, 3, hot, 1).setBlendMode(ADD).setDepth(DEPTH.proj); this.tweens.add({ targets: core, scale: 4, duration: 150, ease: 'Quad.in' });
+        const glow = this.add.circle(cx, cy, 7, color, 0.55).setBlendMode(ADD).setDepth(DEPTH.proj); this.tweens.add({ targets: glow, scale: 4.5, duration: 150, ease: 'Quad.in' });
+        this.time.delayedCall(150, () => {   // ⏱2026-10-11 集氣 240→150(粒子/核心/光暈同比縮)
           core.destroy(); glow.destroy();
           const seal = this.add.circle(cx, cy, 14, hot, 1).setBlendMode(ADD).setDepth(DEPTH.proj); this.tweens.add({ targets: seal, scale: 2.8, alpha: 0, duration: 200, ease: 'Quad.out', onComplete: () => seal.destroy() });
           if (shakeBig) this.shakeCam(180, 0.007);
-          victims.forEach((v, k) => { if (!v.sprite) return; this.time.delayedCall(k * 45, () => this.chakraBolt(cx, cy, v.sprite.x, v.sprite.y, color, v, dmg, 1, hot)); });
-          this.time.delayedCall(330, () => {
+          victims.forEach((v, k) => { if (!v.sprite) return; this.time.delayedCall(k * 45, () => this.chakraBolt(cx, cy, v.sprite.x, v.sprite.y, color, v, dmg, 1, hot, 230)); });
+          this.time.delayedCall(240, () => {   // ⏱2026-10-11 飛行 330→240(視覺飛行 230,結算點仍略晚於 chakraImpact)
             let anyHit = false, anyBlock = false; victims.forEach(v => { if (v._blocked) { anyBlock = true; const lk = v.shieldLeak || 0; if (lk > 0 && v.dispHp != null) v.dispHp = Math.max(0, v.dispHp - Math.round(dmg * lk)); if (v.sprite && !v.dead) { if (lk > 0) this.floatText(v.sprite.x, v.sprite.y - 18, '🛡 −' + Math.round(dmg * lk), '#a9c4e8'); else if (v._nearMiss) { this._shieldNearMiss(v, v._nearMiss); v._nearMiss = null; } else this.floatText(v.sprite.x, v.sprite.y - 18, tr('🛡 擋下'), '#cfe0ff'); } } else { anyHit = true; if (v.dispHp != null) v.dispHp = Math.max(0, v.dispHp - dmg); if (v._shieldBreak) { v._shieldBreak = false; this._breakEnemyShield(v); if (v._breakBonus > 0) { if (v.dispHp != null) v.dispHp = Math.max(0, v.dispHp - v._breakBonus); if (v.sprite) this.floatText(v.sprite.x, v.sprite.y - 42, tr('破盾 +{n}', { n: v._breakBonus }), '#ffe08a'); } } } if (v._finOrb && el && el !== 'neutral' && (v.finAnyHit || (EL[el] && EL[el].beats === v.el))) this._breakEnemyOrb(v); }); this.updateEnemies();   // 彈著→扣「顯示血量」逐宮下降(真 hp 已在 resolve 同步結清);蓄力中被命中→此刻(彈著後)才打斷:一般需剋屬,finAnyHit(初級哥布林)=任何攻擊屬性即斷
             if (anyHit) { if (el && el !== 'neutral') this.labSnd('s_hit_' + el, 0.75); if (bigHit) { this.labSnd('s_boom', 0.6); this.labSnd('s_punch', 0.75); } } else if (anyBlock) { this.labSnd('s_block', 0.75); }
           });   // 彈著配音:各屬命中音 / ≥18重擊疊爆破+重拳 / 擋下用 flying_pan
@@ -6594,12 +6638,13 @@
         //    否則清 5 宮以上時彈著(460+i*150+隨機)落在 endHand(1200ms) 之後:已被這手打死的敵人先出手、
         //    回血/扣血順序又吃 Math.random → 結果不可重放。endHand 靠 hp<=0 跳過已死敵;死亡演出仍由彈著/收尾觸發。
         const perVictim = plan.hits.reduce((s, h) => s + h.dmg, 0);
+        const _hpBefore = new Map(this.enemies.map(e => [e, e.hp]));   // 🔒2026-10-11 條件式攻擊鎖:傷害套用前記各敵 hp,結算後比對有沒有「本波打死(hp>0→<=0)」
         victims.forEach(v => { v.dispHp = v.hp; if (!v._blocked) { let extra = 0; if (v._shieldBreak) { extra = Math.round(perVictim * 0.5); v._breakBonus = extra; } v.hp = Math.max(0, v.hp - perVictim - extra); } else { const lk = v.shieldLeak || 0; if (lk > 0) { v._chip = Math.round(perVictim * lk); v.hp = Math.max(0, v.hp - v._chip); } } });   // dispHp=血條顯示值:彈著逐宮扣、收尾歸還給真 hp;🛡破盾當手追加 0.5× 傷害;🛡減傷盾(shieldLeak)盾住仍放行部分傷害
         if (this._tutLethalClear) { this._tutLethalClear = false; victims.forEach(v => { if (!v.dead) v.hp = 0; }); }   // 教學⑨火宮收尾安全網:把被打中的敵人殘血歸零(彈著/收尾會演死亡+觸發 win 畢業),不論實際 combo 高低都保證打死
         if (this.tut && data.hitWeak && !aoe && tgt && tgt.sprite) { const _cx = tgt.sprite.x, _cy = tgt.sprite.y; this.time.delayedCall(780, () => this._tutCritFx(_cx, _cy, perVictim)); }   // 🆕教學⑤剋屬強化演出:座標先存(delayedCall 前敵人仍在原位),約略對齊 zoneStrike/chakraImpact 彈著時機,疊在既有命中特效之上
         this.countFX(n);   // 盤面中央只留「n HIT」(清的格數);招式名/盤面 combo 已取消
         { const reps = n >= 18 ? 3 : n >= 15 ? 2 : 1; for (let r = 0; r < reps; r++)this.time.delayedCall(r * 200, () => this.labSnd('s_clear_n', 0.65)); }   // 解宮成功音:powerup10 重複(<15→1、15~17→2、≥18→3,隔 0.2 秒);卡片動畫改在各宮發射時 labCardHop
-        const LEAD = 460;   // 先讓 n HIT 跳出來
+        const LEAD = (this.tut || this.lesson) ? 460 : 220;   // 先讓 n HIT 跳出來;⏱2026-10-11 實戰/實驗室首發前搖 460→300→220(鎖太久,縮短起手);⏱第二輪同步壓縮演出本體:宮間隔 150→100、集氣 240→150、飛行 330→240;教學/課程維持 460(教學⑤暴擊特效 _tutCritFx 寫死 780ms 對齊舊彈著時機,且腳本自有節奏)。LEAD 只是 resolve 局部常數:連動的只有本函式內以 LEAD 為基準的溶解起點/回血浮字/偷襲爪擊(同步前移,相對順序不變);別處的 LEAD 是各函式自己的局部常數,不受影響
         const hits = data.hits || []; let lastFire = LEAD;   // 各「有清到的宮」各自集氣→射出,時間錯開、順序不一
         const healPlan = {};   // 各無屬宮回血:同步入帳(彈著時只演出)
         if (this.teamRcv > 0) hits.forEach((h, i) => { if (h.el !== 'neutral') return; const base = Math.max(1, Math.round(heal * h.cells / 3)); const hv = this.tut ? Math.max(base, Math.round(this.maxHP * 0.5)) : base; healPlan[i] = hv; this.playerHP = Math.min(this.maxHP, this.playerHP + hv); this._pHpHealPending = true; });   // 血量同步入帳,但標記「回血待演」(不分教學/一般)→ updateBars 這段空窗先別把血條瞬間同步,留給 5392 的 animPlayerHP 演。⚠️原本只在 this.tut 設→一般戰鬥回血在動畫跑前就被 updateBars 同步到滿=瞬間補完沒動畫(旗標由 animPlayerHP 開跑時清)
@@ -6607,7 +6652,7 @@
           const br = Math.floor(h.b / 3) * 3, bc = (h.b % 3) * 3, cen = this.cellCenter(br + 1, bc + 1);
           const cellsB = data.cells.filter(rc => boxOf(rc[0], rc[1]) === h.b);
           const col = h.el !== 'neutral' ? EL[h.el].color : 0xbfe6ff, dmg = plan.hits[i].dmg;   // 每段傷害取自 battle-core 計畫
-          const fireAt = LEAD + i * 150 + Math.random() * 120; lastFire = Math.max(lastFire, fireAt);
+          const fireAt = LEAD + i * 100 + Math.random() * 120; lastFire = Math.max(lastFire, fireAt);
           this.time.delayedCall(fireAt, () => {
             this.labSnd(['s_fire1', 's_fire2', 's_fire3'][Math.floor(Math.random() * 3)], 0.55); this.labCardHop(h.el); this.zoneStrike(cen.x, cen.y, cellsB, col, dmg, victims, aoe && i === 0, h.el, (n >= 18 && i === 0));   // 發射音(隨機)+ 對應卡小跳 + 傳屬性/≥18重擊旗標(彈著配音)
             if (h.el !== 'neutral' && this._resK && this._resK[h.b] > 0 && this.floatText) this.time.delayedCall(140, () => { try { this.floatText(cen.x, cen.y - 30, tr('共鳴!'), '#ffd86b'); } catch (e) { } });   // 🔗該宮有同屬共鳴加成→宮中心上方浮小字「共鳴!」(沿用 floatText,沒有就略過;傷害照算不受影響)
@@ -6650,7 +6695,12 @@
           const cc = data.cells || []; cc.forEach((rc, idx) => { const cell = this.cellRect(rc[0], rc[1]), dl = Math.min(idx, 18) * 16, sp = this.blockSprites && this.blockSprites[rc[0] * N + rc[1]]; if (cell) this.tweens.add({ targets: cell, alpha: 0, duration: 260, delay: dl, ease: 'Sine.in' }); if (sp && sp.visible) this.tweens.add({ targets: sp, alpha: 0, scaleX: RECT / 96 * 0.55, scaleY: RECT / 96 * 0.55, duration: 260, delay: dl, ease: 'Sine.in' }); });   // 質感糖果塊跟著格子一起淡出+縮小溶解
           this.time.delayedCall(300 + Math.min(cc.length, 18) * 16, () => this.refreshBoard());
         });
-        this.time.delayedCall(lastFire + 240 + 330 + 260, () => { this.enemies.forEach(v => { v.dispHp = null; }); this.updateAll(); this.enemies.forEach(v => { if (v._finBreakPending && v._finOrb) this._breakEnemyOrb(v); }); victims.forEach(v => { if (v.hp <= 0) this.killEnemy(v); }); if (this.camCine && this.enemies.some(e => !e.dead && e.hp > 0)) this.camCine = false; });   // 最後一段彈著後:顯示血量歸還真 hp+補破仍未破的蓄力(安全網→掃全體,雜兵沒被鎖定也會碎)+收死亡敵;🔓保險閥:上面 🔒致命鎖若遇「敵人被回血/吸收救活」(仍有活且 hp>0 的敵)→放開,杜絕軟鎖(全滅則 stageClear/finalBlow 自己接手 camCine,不在此放)
+        const _anyKill = this.enemies.some(e => !e.dead && _hpBefore.get(e) > 0 && e.hp <= 0);   // 🔒2026-10-11 條件式鎖:上面 victims 扣血與猴群偷襲 t2 扣血皆同步入帳(t0)→此刻 hp 已定案;至少打死一隻才鎖,沒打死→不鎖(判定同步正確,無 bug 窗,玩家照常連放)
+        const _relAtk = (_anyKill && !this.tut && !this.lesson && !this.hitLab && !this.enemyLab) ? this._atkLockOn(lastFire + 150 + 240 + 260) : null;   // 🔒攻擊演出鎖:本手有清除(上面 computeClears 有料才走到這)→鎖到收尾 killEnemy 後;放在收尾排定之前一行(其前任何一處 throw 都不會鎖到);教學/課程(自有腳本鎖)與兩個實驗室(連發測試沙盒)不套
+        // ⏱2026-10-11 提前解鎖:解鎖點從「收尾 killEnemy 後(lastFire+830)」提前到「最後一發彈著命中(lastFire+240 集氣+330 飛行=+570)」→鎖長砍 260ms。rel 是一次性+epoch 防護,與收尾 finally 的 _relAtk() 先到先解、重複呼叫無害(finally 那個保留當雙保險;看門狗 ms 維持原收尾時間 lastFire+830 再 +1500,不動)。
+        //   安全依據:命中後~260ms 的瀕死窗(真 hp 已扣光、killEnemy 尚未設 e.dead)已有兩道點修擋住——(1) targetEnemy() 排除 hp<=0 的瀕死敵(轉向活敵;全員瀕死才 fallback)(2) 本函式尾端致命鎖:場上活敵 hp 全 ≤0 → camCine=true 擋輸入。_atkLock 全程鎖只是第三層,提前不開縫。
+        if (_relAtk) this.time.delayedCall(lastFire + 150 + 240, _relAtk);   // 第二輪:集氣 150+飛行 240=最後一發命中點
+        this.time.delayedCall(lastFire + 150 + 240 + 260, () => { try { this.enemies.forEach(v => { v.dispHp = null; }); this.updateAll(); this.enemies.forEach(v => { if (v._finBreakPending && v._finOrb) this._breakEnemyOrb(v); }); victims.forEach(v => { if (v.hp <= 0) this.killEnemy(v); }); if (this.camCine && this.enemies.some(e => !e.dead && e.hp > 0)) this.camCine = false; } finally { if (_relAtk) _relAtk(); } });   // 🔓finally 保證解 _atkLock;最後一段彈著後:顯示血量歸還真 hp+補破仍未破的蓄力(安全網→掃全體,雜兵沒被鎖定也會碎)+收死亡敵;🔓保險閥:上面 🔒致命鎖若遇「敵人被回血/吸收救活」(仍有活且 hp>0 的敵)→放開,杜絕軟鎖(全滅則 stageClear/finalBlow 自己接手 camCine,不在此放)
         // 🔒2026-10-07 致命傷害死亡演出窗:真 hp 在上方 6558 已同步扣光、但 e.dead 要等上面這根彈著收尾(~1.3-1.9s)的 killEnemy 才設→窗內 aliveCount()>0、targetEnemy() 仍回 hp<=0 的敵→玩家手快再放塊=照常 resolve、塊被消耗、傷害白打死敵。確定本波清場(場上活著的敵 hp 全 ≤0)→立刻沿用 camCine 鎖;解鎖鏈同 stageClear 鎖(startStage 無條件 false + catch)。放在收尾 delayedCall 已排定之後(resolve 中途丟例外就不會鎖到而收尾排不上)。排除:教學/課程(stageClear 早退→showResult,不進 startStage)、實驗室(killEnemy 原地重生、不進 stageClear)、最終關(killEnemy→finalBlow 自己鎖+showResult)
         if (!this.tut && !this.lesson && !this.hitLab && !this.enemyLab && !this.camCine && this.stage < this.stagesEff.length) { const _al = this.enemies.filter(e => !e.dead); if (_al.length && _al.every(e => e.hp <= 0)) this.camCine = true; }
       }
@@ -6939,7 +6989,10 @@
         const last = this.aliveCount() === 0, isFinal = last && this.stage >= this.stagesEff.length;
         if (isFinal) { this._finalEnemy = e; this.stageClear(); return; }   // 最後一關最後一擊:由 finalBlow 演特寫鏡頭+飛出(不在此 playDeath)
         this.playDeath(e);   // 敗陣演出:被打飛(後上)+縮小+旋轉+淡出 → 化成光芒
-        if (last) this.stageClear(); else { this.targetEnemy(); this.updateEnemies(); }
+        if (last) this.stageClear(); else {
+          this.targetEnemy(); this.updateEnemies();
+          if (!this.tut && !this.lesson && !this.hitLab && !this.enemyLab && !this.camCine && this.stage < this.stagesEff.length) { const _al = this.enemies.filter(x => !x.dead); if (_al.length && _al.every(x => x.hp <= 0)) this.camCine = true; }   // 🔒2026-10-10 審計:同 resolve 尾端致命鎖。主動技(非 resolve 路徑)擊殺一隻後,若場上剩下的全是「已被放塊打到 hp<=0、死亡演出還沒收」的瀕死敵→resolve 的致命鎖早在技能彈著前就判過(當時還有活敵)=沒鎖到,此刻補鎖(窗內放塊會打屍體、塊白耗)。解鎖鏈同:瀕死敵的收尾 killEnemy→last→stageClear→startStage 重置
+        }
       }
       _clearEnemyIron(e) {   // 🔩鐵機人死亡→移除牠放的鐵塊(只清「還是 iron」的格,玩家已清掉的略過);逐隻歸屬,別隻的鐵塊不受影響
         if (!e || !e._ironCells || !e._ironCells.length) return;
@@ -7277,7 +7330,8 @@
         });
       }
       // 能量彈:沿弧線飛 + 逐段描出的弧線軌跡線(亮白核 + 屬色光暈,像子機/追蹤彈)
-      chakraBolt(ox, oy, tx, ty, color, tgt, dmg, pw, hot) {
+      chakraBolt(ox, oy, tx, ty, color, tgt, dmg, pw, hot, flyMs) {   // flyMs:⏱2026-10-11 飛行時間(預設 320;只有 zoneStrike 傳 230 加速主攻擊彈道,各主動技等其他呼叫端不傳→維持 320,它們寫死的 360 結算點不動)
+        const _fly = flyMs || 320;
         if (tgt) tgt._hitFromX = ox;   // 記錄攻擊起點x→死亡打飛方向用(起點在左=往右飛+順時針,反之逆時針);playDeath 讀取
         pw = pw || 1; hot = hot || 0xffffff; const ADD = Phaser.BlendModes.ADD, a = { x: ox, y: oy }, b = { x: tx, y: ty }, bs = 1 + (pw - 1) * 0.4;   // bs:彈體/軌跡隨 HIT 變粗大;hot=高光色(預設白)
         const ctrl = this.chakraArc(a, b, (Math.random() < 0.5 ? 1 : -1) * (55 + Math.random() * 45));
@@ -7285,7 +7339,7 @@
         const core = this.add.circle(ox, oy, 6 * bs, hot, 1).setBlendMode(ADD).setDepth(DEPTH.proj);          // 亮核縮小→不洗白
         const trail = this.add.graphics().setDepth(DEPTH.proj - 1).setBlendMode(ADD), ob = { t: 0 };
         this.tweens.add({
-          targets: ob, t: 1, duration: 320, ease: 'Quad.in',
+          targets: ob, t: 1, duration: _fly, ease: 'Quad.in',
           onUpdate: () => {
             const p = this.chakraBez(a, ctrl, b, ob.t); glow.setPosition(p.x, p.y); core.setPosition(p.x, p.y);
             trail.clear(); const N = Math.max(2, Math.round(ob.t * 26));
@@ -7294,7 +7348,7 @@
           },
           onComplete: () => { glow.destroy(); core.destroy(); this.tweens.add({ targets: trail, alpha: 0, duration: 360, onComplete: () => trail.destroy() }); this.chakraImpact(tx, ty, color, tgt, dmg, Math.atan2(ty - ctrl.y, tx - ctrl.x), pw, hot); }
         });   // 傳入到達角度(貝茲末端切線)+ HIT 規模 + 高光色
-        this.tweens.add({ targets: glow, scale: 1.5, duration: 320, ease: 'Quad.in' });
+        this.tweens.add({ targets: glow, scale: 1.5, duration: _fly, ease: 'Quad.in' });
       }
       // ang=能量彈到達角度→火花/粒子依「擊中角度」散開(大半往來向反向潑回 back-splash、少數穿透)
       chakraImpact(x, y, color, tgt, dmg, ang, pw, hot) {
@@ -7694,6 +7748,9 @@
         if (this.sortMode == null) this.sortMode = 0;
         if (this.filterEl === undefined) this.filterEl = null;
         if (this.boxPage == null) this.boxPage = 0;
+        // 🆕2026-10-10 B4:scene.restart()(resize 觸發)會重跑 init 但保留實例欄位→售卡/確認框旗標殘留(例:askDis=true 重開就直接彈出「解散確認」、selMode 卡在多選但 dsel 為舊 Set)。
+        //   此處清:askDis/askEvo(確認框)、selMode/dsel(售卡多選)。刻意不清:_busyDis/_busyEvo/_busyExpand(在途請求的防連點旗標,callback 打在同一實例會自己還原;提前清反而可重送);sortMode/filterEl/boxPage(檢視偏好,既有行為)。
+        this.askDis = false; this.askEvo = false; this.selMode = false; this.dsel = new Set();
       }
       create() {
         _pageGradBg(this);   // demo --page:深色放射漸層整頁底(像「卡片管理」選單頁)
@@ -7769,7 +7826,7 @@
               const nn = Array.isArray(d.removed) ? d.removed.length : 0, gain = Math.max(0, (d.coins || 0) - before);   // 🆕2026-10-08 拿掉「每種保留最後 n 張」尾註(伺服器已不保留最後一張)
               this.toast(tr('售出 {n} 張,+{g} 金', { n: nn, g: gain }));
               this.rebuild();
-            }).catch(e => { this._busyDis = false; this.toast(e && e.code === 'fav_protected' ? tr('已鎖定為最愛\n請先取消鎖定') : tr('需要連線,請稍後再試')); this.rebuild(); });
+            }).catch(e => { this._busyDis = false; this.toast(dissolveErrMsg(e)); this.rebuild(); });
           };
         }
       }
@@ -7886,7 +7943,7 @@
           // 命中區(透明方形覆蓋整格;圓角只是視覺)
           if (!this.sel) {
             const hit = this.rect(cx, cy, cw, cw, 0x000000, 0.001).setInteractive();
-            tapBind(this, hit, () => { if (this.selMode) { if (!this.dsel) this.dsel = new Set(); if (isFavUid(cd.u)) return; if (teamUidSet().has(cd.u)) { this.toast(tr('編隊中的卡無法賣出\n請先從隊伍移除')); return; } this.dsel.has(cd.u) ? this.dsel.delete(cd.u) : this.dsel.add(cd.u); this.rebuild(); } else if (cd._ghost) { this.toast(tr('舊版卡片(已不在卡表)\n可用「整理/分解」回收')); } else { this.sel = cd.u; this.rebuild(); } });   // 🆕個體制:sel 改存這一格個體的 uid;🆕2026-10-08 編隊中(任一隊)不可賣(使用者拍板:會影響隊伍),toast 指路
+            tapBind(this, hit, () => { if (this.selMode) { if (!this.dsel) this.dsel = new Set(); if (isFavUid(cd.u)) return; if (teamUidSet().has(cd.u)) { this.toast(tr('編隊中的卡無法賣出\n請先從隊伍移除')); return; } if (!this.dsel.has(cd.u) && this.dsel.size >= DISSOLVE_MAX) { this.toast(tr('一次最多售出 {n} 張', { n: DISSOLVE_MAX })); return; } this.dsel.has(cd.u) ? this.dsel.delete(cd.u) : this.dsel.add(cd.u); this.rebuild(); } else if (cd._ghost) { this.toast(tr('舊版卡片(已不在卡表)\n可用「整理/分解」回收')); } else { this.sel = cd.u; this.rebuild(); } });   // 🆕個體制:sel 改存這一格個體的 uid;🆕2026-10-08 編隊中(任一隊)不可賣(使用者拍板:會影響隊伍),toast 指路
           }
         });
         this.layer = _realL;   // 還原:分頁/其餘元素回主 layer
@@ -8072,7 +8129,7 @@
         const PW = Math.min(340, W - 24), PH = 372, panelY = Math.round(H / 2), top = panelY - PH / 2;
         g.add(this.add.image(CX, panelY, _softPanelTex(this, PW, PH, 20)).setDisplaySize(PW + 80, PH + 80));   // 白色 .panel 彈窗(柔影,任意 dpi 平滑)。⚠️ _softPanelTex 是 2× 超取樣貼圖,不設 setDisplaySize 會用原生像素≈2倍螢幕→白面板撐爆整個畫面(全白 bug);+80=貼圖四周各留的 40 陰影padding
         g.add(this.add.text(CX, top + 30, tr('🎁 每日登入獎勵'), { fontFamily: EMOJIFONT, fontSize: FS.title, color: T.ink, fontStyle: 'bold' }).setOrigin(0.5));
-        g.add(this.add.text(CX, top + 56, tr('連續登入第 {n} 天 · 每天可領一次', { n: cur + 1 }), { fontFamily: EMOJIFONT, fontSize: FS.micro, color: T.ink2 }).setOrigin(0.5));
+        g.add(this.add.text(CX, top + 60, tr('🔥 連續 {n} 天', { n: dailyStreakNow() }), { fontFamily: EMOJIFONT, fontSize: FS.sub, color: T.goldTx, fontStyle: 'bold' }).setOrigin(0.5));   // 🔥連續制:字級 18px(FS.sub);取代舊「連續登入第 N 天 · 每天可領一次」小字(斷簽時 streak=0 → 下面今日格自然落在 D1)
         // 日卡:3 欄 grid,D1~D6 兩排、D7 週滿獎跨滿寬
         const gap = 8, innerW = PW - 32, colW = Math.floor((innerW - 2 * gap) / 3), cardH = 62, col = [CX - (colW + gap), CX, CX + (colW + gap)];
         const drawDay = (cx, cy, cw2, i, wide) => {
@@ -8099,7 +8156,7 @@
         btnEl.addEventListener('click', async () => {
           if (this._busyDaily) return; this._busyDaily = true;
           const r = await claimDailyServer(); close(); this.rebuild();   // ★先 rebuild(會 killAll)再 toast → toast 淡出 tween 不被殺
-          if (r) this.toast(tr('🎁 領到 {ic} {label}', { ic: r.ic, label: tr(r.label) }) + (r.gemEl ? tr('({n}屬)', { n: tr(EL[r.gemEl].name) }) : ''));   // undefined(離線)/null(已領過)→靜默關閉
+          if (r) this.toast(tr('🎁 領到 {ic} {label}', { ic: r.ic, label: tr(r.label) }) + (r.gemEl ? tr('({n}屬)', { n: tr(EL[r.gemEl].name) }) : '') + (r.reset ? '\n' + tr('連續中斷,從第 1 天重新開始') : ''));   // 斷簽(後端 reset:true)→同一則 toast 加一行一次性提示   // undefined(離線)/null(已領過)→靜默關閉
         });
         this._dailyBtnDom = this.add.dom(CX, top + 328, btnEl).setDepth(1601);
         // ✕ 角落白圓關閉鈕(demo .closebtn,貼彈窗右上角)
@@ -9569,7 +9626,7 @@
         this.mode = 'feed'; if (this.feedPage == null) this.feedPage = 0; this.pickPage = 0; this.sel = []; this.fuseEl = null; }   // 🆕2026-10-07 fuseEl=素材屬性篩選(null=全),進場重置;強化對象預設=隊伍第一張的卡種 id(個體制:loadTeamIds 解析)   // sel=已選素材個體 u 陣列(進場清空)
       create() {
         this.add.rectangle(CX, H / 2, W, H, UI().page); this._buildElFilter(); this.rebuild();
-        bindGridSwipe(this, 210, H - 92, 'feedPage');   // 素材格區拖曳換頁(慣性滑動)
+        bindGridSwipe(this, () => this.mode === 'pick' ? 110 : 210, H - 92, () => this.mode === 'pick' ? 'pickPage' : 'feedPage');   // 素材格區拖曳換頁(慣性滑動);🆕2026-10-10 B6:選對象頁(mode==='pick')改切 pickPage、感應區頂從 110(選對象格起點 y0=150,cw 64→頂≈118)
         bindSceneResize(this, () => { const o = H; recomputeLayout(); if (Math.abs(H - o) > 3) { this.scale.setGameSize(W, H); this.rebuild(); } });
       }
       // 🆕2026-10-07 素材屬性篩選列(全/火/水/雷/土/風):元件/配色/行為逐字比照卡冊 CollectionScene.buildDomBar 的圓鈕列(DOM overlay、34px 圓鈕、選中=金底白 icon、EL_ICON 內嵌圖);只是沒有左側排序鈕,6 顆平分整列
@@ -9638,9 +9695,9 @@
         const nAtk = pv ? cardAtk(ti.id, pv.toLv, tEvo) : atk, nHp = pv ? cardHp(ti.id, pv.toLv, tEvo) : hp, nRcv = pv ? cardRcv(ti.id, pv.toLv, tEvo) : rcv;   // 餵完後三圍(用預覽 toLv)
         // 對象卡(元素底色):白字+深描邊→任何屬色都看得清(修「火/★/atk 被底色吃掉」)
         this.L(roundRectG(this, CX, 122, 360, 96, 14, EL[t.el].color, 1, T.gold, 2));
-        cardImgOn(this, 356, 108, 66, t.id, 'thumb');   // 對象卡狗圖(右上)
+        cardImgOn(this, 356, 108, 66, t.id, 'thumb', tEvo);   // 對象卡狗圖(右上)
         const ct = (x, y, s, size, col, ox) => this.L(this.add.text(x, y, s, { fontFamily: EMOJIFONT, fontSize: Math.max(13, size || 14) + 'px', color: col || '#ffffff', fontStyle: 'bold' }).setOrigin(ox == null ? 0 : ox, 0.5).setStroke('#1a1208', 4).setResolution(2));
-        fitText(ct(40, 92, tr(t.name) + '  Lv.' + (pv ? pv.toLv : lv) + (mx ? ' MAX' : (pv && pv.ups > 0 ? '  ↑' + pv.ups : '')), 16, '#ffffff', 0), 272);   // 🈳 en 卡名最長 24 字→不撞右側卡圖(x≥323)
+        fitText(ct(40, 92, cardName(t.id, tEvo) + '  Lv.' + (pv ? pv.toLv : lv) + (mx ? ' MAX' : (pv && pv.ups > 0 ? '  ↑' + pv.ups : '')), 16, '#ffffff', 0), 272);   // 🈳 en 卡名最長 24 字→不撞右側卡圖(x≥323)
         ct(40, 112, tr(EL[t.el].name) + ' · ' + starStr(t.id, tEvo), 13, '#ffe08a', 0);   // 屬性+星:亮金,清楚
         const _d = (cur, nw) => '' + cur + (pv && nw > cur ? '→' + nw : '');   // 選了素材→顯示 before→after
         ct(40, 132, '⚔' + _d(atk, nAtk) + '   ♥' + _d(hp, nHp) + '   ✚' + _d(rcv, nRcv), 13, pv ? '#9dffbe' : '#ffffff', 0);   // 三圍(升值時整行轉亮綠)
@@ -9656,7 +9713,7 @@
         loadSave().cards.forEach(c => {
           if (c.u === ti.u) return;
           const cd = ROSTER.find(x => x.id === c.id); if (!cd) return;   // 卡表已移除的 id 不進素材清單(feedFodderMany 也會擋)
-          feedList.push({ cd, u: c.u, lv: c.lv || 1 });
+          feedList.push({ cd, u: c.u, lv: c.lv || 1, evo: c.evo || 0 });   // 🆕2026-10-10 B3:帶個體 evo(素材圖/星用)
         });
         feedList.sort((a, b) => ((b.cd.el === t.el ? 1 : 0) - (a.cd.el === t.el ? 1 : 0)) || a.cd.id.localeCompare(b.cd.id));   // 排序維持現狀(同屬優先);屬性篩選在排序後套用→篩後仍是同順序
         if (this.fuseEl) feedList = feedList.filter(it => it.cd.el === this.fuseEl);   // 🆕2026-10-07 屬性篩選:pages/perPage/頁碼夾限都在下方依篩後 feedList 重算
@@ -9672,8 +9729,8 @@
         pageList.forEach((it, k) => {
           const c = it.cd, u = it.u, cx = x0 + (k % cols) * gx, cy = y0 + Math.floor(k / cols) * gy, same = c.el === t.el, oi = sel.indexOf(u), on = oi >= 0;
           this.L(roundRectG(this, cx, cy, cw, cw, 12, EL[c.el].color, 1, (on || same) ? T.gold : T.divider, on ? 4 : 2));
-          cardImgOn(this, cx, cy, cw - 4, c.id, 'thumb');   // 素材狗圖
-          this.L(this.add.text(cx, cy - cw / 2 + 9, '★'.repeat(Math.max(1, Math.min(6, cardStars(c.id)))), { fontFamily: EMOJIFONT, fontSize: '11px', color: '#ffd257', fontStyle: 'bold' }).setOrigin(0.5).setResolution(3).setStroke('#4a2e00', 3));   // 🧹卡名改星級(頂,金字描邊)
+          cardImgOn(this, cx, cy, cw - 4, c.id, 'thumb', it.evo);   // 素材狗圖(🆕2026-10-10 B3:帶個體 evo)
+          this.L(this.add.text(cx, cy - cw / 2 + 9, '★'.repeat(Math.max(1, Math.min(6, cardStars(c.id, it.evo)))), { fontFamily: EMOJIFONT, fontSize: '11px', color: '#ffd257', fontStyle: 'bold' }).setOrigin(0.5).setResolution(3).setStroke('#4a2e00', 3));   // 🧹卡名改星級(頂,金字描邊)
           this.L(roundRectG(this, cx, cy + cw / 2 - 10, 38, 15, 7.5, 0x12161a, 0.7, null, 0));
           this.L(this.add.text(cx, cy + cw / 2 - 10, 'Lv' + (it.lv || 1), { fontFamily: EMOJIFONT, fontSize: '11px', color: '#ffffff', fontStyle: 'bold' }).setOrigin(0.5).setResolution(3));   // per-instance 等級(底,深膠囊白字);繞過 this.txt 的 15px 下限→小卡格才不擠
           if (on) { this.L(roundRectG(this, cx + cw / 2 - 12, cy - cw / 2 + 12, 20, 20, 6, T.ok, 1, T.surf, 2)); this.txt(cx + cw / 2 - 12, cy - cw / 2 + 12, String(oi + 1), '13px', '#ffffff', 0.5, true); }
@@ -9692,8 +9749,10 @@
         }
         // 合成確認 bar(神魔/龍族式:選好才按)
         const canFuse = sel.length > 0 && !mx;
+        const coinOk = !pv || (getMeta().coins || 0) >= pv.cost;   // 🆕2026-10-10 B2:金幣預檢(伺服器會回 402 insufficient_funds);不足→CTA 灰掉(仍可點→toast「金幣不足」)
+        const fuseGo = canFuse && coinOk;
         this.btn(CX, LY.ctaY, 330, 50, canFuse ? tr('⚡ 合成  {n}/5  ·  {c}金', { n: sel.length, c: (pv ? pv.cost : 0) }) : (mx ? tr('已達滿級 Lv.{n}', { n: maxLv }) : tr('點素材選取後可合成')),
-          () => this.tryFuse(), { col: canFuse ? T.ok : T.surf2, stroke: canFuse ? T.ok : T.divider, color: canFuse ? T.onAccent : T.ink3, bold: true, fs: '18px' });
+          () => this.tryFuse(), { col: fuseGo ? T.ok : T.surf2, stroke: fuseGo ? T.ok : T.divider, color: fuseGo ? T.onAccent : T.ink3, bold: true, fs: '18px' });
         this.back();
       }
       toggleSel(u) {
@@ -9708,6 +9767,7 @@
         const sel = this.sel || []; if (!sel.length) { this.toast(tr('先點素材選取')); return; }
         const _ti = instOf(this.targetUid); if (!_ti) { this.toast(tr('對象卡不存在')); return; }
         if ((_ti.lv || 1) >= maxLvForCard(_ti.id, _ti.evo || 0)) { this.toast(tr('已達滿級')); return; }   // 🆕2026-10-08 以該個體的 lv/evo 判滿級
+        if ((getMeta().coins || 0) < previewFeed(this.targetUid, sel).cost) { this.toast(tr('金幣不足')); return; }   // 🆕2026-10-10 B2:金幣預檢(與 draw 的 coinOk 同源 previewFeed)
         const s = loadSave(), rare = sel.some(u => { const c = s.cards.find(x => x.u === u); const cd = c && ROSTER.find(r => r.id === c.id); return cd && (cd.rank === 'jonin' || cd.rank === 'kage'); });
         if (rare) { this.confirmFuse(); return; }   // 防呆:含 ★★★↑ 稀有素材→二次確認
         this.doFuse();
@@ -9733,11 +9793,11 @@
         const sel = (this.sel || []).slice();
         feedFodderMany(this.targetUid, sel).then(r => {
           this._busyFuse = false;
-          if (!r.ok) { this.toast(r.msg); return; }
+          if (!r.ok) { this.toast(r.msg); const have = new Set(loadSave().cards.map(c => c.u)); this.sel = (this.sel || []).filter(u => have.has(u)); this.rebuild(); return; }   // 🆕2026-10-10 B2:失敗(含 409 已套用最新 collection)→剔除已不存在的素材並重畫,畫面與最新狀態一致
           this.sel = []; this.feedPage = 0;
           this.toast(r.ups > 0 ? tr('🆙 升級! Lv.{n}(吃 {e} 張)', { n: r.lv, e: r.eaten }) : tr('吃 {n} 張素材', { n: r.eaten }));
           this.rebuild();
-        });
+        }).catch(e => { this._busyFuse = false; this.toast(tr('合成失敗')); }).finally(() => { this._busyFuse = false; });   // 🆕2026-10-10 S1:feedFodderMany 內 r.json()/sync* 若丟錯→先前會永遠卡 _busyFuse=true(合成鈕之後全無反應);catch 報錯+finally 保證解鎖
       }
       drawPick() {
         const T = UI();
@@ -9754,8 +9814,8 @@
           const c = ROSTER.find(x => x.id === inst.id);
           const cx = x0 + (k % cols) * gx, cy = y0 + Math.floor(k / cols) * gy, on = inst.u === this.targetUid;
           this.L(roundRectG(this, cx, cy, cw, cw, 13, EL[c.el].color, 1, on ? T.gold : T.divider, on ? 3 : 1.5));
-          cardImgOn(this, cx, cy, cw - 4, c.id, 'thumb');   // 選對象狗圖
-          this.txt(cx, cy - 15, cardName(c.id), '10px', '#1a1208', 0.5, true);
+          cardImgOn(this, cx, cy, cw - 4, c.id, 'thumb', inst.evo || 0);   // 選對象狗圖(🆕2026-10-10 B3:帶個體 evo)
+          this.txt(cx, cy - 15, cardName(c.id, inst.evo || 0), '10px', '#1a1208', 0.5, true);
           this.txt(cx, cy + 3, 'Lv' + (inst.lv || 1), '10px', '#3a2c12', 0.5);   // 這個體自己的等級
           this.txt(cx, cy + 19, starStr(c.id, inst.evo || 0), '9px', '#3a2c12', 0.5);   // 原「持有n」(種類層級概念)→改這個體的星級
           const hit = this.rect(cx, cy, cw, cw, 0x000000, 0.001).setInteractive();   // 命中區(透明方形覆蓋整格;圓角只是視覺)
