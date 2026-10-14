@@ -662,6 +662,7 @@ const I18N_DICT = {
     '🌟 三格全清　🔮×2': '🌟 Clear All 3　🔮×2',
     '明日再來': 'Come back tomorrow',
     '⚡ {cost} · 🪙 ★{tier}金屬怪 · 💎+1': '⚡ {cost} · 🪙 ★{tier} Metal Enemy · 💎+1',
+    '⚡ {cost} · 🪙 ★{tier}金屬怪 · 💎已領': '⚡ {cost} · 🪙 ★{tier} Metal Enemy · 💎 Claimed',
     '✓ 完成': '✓ Done',
     '今天已通關,明日再來': 'Already cleared today — come back tomorrow',
     '背包已滿': 'Bag Full',

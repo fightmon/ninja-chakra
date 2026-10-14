@@ -485,6 +485,8 @@
     const DIVE_COLOR = { fire: [255, 90, 42], water: [58, 160, 220], thunder: [245, 205, 60], earth: [180, 130, 70], wind: [120, 210, 150], tower: [220, 200, 120] };   // 🎬大廳俯衝進關轉場的「有轉場城」清單(6 城全開;值目前僅當有無轉場的旗標,暗霧色固定 0x1b1620)。prologue 教學不列入(有專屬教學流程)
     // 各敵圖「角色實體」在 320 畫布的高度佔比 h 與底緣 bottom(量測值)。渲染時改以「實體高度」對齊→不同圖體型一致;bottom 用來對齊腳底基準線。魔王再乘 BOSS_MUL 刻意略大。
     const ENEMY_FIT = { grunt: { h: 0.65, bottom: 0.867 }, grunt2: { h: 0.65, bottom: 0.867 }, guard: { h: 0.69, bottom: 0.869 }, caster: { h: 0.72, bottom: 0.867 }, boss_baby: { h: 0.65, bottom: 0.867 }, boss_beg: { h: 0.69, bottom: 0.869 }, boss_nrm: { h: 0.88, bottom: 0.902 } };   // caster 略含尖帽→h 高一點
+    // 🦶2026-10-14 腳底偏移表(card_*_full 實際最底不透明列 / 圖高;art/feet-offsets.json 由 scratchpad/scan-feet.cjs 產生並內嵌於此,重跑腳本 --inject 即更新):fitEnemySprite 用它讓「實際腳底」落在地面線,不再各圖留白不同而高低不齊
+    const ENEMY_FEET_PAD = /*FEET-BEGIN*/{"card_c01_full":0.059,"card_c02_e2_full":0.046,"card_c02_e3_full":0.057,"card_c02_e_full":0.058,"card_c02_full":0.063,"card_c03_full":0.026,"card_c04_full":0.047,"card_c05_e2_full":0.06,"card_c05_e3_full":0.036,"card_c05_e_full":0.064,"card_c05_full":0.061,"card_c06_full":0.032,"card_c07_full":0.044,"card_c08_e2_full":0.051,"card_c08_e3_full":0.064,"card_c08_e_full":0.047,"card_c08_full":0.049,"card_c09_e2_full":0.032,"card_c09_e3_full":0.003,"card_c09_e_full":0.046,"card_c09_full":0.038,"card_c10_full":0.018,"card_c11_e2_full":0.074,"card_c11_e3_full":0.032,"card_c11_e_full":0.093,"card_c11_full":0.057,"card_c12_full":0.018,"card_c13_full":0.018,"card_c14_full":0.018,"card_c15_full":0.018,"card_c16_full":0.012,"card_c17_full":0.015,"card_c18_full":0.009,"card_c19_full":0.018,"card_c20_full":0.018,"card_c21_full":0.173,"card_c22_full":0.021,"card_c23_full":0.018,"card_c24_full":0.021,"card_c25_full":0.053,"card_c26_full":0,"card_c27_full":0.021,"card_c28_full":0.018,"card_c29_full":0.056,"card_c30_full":0.012,"card_c31_full":0.015,"card_c32_full":0,"card_c33_full":0.015,"card_c34_full":0.018,"card_c35_full":0.023,"card_c36_e2_full":0.056,"card_c36_e_full":0.003,"card_c36_full":0.006,"card_c36_king_full":0.006,"card_c37_e2_full":0.056,"card_c37_e_full":0.003,"card_c37_full":0.006,"card_c37_king_full":0.006,"card_c38_e2_full":0.056,"card_c38_e_full":0.003,"card_c38_full":0.006,"card_c38_king_full":0.006,"card_c39_e2_full":0.056,"card_c39_e_full":0.003,"card_c39_full":0.006,"card_c39_king_full":0.006,"card_c40_e2_full":0.056,"card_c40_e_full":0.003,"card_c40_full":0.006,"card_c40_king_full":0.006,"card_c41_e2_full":0.065,"card_c41_e_full":0.056,"card_c41_full":0.059,"card_c41_king_full":0.041,"card_c42_e2_full":0.065,"card_c42_e_full":0.056,"card_c42_full":0.059,"card_c43_e2_full":0.065,"card_c43_e_full":0.056,"card_c43_full":0.059,"card_c44_e2_full":0.065,"card_c44_e_full":0.056,"card_c44_full":0.059,"card_c45_e2_full":0.065,"card_c45_e_full":0.056,"card_c45_full":0.059,"card_c46_e2_full":0.062,"card_c46_e_full":0.059,"card_c46_full":0.062,"card_c46_king_full":0.056,"card_c47_e2_full":0.062,"card_c47_e_full":0.059,"card_c47_full":0.062,"card_c47_king_full":0.056,"card_c48_e2_full":0.062,"card_c48_e_full":0.059,"card_c48_full":0.062,"card_c48_king_full":0.056,"card_c49_e2_full":0.062,"card_c49_e_full":0.059,"card_c49_full":0.062,"card_c49_king_full":0.056,"card_c50_e2_full":0.062,"card_c50_e_full":0.059,"card_c50_full":0.062,"card_c50_king_full":0.056,"card_c51_e2_full":0.029,"card_c51_e_full":0.085,"card_c51_full":0.12,"card_c51_king_full":0.029,"card_c52_e2_full":0.029,"card_c52_e_full":0.085,"card_c52_full":0.12,"card_c52_king_full":0.029,"card_c53_e2_full":0.029,"card_c53_e_full":0.085,"card_c53_full":0.12,"card_c53_king_full":0.029,"card_c54_e2_full":0.029,"card_c54_e_full":0.085,"card_c54_full":0.12,"card_c54_king_full":0.029,"card_c55_e2_full":0.029,"card_c55_e_full":0.085,"card_c55_full":0.12,"card_c55_king_full":0.029,"card_c56_e2_full":0.056,"card_c56_e_full":0.038,"card_c56_full":0.067,"card_c56_king_full":0.059,"card_c57_e2_full":0.056,"card_c57_e_full":0.038,"card_c57_full":0.059,"card_c57_king_full":0.059,"card_c58_e2_full":0.056,"card_c58_e_full":0.038,"card_c58_full":0.059,"card_c58_king_full":0.059,"card_c59_e2_full":0.056,"card_c59_e_full":0.038,"card_c59_full":0.059,"card_c59_king_full":0.059,"card_c60_e2_full":0.056,"card_c60_e_full":0.038,"card_c60_full":0.059,"card_c60_king_full":0.059,"card_c61_full":0.158,"card_c62_full":0.158,"card_c63_full":0.158,"card_c64_full":0.158,"card_c65_full":0.158,"card_c66_e2_full":0.044,"card_c66_e_full":0.05,"card_c66_full":0.053,"card_c67_e2_full":0.065,"card_c67_e_full":0.065,"card_c67_full":0.062,"card_c68_e2_full":0.059,"card_c68_e_full":0.047,"card_c68_full":0.059,"card_c69_e2_full":0.067,"card_c69_e_full":0.05,"card_c69_full":0.05,"card_c70_e2_full":0.067,"card_c70_e_full":0.062,"card_c70_full":0.062,"card_c71_full":0.062,"card_c72_full":0.059,"card_c73_full":0.05,"card_c74_full":0.047,"card_c75_full":0.038,"card_c76_full":0.029}/*FEET-END*/;
     const BOSS_MUL = 1.1;   // 魔王體型相對雜兵的刻意放大倍率(看得出是王、又不爆出敵格)
     const DUNGEON_BG = {
       fire: { back: 'art/bg/fire_back.webp', front: 'art/bg/fire_front.webp' },
@@ -2718,10 +2720,11 @@
         if (!e.img || !e.sprite) return;
         if (e.sprite.texture.key.indexOf('card_') === 0) {   // 🕷️ 借透明橫式大圖(完整蜘蛛/鬼)當敵圖:等比縮放「不裁」、置中;三檔各自獨立→單魔王(this._soloBoss)/一般魔王/小兵
           const szc = e.cardW, solo = e.boss && this._soloBoss;   // 單魔王=全關只有這一隻魔王(生成時鎖定);比例/位置/影子皆獨立,不與中級魔王共用
-          const off = solo ? -0.15 : (e.boss ? -0.29 : -0.14), mul = solo ? 1.7 : (e.boss ? 1.4 : 1.25);   // Y偏移(負=上)/放大倍率;放大同時 off 加大讓腳底維持貼影子(腳底比例 fb≈0.44:off=地線−mul×0.44,魔王地線0.32/雜兵0.42)。魔王1.4比雜兵1.25再大;單魔王的 -0.15、1.7 是暫定值,你到時再調
-          const scl = szc * mul / (e.sprite.height || 1);
-          e.sprite.setScale(scl); e.sprite.y = e.cy + szc * off; e.baseScale = scl;
-          if (e.shadow) e.shadow.y = e.cy + szc * (0.42 + (solo ? -0.15 : (e.boss ? -0.1 : (e._five ? -0.1 : 0))));   // 🕸️影子偏移改「隨敵人大小 szc 縮放」(原固定 46px→大小螢幕腳底對不齊):基準 0.42(szc≈110 時≈原46);單魔王 -0.15 / 一般魔王 -0.1 / 前3後2雜兵 -0.1
+          const mul = solo ? 1.7 : (e.boss ? 1.4 : 1.25);   // 放大倍率:魔王1.4比雜兵1.25再大;單魔王的 1.7 是暫定值,你到時再調
+          const gOff = solo ? 0.62 : (e.boss ? 0.32 : (e._five ? 0.32 : 0.42));   // 🦶地面線(相對 e.cy、單位 szc):雜兵 0.42 / 魔王與前3後2雜兵 0.32 / 單魔王 0.62(大圖;沿用舊版實際腳位≈-0.15+1.7×(0.5−pad),不頂出畫面)。同類敵人腳底必在同一條線上(影子也在這條線)
+          const scl = szc * mul / (e.sprite.height || 1), dispH = (e.sprite.height || 1) * scl, pad = ENEMY_FEET_PAD[e.sprite.texture.key] || 0;   // pad=圖底到實際腳底(最底不透明列)佔圖高比例;查無表=0(退回圖底緣對齊)
+          e.sprite.setScale(scl); e.sprite.y = e.cy + szc * gOff - dispH * (0.5 - pad); e.baseScale = scl;   // origin 0.5:中心到實際腳底=dispH×(0.5−pad)→實際腳底=地面線;呼叫端(spawnEnemies/變身/換圖)隨後記 restY=sprite.y,呼吸/入場/受擊皆以此為準
+          if (e.shadow) e.shadow.y = e.cy + szc * gOff;   // 🕸️影子在地面線上(隨 szc 縮放→大小螢幕一致)
           return;
         }
         const p = this.enemyFitParams(e);
@@ -2917,7 +2920,7 @@
           const abg = this.add.circle(0, 0, 13, 0x2b2014).setStrokeStyle(2, 0x5a4128);
           const aic = this.add.text(0, 0, '', { fontFamily: EMOJIFONT, fontSize: '12px', color: '#fff' }).setOrigin(0.5);
           const aiIm = this.add.image(0, 0, 'el_fire').setDisplaySize(16, 16).setVisible(false);   // 🆕2026-09-25 批4:技能iconKey圖(教學/課程 abtn 按鈕用,取代aic疊字emoji);初始貼 el_fire 佔位(GameScene 恆已載,見 preload 2517)保證建構當下就有合法材質,renderCharges 依技能換圖
-          abtn.add([abg, aic, aiIm]); abtn.setSize(30, 30).setInteractive(new Phaser.Geom.Rectangle(-15, -15, 30, 30), Phaser.Geom.Rectangle.Contains);
+          abtn.add([abg, aic, aiIm]); abtn.setSize(44, 44).setInteractive(new Phaser.Geom.Rectangle(-22, -22, 44, 44), Phaser.Geom.Rectangle.Contains);   // 🩹2026-10-14 感應 30→44(視覺不變,手機觸控準則)
           abtn.on('pointerup', () => this.fireActive(i));
           this.teamCards.push({ rect, txt, storeObj, abtn, abg, aic, aiIm, el: null, pulse: null, img: null });
         }
@@ -4241,7 +4244,7 @@
           const img = this.add.image(x, y, this._coinTex(card.el)).setDisplaySize(30, 30).setDepth(DEPTH.abtn);
           const txt = this.add.text(x, y, '', { fontFamily: EMOJIFONT, fontSize: '14px', color: '#fff', fontStyle: 'bold' }).setOrigin(0.5).setResolution(3).setDepth(DEPTH.abtn + 1);
           const ic = this.textures.exists('el_' + card.el) ? this.add.image(x, y, 'el_' + card.el).setDisplaySize(16, 16).setTintFill(0xffffff).setDepth(DEPTH.abtn + 1).setVisible(false) : null;   // 🆕2026-09-25 批3:蓄滿可放時的圖示,取代硬幣上疊字的 emoji;此處貼 el_* 只是佔位(GameScene.preload 固定載五屬 el_* SVG,不會沒有)→建立後立刻呼叫 renderCharges() 換成該技能真正的 iconKey(批5:sk_* 技能圖優先,退回 el_* 屬性圖)
-          const hit = this.add.zone(x, y, 58, 34).setInteractive({ useHandCursor: true }).setDepth(DEPTH.abtn + 2);
+          const hit = this.add.zone(x, y - 7, 64, 48).setInteractive({ useHandCursor: true }).setDepth(DEPTH.abtn + 2);   // 🩹2026-10-14 觸及區 58×34→64×48(上移7:底緣不變,不搶下方卡片拖曳)——34px 低於手機 44px 觸控準則,使用者反映難按
           hit.on('pointerup', () => this.fireActive(i));
           card._coin = { img, txt, ic, hit };
           if (card.abtn) card.abtn.setVisible(false);
@@ -8698,13 +8701,14 @@
           const d = DAILY_DUNGEONS['daily_' + el + '_' + tier]; if (!d) return;
           const yy = blockTop + i * rh3 + rh3 / 2;
           const cost = d.cost, afford = getMeta().stamina >= cost, cleared = !!(st.tierClears && st.tierClears[String(tier)]);
+          const stoneDone = !!(st.stoneClaimed && st.stoneClaimed[String(tier)]);   // 🆕2026-10-12 石頭一次性:該(屬×層)終身已領過→顯示「💎已領」(舊後端無此欄位→false=照舊顯示 💎+1;實際發不發以伺服器為準)
           const usable = afford && !cleared;
           const kids = [];
           kids.push(roundRectG(this, 0, 0, rw, rh3 - 8, 15, usable ? T.surf : T.surf2, 1, elInfo.color, usable ? 2.5 : 1.5));   // 白圓角列+元素色框
           const hit = this.add.rectangle(0, 0, rw, rh3 - 8, 0x000000, 0.001).setInteractive(); kids.push(hit);
           kids.push(this.add.text(Lx + 6, 0, d.emoji, { fontFamily: EMOJIFONT, fontSize: '26px' }).setOrigin(0, 0.5).setAlpha(usable ? 1 : 0.45));
           const nameTx = this.add.text(Lx + 44, -11, tr(d.name), { fontFamily: EMOJIFONT, fontSize: '16px', color: usable ? T.ink : T.ink3, fontStyle: 'bold' }).setOrigin(0, 0.5); kids.push(nameTx);
-          const descTx = this.add.text(Lx + 44, 13, cleared ? tr('明日再來') : tr('⚡ {cost} · 🪙 ★{tier}金屬怪 · 💎+1', { cost, tier }), { fontFamily: EMOJIFONT, fontSize: '13px', color: cleared ? T.ink3 : (afford ? T.ink2 : '#c0492c'), fontStyle: (!cleared && !afford) ? 'bold' : 'normal' }).setOrigin(0, 0.5); kids.push(descTx);
+          const descTx = this.add.text(Lx + 44, 13, cleared ? tr('明日再來') : (stoneDone ? tr('⚡ {cost} · 🪙 ★{tier}金屬怪 · 💎已領', { cost, tier }) : tr('⚡ {cost} · 🪙 ★{tier}金屬怪 · 💎+1', { cost, tier })), { fontFamily: EMOJIFONT, fontSize: '13px', color: cleared ? T.ink3 : (afford ? T.ink2 : '#c0492c'), fontStyle: (!cleared && !afford) ? 'bold' : 'normal' }).setOrigin(0, 0.5); kids.push(descTx);
           let badgeGapW = 0;
           if (cleared) { kids.push(roundRectG(this, rw / 2 - 46, 0, 66, 26, 13, 0x35a866, 1, null, 0)); kids.push(this.add.text(rw / 2 - 46, 0, tr('✓ 完成'), { fontFamily: EMOJIFONT, fontSize: '13px', color: '#ffffff', fontStyle: 'bold' }).setOrigin(0.5)); badgeGapW = 65; }   // 固定66寬徽章,左緣約在 rw/2-79
           const availW = (rw - 72) - (badgeGapW ? badgeGapW + 8 : 0);
