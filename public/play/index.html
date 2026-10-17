@@ -7916,7 +7916,7 @@
         const RAD = 13, USE = 0xeaa419, teamUids = new Set(loadTeamUids()), anyTeamUids = teamUidSet();   // 🆕個體制:使用中=隊上「那幾張個體 uid」→只有被放進隊的那張才金框+「出戰」(同角色其他張不算)
         pageList.forEach((cd, k) => {
           const cx = x0 + (k % cols) * gx, cy = y0 + Math.floor(k / cols) * gy;
-          if (!cd) { this.L(roundRectG(this, cx, cy, cw, cw, RAD, T.surf2, 1, T.divider, 1.5)); return; }   // 空欄:淺色圓角框
+          if (!cd) { this.L(roundRectG(this, cx, cy, cw, cw, RAD, 0xffffff, 0.06, 0x56504a, 1.5)); return; }   // 空欄:暗色圓角框(2026-10-17 使用者指定:深色頁上空格別用亮色,改微透白底+暖灰框)
           const inUse = teamUids.has(cd.u), isKage = cd.rank === 'kage';
           const bgKey = cd.el !== 'junk' && _elGradCardTex(this, cd.el, cw, RAD);   // 元素漸層卡底(透明去背角色疊上→有漸層背景)
           if (bgKey) this.L(this.add.image(cx, cy, bgKey).setDisplaySize(cw + 4, cw + 4).setOrigin(0.5));
