@@ -8098,22 +8098,33 @@
       async _doFreePull() {   // 🔐 新手免費十連(引導式:玩家按脈動的十連鈕才觸發)改打伺服器(POST /api/gacha/pull {poolId:'premium',count:10,free:true});防重放
         if (this._freePulling) return; this._freePulling = true; this._busyPull = true;   // 防連點雙抽;_busyPull→gachaBanner 讓按鈕變灰(pending)
         this.rebuild();   // 立刻重繪讓按鈕變灰,避免等 fetch 期間被連點
-        let r;
-        try { r = await authedFetch('/api/gacha/pull', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ poolId: 'premium', count: 10, free: true }) }); }
-        catch (e) { this._freePulling = false; this._busyPull = false; this.rebuild(); this.toast(tr('連線失敗,再按一次領取')); return; }   // 網路失敗(🩹2026-10-17 toast 移到 rebuild 之後:rebuild 會清 _toastCon,原順序=提示一閃即滅=「按了沒反應」):保留 freePull/引導旗標→玩家可再按脈動鈕
-        if (r.status === 409) { this._freePulling = false; this._busyPull = false; this._freeGuide = false; mutSave(s => { s.settings.freePull = false; }); this.rebuild(); return; }   // 伺服器說領過了:解除引導,顯示一般抽卡頁
-        if (!r.ok) { this._freePulling = false; this._busyPull = false; this.rebuild(); this.toast(tr('連線失敗,再按一次領取') + ' (' + r.status + ')'); return; }   // 其他失敗(🩹2026-10-17 toast 移到 rebuild 後+附 HTTP 碼供回報;原 403 prologue_required 落在這條,提示被 rebuild 清掉):保留引導旗標,可再按
-        const d = await r.json();
+        let st = 'fail', msg = tr('連線失敗,再按一次領取'), d = null;   // st: ok|used|fail
+        try {
+          const call = () => authedFetch('/api/gacha/pull', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ poolId: 'premium', count: 10, free: true }) });
+          let r = await call();
+          if (r.status === 403) {   // 🩹2026-10-17 自救:三課首通獎勵 /api/lesson/claim 是 fire-and-forget,丟失→伺服器沒記錄→免費十連永遠 403 prologue_required。引導態=本地三課已破→自動補報 p1/p2/p3(後端白名單+冪等:409/其他錯誤都忽略)再重試一次(只補報+重試一次,無迴圈)
+            let e = null; try { e = await r.clone().json(); } catch (_) { }
+            if (e && e.error === 'prologue_required') {
+              for (const lid of ['p1', 'p2', 'p3']) { try { await authedFetch('/api/lesson/claim', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ lessonId: lid }) }); } catch (_) { } }
+              r = await call();
+            }
+          }
+          if (r.status === 409) st = 'used';   // 伺服器說領過了
+          else if (!r.ok) msg += ' (' + r.status + ')';   // 其他失敗:附 HTTP 碼供回報
+          else { d = await r.json(); if (!d || !Array.isArray(d.results)) throw new Error('bad_json'); st = 'ok'; }   // 🩹json 解析/格式例外落到 catch→不卡灰
+        } catch (e) { st = 'fail'; }   // 網路失敗/json 例外
+        finally { this._freePulling = false; this._busyPull = false; }   // 🩹任何出口都重置,按鈕不會永久灰
+        if (st === 'used') { this._freeGuide = false; mutSave(s => { s.settings.freePull = false; }); this.rebuild(); return; }   // 領過了:解除引導,顯示一般抽卡頁
+        if (st === 'fail') { this.rebuild(); this.toast(msg); return; }   // 失敗(toast 在 rebuild 之後:rebuild 會清 _toastCon;保留 freePull/引導旗標→可再按脈動鈕)
         this._freeGuide = false;   // 領到了→解除引導(鎖住換頁/齒輪同步解除)
         mutSave(s => { s.settings.freePull = false; s.meta.freePullUsed = 1; }); syncWallet(d);   // 領成功→本地即標記已領(不必等下次 wallet 同步),立刻重玩教學就不會再被提供十連
         const out = d.results.map(x => { const cd = ROSTER.find(c => c.id === x.id); addCard(x.id); return { cd, isNew: !!x.isNew, pity: false }; });   // 🔐 isNew 改由伺服器回
         cardsFetch();   // 背景校正 uid
         this.tab = 'gacha'; this.gachaResult = out; this.gachaRevealed = false; this._afterPull = 'team';
-        this._freePulling = false; this._busyPull = false;
         _loadCardArt(this, out.map(o => o.cd.id));   // 大廳只載出戰隊→補載抽到的卡圖,reveal 才有圖(比照 pull())
         if (this.load.list.size) { this.load.once('complete', () => this.rebuild()); this.load.start(); } else this.rebuild();
       }
-      rebuild() { this.tweens.killAll(); if (this._toastCon && this._toastCon.active) { this._toastCon.destroy(); this._toastCon = null; } if (this._tabDom) { this._tabDom.forEach(d => { if (d) d.destroy(); }); this._tabDom = null; } if (this.layer) this.layer.destroy(); this.layer = this.add.container(0, 0); if (this.tab === 'other') { this.body(); this.topBar(); this.nav(); } else { this.topBar(); this.body(); this.nav(); } }   // _tabDom=分頁 DOM 精緻鈕(轉蛋抽卡;scene 級不在 layer)→手動銷毀,免切分頁殘留;'other' 分頁改為可捲動 canvas 內容→先畫內容、頂欄/導覽列後畫(z 序更高,蓋住捲出的溢出內容+輸入優先)
+      rebuild() { this.tweens.killAll(); if (this._gdToast && this.tab !== 'gacha') { clearTimeout(this._gdToast.t); try { this._gdToast.dom.destroy(); } catch (e) { } this._gdToast = null; } if (this._toastCon && this._toastCon.active) { this._toastCon.destroy(); this._toastCon = null; } if (this._tabDom) { this._tabDom.forEach(d => { if (d) d.destroy(); }); this._tabDom = null; } if (this.layer) this.layer.destroy(); this.layer = this.add.container(0, 0); if (this.tab === 'other') { this.body(); this.topBar(); this.nav(); } else { this.topBar(); this.body(); this.nav(); } }   // _tabDom=分頁 DOM 精緻鈕(轉蛋抽卡;scene 級不在 layer)→手動銷毀,免切分頁殘留;'other' 分頁改為可捲動 canvas 內容→先畫內容、頂欄/導覽列後畫(z 序更高,蓋住捲出的溢出內容+輸入優先)
       _setDomUI(on) { if (this._tabDom) this._tabDom.forEach(d => { if (d && d.node) d.setVisible(on); }); }   // DOM overlay 永遠浮在 canvas 上(setDepth 無效)→開 canvas 彈窗(勇者卡/信箱等)要先藏,關閉再恢復。同 TeamScene/CollectionScene 慣例
       L(o) { this.layer.add(o); return o; }
       txt(x, y, s, size, col, ox, bold) { return this.L(this.add.text(x, y, s, { fontFamily: EMOJIFONT, fontSize: Math.max(15, parseInt(size || '16', 10) || 16) + 'px', color: col || '#f3e9d8', fontStyle: bold ? 'bold' : 'normal' }).setOrigin(ox == null ? 0.5 : ox, 0.5)); }   // 全選單字級最小 15px(手機可讀)
@@ -8124,7 +8135,7 @@
         this.txt(x, y, label, o.fs || '15px', o.color || T.ink, 0.5, o.bold);
         const hit = this.L(this.add.rectangle(x, y, w, h, 0x000000, 0.001).setInteractive()); tapBind(this, hit, cb); return hit;
       }
-      toast(msg) { if (this._freeGuide && this.tab === 'gacha' && this._tabDom && this._tabDom.length) { this._guideDomToast(msg); return; } showWhiteToast(this, msg, { fs: '26px', big: true, hold: 1200 }); }   // 🎁 新手引導十連頁(DOM 抽卡鈕在)→改走 DOM toast(見 _guideDomToast);其餘照舊
+      toast(msg) { if (this.tab === 'gacha' && this._tabDom && this._tabDom.length) { this._guideDomToast(msg); return; } showWhiteToast(this, msg, { fs: '26px', big: true, hold: 1200 }); }   // 🎁 轉蛋頁(DOM 抽卡鈕在;🩹2026-10-17 由僅引導態放寬為引導+老手皆然,魔法石不足等提示才不被鈕蓋)→改走 DOM toast(見 _guideDomToast);其餘照舊
       _guideDomToast(msg) {   // 🩹2026-10-17 新手十連頁專用提示:canvas 白卡 toast 永遠在 DOM 抽卡鈕「下面」(DOM 浮在 canvas 之上,setDepth 無效)→提示被兩顆鈕蓋住只露半截。改 DOM 元件(depth 40>鈕 6>手指 20)+固定落在「第二張卡底~導覽列頂」的空白帶(不與任何鈕重疊);字級 22px;不進 _tabDom→rebuild 不會把它清掉(失敗路徑 rebuild 後 toast 才看得到)
         try {
           if (this._gdToast) { clearTimeout(this._gdToast.t); try { this._gdToast.dom.destroy(); } catch (e) { } this._gdToast = null; }
@@ -9010,20 +9021,18 @@
         if (this._busyPull) return; this._busyPull = true;
         {
           const s = loadSave(), cap = boxCap(s), free = cap - s.cards.length;   // 個體制:每張佔一格;檢查格子夠不夠放 count 張
-          if (free < count) { this._busyPull = false; this.toast(tr('背包格子不足!\n目前 {n} / {c} 格', { n: s.cards.length, c: cap }) + (count > 1 ? tr('(十連需 {n} 格)', { n: count }) : '') + tr('\n請到卡冊分解或 💎 擴充')); this.rebuild(); return; }
+          if (free < count) { this._busyPull = false; this.rebuild(); this.toast(tr('背包格子不足!\n目前 {n} / {c} 格', { n: s.cards.length, c: cap }) + (count > 1 ? tr('(十連需 {n} 格)', { n: count }) : '') + tr('\n請到卡冊分解或 💎 擴充')); return; }
         }
         this.rebuild();   // 進 pending:立刻重繪讓按鈕變灰,避免等 fetch 期間畫面看起來沒反應而被連點
-        let r;
-        try { r = await authedFetch('/api/gacha/pull', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ poolId: bankey, count: count }) }); }
-        catch (e) { this._busyPull = false; this.toast(tr('抽卡需要連線,請稍後再試')); this.rebuild(); return; }
-        if (!r.ok) {
-          this._busyPull = false;
-          if (r.status === 402) this.toast(tr('{n}不足', { n: GACHA[bankey].cur === 'stones' ? tr('魔法石') : tr('金錢') }));
-          else if (r.status === 404) this.toast(tr('卡池未開放'));
-          else this.toast(tr('抽卡需要連線,請稍後再試'));
-          this.rebuild(); return;
-        }
-        const d = await r.json(); syncWallet(d);
+        let d = null, errMsg = null;
+        try {
+          const r = await authedFetch('/api/gacha/pull', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ poolId: bankey, count: count }) });
+          if (!r.ok) errMsg = r.status === 402 ? tr('{n}不足', { n: GACHA[bankey].cur === 'stones' ? tr('魔法石') : tr('金錢') }) : r.status === 404 ? tr('卡池未開放') : tr('抽卡需要連線,請稍後再試');
+          else { d = await r.json(); if (!d || !Array.isArray(d.results)) throw new Error('bad_json'); }   // 🩹json 解析/格式例外→落 catch,不卡灰
+        } catch (e) { d = null; errMsg = tr('抽卡需要連線,請稍後再試'); }
+        finally { this._busyPull = false; }   // 🩹任何出口都重置
+        if (errMsg) { this.rebuild(); this.toast(errMsg); return; }   // 🩹先 rebuild 再 toast(rebuild 會清 _toastCon,原順序=提示一閃即滅);轉蛋頁 toast 走 DOM,不被抽卡鈕蓋
+        syncWallet(d);
         const out = d.results.map(x => { const cd = ROSTER.find(c => c.id === x.id); addCard(x.id); return { cd, isNew: !!x.isNew, pity: false }; });   // 🔐 isNew 改由伺服器回(不再前端 isOwned 算,避免快取漂移誤判)
         cardsFetch();   // 背景校正 uid(addCard 只是本地鏡像)
         this.gachaDetail = null; this.gachaRevealed = false; this.gachaResult = out;
