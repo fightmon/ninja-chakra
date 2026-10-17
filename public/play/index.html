@@ -8100,9 +8100,9 @@
         this.rebuild();   // 立刻重繪讓按鈕變灰,避免等 fetch 期間被連點
         let r;
         try { r = await authedFetch('/api/gacha/pull', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ poolId: 'premium', count: 10, free: true }) }); }
-        catch (e) { this._freePulling = false; this._busyPull = false; this.toast(tr('連線失敗,再按一次領取')); this.rebuild(); return; }   // 網路失敗:保留 freePull/引導旗標→玩家可再按脈動鈕
+        catch (e) { this._freePulling = false; this._busyPull = false; this.rebuild(); this.toast(tr('連線失敗,再按一次領取')); return; }   // 網路失敗(🩹2026-10-17 toast 移到 rebuild 之後:rebuild 會清 _toastCon,原順序=提示一閃即滅=「按了沒反應」):保留 freePull/引導旗標→玩家可再按脈動鈕
         if (r.status === 409) { this._freePulling = false; this._busyPull = false; this._freeGuide = false; mutSave(s => { s.settings.freePull = false; }); this.rebuild(); return; }   // 伺服器說領過了:解除引導,顯示一般抽卡頁
-        if (!r.ok) { this._freePulling = false; this._busyPull = false; this.toast(tr('連線失敗,再按一次領取')); this.rebuild(); return; }   // 其他失敗:保留引導旗標,可再按
+        if (!r.ok) { this._freePulling = false; this._busyPull = false; this.rebuild(); this.toast(tr('連線失敗,再按一次領取') + ' (' + r.status + ')'); return; }   // 其他失敗(🩹2026-10-17 toast 移到 rebuild 後+附 HTTP 碼供回報;原 403 prologue_required 落在這條,提示被 rebuild 清掉):保留引導旗標,可再按
         const d = await r.json();
         this._freeGuide = false;   // 領到了→解除引導(鎖住換頁/齒輪同步解除)
         mutSave(s => { s.settings.freePull = false; s.meta.freePullUsed = 1; }); syncWallet(d);   // 領成功→本地即標記已領(不必等下次 wallet 同步),立刻重玩教學就不會再被提供十連
@@ -8124,7 +8124,20 @@
         this.txt(x, y, label, o.fs || '15px', o.color || T.ink, 0.5, o.bold);
         const hit = this.L(this.add.rectangle(x, y, w, h, 0x000000, 0.001).setInteractive()); tapBind(this, hit, cb); return hit;
       }
-      toast(msg) { showWhiteToast(this, msg, { fs: '26px', big: true, hold: 1200 }); }   // 大廳=大卡(獎勵/提示);停留縮到 ~1.2 秒(使用者:告示訊息別停太久),切畫面/rebuild 也會立刻清掉(見 rebuild + showWhiteToast _toastCon)
+      toast(msg) { if (this._freeGuide && this.tab === 'gacha' && this._tabDom && this._tabDom.length) { this._guideDomToast(msg); return; } showWhiteToast(this, msg, { fs: '26px', big: true, hold: 1200 }); }   // 🎁 新手引導十連頁(DOM 抽卡鈕在)→改走 DOM toast(見 _guideDomToast);其餘照舊
+      _guideDomToast(msg) {   // 🩹2026-10-17 新手十連頁專用提示:canvas 白卡 toast 永遠在 DOM 抽卡鈕「下面」(DOM 浮在 canvas 之上,setDepth 無效)→提示被兩顆鈕蓋住只露半截。改 DOM 元件(depth 40>鈕 6>手指 20)+固定落在「第二張卡底~導覽列頂」的空白帶(不與任何鈕重疊);字級 22px;不進 _tabDom→rebuild 不會把它清掉(失敗路徑 rebuild 後 toast 才看得到)
+        try {
+          if (this._gdToast) { clearTimeout(this._gdToast.t); try { this._gdToast.dom.destroy(); } catch (e) { } this._gdToast = null; }
+          const el = document.createElement('div'); el.textContent = msg;
+          el.style.cssText = 'box-sizing:border-box;max-width:' + (W - 24) + 'px;padding:12px 22px;border-radius:16px;background:#ffffff;color:' + UI().ink + ';border:2px solid #d9dde2;font:bold 22px/1.3 ' + EMOJIFONT + ';text-align:center;white-space:pre-line;box-shadow:0 6px 16px rgba(0,0,0,.35);pointer-events:none;user-select:none;';
+          const bandTop = 84 + 342 + 84, bandBot = H - 60;   // 第二張卡底(bGacha: cTop+342+84)~導覽列頂;H>=640 → 帶高>=70px 容得下單行
+          const dom = this.add.dom(CX, Math.round((bandTop + bandBot) / 2), el).setDepth(40);
+          const rec = { dom: dom, t: 0 };
+          rec.t = setTimeout(() => { try { dom.destroy(); } catch (e) { } if (this._gdToast === rec) this._gdToast = null; }, 2200);
+          this._gdToast = rec;
+        } catch (e) { }
+      }
+      // 大廳=大卡(獎勵/提示);停留縮到 ~1.2 秒(使用者:告示訊息別停太久),切畫面/rebuild 也會立刻清掉(見 rebuild + showWhiteToast _toastCon)
       showDaily() {   // 🎁 每日登入(2026-07-14 鏡射 007_UI_demo daily.html:白色 .panel 彈窗 + 3×3 日卡 grid + DOM 精緻領取鈕)
         if (this._dailyG) this._dailyG.destroy();
         if (this._dailyBtnDom) { this._dailyBtnDom.destroy(); this._dailyBtnDom = null; }   // 領取鈕=DOM(scene 級)→手動清
