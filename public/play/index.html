@@ -1906,6 +1906,16 @@
       if ((getMeta().coins || 0) < req.coins) return { ok: false, msg: tr('需 {n} 金', { n: req.coins }) };
       return { ok: true, req: req };
     }
+    // 🆕2026-10-18 強化滿級判斷(個體制:用這張個體自己的 lv/evo 對應上限,進化後上限變高就自動不再滿級)。回 null=未滿級;滿級回 { maxLv, canEvo(還能進化) }。
+    //   canEvo 的 cap 判斷與 canEvolve/cardDetailPanel._evoCap 同一套(只看階數上限+素材卡,不看寶玉/金幣——那些是「現在能不能進化」,這裡只為指路文案)。
+    function fuseMaxState(inst) {
+      if (!inst) return null;
+      const evo = inst.evo || 0, maxLv = maxLvForCard(inst.id, evo);
+      if ((inst.lv || 1) < maxLv) return null;
+      const evoCap = (EVO3_ENABLED && EVO3_CARDS[inst.id]) ? 3 : (EVO2_CARDS[inst.id] ? 2 : (EVO_CARDS[inst.id] ? 1 : EVO_MAX));
+      return { maxLv: maxLv, canEvo: !MATERIAL_IDS.has(inst.id) && evo < evoCap };
+    }
+    function fuseMaxMsg(st) { return st && st.canEvo ? tr('已達滿級，無法再強化\n請先進化') : tr('已達滿級，無法再強化'); }   // 強化入口/素材格/CTA 共用 toast
     // 🔐 進化改打伺服器 POST /api/cards/evolve {targetUid};canEvolve 保留當前端「先擋一次」的友善錯誤訊息(伺服器仍會再驗一次,真相在後端)
     // 🆕2026-09-25 uid 傳入=進化「正在看的那個個體」(BOX 詳情對準顯示);不傳→退回舊行為(該卡種目前最強個體)
     async function evolveCard(id, uid) {
@@ -7976,7 +7986,7 @@
           manage: true,
           ovLv, ovEvo, ovExp, favUid: inst.u,   // 🆕2026-10-08 最愛鎖鈕(個體 uid)
           onClose: () => { this.sel = null; this.askDis = false; this.askEvo = false; this.rebuild(); },
-          onFuse: () => { this.scene.manager.start('fuse', { target: cd.id, targetUid: inst.u }); this.scene.manager.stop('collection'); },   // 🆕2026-10-08 帶正在看的個體 uid:強化對象=這一張(不再是卡種最強那張)
+          onFuse: () => { const _fm = fuseMaxState(instOf(inst.u) || inst); if (_fm) { this.toast(fuseMaxMsg(_fm)); return; } this.scene.manager.start('fuse', { target: cd.id, targetUid: inst.u }); this.scene.manager.stop('collection'); },   // 🆕2026-10-08 帶正在看的個體 uid:強化對象=這一張(不再是卡種最強那張)
           onDissolve: () => { if (isFavUid(inst.u)) { this.toast(tr('已鎖定為最愛\n請先取消鎖定')); return; } if (teamUidSet().has(inst.u)) { this.toast(tr('編隊中的卡無法賣出\n請先從隊伍移除')); return; } this.askDis = true; this.rebuild(); },   // 🆕2026-10-08 擋最愛鎖+編隊中(任一隊);最後一張可賣
           onEvolve: () => { const chk = canEvolve(cd.id, ovLv, ovEvo); if (!chk.ok) { this.toast(chk.msg); return; } this.askEvo = true; this.rebuild(); },   // 🆕2026-09-25 用這個體的 ovLv/ovEvo 驗滿級,不再用卡種最強個體
         });
@@ -9719,20 +9729,26 @@
         const tEvo = ti.evo || 0, maxLv = maxLvForCard(ti.id, tEvo);   // 🆕2026-10-08 以下 lv/exp/evo/三圍/預覽全部取「該個體自己的」(ovLv/ovEvo 慣例),不再讀 per-type 最強快取
         const lv = ti.lv || 1, exp = ti.exp || 0, need = expToNext(lv), mx = lv >= maxLv;
         const pv = (sel.length && !mx) ? previewFeed(ti.u, sel) : null;   // 選了素材→即時預覽結果
+        const capped = !!(pv && pv.willMax);   // 🆕2026-10-18 預估到頂(同源 previewFeed;與 toggleSel 的加選擋同一判準)
         const atk = cardAtk(ti.id, lv, tEvo), hp = cardHp(ti.id, lv, tEvo), rcv = cardRcv(ti.id, lv, tEvo);   // 現在三圍(這個體)
         const nAtk = pv ? cardAtk(ti.id, pv.toLv, tEvo) : atk, nHp = pv ? cardHp(ti.id, pv.toLv, tEvo) : hp, nRcv = pv ? cardRcv(ti.id, pv.toLv, tEvo) : rcv;   // 餵完後三圍(用預覽 toLv)
         // 對象卡(元素底色):白字+深描邊→任何屬色都看得清(修「火/★/atk 被底色吃掉」)
         this.L(roundRectG(this, CX, 122, 360, 96, 14, EL[t.el].color, 1, T.gold, 2));
         cardImgOn(this, 356, 108, 66, t.id, 'thumb', tEvo);   // 對象卡狗圖(右上)
         const ct = (x, y, s, size, col, ox) => this.L(this.add.text(x, y, s, { fontFamily: EMOJIFONT, fontSize: Math.max(13, size || 14) + 'px', color: col || '#ffffff', fontStyle: 'bold' }).setOrigin(ox == null ? 0 : ox, 0.5).setStroke('#1a1208', 4).setResolution(2));
-        fitText(ct(40, 92, cardName(t.id, tEvo) + '  Lv.' + (pv ? pv.toLv : lv) + (mx ? ' MAX' : (pv && pv.ups > 0 ? '  ↑' + pv.ups : '')), 16, '#ffffff', 0), 272);   // 🈳 en 卡名最長 24 字→不撞右側卡圖(x≥323)
+        { const _cap = !!(pv && pv.willMax), _nm = ct(40, 92, cardName(t.id, tEvo) + '  Lv.' + (pv ? pv.toLv : lv) + (mx ? ' MAX' : (pv && !pv.willMax && pv.ups > 0 ? '  ↑' + pv.ups : '')), 16, '#ffffff', 0);   // 🆕2026-10-18 預覽到頂(pv.willMax)→「Lv.n」後接金色粗體 MAX、拿掉 ↑n(最後一張可能溢出,↑n 會誤導);未到頂/無預覽維持原樣
+          fitText(_nm, _cap ? 272 - 54 : 272); if (_cap) ct(40 + _nm.displayWidth + 6, 92, 'MAX', 16, '#ffd257', 0); }   // 🈳 en 卡名最長 24 字→不撞右側卡圖(x≥323)
         ct(40, 112, tr(EL[t.el].name) + ' · ' + starStr(t.id, tEvo), 13, '#ffe08a', 0);   // 屬性+星:亮金,清楚
         const _d = (cur, nw) => '' + cur + (pv && nw > cur ? '→' + nw : '');   // 選了素材→顯示 before→after
         ct(40, 132, '⚔' + _d(atk, nAtk) + '   ♥' + _d(hp, nHp) + '   ✚' + _d(rcv, nRcv), 13, pv ? '#9dffbe' : '#ffffff', 0);   // 三圍(升值時整行轉亮綠)
         const bw = 268, ratio = mx ? 1 : (pv ? Math.min(1, pv.exp / pv.need) : Math.min(1, exp / need));
-        this.L(roundRectG(this, 40 + bw / 2, 154, bw, 12, 6, 0x000000, 0.32, null, 0));
-        if (ratio > 0) this.L(roundRectG(this, 40 + (bw * ratio) / 2, 154, bw * ratio, 12, 6, T.ok, 1, null, 0));
-        ct(40 + bw, 154, mx ? 'MAX' : (pv ? ('+' + pv.gained + ' exp') : (exp + '/' + need)), 12, '#ffffff', 1);
+        const mxSt = mx ? fuseMaxState(ti) : null;   // 🆕2026-10-18 滿級狀態(null=未滿級);滿級→經驗條位置改顯示大字狀態,不畫條/「MAX」/預覽數字
+        if (mxSt) fitText(ct(40, 154, mxSt.canEvo ? tr('已達滿級，進化後可繼續成長') : tr('已達最高等級'), 18, '#ffe08a', 0), 272);
+        else {
+          this.L(roundRectG(this, 40 + bw / 2, 154, bw, 12, 6, 0x000000, 0.32, null, 0));
+          if (ratio > 0) this.L(roundRectG(this, 40 + (bw * ratio) / 2, 154, bw * ratio, 12, 6, T.ok, 1, null, 0));
+          ct(40 + bw, 154, pv ? ('+' + pv.gained + ' exp') : (exp + '/' + need), 12, '#ffffff', 1);
+        }
         this.txt(CX - 12, 222, tr('點素材選取(可多選,最多 5)'), '13px', '#9a8a6a', 0.5);   // 🧹拿掉「換強化對象」鈕(對象由卡片頁選定)
         if (sel.length) this.btn(W - 46, 222, 64, 26, tr('清空'), () => { this.sel = []; this.rebuild(); }, { color: UI().ink2, fs: FS.micro });
         // 素材格(toggle 選取;同屬優先排序)。🆕2026-10-08 個體化:唯一排除的是「正在強化的這張個體」本身(ti.u);同卡種其他個體可當素材;
@@ -9766,6 +9782,7 @@
           const _fav = isFavUid(u);
           if (_fav) { this.L(roundRectG(this, cx, cy, cw, cw, 12, 0x000000, 0.5, null, 0)); const _fk = gameIcon(this, cx, cy, 'ui_hp', 28); if (_fk) this.L(_fk); else this.txt(cx, cy, '❤', '20px', '#e24a58', 0.5); }
           else if (!on && _teamU.has(u)) { const _tk = gameIcon(this, cx + cw / 2 - 11, cy - cw / 2 + 11, 'ui_flag', 18); if (_tk) this.L(_tk); }   // 🆕2026-10-08 medal→方格旗(編隊中,不可當素材)
+          if (mx || (capped && !on)) this.L(roundRectG(this, cx, cy, cw, cw, 12, 0x000000, 0.45, null, 0));   // 🆕2026-10-18 對象已滿級,或「已選素材預估已到頂(pv.willMax)」→未選的素材壓暗(點了由 toggleSel 跳 toast,不可選;已選的仍可點取消)
           const hit = this.rect(cx, cy, cw, cw, 0x000000, 0.001).setInteractive(); tapBind(this, hit, () => this.toggleSel(u));   // 命中區(透明方形覆蓋整格;圓角只是視覺)
         });   // 選取序號角標
         this.layer = _realL;   // 還原:分頁/其餘元素回主 layer
@@ -9779,22 +9796,23 @@
         const canFuse = sel.length > 0 && !mx;
         const coinOk = !pv || (getMeta().coins || 0) >= pv.cost;   // 🆕2026-10-10 B2:金幣預檢(伺服器會回 402 insufficient_funds);不足→CTA 灰掉(仍可點→toast「金幣不足」)
         const fuseGo = canFuse && coinOk;
-        this.btn(CX, LY.ctaY, 330, 50, canFuse ? tr('⚡ 合成  {n}/5  ·  {c}金', { n: sel.length, c: (pv ? pv.cost : 0) }) : (mx ? tr('已達滿級 Lv.{n}', { n: maxLv }) : tr('點素材選取後可合成')),
+        this.btn(CX, LY.ctaY, 330, 50, canFuse ? tr('⚡ 合成  {n}/5  ·  {c}金', { n: sel.length, c: (pv ? pv.cost : 0) }) : (mx ? tr('已達滿級') : tr('點素材選取後可合成')),
           () => this.tryFuse(), { col: fuseGo ? T.ok : T.surf2, stroke: fuseGo ? T.ok : T.divider, color: fuseGo ? T.onAccent : T.ink3, bold: true, fs: '18px' });
         this.back();
       }
       toggleSel(u) {
+        { const _ms = fuseMaxState(instOf(this.targetUid)); if (_ms) { this.toast(fuseMaxMsg(_ms)); return; } }   // 🆕2026-10-18 對象已滿級→素材一律不可選(先於最愛/編隊檢查,訊息才一致);用該個體自己的 lv/evo 現算
         if (isFavUid(u)) return;   // 🆕2026-10-08 最愛鎖的卡不可當素材(點擊無效;格上已有愛心標)
         if (teamUidSet().has(u)) { this.toast(tr('編隊中的卡無法當素材\n請先從隊伍移除')); return; }   // 🆕2026-10-08 編隊中不可餵掉(與售卡同規則:會影響隊伍)
         this.sel = this.sel || []; const i = this.sel.indexOf(u);
-        if (i >= 0) this.sel.splice(i, 1); else { if (this.sel.length >= 5) { this.toast(tr('一次最多 5 張')); return; } this.sel.push(u); }
+        if (i >= 0) this.sel.splice(i, 1); else { if (this.sel.length && previewFeed(this.targetUid, this.sel).willMax) { this.toast(tr('預估已達滿級\n再選也不會獲得經驗')); return; } if (this.sel.length >= 5) { this.toast(tr('一次最多 5 張')); return; } this.sel.push(u); }
         this.rebuild();
       }
       tryFuse() {
+        { const _ms = fuseMaxState(instOf(this.targetUid)); if (_ms) { this.sel = []; this.toast(fuseMaxMsg(_ms)); return; } }   // 🆕2026-10-18 滿級先擋(須在「先點素材選取」之前,否則滿級空選取會跳錯訊息);原 line「已達滿級」檢查併入此處
         if ((this.sel || []).some(isFavUid)) { this.sel = this.sel.filter(u => !isFavUid(u)); this.rebuild(); this.toast(tr('已鎖定為最愛\n請先取消鎖定')); return; }   // 🆕2026-10-08 保險:選取後才被鎖的素材→剔除並提示
         const sel = this.sel || []; if (!sel.length) { this.toast(tr('先點素材選取')); return; }
         const _ti = instOf(this.targetUid); if (!_ti) { this.toast(tr('對象卡不存在')); return; }
-        if ((_ti.lv || 1) >= maxLvForCard(_ti.id, _ti.evo || 0)) { this.toast(tr('已達滿級')); return; }   // 🆕2026-10-08 以該個體的 lv/evo 判滿級
         if ((getMeta().coins || 0) < previewFeed(this.targetUid, sel).cost) { this.toast(tr('金幣不足')); return; }   // 🆕2026-10-10 B2:金幣預檢(與 draw 的 coinOk 同源 previewFeed)
         const s = loadSave(), rare = sel.some(u => { const c = s.cards.find(x => x.u === u); const cd = c && ROSTER.find(r => r.id === c.id); return cd && (cd.rank === 'jonin' || cd.rank === 'kage'); });
         if (rare) { this.confirmFuse(); return; }   // 防呆:含 ★★★↑ 稀有素材→二次確認

@@ -776,6 +776,11 @@ const I18N_DICT = {
     '一次最多 5 張': 'Up to 5 at a time',
     '先點素材選取': 'Select a material first',
     '已達滿級': 'Already max level',
+    '已達滿級，無法再強化': 'Max level reached, cannot be enhanced',   // 2026-10-18 強化頁/BOX 入口滿級擋(fuseMaxMsg)
+    '已達滿級，無法再強化\n請先進化': 'Max level reached, cannot be enhanced\nEvolve it first',
+    '已達滿級，進化後可繼續成長': 'Max level. Evolve to keep growing',   // 強化頁對象卡狀態字(滿級但還能進化)
+    '預估已達滿級\n再選也不會獲得經驗': 'Projected max level\nMore materials won\'t add any EXP',   // 2026-10-18 預估到頂後禁加選(toggleSel)
+    '已達最高等級': 'Highest level reached',   // 強化頁對象卡狀態字(最終階滿級)
     '⚠️ 確認合成': '⚠️ Confirm Fuse',
     '素材含 ★★★ 以上稀有卡\n餵入後無法復原,確定?': 'Includes ★★★+ rare cards.\nFusing cannot be undone. Continue?',
     '確定合成': 'Confirm Fuse',
