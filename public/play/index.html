@@ -1733,7 +1733,13 @@
       try { const v = window._nbConfig && window._nbConfig.econ && window._nbConfig.econ.feedCostRate, n = Number(v); if (v != null && v !== '' && isFinite(n) && n >= 0) return n; } catch (e) { }
       return 0.05;
     }
-    function feedCoinCost(expGained) { return Math.round(Math.max(0, expGained || 0) * feedCostRate()); }
+    // 🆕2026-10-22 費用×(1+目標個體「餵之前」等級/feedLvDiv)(鏡射後端 _lib/econ.ts feedLvFactor):div 讀 window._nbConfig.econ.feedLvDiv(0 或負=停用→係數 1;正值夾 50~1000;讀不到/壞值→200)。
+    function feedLvDiv() {
+      try { const v = window._nbConfig && window._nbConfig.econ && window._nbConfig.econ.feedLvDiv, n = Number(v); if (v != null && v !== '' && isFinite(n)) return n <= 0 ? 0 : Math.min(1000, Math.max(50, n)); } catch (e) { }
+      return 200;
+    }
+    function feedLvFactor(lvBefore) { const d = feedLvDiv(); return d > 0 ? 1 + Math.max(0, lvBefore || 0) / d : 1; }
+    function feedCoinCost(expGained, lvBefore) { return Math.round(Math.max(0, expGained || 0) * (feedCostRate() * feedLvFactor(lvBefore))); }   // lvBefore=餵之前的目標個體等級(不是預估升級後);運算順序與後端 effFeedRate=rate×factor 一致
     function getCardLv(id, ovLv) { if (ovLv != null) return ovLv; const c = loadSave().cardLv[id]; return c ? c.lv : 1; }   // ovLv 傳入=用個體自己的等級(個體制);不傳=per-type 最強快取
     function getCardExp(id) { const c = loadSave().cardLv[id]; return c ? c.exp : 0; }
     // 三圍成長曲線分段(spec-progression-economy.md §2,2026-08-16):LV1-20 沿用 +5%/級(現況不變,零震撼);
@@ -1800,7 +1806,7 @@
       let l = lv; e += gained;
       while (l < maxLv && e >= expToNext(l)) { e -= expToNext(l); l++; }
       if (l >= maxLv) e = 0;
-      return { fromLv: lv, toLv: l, exp: e, need: expToNext(l), gained: gained, cost: feedCoinCost(gained), willMax: l >= maxLv, ups: l - lv, eaten: eaten };
+      return { fromLv: lv, toLv: l, exp: e, need: expToNext(l), gained: gained, cost: feedCoinCost(gained, lv), willMax: l >= maxLv, ups: l - lv, eaten: eaten };
     }
     // 💰 分解單價/預估(2026-10-07 卡冊多選售卡即時金額):與伺服器 005_backend/functions/api/cards/dissolve.ts 同源——
     //   單價 = econ.moneySell[card_id](金錢卡;優先取 /api/config 回來的 window._nbConfig.econ.moneySell=後台可調的真值,沒抓到→程式碼預設 {c74:200,c75:550,c76:1350})
@@ -10143,7 +10149,7 @@
       draw() {
         const T = UI();
         this.txt(CX, 34, tr('⬆️ 強化合成'), FS.title, T.ink, 0.5, true);
-        { const _ready = _iconReady(this, 'ui_coin'), _label = tr('💰 {n} · 同屬×1.5 · 金幣＝經驗×5%', { n: getMeta().coins });   // 🆕2026-09-23 開頭 💰 前綴→icon_coin(stripEmoji 去開頭emoji);未載到 fallback 原字串
+        { const _ready = _iconReady(this, 'ui_coin'), _label = tr('💰 {n} · 同屬×1.5 · 金幣＝經驗×5%・隨等級微增', { n: getMeta().coins });   // 🆕2026-09-23 開頭 💰 前綴→icon_coin(stripEmoji 去開頭emoji);未載到 fallback 原字串
           if (_ready) { const _disp = stripEmoji(_label), _tmp = this.add.text(0, 0, _disp, { fontFamily: EMOJIFONT, fontSize: '13px' }); const _tw = Math.ceil(_tmp.width); _tmp.destroy(); const _ics = 14, _gw = _ics + 5 + _tw, _left = CX - _gw / 2; this.L(this.add.image(_left + _ics / 2, 60, 'ui_coin').setDisplaySize(_ics, _ics)); this.txt(_left + _ics + 5 + _tw / 2, 60, _disp, '13px', '#8a6414', 0.5); }
           else this.txt(CX, 60, _label, '13px', '#8a6414', 0.5); }   // 深金色→米色底可讀(原 #ffe08a 淺黃看不到);§4:花費改成經驗比例,不再是固定每張金額
         if (this.mode === 'pick') { this._setFilterDom(false); return this.drawPick(); }

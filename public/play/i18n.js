@@ -758,7 +758,7 @@ const I18N_DICT = {
     '刪除失敗,請檢查連線': 'Delete failed, please check your connection',
     '← 回上一頁': '← Back',
     '⬆️ 強化合成': '⬆️ Power Up & Fuse',
-    '💰 {n} · 同屬×1.5 · 金幣＝經驗×5%': '💰 {n} · Same element ×1.5 · Coin cost = EXP×5%',
+    '💰 {n} · 同屬×1.5 · 金幣＝經驗×5%・隨等級微增': '💰 {n} · Same elem ×1.5 · Coin = EXP×5% (rises w/ Lv)',
     '選擇強化對象': 'Choose a Card',
     '點素材選取(可多選,最多 5)': 'Tap materials to select (up to 5)',
     '清空': 'Clear',
