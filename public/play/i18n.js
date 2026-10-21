@@ -874,6 +874,12 @@ const I18N_DICT = {
     '素材無效': 'Invalid fodder cards',
     '卡片狀態已變更': 'Card status has changed',
     '狀態已更新,請再試一次': 'Status updated, please try again',
+    // === 強化/進化動態演出(2026-10-22) ===
+    '進化！': 'Evolved!',
+    '星級': 'Stars',
+    '攻擊': 'ATK',
+    '生命': 'HP',
+    '回復': 'RCV',
   },
 };
 
