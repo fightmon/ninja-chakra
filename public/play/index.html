@@ -655,7 +655,7 @@
     const W = 420, CX = 210;
     const CS = 40, RECT = 37, BX0 = 30, DRAG_LIFT = 66;
     // 戰鬥畫面 z-index 分層(由下往上):背景→敵方→我方卡→combo/HP→盤面→托盤→暫態特效→nav(最高);暫態特效字壓在盤面之上、僅次 nav
-    const DEPTH = { bg: 0, enemy: 10, card: 20, hp: 30, morale: 32, store: 34, abtn: 38, board: 40, tray: 50, drag: 56, proj: 60, flash: 62, fx: 66, nav: 90 };
+    const DEPTH = { bg: 0, enemy: 10, card: 20, hp: 30, morale: 32, store: 25, abtn: 38, board: 40, tray: 50, drag: 56, proj: 60, flash: 62, fx: 66, nav: 90 };
     // 色彩工具:shadeColor(往白/往黑)、lerpColor(兩色內插)→ 給屬塊「明暗漸層流動」用
     function shadeColor(col, f) { let r = (col >> 16) & 255, g = (col >> 8) & 255, b = col & 255; if (f >= 0) { r += (255 - r) * f; g += (255 - g) * f; b += (255 - b) * f; } else { const k = 1 + f; r *= k; g *= k; b *= k; } return (Math.round(r) << 16) | (Math.round(g) << 8) | Math.round(b); }
     function lerpColor(a, b, t) { const A = [(a >> 16) & 255, (a >> 8) & 255, a & 255], B = [(b >> 16) & 255, (b >> 8) & 255, b & 255]; return (Math.round(A[0] + (B[0] - A[0]) * t) << 16) | (Math.round(A[1] + (B[1] - A[1]) * t) << 8) | Math.round(A[2] + (B[2] - A[2]) * t); }
@@ -5985,7 +5985,7 @@
         const bx = _hg ? (_hg.x + (e.hpW || 0) + R + 4) : (e.sprite.x + ((e.cardW || 60) * 0.35));
         const by = _hg ? _hg.y : (e.sprite.y + ((e.cardH || e.cardW || 60) * 0.3));
         const plus = sign > 0;
-        const cont = this.add.container(bx, by).setDepth(DEPTH.fx + 1).setScale(0);
+        const cont = this.add.container(bx, by).setDepth(DEPTH.abtn - 2).setScale(0);   // 🩹2026-10-21 剋屬徽章層級 fx+1(67)→abtn-2(36):在主動技硬幣(abtn 38)之下,仍在敵人層(10)/我方血條(30)之上
         const key = plus ? 'fx_atkup' : 'fx_atkdown';   // 🆕2026-08-26 自製圖示(art/ui/atk_up|down.webp,金劍+/灰藍劍−,transparent):取代 emoji 拼裝;preload 一律載(各~7KB)
         if (this.textures.exists(key)) { cont.add(this.add.image(0, 0, key).setDisplaySize(R * 2.6, R * 2.6)); }
         else {   // 圖沒載到(防呆)→退回舊圓底+⚔️符號
