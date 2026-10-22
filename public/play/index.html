@@ -231,7 +231,7 @@
       }
       return { add: add, info: info };
     })();
-    const BGM_OGG = { bgm_earth: 1, bgm_fire: 1 };   // 已重剪(去頭尾靜音)並備有 .ogg 的 BGM key;之後逐首重剪就加進來
+    const BGM_OGG = { bgm_earth: 1, bgm_fire: 1, bgm_home: 1 };   // 已重剪(去頭尾靜音)並備有 .ogg 的 BGM key;之後逐首重剪就加進來
     if (typeof window !== 'undefined') window.addEventListener('pointerdown', () => SFX.resume(), { once: true });   // 首次點擊解鎖音訊(瀏覽器禁自動播放)
     // ===== 新手教學:腳本化引導戰鬥(事件推進)。on=完成這步的事件;setup=進這步先佈置盤面 =====
     // 🆕2026-08-26 重設計(10步→7步,文字最小化+加爽點演出):拿掉歡迎 tap 頁,直接進①;③改教「全體攻擊」(AoE)+PERFECT演出;
@@ -8121,7 +8121,7 @@
         this.input.on('pointerup', () => { this._aDragFrom = null; });
         this.input.on('wheel', (p, go, dx, dy) => { if (!_isAch()) return; const minY = Math.min(0, _achView() - (this._achContentH || 0)); this._achScrollY = Phaser.Math.Clamp((this._achScrollY || 0) - dy * 0.5, minY, 0); this._achScroll.y = this._achScrollY; });
         this._homeLeft = false; const _bk = 'bgm_home', _playHome = () => { if (this._homeLeft || this.bgmMp3) return; if (this.cache.audio.exists(_bk)) { this._bgmBase = 0.45; this.bgmMp3 = BgmLoop.add(this, _bk, 0.45 * (SFX.bgmVol ? SFX.bgmVol() : 1)); try { this.bgmMp3.play(); } catch (e) { } } };
-        if (this.cache.audio.exists(_bk)) _playHome(); else { this.load.audio(_bk, 'snd/bgm_home.mp3'); this.load.once('complete', _playHome); try { this.load.start(); } catch (e) { } }   // 大廳 BGM 非阻塞:先開畫面,BGM 載好再播→大廳秒開
+        if (this.cache.audio.exists(_bk)) _playHome(); else { this.load.audio(_bk, BGM_OGG[_bk] ? ['snd/bgm_home.ogg', 'snd/bgm_home.mp3'] : 'snd/bgm_home.mp3'); this.load.once('complete', _playHome); try { this.load.start(); } catch (e) { } }   // 大廳 BGM 非阻塞:先開畫面,BGM 載好再播→大廳秒開;有 ogg 走雙軌(ogg 優先/mp3 備援)
         this.events.once('shutdown', () => { this._homeLeft = true; if (this.bgmMp3) { this.bgmMp3.stop(); this.bgmMp3.destroy(); this.bgmMp3 = null; } });   // 離開大廳(進關等)→停大廳音樂
         bindSceneResize(this, () => { const o = H; recomputeLayout(); if (Math.abs(H - o) > 3) { this.scale.setGameSize(W, H); this.rebuild(); } });
         if (!tutSeen()) {   // 🔐[8] tutSeen=「教學真正完成(畢業)」旗標,只在 tutDone()/_doTutSkip() 真正結束時才會被設 true;這裡只要沒畢業就一律(重新)進教學——不分「第一次啟動」或「教學看到一半重整回來」,兩者動作完全相同(都是從 prologue stage1 重新開始)。過去這裡會搶先 setTutSeen()+freePull=true,導致教學才看第一句就重整→下次開場判定「已看過」直接跳過教學,但 freePull 已經設了照樣發十連,玩家等於没學過玩法就畢業。現在只記錄「已進入教學」(tutEntered,純 bookkeeping,不影響任何判斷式),freePull 改到教學真正結束時才發(見 showTutComplete 兩顆鈕 / _doTutSkip)
