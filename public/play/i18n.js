@@ -758,7 +758,9 @@ const I18N_DICT = {
     '刪除失敗,請檢查連線': 'Delete failed, please check your connection',
     '← 回上一頁': '← Back',
     '⬆️ 強化合成': '⬆️ Power Up & Fuse',
-    '💰 {n} · 同屬×1.5 · 金幣＝經驗×5%・隨等級微增': '💰 {n} · Same elem ×1.5 · Coin = EXP×5% (rises w/ Lv)',
+    '同屬×1.5・金幣＝經驗×5%・隨等級微增': 'Same elem ×1.5 · Coin = EXP×5% (rises w/ Lv)',   // 2026-10-23 強化頁頁首說明行(金幣數字移到右上膠囊,原 {n} 版 key 取代)
+    '金幣不足（差 {n}）': 'Not enough coins (short {n})',   // 2026-10-23 強化 CTA 灰態文字/點擊 toast/進化確認框保險 toast 共用
+    '持有 {n} 金幣': 'You have {n} coins',   // 2026-10-23 進化確認框費用行下方的持有數
     '選擇強化對象': 'Choose a Card',
     '點素材選取(可多選,最多 5)': 'Tap materials to select (up to 5)',
     '清空': 'Clear',

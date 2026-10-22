@@ -8021,10 +8021,13 @@
         this.rect(CX, py, 330, 220, 0x241a10).setStrokeStyle(2, 0x8a6a3a);
         this.txt(CX, py - 84, tr('✨ 確認進化?'), '16px', '#ffd9a0', 0.5, true);
         this.txt(CX, py - 52, cardName(cd.id, ovEvo) + ' → ' + nextName, '13px', '#cfc0a8', 0.5).setAlign('center').setWordWrapWidth(306);   // 🈳 en 兩個長卡名相連→折兩行(330 面板內寬 306,不縮字)   // 🆕2026-09-25 現名補 ovEvo,與這個體目前進化階一致
-        this.txt(CX, py - 20, tr('需 1 張「{n}」+ {c} 金幣', { n: jewelName(cd.el), c: req.coins }), '14px', '#ffe08a', 0.5, true);
-        this.txt(CX, py + 6, tr('(進化後等級/經驗保留原值)'), '12px', '#cfc0a8', 0.5);
+        const _have = getMeta().coins || 0, _enough = _have >= req.coins;   // 🆕2026-10-23 持有金幣(與主畫面/強化頁膠囊同源 meta.coins);canEvolve 已預檢過,這裡只為顯示+保險(不足→確定鍵灰、點了無效)
+        this.txt(CX, py - 28, tr('需 1 張「{n}」+ {c} 金幣', { n: jewelName(cd.el), c: req.coins }), '14px', '#ffe08a', 0.5, true);
+        this.txt(CX, py - 6, tr('持有 {n} 金幣', { n: _have.toLocaleString() }), '12px', _enough ? '#cfc0a8' : '#ff8a8a', 0.5);   // 小字(txt 下限 15px);不足轉紅
+        this.txt(CX, py + 18, tr('(進化後等級/經驗保留原值)'), '12px', '#cfc0a8', 0.5);
         this.btn(CX - 80, py + 62, 144, 40, tr('✖ 取消'), () => { this.askEvo = false; this.rebuild(); }, { col: 0x2a2218, stroke: 0x5a4a32, color: '#cfc0a8', bold: true, fs: '14px' });
         this.btn(CX + 80, py + 62, 144, 40, tr('✔ 確定進化'), () => {   // 🔐 進化改打伺服器,async 期間防連點(_busyEvo)
+          if (!_enough) { this.toast(tr('金幣不足（差 {n}）', { n: (req.coins - _have).toLocaleString() })); return; }   // 🆕2026-10-23 保險:金幣不足(理論上 canEvolve 已擋)
           if (this._busyEvo) return; this._busyEvo = true; this.askEvo = false; this.rebuild();
           // 🆕2026-10-22 進化演出:API 成功、資料落地(evolveCard 內 sync*)後才播 playEvoFx(~4s、不可跳過,按「完成」才收),收完才 rebuild 回詳情(已是新階);失敗/離線走原路徑(toast)不播。
           //   輸入鎖 fxLock 從確認鍵起鎖到「完成」(之後才能做別的事);進化前 lv/三圍/星級在 API 之前快照
@@ -8047,7 +8050,7 @@
               });
             } catch (e) { console.error('[evo fx]', e); plain(r); }
           }).catch(e => { console.error('[evo]', e); this._busyEvo = false; unlock(); });
-        }, { col: 0x3a2a1a, stroke: 0x8a6a3a, color: '#ffd9a0', bold: true, fs: '14px' });
+        }, _enough ? { col: 0x3a2a1a, stroke: 0x8a6a3a, color: '#ffd9a0', bold: true, fs: '14px' } : { col: 0x2a2218, stroke: 0x5a4a32, color: '#7a6a4a', bold: true, fs: '14px' });   // 🆕2026-10-23 不足→灰
       }
     }
 
@@ -8238,7 +8241,16 @@
           this.L(this.add.image(xR - Math.ceil(t.width) - 11, y, iconKey).setDisplaySize(16, 16)); this.L(t);
         };
         // 頭像(左,跨兩排置中,照 demo)
-        this.L(this.add.circle(28, 42, 17, _l ? EL[_l.el].color : 0xc9c2b8).setStrokeStyle(2, 0xffffff)); this.txt(28, 42, _l ? EL[_l.el].face : '🥷', '18px', '#ffffff', 0.5);
+        // 🆕2026-10-23 頭像=現任出擊隊「隊長」(中央位=出擊隊 presetTeam[2];取法同 enterDungeon 的 leveledTeam(loadTeam().filter(Boolean)),帶個體 evo 取進化縮圖);無隊/無圖→退回原元素色圓+表情
+        let _ld = null; try { _ld = leveledTeam(loadTeam().filter(Boolean))[2] || null; } catch (e) { _ld = null; }
+        const _lk = _ld ? cardArtKey(_ld.id, 'thumb', _ld.evo || 0) : null;
+        this.L(this.add.circle(28, 42, 17, _l ? EL[_l.el].color : 0xc9c2b8).setStrokeStyle(2, 0xffffff));   // 底圓(底色+白框)保留:隊長圖載入時墊底,fallback 時就是原頭像
+        if (_lk && this.textures.exists(_lk)) {
+          const _av = this.L(this.add.image(28, 42, _lk)), _fr = _av.frame, _sc = 34 / Math.max(1, Math.min(_fr.width, _fr.height));   // cover 填滿直徑 34
+          _av.setScale(_sc);
+          const _mk = this.make.graphics(); _mk.fillStyle(0xffffff, 1); _mk.fillCircle(28, 42, 17); _av.setMask(_mk.createGeometryMask()); _av.once('destroy', () => _mk.destroy());
+          this.L(this.add.circle(28, 42, 17).setStrokeStyle(2, 0xffffff));   // 白框壓在圖上(遮罩邊緣不鋸齒)
+        } else this.txt(28, 42, _l ? EL[_l.el].face : '🥷', '18px', '#ffffff', 0.5);
         // 列1:名稱 + 稱號 chip(並排,照 demo:淡雷色底 + 金字)
         const nameT = this.txt(54, 28, (m.name || tr('塊頭勇者')), FS.body, T.ink, 0, true);
         if (getTitle()) {   // 🆕2026-09-25 🎖️ 前綴→icon_medal(topbar 常駐,UI_ICONS 已 eager 預載,恆已就緒)
@@ -10146,12 +10158,29 @@
         return { backY, ctaY, pagerY, gridBot: pagerY - pgH / 2 - 8 };   // gridBot=素材格最底可用 y(翻頁列頂再留 8px)
       }
       back() { this.btn(CX, this._lay(true).backY, 200, 44, tr('← 回上一頁'), () => { this.scene.manager.start('collection'); this.scene.manager.stop('fuse'); }, { color: UI().ink }); }   // 回上一頁=卡片頁(fuse 由 collection 進來)
+      // 🆕2026-10-23 持有金幣:單一來源=syncWallet 落地的 meta.coins(與主畫面 HomeScene.topBar 同源;feed/dissolve/evolve/領信各路徑回應都經 syncWallet 寫入)。膠囊/預檢/CTA 一律走這裡
+      _coins() { return getMeta().coins || 0; }
+      // 🆕2026-10-23 右上金幣膠囊(icon_coin + 千分位,樣式比照主畫面右上資源列);pop=true 時彈一下(數字變動提示)。每次呼叫重畫(destroy 舊的),可在 rebuild 之外單獨刷新
+      _coinShortMsg(cost) { return tr('金幣不足（差 {n}）', { n: Math.max(0, cost - this._coins()).toLocaleString() }); }   // CTA 文字與點擊 toast 共用
+      _drawCoinPill(pop) {
+        if (this._coinC) { this._coinC.destroy(); this._coinC = null; }
+        if (!this.layer) return null;
+        const T = UI(), t = this.add.text(0, 0, this._coins().toLocaleString(), { fontFamily: EMOJIFONT, fontSize: FS.cap, color: T.goldTx, fontStyle: 'bold' }).setOrigin(0, 0.5);
+        const icw = 16, pad = 10, gap = 5, h = 28, w = pad + icw + gap + Math.ceil(t.width) + pad, c = this.add.container(W - 14 - w / 2, 34);
+        c.add(roundRectG(this, 0, 0, w, h, h / 2, T.surf2, 1, T.divider, 1.5));
+        const ic = gameIcon(this, -w / 2 + pad + icw / 2, 0, 'ui_coin', icw);
+        if (ic) c.add(ic); else c.add(this.add.text(-w / 2 + pad + icw / 2, 0, '🪙', { fontFamily: EMOJIFONT, fontSize: '14px' }).setOrigin(0.5));   // 圖未載到→emoji 墊著(_iconReady 載完會 rebuild 換上)
+        t.setPosition(-w / 2 + pad + icw + gap, 0); c.add(t);
+        this.L(c); this._coinC = c;
+        if (pop) this.tweens.add({ targets: c, scale: 1.18, duration: 120, yoyo: true, ease: 'Quad.easeOut' });
+        return c.x - w / 2;   // 回傳膠囊左緣 x,讓標題避讓
+      }
       draw() {
         const T = UI();
-        this.txt(CX, 34, tr('⬆️ 強化合成'), FS.title, T.ink, 0.5, true);
-        { const _ready = _iconReady(this, 'ui_coin'), _label = tr('💰 {n} · 同屬×1.5 · 金幣＝經驗×5%・隨等級微增', { n: getMeta().coins });   // 🆕2026-09-23 開頭 💰 前綴→icon_coin(stripEmoji 去開頭emoji);未載到 fallback 原字串
-          if (_ready) { const _disp = stripEmoji(_label), _tmp = this.add.text(0, 0, _disp, { fontFamily: EMOJIFONT, fontSize: '13px' }); const _tw = Math.ceil(_tmp.width); _tmp.destroy(); const _ics = 14, _gw = _ics + 5 + _tw, _left = CX - _gw / 2; this.L(this.add.image(_left + _ics / 2, 60, 'ui_coin').setDisplaySize(_ics, _ics)); this.txt(_left + _ics + 5 + _tw / 2, 60, _disp, '13px', '#8a6414', 0.5); }
-          else this.txt(CX, 60, _label, '13px', '#8a6414', 0.5); }   // 深金色→米色底可讀(原 #ffe08a 淺黃看不到);§4:花費改成經驗比例,不再是固定每張金額
+        const _pl = this._drawCoinPill(false), _ti = this.txt(CX, 34, tr('⬆️ 強化合成'), FS.title, T.ink, 0.5, true);
+        { const _mr = (_pl == null ? W : _pl) - 8; fitText(_ti, _mr - 12); if (CX + _ti.displayWidth / 2 > _mr) _ti.x = _mr - _ti.displayWidth / 2; }   // 🈳 en 標題較長:不壓到右上金幣膠囊(超出就左移、再不夠才縮)
+           // 🆕2026-10-23 右上金幣膠囊(持有數,與主畫面 topBar 同源 meta.coins);頁首說明行不再放金幣數字(原置中長行超出 420 畫布被左側截掉「9」,玩家看成 807)
+        fitText(this.txt(CX, 62, tr('同屬×1.5・金幣＝經驗×5%・隨等級微增'), '13px', '#8a6414', 0.5), W - 32);   // 深金色→米色底可讀;§4:花費改成經驗比例,不再是固定每張金額
         if (this.mode === 'pick') { this._setFilterDom(false); return this.drawPick(); }
         const ti = this.targetUid ? instOf(this.targetUid) : null;   // 🆕2026-10-08 強化對象=個體(被併發解散/吃掉找不到→退回「選擇強化對象」)
         if (!ti) { this.targetUid = null; this.target = null; }
@@ -10229,9 +10258,9 @@
         }
         // 合成確認 bar(神魔/龍族式:選好才按)
         const canFuse = sel.length > 0 && !mx;
-        const coinOk = !pv || (getMeta().coins || 0) >= pv.cost;   // 🆕2026-10-10 B2:金幣預檢(伺服器會回 402 insufficient_funds);不足→CTA 灰掉(仍可點→toast「金幣不足」)
+        const coinOk = !pv || this._coins() >= pv.cost;   // 🆕2026-10-10 B2:金幣預檢(伺服器會回 402 insufficient_funds);不足→CTA 灰掉(仍可點→toast「金幣不足(差 n)」);🆕2026-10-23 持有數改走 this._coins()(與右上膠囊同源)
         const fuseGo = canFuse && coinOk;
-        this.btn(CX, LY.ctaY, 330, 50, canFuse ? tr('⚡ 合成  {n}/5  ·  {c}金', { n: sel.length, c: (pv ? pv.cost : 0) }) : (mx ? tr('已達滿級') : tr('點素材選取後可合成')),
+        this.btn(CX, LY.ctaY, 330, 50, canFuse ? (coinOk ? tr('⚡ 合成  {n}/5  ·  {c}金', { n: sel.length, c: (pv ? pv.cost : 0) }) : this._coinShortMsg(pv.cost)) : (mx ? tr('已達滿級') : tr('點素材選取後可合成')),
           () => this.tryFuse(), { col: fuseGo ? T.ok : T.surf2, stroke: fuseGo ? T.ok : T.divider, color: fuseGo ? T.onAccent : T.ink3, bold: true, fs: '18px' });
         this.back();
       }
@@ -10248,7 +10277,7 @@
         if ((this.sel || []).some(isFavUid)) { this.sel = this.sel.filter(u => !isFavUid(u)); this.rebuild(); this.toast(tr('已鎖定為最愛\n請先取消鎖定')); return; }   // 🆕2026-10-08 保險:選取後才被鎖的素材→剔除並提示
         const sel = this.sel || []; if (!sel.length) { this.toast(tr('先點素材選取')); return; }
         const _ti = instOf(this.targetUid); if (!_ti) { this.toast(tr('對象卡不存在')); return; }
-        if ((getMeta().coins || 0) < previewFeed(this.targetUid, sel).cost) { this.toast(tr('金幣不足')); return; }   // 🆕2026-10-10 B2:金幣預檢(與 draw 的 coinOk 同源 previewFeed)
+        { const _cost = previewFeed(this.targetUid, sel).cost; if (this._coins() < _cost) { this.toast(this._coinShortMsg(_cost)); return; } }   // 🆕2026-10-10 B2:金幣預檢(與 draw 的 coinOk 同源 previewFeed);🆕2026-10-23 訊息帶差額、持有數走 this._coins()
         const s = loadSave(), rare = sel.some(u => { const c = s.cards.find(x => x.u === u); const cd = c && ROSTER.find(r => r.id === c.id); return cd && (cd.rank === 'jonin' || cd.rank === 'kage'); });
         if (rare) { this.confirmFuse(); return; }   // 防呆:含 ★★★↑ 稀有素材→二次確認
         this.doFuse();
@@ -10286,6 +10315,7 @@
         const plain = r => { this.toast(r.ups > 0 ? tr('🆙 升級! Lv.{n}(吃 {e} 張)', { n: r.lv, e: r.eaten }) : tr('吃 {n} 張素材', { n: r.eaten })); this.rebuild(); };   // 原成功路徑(沒快照/場景已離開/演出出錯時退回)
         feedFodderMany(this.targetUid, sel).then(r => {
           this._busyFuse = false;
+          if (this.sys.isActive()) this._drawCoinPill(true);   // 🆕2026-10-23 伺服器回應已經 syncWallet 落地(成功/409 競態皆含最新 coins)→金幣膠囊立刻跳新值(不等演出播完 rebuild)
           if (!r.ok) { unlock(); this.toast(r.msg); const have = new Set(loadSave().cards.map(c => c.u)); this.sel = (this.sel || []).filter(u => have.has(u)); this.rebuild(); return; }   // 🆕2026-10-10 B2:失敗(含 409 已套用最新 collection)→剔除已不存在的素材並重畫,畫面與最新狀態一致
           this.sel = []; this.feedPage = 0;
           const ni = snap && instOf(snap.u);
