@@ -190,6 +190,48 @@
         button() { sfx(() => T(660, 0.04, { type: 'square', gain: 0.05 })); },
       };
     })();
+    // ===== BgmLoop:BGM 無縫循環(自動裁 MP3 頭尾編碼填充)。2026-10-23 =====
+    // 為什麼:MP3 編碼必帶頭尾靜音填充(實測頭~21ms/尾~45ms),Phaser 3.60 的 loop 是「整段 buffer 接力」→填充被播出來=接點斷一拍。
+    // 做法:解碼後掃 channelData 首尾第一個超過閾值(0.003)的樣本→loopStart/loopEnd 設到實際波形邊界,用原生 BufferSource.loop(取樣點精準)。
+    // 結果快取(同 key 不重算)。只做 BGM(兩個播放點:戰鬥 _startStageAudio / 大廳);SFX 仍走 Phaser。
+    // 非 WebAudio(HTML5 Audio)或 buffer 取不到→退回舊的 this.sound.add(loop:true),行為不變。回傳物件介面同 Phaser sound:play/stop/destroy/setVolume。
+    const BgmLoop = (() => {
+      const TH = 0.003, MAX_TRIM = 99, memo = {}, info = {};   // MAX_TRIM(秒):單側靜音超過此值就不裁(視為刻意留白)。目前 99=不設限:舊 BGM 實測尾端有 1.3~3.5 秒的 <-50dB 近靜音,裁掉才是無縫;若某首想保留留白,把此值調小(如 0.5)
+      function measure(key, buf) {
+        if (memo[key]) return memo[key];
+        const n = buf.length, sr = buf.sampleRate; let s = n, e = -1;
+        for (let c = 0; c < buf.numberOfChannels; c++) {
+          const d = buf.getChannelData(c);
+          for (let i = 0; i < s; i++) if (Math.abs(d[i]) > TH) { s = i; break; }
+          for (let i = n - 1; i > e; i--) if (Math.abs(d[i]) > TH) { e = i; break; }
+        }
+        if (e < s) { s = 0; e = n - 1; }   // 全靜音(不該發生)→不裁
+        const rawHead = s / sr, rawTail = (n - 1 - e) / sr;
+        if (rawHead > MAX_TRIM) s = 0; if (rawTail > MAX_TRIM) e = n - 1;
+        if ((e + 1 - s) / sr < 1) { s = 0; e = n - 1; }   // 保險:裁完不足 1 秒(異常檔)→不裁
+        const r = memo[key] = { start: s / sr, end: (e + 1) / sr };
+        info[key] = { headMs: +(rawHead * 1000).toFixed(1), tailMs: +(rawTail * 1000).toFixed(1), loopStart: +r.start.toFixed(4), loopEnd: +r.end.toFixed(4), dur: +buf.duration.toFixed(4), used: (s > 0 || e < n - 1) };
+        return r;
+      }
+      function add(scene, key, volume) {
+        const sm = scene.sound, ctx = sm && sm.context;
+        let buf = null; try { buf = scene.cache.audio.get(key); } catch (e) { }
+        if (!ctx || !ctx.createGain || !buf || !buf.getChannelData) return sm.add(key, { loop: true, volume: volume });   // 舊行為(HTML5 Audio / 無 buffer)
+        const lp = measure(key, buf), gain = ctx.createGain(); gain.gain.value = volume; gain.connect(sm.destination || ctx.destination);
+        let src = null, dead = false, pend = null;
+        const go = () => { pend = null; if (dead || src) return; src = ctx.createBufferSource(); src.buffer = buf; src.loop = true; src.loopStart = lp.start; src.loopEnd = lp.end; src.connect(gain); src.start(0, lp.start); };
+        const kill = () => { if (pend) { sm.off('unlocked', pend); pend = null; } if (src) { try { src.stop(); } catch (e) { } try { src.disconnect(); } catch (e) { } src = null; } };
+        return {
+          key: key, isBgmLoop: true, loopStart: lp.start, loopEnd: lp.end,
+          play() { if (dead || src || pend) return true; if (sm.locked) { pend = go; sm.once('unlocked', go); } else go(); return true; },   // 瀏覽器尚未解鎖→等 Phaser 'unlocked' 再起播(同 Phaser sound 行為)
+          setVolume(v) { gain.gain.value = v; return this; },
+          stop() { kill(); return true; },
+          destroy() { dead = true; kill(); try { gain.disconnect(); } catch (e) { } },
+        };
+      }
+      return { add: add, info: info };
+    })();
+    const BGM_OGG = { bgm_earth: 1 };   // 已重剪(去頭尾靜音)並備有 .ogg 的 BGM key;之後逐首重剪就加進來
     if (typeof window !== 'undefined') window.addEventListener('pointerdown', () => SFX.resume(), { once: true });   // 首次點擊解鎖音訊(瀏覽器禁自動播放)
     // ===== 新手教學:腳本化引導戰鬥(事件推進)。on=完成這步的事件;setup=進這步先佈置盤面 =====
     // 🆕2026-08-26 重設計(10步→7步,文字最小化+加爽點演出):拿掉歡迎 tap 頁,直接進①;③改教「全體攻擊」(AoE)+PERFECT演出;
@@ -2678,9 +2720,9 @@
       // 非阻塞載入本關 BGM + 戰鬥音效(在 create 之後動態載;關卡已可玩,聲音背景串流→弱網不卡關)
       _startStageAudio() {
         const bk = 'bgm_' + (this._bgId || this.dungeonId);   // 🆕每日修煉沿用同屬五屬城 BGM(_bgId,跟背景同源;daily_fire→bgm_fire);非每日 _bgId===dungeonId 不受影響
-        const playBgm = () => { if (this.bgmMp3) return; if (this.cache.audio.exists(bk)) { this._bgmBase = 0.5; this.bgmMp3 = this.sound.add(bk, { loop: true, volume: 0.5 * (SFX.bgmVol ? SFX.bgmVol() : 1) }); try { this.bgmMp3.play(); } catch (e) { } } else SFX.startBgm(); };
+        const playBgm = () => { if (this.bgmMp3) return; if (this.cache.audio.exists(bk)) { this._bgmBase = 0.5; this.bgmMp3 = BgmLoop.add(this, bk, 0.5 * (SFX.bgmVol ? SFX.bgmVol() : 1)); try { this.bgmMp3.play(); } catch (e) { } } else SFX.startBgm(); };
         const need = [];
-        if (!this.cache.audio.exists(bk)) need.push([bk, 'snd/' + bk + '.mp3']);
+        if (!this.cache.audio.exists(bk)) need.push([bk, BGM_OGG[bk] ? ['snd/' + bk + '.ogg', 'snd/' + bk + '.mp3'] : 'snd/' + bk + '.mp3']);   // 有重剪 OGG 的 BGM:OGG 優先、MP3 備援(Phaser 依瀏覽器支援挑);其餘仍單一 mp3
         if (!this.cache.audio.exists('place_align')) need.push(['place_align', 'snd/place_align.mp3']);
         if (!this.cache.audio.exists('place_drop')) need.push(['place_drop', 'snd/place_drop.mp3']);
         ['s_fall', 's_hit_fire', 's_hit_earth', 's_hit_wind', 's_hit_thunder', 's_hit_water', 's_boom', 's_punch', 's_player', 's_block', 's_clear_n', 's_clear15', 's_clear18', 's_clear21', 's_fire1', 's_fire2', 's_fire3', 's_pick', 's_heal', 's_earth_skill'].forEach(k => { if (!this.cache.audio.exists(k)) need.push([k, 'snd/' + k + '.mp3']); });   // 音效:labSnd 會先檢查 cache.exists,沒載好就靜默略過→不報錯
@@ -8078,7 +8120,7 @@
         this.input.on('pointermove', p => { if (!_isAch() || this._aDragFrom == null || !p.isDown) return; const dy = p.y - this._aDragFrom; this._aDragFrom = p.y; const minY = Math.min(0, _achView() - (this._achContentH || 0)); this._achScrollY = Phaser.Math.Clamp((this._achScrollY || 0) + dy, minY, 0); this._achScroll.y = this._achScrollY; });
         this.input.on('pointerup', () => { this._aDragFrom = null; });
         this.input.on('wheel', (p, go, dx, dy) => { if (!_isAch()) return; const minY = Math.min(0, _achView() - (this._achContentH || 0)); this._achScrollY = Phaser.Math.Clamp((this._achScrollY || 0) - dy * 0.5, minY, 0); this._achScroll.y = this._achScrollY; });
-        this._homeLeft = false; const _bk = 'bgm_home', _playHome = () => { if (this._homeLeft || this.bgmMp3) return; if (this.cache.audio.exists(_bk)) { this._bgmBase = 0.45; this.bgmMp3 = this.sound.add(_bk, { loop: true, volume: 0.45 * (SFX.bgmVol ? SFX.bgmVol() : 1) }); try { this.bgmMp3.play(); } catch (e) { } } };
+        this._homeLeft = false; const _bk = 'bgm_home', _playHome = () => { if (this._homeLeft || this.bgmMp3) return; if (this.cache.audio.exists(_bk)) { this._bgmBase = 0.45; this.bgmMp3 = BgmLoop.add(this, _bk, 0.45 * (SFX.bgmVol ? SFX.bgmVol() : 1)); try { this.bgmMp3.play(); } catch (e) { } } };
         if (this.cache.audio.exists(_bk)) _playHome(); else { this.load.audio(_bk, 'snd/bgm_home.mp3'); this.load.once('complete', _playHome); try { this.load.start(); } catch (e) { } }   // 大廳 BGM 非阻塞:先開畫面,BGM 載好再播→大廳秒開
         this.events.once('shutdown', () => { this._homeLeft = true; if (this.bgmMp3) { this.bgmMp3.stop(); this.bgmMp3.destroy(); this.bgmMp3 = null; } });   // 離開大廳(進關等)→停大廳音樂
         bindSceneResize(this, () => { const o = H; recomputeLayout(); if (Math.abs(H - o) > 3) { this.scale.setGameSize(W, H); this.rebuild(); } });
