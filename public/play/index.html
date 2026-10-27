@@ -231,7 +231,7 @@
       }
       return { add: add, info: info };
     })();
-    const BGM_OGG = { bgm_earth: 1, bgm_fire: 1, bgm_home: 1 };   // 已重剪(去頭尾靜音)並備有 .ogg 的 BGM key;之後逐首重剪就加進來
+    const BGM_OGG = { bgm_earth: 1, bgm_fire: 1, bgm_home: 1, bgm_prologue: 1, bgm_thunder: 1, bgm_tower: 1, bgm_water: 1, bgm_wind: 1 };   // 已重剪(去頭尾靜音)並備有 .ogg 的 BGM key(2026-10-27 全數到位);新增 BGM 照這管線:scratchpad bgm-batch.mjs
     if (typeof window !== 'undefined') window.addEventListener('pointerdown', () => SFX.resume(), { once: true });   // 首次點擊解鎖音訊(瀏覽器禁自動播放)
     // ===== 新手教學:腳本化引導戰鬥(事件推進)。on=完成這步的事件;setup=進這步先佈置盤面 =====
     // 🆕2026-08-26 重設計(10步→7步,文字最小化+加爽點演出):拿掉歡迎 tap 頁,直接進①;③改教「全體攻擊」(AoE)+PERFECT演出;
