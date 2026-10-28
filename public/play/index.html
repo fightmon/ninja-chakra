@@ -369,15 +369,18 @@
       { const p = mx ? 1 : Math.min(1, exp / need); if (p > 0.02) rr(CX + 6 - 75 + 75 * p, yC + 222, 150 * p, 10, 5, elc, 1, null, 0); }
       txt(CX + (W - 28) / 2 - 20, yC + 222, tr('持有 ×{n}', { n: n }), '15px', TK.ink2, 1);
       // 主動技 / 隊長技(淺灰圓角卡:屬色小標+名+CD黑丸+說明)
-      const sk = (yy, tag, name, cdTx, desc) => {
+      const sk = (yy, tag, name, cdTx, desc, ik) => {
         rr(CX, yy, W - 64, 56, 16, TK.surf2, 1, null, 0);
-        let x = Lc + 6; const t1 = txt(x, yy - 11, tag, '14px', elcTx, 0, true); x += t1.width + 10;
-        const t2 = txt(x, yy - 11, name, '16px', TK.ink, 0, true); fitText(t2, (W - 64) - 12 - t1.width - 10 - (cdTx ? 54 : 0) - 8); x += t2.displayWidth + 10;   // 🈳 en 技名過長→縮進灰卡內(標籤+技名+CD章同列)
+        let x = Lc + 6;
+        if (ik && _iconReady(scene, ik)) { add(scene.add.image(x + 9, yy - 11, ik).setDisplaySize(18, 18)); x += 22; tag = stripEmoji(tag); }
+        const ioff = x - (Lc + 6);   // 🆕2026-10-28 標籤前綴 emoji→彩圖(🎖→icon_leader);未載到 fallback 原字串
+        const t1 = txt(x, yy - 11, tag, '14px', elcTx, 0, true); x += t1.width + 10;
+        const t2 = txt(x, yy - 11, name, '16px', TK.ink, 0, true); fitText(t2, (W - 64) - 12 - ioff - t1.width - 10 - (cdTx ? 54 : 0) - 8); x += t2.displayWidth + 10;   // 🈳 en 技名過長→縮進灰卡內(標籤+技名+CD章同列)
         if (cdTx) { rr(x + 22, yy - 11, 44, 20, 10, 0x22262a, 1, null, 0); txt(x + 22, yy - 11, cdTx, '12px', '#ffffff', 0.5, true); }
         fitText(txt(Lc + 6, yy + 15, desc, '13px', TK.ink2, 0), W - 64 - 24);   // 🈳 en 說明單行縮進灰卡內寬(字典已瘦身到 ≤~44 字,此為保險)
       };
       sk(yC + 268, tr('⚡ 主動技'), ac ? tr(ac.name) : '—', ac ? 'CD' + ac.cd : null, ac ? tr(ac.desc) : '');
-      sk(yC + 332, tr('🎖 隊長技'), ls ? tr(ls.name) : '—', null, ls ? tr(ls.desc) : '');
+      sk(yC + 332, tr('🎖 隊長技'), ls ? tr(ls.name) : '—', null, ls ? tr(ls.desc) : '', 'icon_leader');
       // 底排按鈕(藥丸:manage=三顆等寬「強化/進化/關閉」,主=屬色/金色、次=白底;非manage只有關閉)
       if (opt.manage) {
         gpill(CX - 118, H - 52, 110, 52, tr('⬆️ 強化'), tint(elc, 0.3), elc, '#ffffff', FS.cap, () => opt.onFuse && opt.onFuse());   // 屬色漸層(上亮下深,寶可夢式)
@@ -479,6 +482,10 @@
       ['sk_fist', 'sk_fist'], ['sk_wall', 'sk_wall'], ['sk_duck', 'sk_duck'], ['sk_gel', 'sk_gel'], ['sk_lock', 'sk_lock'],   // 物種主動技共用:鬼(怨擊)/牆怪(築牆阻擋)/賊鴨(群鴨亂啄)/史萊姆醫療(治療凝膠)/鐵機人(電磁絞鎖)
       ['sk_leopard', 'sk_leopard'], ['sk_bear', 'sk_bear'], ['sk_monkey', 'sk_monkey'],   // 台灣專屬卡主動技:雲豹(裂空撲殺)/黑熊(巨塊)/獼猴(靈猴造塊);藍鵲/鮭魚共用上面 sk_bird/sk_fish
       ['icon_puzzle', 'icon_puzzle'], ['icon_web', 'icon_web'],   // 新手教學第1步大圖示(拼塊×打怪)/蜘蛛網狀態圖示
+      ['icon_gear', 'icon_gear'], ['icon_friends', 'icon_friends'], ['icon_home', 'icon_home'], ['icon_mail', 'icon_mail'], ['icon_music', 'icon_music'],   // 🆕2026-10-28 全面彩圖化 20 顆(art/ui/icon_*.webp,key=檔名):前 14 顆是 Lucide 功能圖示的彩色替身(經 LUCIDE_COLOR 映射由 lucideIcon() 自動換上)
+      ['icon_volume', 'icon_volume'], ['icon_globe', 'icon_globe'], ['icon_idcard', 'icon_idcard'], ['icon_cloud', 'icon_cloud'], ['icon_key', 'icon_key'],
+      ['icon_stats', 'icon_stats'], ['icon_pencil', 'icon_pencil'], ['icon_trash', 'icon_trash'], ['icon_copy', 'icon_copy'],
+      ['icon_tower', 'icon_tower'], ['icon_leader', 'icon_leader'], ['icon_map', 'icon_map'], ['icon_skull', 'icon_skull'], ['icon_burst', 'icon_burst'], ['icon_run', 'icon_run'],   // 內容性替換:序章 picker 戰鬥關/隊長技標題/個人檔案列/敗北面板;icon_run 暫未使用(逃走浮字保留 emoji)
     ];
     const UI_ICON_FILE = Object.fromEntries(UI_ICONS);   // key→檔名,給 gameIcon()/_iconReady() 按需 lazy load 查表用
     function _iconReady(scene, key) {   // 🆕泛用 UI webp icon 是否已可畫:已載回 true;未載且是合法 key→背景 lazy load(比照 _loadIcon/lucideIcon 模式,同一 key 只排一次隊)+ load 完成後 scene 仍 active 就 rebuild() 換上圖,回 false 讓呼叫端當下 fallback 原 emoji/文字
@@ -786,7 +793,8 @@
     // 🆕2026-09-23 Lucide icon 管線(emoji→icon 分層替換 第一批,遊戲端示範批=設定頁 bOther):MIT 授權 SVG 存於 art/icons/lucide_<name>.svg
     const LUCIDE_ICONS = { settings: 1, 'volume-2': 1, music: 1, pencil: 1, link: 1, 'rotate-ccw': 1, x: 1, 'chevron-right': 1, cloud: 1, 'graduation-cap': 1, globe: 1, 'id-card': 1, home: 1, 'trash-2': 1, copy: 1, mail: 1, key: 1, users: 1, 'chart-column': 1, hourglass: 1 };   // 目前已備妥 SVG 檔的 icon 名單(比照 CARD_ART 當「有沒有這張圖」的查表);🆕2026-09-25 批2補 7 顆(回大廳/刪信/複製/信箱/找回/好友上限/紀錄tab);🆕批3補 hourglass(戰鬥敵人出手倒數沙漏,取自 lucide-static v1.47.0 官方檔,逐位元組)
     function _loadIcon(scene, name) { if (!LUCIDE_ICONS[name]) return; const k = 'lucide_' + name; if (!scene.textures.exists(k)) scene.load.svg(k, 'art/icons/lucide_' + name + '.svg', { width: 96, height: 96 }); }   // 按需 lazy load(比照 _loadElSvgs):texture 已存在跳過;呼叫端需等 load.once('complete') 觸發重繪後才看得到圖(比照 _loadCardArt L2212 收尾模式),載完前 lucideIcon() 會回 null 讓呼叫端退回原樣文字
-    function lucideIcon(scene, x, y, name, size, colorHex) { const k = 'lucide_' + name; if (!scene.textures.exists(k)) return null; const img = scene.add.image(x, y, k).setDisplaySize(size, size); if (colorHex != null) img.setTintFill(colorHex); return img; }   // 尚未載到回 null(避免顯示 Phaser 內建的破圖 placeholder),呼叫端自行 fallback 成原文字;載到才回傳上色+定大小(22-26px)的 add.image
+    const LUCIDE_COLOR = { settings: 'icon_gear', users: 'icon_friends', home: 'icon_home', mail: 'icon_mail', music: 'icon_music', 'volume-2': 'icon_volume', globe: 'icon_globe', 'id-card': 'icon_idcard', cloud: 'icon_cloud', key: 'icon_key', 'chart-column': 'icon_stats', pencil: 'icon_pencil', 'trash-2': 'icon_trash', copy: 'icon_copy' };   // 🆕2026-10-28 全面彩圖化:Lucide 名→彩色 webp texture key(UI_ICONS 大廳 preload);x/chevron-right/rotate-ccw/link/graduation-cap/hourglass 不在表內維持單色線條
+    function lucideIcon(scene, x, y, name, size, colorHex) { const _ck = LUCIDE_COLOR[name]; if (_ck && scene.textures.exists(_ck)) return scene.add.image(x, y, _ck).setDisplaySize(size, size); const k = 'lucide_' + name; if (!scene.textures.exists(k)) return null; const img = scene.add.image(x, y, k).setDisplaySize(size, size); if (colorHex != null) img.setTintFill(colorHex); return img; }   // 尚未載到回 null(避免顯示 Phaser 內建的破圖 placeholder),呼叫端自行 fallback 成原文字;載到才回傳上色+定大小(22-26px)的 add.image
     function _hex2num(s) { return parseInt(String(s).replace('#', ''), 16); }   // CSS hex 字串(如 T.ink='#2b333a')轉 setTintFill 要的數字色碼
     function stripEmoji(s) { if (!s) return s; return String(s).replace(/^[\p{Extended_Pictographic}️‍]+\s*/u, ''); }   // 只去字串「開頭」的 emoji(含變體選擇符 FE0F/ZWJ 組合)+其後空白,字串中段不動;i18n key/字典不動,只在顯示前呼叫這層
     const FLOAT_ICON_MAP = { '💚': ['ui_heal', 'ui'], '🛡': ['ui_shield', 'ui'], '👑': ['ui_crown', 'ui'], '🔒': ['ui_lock', 'ui'], '💰': ['ui_coin', 'ui'], '📦': ['ui_crate', 'ui'], '⭐': ['ui_star', 'ui'], '💎': ['ui_gem', 'ui'], '🔥': ['el_fire', 'el'], '💧': ['el_water', 'el'], '⚡': ['el_thunder', 'el'], '🪨': ['el_earth', 'el'], '🌪️': ['el_wind', 'el'], '🕸️': ['icon_web', 'ui'] };   // 🆕2026-09-25 批3:floatText/tonFloat 開頭emoji→自製icon對照表(戰鬥浮字/演出文字共用);找不到映射或圖沒載到→回傳 null,呼叫端照舊顯示原 emoji 字串(不強求,比開天窗好)。🆕批4:🕸️(蜘蛛網,U+1F578+FE0F,與 tonFloat/floatText 實際字串一致)→icon_web,'ui'型不上色(webp本身彩圖)
@@ -2658,6 +2666,458 @@
       }
     }
 
+    /* ===== BFX 戰鬥「屬性爆發」打擊特效(2026-10-27 自 fx-battle-lab.html 已驗證版移植) =====
+       只畫彈著點的屬性粒子,完全不碰敵人本體(tint/knockEnemy/呼吸/浮動/封印/死亡一律不動)。獨立模組,不共用收藏頁 FXD/fxCore。
+       入口:BFX.makeTextures(scene) 於 GameScene.create 呼叫一次;BFX.cellsByEl(hits) 各屬格數;BFX.volley(scene, el, cells, victims) 對存活受害者各爆一次。
+       深度:主體 D+7..D+13 = 60..66(= DEPTH.proj..DEPTH.fx,< nav 90);土的地面裂痕/地面環用 GD=5(< enemy 10)。特效不播時零成本(無 update 常駐)。 */
+    const BFX = (function () {
+      "use strict";
+      var D = 53;   // demo D=50 → 53:D+7..D+13 = 60..66,落在 DEPTH.proj(60)~DEPTH.fx(66) 帶,不碰 nav(90)
+      var GD = 5;   // 地面層 FX(裂痕/地面環)必須在敵人(enemy=10)之下
+
+      /* ---------- helpers ---------- */
+      function kOf(h) { var k = h / 300; return { k: k, q: Math.sqrt(k) }; }   // k = 空間縮放, q = 粒子大小縮放(h = 敵人顯示高度)
+      function lw(w, q) { return Math.max(1.2, w * q); }
+      function fb(a, b) { return Phaser.Math.FloatBetween(a, b); }
+      function kl(o) { if (o && o.active) o.destroy(); }   // 安全銷毀(場景關閉/已銷毀時不報錯)
+      function live(s) { return !!(s && s.sys && s.sys.isActive()); }
+      function later(s, ms, fn) { return s.time.delayedCall(ms, function () { if (live(s)) fn(); }); }   // 建立新物件的延遲回呼:場景不在運行就略過
+      function tierOf(TABLE, i, keys, O) {            // 複製階級列, 套粒子數降載 + heavy 時砍掉 extra 波
+        var T = Object.assign({}, TABLE[i]);
+        if (O.cm < 1) { keys.forEach(function (key) { T[key] = Math.max(1, Math.round(T[key] * O.cm)); }); }
+        if (O.heavy) T.extra = 0;
+        return T;
+      }
+
+      /* ---------- 共用程序貼圖(GameScene.create 建一次;重複呼叫安全) ---------- */
+      function softTex(s, key, mid, midA) {
+        if (s.textures.exists(key)) return;
+        var cv = s.textures.createCanvas(key, 128, 128), ctx = cv.getContext();
+        var g = ctx.createRadialGradient(64, 64, 0, 64, 64, 64);
+        g.addColorStop(0, 'rgba(255,255,255,1)'); g.addColorStop(mid, 'rgba(255,255,255,' + midA + ')'); g.addColorStop(1, 'rgba(255,255,255,0)');
+        ctx.fillStyle = g; ctx.fillRect(0, 0, 128, 128); cv.refresh();
+      }
+      function ringTex(s, key, lw2) {
+        if (s.textures.exists(key)) return;
+        var gr = s.make.graphics({ x: 0, y: 0, add: false }); gr.lineStyle(lw2, 0xffffff, 1); gr.strokeCircle(80, 80, 66);
+        gr.generateTexture(key, 160, 160); gr.destroy();
+      }
+      function rockTex(s) {
+        if (s.textures.exists('rock')) return;
+        var gr = s.make.graphics({ x: 0, y: 0, add: false }); gr.fillStyle(0xffffff, 1);
+        gr.beginPath(); gr.moveTo(8, 2); gr.lineTo(26, 7); gr.lineTo(31, 21); gr.lineTo(19, 31); gr.lineTo(4, 22); gr.lineTo(2, 9); gr.closePath(); gr.fillPath();
+        gr.generateTexture('rock', 32, 32); gr.destroy();
+      }
+      function leafTex(s) {
+        if (s.textures.exists('leaf')) return;
+        var g = s.make.graphics({ x: 0, y: 0, add: false }); g.fillStyle(0xffffff, 1); g.fillEllipse(13, 7, 24, 12); g.generateTexture('leaf', 26, 14); g.destroy();
+      }
+      function makeTextures(s) {
+        softTex(s, 'soft', 0.35, 0.55);
+        softTex(s, 'soft_e', 0.4, 0.5);
+        ringTex(s, 'ring', 16);
+        ringTex(s, 'ring14', 14);
+        rockTex(s); leafTex(s);
+      }
+
+      /* =====================================================================
+         FIRE
+         ===================================================================== */
+      var FIRE_TIERS = [
+        { flames: 18, fspeed: 130, fscale: 0.48, flife: 650, sparks: 9, smoke: 5, flash: 2.6, flashA: 0.65, ring: 1.5, extra: 0, burnMs: 550, burnFreq: 70, burnScale: 0.16 },
+        { flames: 30, fspeed: 185, fscale: 0.64, flife: 850, sparks: 15, smoke: 9, flash: 3.3, flashA: 0.9, ring: 2.2, extra: 0, burnMs: 950, burnFreq: 50, burnScale: 0.2 },
+        { flames: 58, fspeed: 255, fscale: 0.62, flife: 1000, sparks: 26, smoke: 13, flash: 3.5, flashA: 0.85, ring: 3.2, extra: 1, burnMs: 1450, burnFreq: 32, burnScale: 0.24 },
+        { flames: 90, fspeed: 315, fscale: 0.68, flife: 1150, sparks: 42, smoke: 18, flash: 3.9, flashA: 0.9, ring: 4.2, extra: 1, burnMs: 1300, burnFreq: 22, burnScale: 0.3 }
+      ];
+
+      function fire_flameBurst(s, x, y, T, mult, K) {
+        var flame = s.add.particles(x, y, 'soft', {
+          lifespan: { min: T.flife * 0.5, max: T.flife }, speed: { min: T.fspeed * 0.3 * K.k, max: T.fspeed * K.k }, angle: { min: 0, max: 360 },
+          scale: { start: T.fscale * mult * K.q, end: 0 }, alpha: { start: 1, end: 0 }, gravityY: -70 * K.k,
+          tint: [0xfff2a0, 0xffc24a, 0xff7a2a, 0xff3b2f], blendMode: 'ADD', emitting: false,
+          emitZone: { type: 'random', source: new Phaser.Geom.Circle(0, 0, 22 * mult * K.k) }
+        }).setDepth(D + 10);
+        flame.explode(Math.round(T.flames * mult));
+        s.time.delayedCall(90, function () { if (flame.active) flame.explode(Math.round(T.flames * mult * 0.4)); });
+        s.time.delayedCall(180, function () { if (flame.active) flame.explode(Math.round(T.flames * mult * 0.22)); });
+        s.time.delayedCall(T.flife + 400, function () { kl(flame); });
+      }
+
+      function fire_residualBurn(s, T, target, K, O) {
+        var ms = O && O.heavy ? Math.min(T.burnMs, 800) : T.burnMs, fq = O && O.heavy ? T.burnFreq * 2 : T.burnFreq;
+        var burn = s.add.particles(0, 0, 'soft', {
+          lifespan: { min: 420, max: 880 }, speedY: { min: -55 * K.k, max: -16 * K.k }, speedX: { min: -22 * K.k, max: 22 * K.k },
+          scale: { start: T.burnScale * K.q, end: 0 }, alpha: { start: 0.95, end: 0 },
+          tint: [0xffe07a, 0xffa02a, 0xff4a20], blendMode: 'ADD', frequency: fq, quantity: 2,
+          emitZone: { type: 'random', source: new Phaser.Geom.Rectangle(-70 * K.k, -110 * K.k, 140 * K.k, 200 * K.k) }
+        }).setDepth(D + 11);
+        burn.startFollow(target, 0, -4 * K.k);
+        var sc = s.add.image(target.x, target.y, 'soft').setBlendMode('ADD').setTint(0xff6a2a).setScale(2.6 * K.k).setAlpha(0).setDepth(D + 8);
+        s.tweens.add({ targets: sc, alpha: 0.22, duration: 140, yoyo: true, hold: ms * 0.5, ease: 'Sine.easeOut', onComplete: function () { if (!sc.active) return; s.tweens.add({ targets: sc, alpha: 0, duration: 500, onComplete: function () { kl(sc); } }); } });
+        var scFollow = s.time.addEvent({ delay: 16, loop: true, callback: function () {
+          if (O && O.gone && O.gone()) { if (burn.active) burn.stop(); s.tweens.killTweensOf(sc); kl(sc); scFollow.remove(); return; }   // 敵人被打飛:餘火立停
+          if (sc.active && target.active) { sc.x = target.x; sc.y = target.y; } else scFollow.remove();
+        } });
+        s.time.delayedCall(ms, function () { if (burn.active) burn.stop(); });
+        s.time.delayedCall(ms + 1000, function () { kl(burn); kl(sc); scFollow.remove(); });
+      }
+
+      function playHit_fire(s, tx, ty, i, target, O) {
+        var K = kOf(O.h), T = tierOf(FIRE_TIERS, i, ['flames', 'sparks', 'smoke'], O), CX = tx, CY = ty - 10 * K.k;
+        var fl = s.add.image(CX, CY, 'soft').setBlendMode('ADD').setTint(0xfff0c0).setScale(0.6 * K.k).setAlpha(T.flashA).setDepth(D + 12);
+        s.tweens.add({ targets: fl, scale: T.flash * K.k, alpha: 0, duration: 190, ease: 'Cubic.easeOut', onComplete: function () { kl(fl); } });
+        var ring = s.add.image(CX, CY, 'ring').setBlendMode('ADD').setTint(0xff8a3a).setScale(0.25 * K.k).setAlpha(0.95).setDepth(D + 11);
+        s.tweens.add({ targets: ring, scale: T.ring * K.k, alpha: 0, duration: 320, ease: 'Cubic.easeOut', onComplete: function () { kl(ring); } });
+        fire_flameBurst(s, CX, CY, T, 1, K);
+        var spark = s.add.particles(CX, CY, 'soft', {
+          lifespan: { min: 300, max: 720 }, speed: { min: 130 * K.k, max: (130 + T.fspeed) * K.k }, angle: { min: 0, max: 360 },
+          scale: { start: (0.14 + T.fscale * 0.12) * K.q, end: 0 }, alpha: { start: 1, end: 0 }, gravityY: 300 * K.k,
+          tint: [0xffffff, 0xffe85a], blendMode: 'ADD', emitting: false
+        }).setDepth(D + 13);
+        spark.explode(T.sparks);
+        s.time.delayedCall(1100, function () { kl(spark); });
+        later(s, 180, function () {
+          var smoke = s.add.particles(CX, CY, 'soft', {
+            lifespan: { min: 600, max: 1200 }, speed: { min: 18 * K.k, max: (70 + T.fspeed * 0.2) * K.k }, angle: { min: 250, max: 290 },
+            scale: { start: (0.5 * T.fscale + 0.3) * K.q, end: (1.2 * T.fscale + 0.4) * K.q }, alpha: { start: 0.3, end: 0 }, gravityY: -24 * K.k,
+            tint: [0x6b6b70, 0x9a9aa0], blendMode: 'NORMAL', emitting: false,
+            emitZone: { type: 'random', source: new Phaser.Geom.Circle(0, 0, (34 * T.fscale + 10) * K.k) }
+          }).setDepth(D + 9);
+          smoke.explode(T.smoke);
+          s.time.delayedCall(1500, function () { kl(smoke); });
+        });
+        for (var n = 1; n <= T.extra; n++) {
+          (function (kk) {
+            later(s, 120 * kk + 90, function () {
+              var ox = fb(-60, 60) * K.k, oy = fb(-40, 20) * K.k;
+              fire_flameBurst(s, CX + ox, CY + oy, T, 0.55, K);
+              var f2 = s.add.image(CX + ox, CY + oy, 'soft').setBlendMode('ADD').setTint(0xffcf8a).setScale(0.5 * K.k).setAlpha(0.8).setDepth(D + 12);
+              s.tweens.add({ targets: f2, scale: T.flash * 0.6 * K.k, alpha: 0, duration: 170, onComplete: function () { kl(f2); } });
+            });
+          })(n);
+        }
+        if (O.res && target.active) fire_residualBurn(s, T, target, K, O);
+      }
+
+      /* =====================================================================
+         WATER
+         ===================================================================== */
+      var WATER_TIERS = [
+        { drops: 22, dspeed: 150, dscale: 0.16, dlife: 700, mist: 8, flash: 2.3, flashA: 0.5, ring: 1.6, extra: 0, dripMs: 600, dripFreq: 80, dripScale: 0.11 },
+        { drops: 40, dspeed: 210, dscale: 0.19, dlife: 850, mist: 14, flash: 3.0, flashA: 0.7, ring: 2.3, extra: 0, dripMs: 950, dripFreq: 58, dripScale: 0.13 },
+        { drops: 62, dspeed: 265, dscale: 0.21, dlife: 1000, mist: 22, flash: 3.4, flashA: 0.82, ring: 3.1, extra: 1, dripMs: 1250, dripFreq: 42, dripScale: 0.15 },
+        { drops: 92, dspeed: 320, dscale: 0.24, dlife: 1100, mist: 32, flash: 3.8, flashA: 0.88, ring: 4.0, extra: 1, dripMs: 1500, dripFreq: 34, dripScale: 0.17 }
+      ];
+
+      function water_splashBurst(s, x, y, T, mult, K) {
+        var sp = s.add.particles(x, y, 'soft', {
+          lifespan: { min: T.dlife * 0.5, max: T.dlife }, speed: { min: T.dspeed * 0.35 * K.k, max: T.dspeed * K.k }, angle: { min: 200, max: 340 },
+          scale: { start: T.dscale * mult * K.q, end: T.dscale * 0.25 * K.q }, alpha: { start: 0.95, end: 0 }, gravityY: 620 * K.k,
+          tint: [0xffffff, 0xd0efff, 0x7fc8ff], blendMode: 'NORMAL', emitting: false,
+          emitZone: { type: 'random', source: new Phaser.Geom.Circle(0, 0, 18 * mult * K.k) }
+        }).setDepth(D + 10);
+        sp.explode(Math.round(T.drops * mult));
+        s.time.delayedCall(T.dlife + 500, function () { kl(sp); });
+      }
+
+      function water_residualDrip(s, T, target, K, O) {
+        var ms = O && O.heavy ? Math.min(T.dripMs, 800) : T.dripMs, fq = O && O.heavy ? T.dripFreq * 2 : T.dripFreq;
+        var drip = s.add.particles(0, 0, 'soft', {
+          lifespan: { min: 500, max: 1050 }, speedY: { min: 15 * K.k, max: 70 * K.k }, speedX: { min: -10 * K.k, max: 10 * K.k },
+          scale: { start: T.dripScale * K.q, end: T.dripScale * 0.4 * K.q }, alpha: { start: 0.85, end: 0 }, gravityY: 300 * K.k,
+          tint: [0xd0efff, 0x7fc8ff], blendMode: 'NORMAL', frequency: fq, quantity: 1,
+          emitZone: { type: 'random', source: new Phaser.Geom.Rectangle(-66 * K.k, -70 * K.k, 132 * K.k, 180 * K.k) }
+        }).setDepth(D + 11);
+        drip.startFollow(target, 0, 0);
+        var sheen = s.add.image(target.x, target.y, 'soft').setBlendMode('ADD').setTint(0x5ab8ff).setScale(2.4 * K.k).setAlpha(0).setDepth(D + 8);
+        s.tweens.add({ targets: sheen, alpha: 0.16, duration: 150, yoyo: true, hold: ms * 0.5, ease: 'Sine.easeOut', onComplete: function () { if (!sheen.active) return; s.tweens.add({ targets: sheen, alpha: 0, duration: 500, onComplete: function () { kl(sheen); } }); } });
+        var fo = s.time.addEvent({ delay: 16, loop: true, callback: function () {
+          if (O && O.gone && O.gone()) { if (drip.active) drip.stop(); s.tweens.killTweensOf(sheen); kl(sheen); fo.remove(); return; }   // 敵人被打飛:滴水立停
+          if (sheen.active && target.active) { sheen.x = target.x; sheen.y = target.y; } else fo.remove();
+        } });
+        s.time.delayedCall(ms, function () { if (drip.active) drip.stop(); });
+        s.time.delayedCall(ms + 1100, function () { kl(drip); kl(sheen); fo.remove(); });
+      }
+
+      function playHit_water(s, tx, ty, i, target, O) {
+        var K = kOf(O.h), T = tierOf(WATER_TIERS, i, ['drops', 'mist'], O), CX = tx, CY = ty - 10 * K.k;
+        var fl = s.add.image(CX, CY, 'soft').setBlendMode('ADD').setTint(0xd8f2ff).setScale(0.6 * K.k).setAlpha(T.flashA).setDepth(D + 12);
+        s.tweens.add({ targets: fl, scale: T.flash * K.k, alpha: 0, duration: 180, ease: 'Cubic.easeOut', onComplete: function () { kl(fl); } });
+        var ring = s.add.image(CX, CY, 'ring14').setBlendMode('ADD').setTint(0x7fc8ff).setScale(0.25 * K.k).setAlpha(0.9).setDepth(D + 11);
+        s.tweens.add({ targets: ring, scale: T.ring * K.k, alpha: 0, duration: 320, ease: 'Cubic.easeOut', onComplete: function () { kl(ring); } });
+        water_splashBurst(s, CX, CY, T, 1, K);
+        var mist = s.add.particles(CX, CY, 'soft', {
+          lifespan: { min: 500, max: 950 }, speed: { min: 20 * K.k, max: (60 + T.dspeed * 0.2) * K.k }, angle: { min: 230, max: 310 },
+          scale: { start: (0.25 + T.dscale) * K.q, end: 0 }, alpha: { start: 0.3, end: 0 }, gravityY: -20 * K.k,
+          tint: [0xbfe8ff], blendMode: 'ADD', emitting: false,
+          emitZone: { type: 'random', source: new Phaser.Geom.Circle(0, 0, 30 * K.k) }
+        }).setDepth(D + 9);
+        mist.explode(T.mist);
+        s.time.delayedCall(1200, function () { kl(mist); });
+        for (var n = 1; n <= T.extra; n++) { (function (kk) { later(s, 110 * kk + 80, function () { water_splashBurst(s, CX + fb(-50, 50) * K.k, CY + fb(-30, 20) * K.k, T, 0.5, K); }); })(n); }
+        if (O.res && target.active) water_residualDrip(s, T, target, K, O);
+      }
+
+      /* =====================================================================
+         THUNDER   (無殘留)
+         ===================================================================== */
+      var THUNDER_TIERS = [
+        { down: 1, radial: 3, sparks: 14, flash: 3.2, flashA: 0.65, ring: 2.0, extra: 0, strobe: 1, bw: 2.5, rad: 105, jit: 11, col: 0x9ec8ff },
+        { down: 2, radial: 5, sparks: 26, flash: 4.4, flashA: 0.9, ring: 3.0, extra: 0, strobe: 2, bw: 3.5, rad: 150, jit: 18, col: 0xffe23a },
+        { down: 3, radial: 8, sparks: 44, flash: 5.8, flashA: 1, ring: 4.2, extra: 0, strobe: 2, bw: 4.5, rad: 205, jit: 25, col: 0xffe23a },
+        { down: 5, radial: 12, sparks: 70, flash: 8.0, flashA: 1, ring: 5.6, extra: 0, strobe: 3, bw: 6.5, rad: 270, jit: 34, col: 0xffffff }
+      ];
+
+      function thunder_boltLine(g, x1, y1, x2, y2, segs, jit) {
+        g.beginPath(); g.moveTo(x1, y1);
+        for (var i = 1; i < segs; i++) {
+          var t = i / segs;
+          g.lineTo(x1 + (x2 - x1) * t + fb(-jit, jit), y1 + (y2 - y1) * t + fb(-jit, jit));
+        }
+        g.lineTo(x2, y2); g.strokePath();
+      }
+      function thunder_drawAll(g, CX, CY, T, K) {
+        var k, jit = T.jit * K.k;
+        for (k = 0; k < T.down; k++) { var sx = CX + fb(-80, 80) * K.k; thunder_boltLine(g, sx, CY - 330 * K.k, CX + fb(-30, 30) * K.k, CY - 20 * K.k, 9, jit); }   // 落雷長度 = 330*k(打擊點上方)
+        for (k = 0; k < T.radial; k++) {
+          var a = fb(0, Math.PI * 2), r = fb(T.rad * 0.55, T.rad) * K.k;
+          thunder_boltLine(g, CX, CY - 10 * K.k, CX + Math.cos(a) * r, CY - 10 * K.k + Math.sin(a) * r, 6, jit * 0.7);
+        }
+      }
+      function thunder_strike(s, CX, CY, T, K) {
+        var g = s.add.graphics().setBlendMode('ADD').setDepth(D + 12);
+        g.lineStyle(lw(T.bw * 2.8, K.q), 0x66aaff, 0.3); thunder_drawAll(g, CX, CY, T, K);
+        g.lineStyle(lw(T.bw * 1.7, K.q), T.col, 0.6); thunder_drawAll(g, CX, CY, T, K);
+        g.lineStyle(lw(T.bw, K.q), 0xffffff, 1); thunder_drawAll(g, CX, CY, T, K);
+        s.tweens.add({ targets: g, alpha: 0, duration: 150, ease: 'Quad.easeIn', delay: 55, onComplete: function () { kl(g); } });
+      }
+      function thunder_flashOnce(s, CX, CY, scale, a, K) {
+        var fl = s.add.image(CX, CY - 10 * K.k, 'soft').setBlendMode('ADD').setTint(0xffffff).setScale(0.6 * K.k).setAlpha(a).setDepth(D + 11);
+        s.tweens.add({ targets: fl, scale: scale * K.k, alpha: 0, duration: 155, ease: 'Cubic.easeOut', onComplete: function () { kl(fl); } });
+      }
+
+      function playHit_thunder(s, tx, ty, i, target, O) {
+        var K = kOf(O.h), T = tierOf(THUNDER_TIERS, i, ['down', 'radial', 'sparks'], O), CX = tx, CY = ty;
+        thunder_flashOnce(s, CX, CY, T.flash, T.flashA, K); thunder_strike(s, CX, CY, T, K);
+        var ring = s.add.image(CX, CY - 10 * K.k, 'ring14').setBlendMode('ADD').setTint(0xbfe3ff).setScale(0.3 * K.k).setAlpha(0.9).setDepth(D + 10);
+        s.tweens.add({ targets: ring, scale: T.ring * K.k, alpha: 0, duration: 280, ease: 'Cubic.easeOut', onComplete: function () { kl(ring); } });
+        var spark = s.add.particles(CX, CY - 10 * K.k, 'soft', {
+          lifespan: { min: 250, max: 650 }, speed: { min: 120 * K.k, max: (120 + T.rad * 1.4) * K.k }, angle: { min: 0, max: 360 },
+          scale: { start: (0.12 + T.bw * 0.04) * K.q, end: 0 }, alpha: { start: 1, end: 0 }, gravityY: 200 * K.k,
+          tint: [0xffffff, 0xffe23a, 0xbfe3ff], blendMode: 'ADD', emitting: false,
+          emitZone: { type: 'random', source: new Phaser.Geom.Circle(0, 0, 30 * K.k) }
+        }).setDepth(D + 13);
+        spark.explode(T.sparks);
+        s.time.delayedCall(1000, function () { kl(spark); });
+        for (var n = 1; n < T.strobe; n++) { (function (d) { later(s, d, function () { thunder_flashOnce(s, CX, CY, T.flash * 0.8, T.flashA * 0.8, K); thunder_strike(s, CX, CY, T, K); }); })(n * 85); }
+      }
+
+      /* =====================================================================
+         WIND
+         ===================================================================== */
+      var WIND_TIERS = [
+        { rings: 7, vortH: 150, baseRX: 74, vortMs: 520, funnel: 0.15, leaves: 9, streaks: 10, lspeed: 170, flash: 2.0, flashA: 0.32, extra: 0, swayMs: 600, leafScale: 0.5 },
+        { rings: 9, vortH: 195, baseRX: 94, vortMs: 650, funnel: 0.45, leaves: 16, streaks: 18, lspeed: 230, flash: 2.4, flashA: 0.38, extra: 0, swayMs: 950, leafScale: 0.62 },
+        { rings: 11, vortH: 255, baseRX: 120, vortMs: 800, funnel: 0.82, leaves: 27, streaks: 28, lspeed: 290, flash: 2.7, flashA: 0.42, extra: 1, swayMs: 1250, leafScale: 0.74 },
+        { rings: 13, vortH: 320, baseRX: 150, vortMs: 900, funnel: 1.0, leaves: 42, streaks: 40, lspeed: 350, flash: 3.0, flashA: 0.48, extra: 1, swayMs: 1500, leafScale: 0.86 }
+      ];
+
+      function wind_ellArc(g, cx, cy, rx, ry, a0, a1, steps) {
+        for (var i = 0; i <= steps; i++) {
+          var a = a0 + (a1 - a0) * i / steps, x = cx + Math.cos(a) * rx, y = cy + Math.sin(a) * ry;
+          if (i === 0) { g.beginPath(); g.moveTo(x, y); } else g.lineTo(x, y);
+        }
+        g.strokePath();
+      }
+      function wind_windVortex(s, CX, CY, T, K, O) {
+        var g = s.add.graphics().setBlendMode('ADD').setDepth(D + 12);
+        var start = s.time.now, fr = 0, skip = O.heavy ? 3 : 1;     // heavy(>2 隻):每 3 幀才重畫一次
+        var ev = s.time.addEvent({
+          delay: 16, loop: true, callback: function () {
+            if (!g.active) { ev.remove(); return; }
+            var el = s.time.now - start, p = el / T.vortMs;
+            if (p >= 1) { ev.remove(); kl(g); return; }
+            if ((fr++) % skip) return;
+            var fade = p < 0.72 ? 1 : (1 - (p - 0.72) / 0.28), tm = el / 1000;
+            var buildP = Math.min(1, p / 0.5);
+            g.clear();
+            for (var r = 0; r < T.rings; r++) {
+              var t = r / (T.rings - 1);
+              var app = Phaser.Math.Clamp((buildP - t) / 0.2, 0, 1);
+              if (app <= 0) continue;
+              var cone = 0.42 + 0.6 * t, fun = 0.10 + 1.05 * t * t;
+              var prof = (1 - T.funnel) * cone + T.funnel * fun;
+              var rx = T.baseRX * K.k * prof * (0.55 + 0.45 * app), ry = rx * 0.3;
+              var cx = CX + Math.sin(tm * 5 + r * 0.8) * 6 * K.k, cy = (CY + T.vortH * K.k * 0.5) - t * T.vortH * K.k;
+              var a = app * fade;
+              g.lineStyle(lw(8, K.q), 0x4fcf84, 0.3 * a); wind_ellArc(g, cx, cy, rx, ry, 0, Math.PI * 2, 46);
+              var A = tm * 13 + r * 1.15;
+              g.lineStyle(lw(15, K.q), 0x8fe8a8, 0.5 * a); wind_ellArc(g, cx, cy, rx, ry, A - 0.35, A + 2.3, 24);
+              g.lineStyle(lw(6, K.q), 0xffffff, 0.95 * a); wind_ellArc(g, cx, cy, rx, ry, A, A + 1.7, 20);
+            }
+          }
+        });
+      }
+
+      function wind_leafBurst(s, x, y, T, mult, K) {
+        var lv = s.add.particles(x, y, 'leaf', {
+          lifespan: { min: 650, max: 1250 }, speed: { min: T.lspeed * 0.4 * K.k, max: T.lspeed * K.k }, angle: { min: 0, max: 360 },
+          scale: { start: T.leafScale * mult * K.q, end: T.leafScale * 0.45 * K.q }, alpha: { start: 1, end: 0 }, rotate: { start: 0, end: 360 },
+          tint: [0xcdffd9, 0x8fe8a8, 0x53d27e, 0x3a9a5e], gravityY: 45 * K.k, accelerationX: { min: -40 * K.k, max: 40 * K.k },
+          blendMode: 'NORMAL', emitting: false, emitZone: { type: 'random', source: new Phaser.Geom.Circle(0, 0, 24 * mult * K.k) }
+        }).setDepth(D + 10);
+        lv.explode(Math.round(T.leaves * mult));
+        s.time.delayedCall(1400, function () { kl(lv); });
+      }
+
+      // 殘留 = 葉子繞著身體打轉(原版的身體傾斜是敵人反應 → 已剝除)
+      function wind_residualSway(s, T, target, K, O) {
+        var ms = O && O.heavy ? Math.min(T.swayMs, 800) : T.swayMs, fq = (T.swayMs > 1000 ? 100 : 150) * (O && O.heavy ? 2 : 1);
+        var lv = s.add.particles(0, 0, 'leaf', {
+          lifespan: { min: 700, max: 1300 }, speed: { min: 18 * K.k, max: 70 * K.k }, angle: { min: 0, max: 360 },
+          scale: { start: T.leafScale * 0.55 * K.q, end: T.leafScale * 0.28 * K.q }, alpha: { start: 0, end: 0.85 }, rotate: { start: 0, end: 360 },
+          tint: [0x8fe8a8, 0x53d27e], gravityY: -6 * K.k, frequency: fq, quantity: 1,
+          emitZone: { type: 'random', source: new Phaser.Geom.Circle(0, 0, 110 * K.k) }
+        }).setDepth(D + 9);
+        lv.startFollow(target);
+        var lw2 = s.time.addEvent({ delay: 100, loop: true, callback: function () { if (!lv.active) { lw2.remove(); return; } if (O && O.gone && O.gone()) { lv.stop(); lw2.remove(); } } });   // 敵人被打飛:殘葉立停
+        s.time.delayedCall(ms, function () { if (lv.active) lv.stop(); });
+        s.time.delayedCall(ms + 1400, function () { kl(lv); lw2.remove(); });
+      }
+
+      function playHit_wind(s, tx, ty, i, target, O) {
+        var K = kOf(O.h), T = tierOf(WIND_TIERS, i, ['leaves', 'streaks'], O), CX = tx, CY = ty;
+        var fl = s.add.image(CX, CY - 10 * K.k, 'soft').setBlendMode('ADD').setTint(0xd8ffe4).setScale(0.6 * K.k).setAlpha(T.flashA).setDepth(D + 11);
+        s.tweens.add({ targets: fl, scale: T.flash * K.k, alpha: 0, duration: 200, ease: 'Cubic.easeOut', onComplete: function () { kl(fl); } });
+        wind_windVortex(s, CX, CY, T, K, O);
+        wind_leafBurst(s, CX, CY - 10 * K.k, T, 1, K);
+        var st = s.add.particles(CX, CY - 10 * K.k, 'soft', {
+          lifespan: { min: 220, max: 480 }, speedX: { min: -T.lspeed * 1.3 * K.k, max: T.lspeed * 1.3 * K.k }, speedY: { min: -40 * K.k, max: 40 * K.k },
+          scale: { start: 0.18 * K.q, end: 0 }, alpha: { start: 0.55, end: 0 }, blendMode: 'ADD',
+          tint: [0xffffff, 0xcdffd9], emitting: false, emitZone: { type: 'random', source: new Phaser.Geom.Circle(0, 0, 40 * K.k) }
+        }).setDepth(D + 11);
+        st.explode(T.streaks);
+        s.time.delayedCall(700, function () { kl(st); });
+        for (var n = 1; n <= T.extra; n++) { (function (kk) { later(s, 140 * kk + 120, function () { wind_leafBurst(s, CX + fb(-40, 40) * K.k, CY - 10 * K.k + fb(-40, 20) * K.k, T, 0.5, K); }); })(n); }
+        if (O.res && target.active) wind_residualSway(s, T, target, K, O);
+      }
+
+      /* =====================================================================
+         EARTH
+         ===================================================================== */
+      var EARTH_TIERS = [
+        { rocks: 14, rspeed: 175, rscale: 0.5, rlife: 760, dust: 10, flash: 2.0, flashA: 0.42, ring: 1.7, gring: 1.5, extra: 0, dustMs: 650, dustFreq: 70, dustScale: 0.18, crack: 0 },
+        { rocks: 26, rspeed: 235, rscale: 0.6, rlife: 890, dust: 18, flash: 2.7, flashA: 0.6, ring: 2.4, gring: 2.1, extra: 0, dustMs: 1000, dustFreq: 52, dustScale: 0.2, crack: 0 },
+        { rocks: 42, rspeed: 295, rscale: 0.72, rlife: 1010, dust: 28, flash: 3.1, flashA: 0.72, ring: 3.2, gring: 2.9, extra: 1, dustMs: 1300, dustFreq: 40, dustScale: 0.23, crack: 5 },
+        { rocks: 64, rspeed: 345, rscale: 0.85, rlife: 1160, dust: 40, flash: 3.6, flashA: 0.8, ring: 4.0, gring: 3.7, extra: 1, dustMs: 1560, dustFreq: 32, dustScale: 0.26, crack: 8 }
+      ];
+
+      function earth_rockBurst(s, x, y, T, mult, K) {
+        var rb = s.add.particles(x, y, 'rock', {
+          lifespan: { min: T.rlife * 0.5, max: T.rlife }, speed: { min: T.rspeed * 0.4 * K.k, max: T.rspeed * K.k }, angle: { min: 195, max: 345 },
+          scale: { start: T.rscale * mult * K.q, end: T.rscale * mult * 0.7 * K.q }, alpha: { start: 1, end: 0.25 }, gravityY: 800 * K.k,
+          rotate: { min: 0, max: 360 }, tint: [0x8a6a44, 0x6b5436, 0xa8855a, 0x5a4530], blendMode: 'NORMAL', emitting: false,
+          emitZone: { type: 'random', source: new Phaser.Geom.Circle(0, 0, 16 * mult * K.k) }
+        }).setDepth(D + 10);
+        rb.explode(Math.round(T.rocks * mult));
+        s.time.delayedCall(T.rlife + 500, function () { kl(rb); });
+      }
+
+      function earth_groundCrack(s, CX, GY, n, K) {
+        var g = s.add.graphics().setDepth(GD); g.lineStyle(lw(3, K.q), 0x2e2212, 0.95);
+        for (var i = 0; i < n; i++) {
+          var dir = (i % 2 ? 1 : -1); var len = (55 + fb(0, 75)) * K.k; var steps = 3 + Phaser.Math.Between(0, 2);
+          var px = CX, py = GY + fb(-6, 8) * K.k, seg = len / steps; g.beginPath(); g.moveTo(px, py);
+          for (var k = 0; k < steps; k++) { px += dir * seg * fb(0.6, 1.3); py += fb(-9, 11) * K.k; g.lineTo(px, py); }
+          g.strokePath();
+        }
+        s.tweens.add({ targets: g, alpha: 0, duration: 950, delay: 450, onComplete: function () { kl(g); } });
+      }
+
+      // 殘留 = 塵土從身上抖落、落到腳邊(原版身體塵色 tint 是敵人反應 → 已剝除)
+      function earth_residualDust(s, T, tx, ty, K, O) {
+        var ms = O && O.heavy ? Math.min(T.dustMs, 800) : T.dustMs, fq = O && O.heavy ? T.dustFreq * 2 : T.dustFreq;
+        var groundRel = O.gy - ty;   // 腳底線(相對發射點 (tx,ty))
+        var dust = s.add.particles(tx, ty, 'soft_e', {
+          lifespan: { min: 600, max: 1000 }, speedY: { min: 16 * K.k, max: 46 * K.k }, speedX: { min: -12 * K.k, max: 12 * K.k },
+          scale: { start: T.dustScale * K.q, end: T.dustScale * 1.5 * K.q }, alpha: { start: 0.42, end: 0 }, gravityY: 50 * K.k,
+          tint: [0xcbb790, 0x9c7f52, 0xd8c8a4], blendMode: 'NORMAL', frequency: fq, quantity: 1,
+          emitZone: { type: 'random', source: new Phaser.Geom.Rectangle(-58 * K.k, -55 * K.k, 116 * K.k, 140 * K.k) },
+          deathZone: { type: 'onEnter', source: new Phaser.Geom.Rectangle(-600, groundRel, 1200, 1600) }
+        }).setDepth(D + 7);
+        var dw = s.time.addEvent({ delay: 100, loop: true, callback: function () { if (!dust.active) { dw.remove(); return; } if (O && O.gone && O.gone()) { dust.stop(); dw.remove(); } } });   // 敵人被打飛:落塵立停(原地冒灰也怪)
+        s.time.delayedCall(ms, function () { if (dust.active) dust.stop(); });
+        s.time.delayedCall(ms + 1200, function () { kl(dust); dw.remove(); });
+      }
+
+      function playHit_earth(s, tx, ty, i, target, O) {
+        var K = kOf(O.h), T = tierOf(EARTH_TIERS, i, ['rocks', 'dust'], O), CX = tx, CY = ty - 10 * K.k, GY = O.gy;
+        var fl = s.add.image(CX, CY, 'soft_e').setBlendMode('ADD').setTint(0xe4c89a).setScale(0.6 * K.k).setAlpha(T.flashA).setDepth(D + 12);
+        s.tweens.add({ targets: fl, scale: T.flash * K.k, alpha: 0, duration: 190, ease: 'Cubic.easeOut', onComplete: function () { kl(fl); } });
+        var ring = s.add.image(CX, CY, 'ring14').setBlendMode('NORMAL').setTint(0xc99a52).setScale(0.25 * K.k).setAlpha(0.9).setDepth(D + 11);
+        s.tweens.add({ targets: ring, scale: T.ring * K.k, alpha: 0, duration: 330, ease: 'Cubic.easeOut', onComplete: function () { kl(ring); } });
+        var gr = s.add.image(CX, GY, 'ring14').setBlendMode('NORMAL').setTint(0xb5935c).setScale(0.3 * K.k).setAlpha(0.7).setDepth(GD);
+        s.tweens.add({ targets: gr, scaleX: T.gring * K.k, scaleY: T.gring * 0.3 * K.k, alpha: 0, duration: 440, ease: 'Cubic.easeOut', onComplete: function () { kl(gr); } });
+        if (T.crack > 0) earth_groundCrack(s, CX, GY, T.crack, K);
+        earth_rockBurst(s, CX, CY, T, 1, K);
+        var puff = s.add.particles(CX, CY, 'soft_e', {
+          lifespan: { min: 600, max: 1100 }, speed: { min: 20 * K.k, max: (70 + T.rspeed * 0.15) * K.k }, angle: { min: 210, max: 330 },
+          scale: { start: (0.35 + T.rscale * 0.4) * K.q, end: 0.1 * K.q }, alpha: { start: 0.4, end: 0 }, gravityY: 30 * K.k,
+          tint: [0xc9b088, 0xa8855a, 0xd8c8a4], blendMode: 'NORMAL', emitting: false,
+          emitZone: { type: 'random', source: new Phaser.Geom.Circle(0, 0, 34 * K.k) }
+        }).setDepth(D + 8);
+        puff.explode(T.dust);
+        s.time.delayedCall(1300, function () { kl(puff); });
+        for (var n = 1; n <= T.extra; n++) { (function (kk) { later(s, 100 * kk + 70, function () { earth_rockBurst(s, CX + fb(-55, 55) * K.k, CY + fb(-20, 30) * K.k, T, 0.5, K); }); })(n); }
+        if (O.res && target.active) earth_residualDust(s, T, CX, ty, K, O);
+      }
+
+      /* =====================================================================
+         入口:格數 → 階級、存活判定、volley(防卡邏輯照 demo)
+         ===================================================================== */
+      var PLAY = { fire: playHit_fire, water: playHit_water, thunder: playHit_thunder, wind: playHit_wind, earth: playHit_earth };
+      var SHAKE = [0.003, 0.005, 0.006, 0.008];   // 鏡頭震強度(上限 0.008),經 GameScene.shakeCam 發出
+
+      // 該手各屬被清格數:讀 battle-core computeClears 的 data.hits(每宮 {b, el, cells});neutral/非五屬不計
+      function cellsByEl(hits) {
+        var m = {};
+        (hits || []).forEach(function (h) { if (h && PLAY[h.el]) m[h.el] = (m[h.el] || 0) + (h.cells || 0); });
+        return m;
+      }
+      function tierFor(n) { return n >= 12 ? 3 : n >= 9 ? 2 : n >= 6 ? 1 : 0; }   // 3~5→0, 6~8→1, 9~11→2, ≥12→3(<3 呼叫端已擋)
+      function alive(e) { return !!(e && !e.dead && e.sprite && e.sprite.active); }
+      function heightOf(e) {   // 顯示高度:圖=原高×基準縮放(受擊縮放動畫期間也穩定)、emoji Text 同理;取不到退 displayHeight
+        var sp = e.sprite, h = sp.height * (e.baseScale || Math.abs(sp.scaleY) || 1);
+        if (!(h > 0)) h = sp.displayHeight || 100;
+        return Math.max(60, Math.min(260, h));
+      }
+
+      function hitOne(s, el, tier, e, O) {
+        if (!live(s) || !alive(e)) return;
+        var sp = e.sprite, h = heightOf(e), gy = (e.shadow && e.shadow.active) ? e.shadow.y : sp.y + h * 0.5;   // 地面線優先用敵人腳下陰影 y
+        gy = Math.max(sp.y + h * 0.2, Math.min(sp.y + h * 0.8, gy));
+        try { PLAY[el](s, sp.x, sp.y, tier, sp, { n: O.n, cm: O.cm, heavy: O.heavy, res: true, h: h, gy: gy, gone: function () { return !alive(e); } }); }   // gone():敵人死亡(被打飛)後殘留立即收掉
+        catch (err) { if (window.console) console.warn('[BFX]', err); }   // 特效出錯絕不影響戰鬥流程
+      }
+
+      // 對 victims 中「此刻存活」的敵人各爆一次:錯開 60~90ms,降載規則照 demo
+      function volley(s, el, cells, victims) {
+        if (!live(s) || !PLAY[el] || cells < 3) return;
+        var targets = (victims || []).filter(alive);
+        if (!targets.length) return;
+        var tier = tierFor(cells), n = targets.length, cm = n >= 4 ? 0.5 : (n >= 3 ? 0.6 : 1), heavy = n > 2, acc = 0;
+        s.shakeCam(110 + tier * 20, Math.min(0.008, SHAKE[tier]));
+        targets.forEach(function (e, idx) {
+          var O = { n: n, cm: cm, heavy: heavy };
+          if (idx > 0) acc += Phaser.Math.Between(60, 90);
+          if (acc === 0) hitOne(s, el, tier, e, O);
+          else s.time.delayedCall(acc, function () { hitOne(s, el, tier, e, O); });
+        });
+      }
+
+      return { makeTextures: makeTextures, cellsByEl: cellsByEl, volley: volley };
+    })();
+
     /* ===== 戰鬥(多敵 + 自由能量) ===== */
     class GameScene extends Phaser.Scene {
       constructor() { super('game'); }
@@ -2691,7 +3151,7 @@
       }   // 種子亂數:開戰播種(可由外部給種子=回放用),存 battleSeed
       preload() {
         this.load.maxParallelDownloads = 6;   // 限制同時下載數→對弱伺服器/弱網路更穩(避免一次塞太多卡住)
-        ['ui_coin', 'ui_crate', 'ui_heal', 'ui_shield', 'ui_crown', 'ui_lock', 'ui_star', 'ui_gem', 'sk_cat', 'sk_dog', 'sk_bird', 'sk_rat', 'sk_fish', 'sk_rabbit', 'sk_fist', 'sk_wall', 'sk_duck', 'sk_gel', 'sk_lock', 'sk_leopard', 'sk_bear', 'sk_monkey', 'icon_web', 'icon_puzzle'].forEach(k => { if (!this.textures.exists(k) && UI_ICON_FILE[k]) this.load.image(k, 'art/ui/' + UI_ICON_FILE[k] + '.webp'); }); ['settings', 'hourglass', 'graduation-cap', 'rotate-ccw'].forEach(n => { if (!this.textures.exists('lucide_' + n)) this.load.svg('lucide_' + n, 'art/icons/lucide_' + n + '.svg', { width: 96, height: 96 }); });   // 🆕2026-09-25 批3:GameScene 自己不 eager 全載 UI_ICONS/lucide(正常玩家經由 HomeScene 已預載大部分,這裡是防呆:①#hitlab/#enemylab 等 hash 直跳戰鬤繞過大廳、②新手第一次教學面板此時通常還沒去過村落頁(graduation-cap 平常靠村落頁 lazy load)→靠這行保底,loading bar 會等它跑完才進 create())。🆕批4:補 14 顆技能圖(sk_*,#hitlab/#enemylab 繞過大廳時主動技硬幣/abtn 仍要有圖)+ icon_web(戰鬥中蜘蛛網浮字/托盤鎖圖示,同理防呆)。🆕批5:再補 icon_puzzle(新手教學第1步大圖示,關掉「首見該面板該局可能 fallback 文字」的邊緣情況)
+        ['ui_coin', 'ui_crate', 'ui_heal', 'ui_shield', 'ui_crown', 'ui_lock', 'ui_star', 'ui_gem', 'icon_gear', 'icon_home', 'sk_cat', 'sk_dog', 'sk_bird', 'sk_rat', 'sk_fish', 'sk_rabbit', 'sk_fist', 'sk_wall', 'sk_duck', 'sk_gel', 'sk_lock', 'sk_leopard', 'sk_bear', 'sk_monkey', 'icon_web', 'icon_puzzle'].forEach(k => { if (!this.textures.exists(k) && UI_ICON_FILE[k]) this.load.image(k, 'art/ui/' + UI_ICON_FILE[k] + '.webp'); }); ['settings', 'hourglass', 'graduation-cap', 'rotate-ccw'].forEach(n => { if (!this.textures.exists('lucide_' + n)) this.load.svg('lucide_' + n, 'art/icons/lucide_' + n + '.svg', { width: 96, height: 96 }); });   // 🆕2026-09-25 批3:GameScene 自己不 eager 全載 UI_ICONS/lucide(正常玩家經由 HomeScene 已預載大部分,這裡是防呆:①#hitlab/#enemylab 等 hash 直跳戰鬤繞過大廳、②新手第一次教學面板此時通常還沒去過村落頁(graduation-cap 平常靠村落頁 lazy load)→靠這行保底,loading bar 會等它跑完才進 create())。🆕批4:補 14 顆技能圖(sk_*,#hitlab/#enemylab 繞過大廳時主動技硬幣/abtn 仍要有圖)+ icon_web(戰鬥中蜘蛛網浮字/托盤鎖圖示,同理防呆)。🆕批5:再補 icon_puzzle(新手教學第1步大圖示,關掉「首見該面板該局可能 fallback 文字」的邊緣情況)
         const _CLS = ['grunt', 'grunt2', 'guard', 'caster', 'healer', 'shield', 'boss_baby', 'boss_beg', 'boss_nrm'];
         if (this.enemyLab) { for (const el in MONSTER_IMG) if (!this.textures.exists('mon_' + el)) this.load.image('mon_' + el, MONSTER_IMG[el]); for (const k in ENEMY_IMG) if (!this.textures.exists(k)) this.load.image(k, ENEMY_IMG[k]); _loadCardArt(this, ['c38']); }   // 敵技實驗室=全載;🔩補載雷鐵機人(c38)卡圖給「分層鐵塊」demo 借圖用(比照 thunder 城 2354 行)
         else {
@@ -2938,6 +3398,7 @@
 
       create() {
         this.cells = []; this.blockSprites = null; this.boxLabels = []; this.trayIcons = []; this.trayTweens = []; this.teamCards = []; this.drag = null; this.enemies = [];
+        BFX.makeTextures(this);   // 🆕2026-10-27 屬性爆發特效貼圖(soft/soft_e/ring/ring14/rock/leaf;已存在則跳過,restart 安全)
         if (this.dive) {   // 🎬進場:暗霧先蓋著→關卡橫幅(含隊長技)展開停~1.4秒→方塊粒子散→暗霧慢慢散開露出戰鬥
           const mist = this.add.rectangle(CX, H / 2, W, H, 0x1b1620, 1).setDepth(9000);
           this.time.delayedCall(200, () => this._stageBanner(() => { this.tweens.add({ targets: mist, alpha: 0, duration: 1000, ease: 'Sine.out', onComplete: () => { mist.destroy(); this._diveReveal(); } }); }));
@@ -6711,11 +7172,13 @@
         const hits = data.hits || []; let lastFire = LEAD;   // 各「有清到的宮」各自集氣→射出,時間錯開、順序不一
         const healPlan = {};   // 各無屬宮回血:同步入帳(彈著時只演出)
         if (this.teamRcv > 0) hits.forEach((h, i) => { if (h.el !== 'neutral') return; const base = Math.max(1, Math.round(heal * h.cells / 3)); const hv = this.tut ? Math.max(base, Math.round(this.maxHP * 0.5)) : base; healPlan[i] = hv; this.playerHP = Math.min(this.maxHP, this.playerHP + hv); this._pHpHealPending = true; });   // 血量同步入帳,但標記「回血待演」(不分教學/一般)→ updateBars 這段空窗先別把血條瞬間同步,留給 5392 的 animPlayerHP 演。⚠️原本只在 this.tut 設→一般戰鬥回血在動畫跑前就被 updateBars 同步到滿=瞬間補完沒動畫(旗標由 animPlayerHP 開跑時清)
+        const _bfxN = BFX.cellsByEl(hits), _bfxDone = {}; let _bfxLast = -1e9;   // 🆕2026-10-27 屬性爆發特效:各屬被清格數(data.hits 按宮×屬加總,neutral 不計);每屬每手只排一次
         hits.forEach((h, i) => {
           const br = Math.floor(h.b / 3) * 3, bc = (h.b % 3) * 3, cen = this.cellCenter(br + 1, bc + 1);
           const cellsB = data.cells.filter(rc => boxOf(rc[0], rc[1]) === h.b);
           const col = h.el !== 'neutral' ? EL[h.el].color : 0xbfe6ff, dmg = plan.hits[i].dmg;   // 每段傷害取自 battle-core 計畫
           const fireAt = LEAD + i * 100 + Math.random() * 120; lastFire = Math.max(lastFire, fireAt);
+          if (_bfxN[h.el] >= 3 && !_bfxDone[h.el]) { _bfxDone[h.el] = 1; const _bfxAt = Math.max(fireAt + 390, _bfxLast + 250), _bfxC = _bfxN[h.el]; _bfxLast = _bfxAt; this.time.delayedCall(_bfxAt, () => BFX.volley(this, h.el, _bfxC, victims)); }   // 🆕屬性爆發:落在該宮彈著點(fireAt+集氣150+飛行230≈chakraImpact 之後 10ms)、多屬之間 ≥250ms;volley 內部再濾「此刻存活」的 victims,每敵每屬只一爆
           this.time.delayedCall(fireAt, () => {
             this.labSnd(['s_fire1', 's_fire2', 's_fire3'][Math.floor(Math.random() * 3)], 0.55); this.labCardHop(h.el); this.zoneStrike(cen.x, cen.y, cellsB, col, dmg, victims, aoe && i === 0, h.el, (n >= 18 && i === 0));   // 發射音(隨機)+ 對應卡小跳 + 傳屬性/≥18重擊旗標(彈著配音)
             if (h.el !== 'neutral' && this._resK && this._resK[h.b] > 0 && this.floatText) this.time.delayedCall(140, () => { try { this.floatText(cen.x, cen.y - 30, tr('共鳴!'), '#ffd86b'); } catch (e) { } });   // 🔗該宮有同屬共鳴加成→宮中心上方浮小字「共鳴!」(沿用 floatText,沒有就略過;傷害照算不受影響)
@@ -7744,7 +8207,7 @@
         } else {
           const PH = 320, PCY = cy - 26;
           panel.add(roundRectG(this, CX, PCY, PW, PH, 16, T.surf, 1, T.divider, 1.5));
-          TX(cy - 152, tr('☠️ 敗北'), FS.title, T.badTx, true);
+          if (!menuLabelIcon(this, o => panel.add(o), CX, cy - 152, 'icon_skull', tr('☠️ 敗北'), { fs: FS.title, col: T.badTx, ics: 30, maxW: PW - 24 })) TX(cy - 152, tr('☠️ 敗北'), FS.title, T.badTx, true);   // 🆕2026-10-28 ☠️→icon_skull(同列置中);未載到 fallback 原字串
           TX(cy - 112, tr('第 {n} 關失敗', { n: this.stage }), FS.cap, T.ink, false);
           this.mkBtn(panel, cy + 30, tr('再挑戰本關'), () => { g.destroy(); this.resultOpen = false; this.restartStage(); });
           this.mkBtn(panel, cy + 90, tr('🏠 回大廳'), () => { this.scene.manager.start('home'); this.scene.manager.stop('game'); }, null, 'home');
@@ -8412,15 +8875,16 @@
         const T = UI(), cTop = 84;
         const hd = highestDiffCleared(), me = completionRate(), rec = loadSave().records || {}, pr = loadSave().progress || {}, tt = getTitle();
         const PAD = 16, ROWH = 48, GAP = 10;   // 三分頁統一:左右邊距 16、列高 48、列間距 10
-        let y = cTop + 92; const row = (ic, lab, val) => {   // 三分頁統一起始:列高48→中心 cTop+92
+        let y = cTop + 92; const row = (ic, lab, val, ik) => {   // 🆕2026-10-28 ik 選填:彩圖 key(icon_map/icon_skull/icon_burst),未載到 fallback 原 emoji   // 三分頁統一起始:列高48→中心 cTop+92
           this.L(roundRectG(this, CX, y, W - PAD * 2, ROWH, 12, T.surf, 1, T.divider, 1.5));   // 白圓角資料列
-          this.txt(PAD + 12, y, ic + '  ' + lab, FS.body, T.ink2, 0);
+          const _ri = ik ? gameIcon(this, PAD + 12 + 11, y, ik, 22) : null;
+          if (_ri) { this.L(_ri); this.txt(PAD + 12 + 22 + 8, y, lab, FS.body, T.ink2, 0); } else this.txt(PAD + 12, y, ic + '  ' + lab, FS.body, T.ink2, 0);
           this.txt(W - PAD - 12, y, String(val), FS.sub, T.ink, 1, true); y += ROWH + GAP;
         };
-        row('🗺️', tr('完成率'), me.pct + '%  (' + me.done + '/' + me.total + ')');
+        row('🗺️', tr('完成率'), me.pct + '%  (' + me.done + '/' + me.total + ')', 'icon_map');
         row('🏁', tr('通關場數'), pr.clears || 0);
-        row('💀', tr('最高難度通關'), hd ? hd.emoji + ' ' + tr(hd.name) : '—');
-        row('💥', tr('最大單手 HIT'), rec.bestHit || 0);
+        row('💀', tr('最高難度通關'), hd ? hd.emoji + ' ' + tr(hd.name) : '—', 'icon_skull');
+        row('💥', tr('最大單手 HIT'), rec.bestHit || 0, 'icon_burst');
         row('🔗', tr('最長 combo'), rec.bestCombo || 0);
         this.L(roundRectG(this, CX, y + 6, W - PAD * 2, ROWH, 12, T.elTint.thunder, 1, T.gold, 1.5));   // 稱號=金框淡黃卡(同寬同高)
         { const _lbl = menuLabelIcon(this, o2 => this.L(o2), CX, y + 6, 'ui_medal', tr('🏅 目前稱號:{n}', { n: tt ? titleName(tt) : tr('(未裝備)') }), { fs: FS.body, col: T.goldTx, ics: 18 });
@@ -8631,7 +9095,7 @@
           const kids = [];
           kids.push(roundRectG(this, 0, 0, rw, rh - 8, 15, usable ? T.surf : T.surf2, 1, usable ? 0x35a866 : T.divider, usable ? 2.5 : 1.5));   // 可點=綠框;鎖住=灰階
           const hit = this.add.rectangle(0, 0, rw, rh - 8, 0x000000, 0.001).setInteractive(); kids.push(hit);
-          { const _lk = (!isBattle && !usable) ? gameIcon(this, Lx + 6 + 13, 0, 'ui_lock', 26) : null; if (_lk) kids.push(_lk); else kids.push(this.add.text(Lx + 6, 0, isBattle ? '🏯' : (usable ? '🎓' : '🔒'), { fontFamily: EMOJIFONT, fontSize: '26px' }).setOrigin(0, 0.5).setAlpha(usable ? 1 : 0.45)); }   // 🆕2026-09-23 未解鎖(非序章關卡本身)→icon_lock;未載到 fallback 原🔒文字
+          { const _lk = (!isBattle && !usable) ? gameIcon(this, Lx + 6 + 13, 0, 'ui_lock', 26) : (isBattle ? gameIcon(this, Lx + 6 + 13, 0, 'icon_tower', 26) : null); if (_lk) kids.push(_lk); else kids.push(this.add.text(Lx + 6, 0, isBattle ? '🏯' : (usable ? '🎓' : '🔒'), { fontFamily: EMOJIFONT, fontSize: '26px' }).setOrigin(0, 0.5).setAlpha(usable ? 1 : 0.45)); }   // 🆕2026-09-23 未解鎖(非序章關卡本身)→icon_lock;未載到 fallback 原🔒文字
           const nameTx = this.add.text(Lx + 44, 0, item.name, { fontFamily: EMOJIFONT, fontSize: '16px', color: usable ? T.ink : T.ink3, fontStyle: 'bold' }).setOrigin(0, 0.5); kids.push(nameTx);
           let badgeTx = null, badgeW = 0;
           if (isBattle) { badgeTx = this.add.text(rw / 2 - 14, 0, tr('🔓 解鎖五屬關'), { fontFamily: EMOJIFONT, fontSize: '13px', color: '#ffd56a', fontStyle: 'bold' }).setOrigin(1, 0.5); }   // 序章:通關解鎖五屬關(真出擊會扣體力,startBattle 內顯示)
@@ -8993,7 +9457,7 @@
           const d = await r.json(); syncWallet(d); refillStamina(); this._busyStamina = false; this.toast(tr('體力回滿!')); this.rebuild();
         }, 'ui_energy');
         y += 78;
-        [['💎 魔法石商店', '魔法石商店', 'ui_gem'], ['📦 BOX 擴張', 'BOX 擴張', 'ui_crate'], ['👥 好友上限', '好友上限', 'lucide:users']].forEach((it) => {
+        [['💎 魔法石商店', '魔法石商店', 'ui_gem'], ['📦 BOX 擴張', 'BOX 擴張', 'ui_crate'], ['👥 好友上限', '好友上限', 'icon_friends']].forEach((it) => {
           menuBtn(y, tr('{n} — 待做', { n: tr(it[0]) }), () => this.toast(tr('{n} — 待做', { n: tr(it[1]) })), it[2]);
           y += 78;
         });
