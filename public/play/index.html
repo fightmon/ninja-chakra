@@ -656,21 +656,21 @@
       { id: 'c12', name: '颯颯', el: 'wind', race: 'human', rank: 'chunin', atk: 76, hp: 222, rcv: 25, attrs: ['wind'] },
       /* ── 擴充:補滿五屬階梯 + 四星(kage ★4)SSR 層,共 30 張;★4 靈獸=五屬神主角 ── */
       { id: 'c13', name: '烘烘', el: 'fire', race: 'yokai', rank: 'jonin', atk: 120, hp: 150, rcv: 15, attrs: ['fire'] },
-      { id: 'c14', name: '燦燦', el: 'fire', race: 'beast', rank: 'jonin', atk: 192, hp: 240, rcv: 24, attrs: ['fire'] },
+      { id: 'c14', name: '燦燦', el: 'fire', race: 'beast', rank: 'chunin', atk: 192, hp: 240, rcv: 24, attrs: ['fire'] },
       { id: 'c15', name: '大武', el: 'fire', race: 'beast', rank: 'kage', atk: 360, hp: 445, rcv: 45, attrs: ['fire'], hero: true },
       { id: 'c16', name: '沁沁', el: 'water', race: 'yokai', rank: 'jonin', atk: 50, hp: 210, rcv: 40, attrs: ['water'] },
-      { id: 'c17', name: '澄澄', el: 'water', race: 'beast', rank: 'jonin', atk: 80, hp: 336, rcv: 64, attrs: ['water'] },
+      { id: 'c17', name: '澄澄', el: 'water', race: 'beast', rank: 'chunin', atk: 80, hp: 336, rcv: 64, attrs: ['water'] },
       { id: 'c18', name: '武陵', el: 'water', race: 'beast', rank: 'kage', atk: 150, hp: 625, rcv: 120, attrs: ['water'], hero: true },
       { id: 'c19', name: '轟轟', el: 'thunder', race: 'human', rank: 'chunin', atk: 110, hp: 120, rcv: 25, attrs: ['thunder'] },
       { id: 'c20', name: '滋滋', el: 'thunder', race: 'yokai', rank: 'jonin', atk: 110, hp: 120, rcv: 25, attrs: ['thunder'] },
-      { id: 'c21', name: '嘶嘶', el: 'thunder', race: 'beast', rank: 'jonin', atk: 176, hp: 192, rcv: 40, attrs: ['thunder'] },
+      { id: 'c21', name: '嘶嘶', el: 'thunder', race: 'beast', rank: 'chunin', atk: 176, hp: 192, rcv: 40, attrs: ['thunder'] },
       { id: 'c22', name: '太魯閣', el: 'thunder', race: 'beast', rank: 'kage', atk: 330, hp: 355, rcv: 75, attrs: ['thunder'], hero: true },
       { id: 'c23', name: '栗栗', el: 'earth', race: 'yokai', rank: 'jonin', atk: 40, hp: 360, rcv: 20, attrs: ['earth'] },
-      { id: 'c24', name: '磊磊', el: 'earth', race: 'beast', rank: 'jonin', atk: 64, hp: 576, rcv: 32, attrs: ['earth'] },
+      { id: 'c24', name: '磊磊', el: 'earth', race: 'beast', rank: 'chunin', atk: 64, hp: 576, rcv: 32, attrs: ['earth'] },
       { id: 'c25', name: '苔苔', el: 'earth', race: 'yokai', rank: 'jonin', atk: 100, hp: 900, rcv: 50, attrs: ['earth'] },
       { id: 'c26', name: '玉山', el: 'earth', race: 'beast', rank: 'kage', atk: 120, hp: 1070, rcv: 60, attrs: ['earth'], hero: true },
       { id: 'c27', name: '旋旋', el: 'wind', race: 'yokai', rank: 'jonin', atk: 76, hp: 222, rcv: 25, attrs: ['wind'] },
-      { id: 'c28', name: '咻咻', el: 'wind', race: 'beast', rank: 'jonin', atk: 122, hp: 355, rcv: 40, attrs: ['wind'] },
+      { id: 'c28', name: '咻咻', el: 'wind', race: 'beast', rank: 'chunin', atk: 122, hp: 355, rcv: 40, attrs: ['wind'] },
       { id: 'c29', name: '翔翔', el: 'wind', race: 'yokai', rank: 'jonin', atk: 190, hp: 555, rcv: 63, attrs: ['wind'] },
       { id: 'c30', name: '阿里', el: 'wind', race: 'beast', rank: 'kage', atk: 226, hp: 660, rcv: 75, attrs: ['wind'], hero: true },
       /* ── 🐰 兔家族(占位:名/圖/三圍待補,★3 暫用現值;技能=家族扛「化境/繁殖增幅」)── */
@@ -754,7 +754,7 @@
     const WALL_EVO2 = { c46: '火鐵牆', c47: '水鐵牆', c48: '雷鐵牆', c49: '石頭戰士', c50: '風鐵牆' };   // 牆怪 2★→3★再進化名表:進化階≥2 → 顯示「◯鐵牆」+ <id>_e2_ 圖(3星,2026-08-02 加);魔王另借 king_full(4星「◯城牆王」非卡片)
     const BLOCK_EVO2 = { c66: '火方塊王', c67: '水方塊王', c68: '雷方塊王', c69: '土方塊王', c70: '風方塊王' };   // 方塊怪系 2★→3★再進化名表:進化階≥2 → 顯示「◯方塊王」+ <id>_e2_ 圖(3星,2026-08-02 加)
     const EVO2_CARDS = Object.assign({}, GHOST_EVO2, WITCH_EVO2, SPIDER_EVO2, YAKUSHI_EVO2, WALL_EVO2, BLOCK_EVO2);   // 合併「可進到 evo2(3星)」名表:目前哥布林系、賊鴨系、鐵機人系、史萊姆醫療系、牆怪系、方塊怪系支援,別的系要開 evo2 往這加
-    const EVO3_CARDS = { c02: 1, c05: 1, c08: 1, c09: 1, c11: 1 };   // 貓系(2★chunin)可進到 evo3(5★)名單:只當 cap/art 開關用(值非名字,貓不換名只換圖),cardArtKey/_loadCardArt/_loadCardThumbs/_ensureFullArt/evoCap 都要吃這張表;不進 cardName(貓進化不改名)
+    const EVO3_CARDS = { c02: 1, c05: 1, c08: 1, c09: 1, c11: 1, c14: 1, c17: 1, c21: 1, c24: 1, c28: 1 };   // 貓系+魚系(2026-10-30)(2★chunin)可進到 evo3(5★)名單:只當 cap/art 開關用(值非名字,貓不換名只換圖),cardArtKey/_loadCardArt/_loadCardThumbs/_ensureFullArt/evoCap 都要吃這張表;不進 cardName(貓進化不改名)
     const EVO3_ENABLED = false;   // 🙈貓第四階(5★)暫時隱藏(2026-10-15 老闆拍板):false=貓 evoCap 落回 EVO_MAX(2,停在 4★);已進化到 evo3 的個體不受影響(圖/等級上限/隊長倍率照舊,cardArtKey 等美術條件不看這個旗標)。貓第四階暫時隱藏,開回來改 true 即可(後端 gamedata.ts EVO3_ENABLED 要同步)
     const EVO2_ART_CARDS = { c03: 1, c06: 1, c19: 1, c10: 1, c12: 1 };   // 🐶狗系(2★chunin)三階進化美術開關(2026-10-15):evo1→<id>_e_ 圖、evo2→<id>_e2_ 圖,狗進化不改名(所以不能放 EVO_CARDS/EVO2_CARDS——那兩張表值是改名,且 EVO_CARDS 會影響轉蛋池);cap 不看這張表(沒進任何表→落回 EVO_MAX=2),只管 cardArtKey/_loadCardArt/_loadCardThumbs/_ensureFullArt 解析 _e/_e2 圖
     function cardName(id, ovEvo) { const c = ROSTER.find(x => x.id === id) || {}; const t = getCardEvo(id, ovEvo); if (t >= 2 && EVO2_CARDS[id]) return tr(EVO2_CARDS[id]); return tr((EVO_CARDS[id] && t >= 1) ? EVO_CARDS[id] : c.name); }   // 卡片顯示名字統一入口(evo2 名表優先於 evo1 名表,再 fallback ROSTER.name);tr() 包在回傳處=集中式,涵蓋全部呼叫點
@@ -1113,7 +1113,7 @@
       const f = STAT_FAM[fam], e = STAT_EL[el]; if (!f || !e) return null; const s = [0, 1, 2].map(i => (f[i] + e[i]) / 2), sum = s[0] + s[1] + s[2], sh = s.map(x => x / sum);
       return { atk: Math.round(sh[0] * STAT_BUD), hp: Math.round(sh[1] * STAT_BUD / STAT_WT.hp / 10) * 10, rcv: Math.round(sh[2] * STAT_BUD / STAT_WT.rcv) };
     }
-    ROSTER.forEach(c => { const fam = TW_IDS.has(c.id) ? 'taiwan' : CARD_FAMILY[c.id]; if (!fam) return; const s = famStat(fam, c.el); if (!s) return; c.atk = s.atk; c.hp = s.hp; c.rcv = s.rcv; if (!TW_IDS.has(c.id) && fam !== 'cat' && fam !== 'dog') c.rank = 'jonin'; });   // 家族全 ★3(jonin)+ 重算三圍;台灣三圍仍走統一上限但維持 kage(★4)不降階(2026-07-15);🐱貓系四階進化(2026-08-25)base 降 chunin(★2)不可被這裡蓋回 jonin,故排除 cat
+    ROSTER.forEach(c => { const fam = TW_IDS.has(c.id) ? 'taiwan' : CARD_FAMILY[c.id]; if (!fam) return; const s = famStat(fam, c.el); if (!s) return; c.atk = s.atk; c.hp = s.hp; c.rcv = s.rcv; if (!TW_IDS.has(c.id) && fam !== 'cat' && fam !== 'dog' && fam !== 'fish') c.rank = 'jonin'; });   // 家族全 ★3(jonin)+ 重算三圍;台灣三圍仍走統一上限但維持 kage(★4)不降階(2026-07-15);🐱貓系四階進化(2026-08-25)base 降 chunin(★2)不可被這裡蓋回 jonin,故排除 cat;🐟魚系(2026-10-30)比照貓同理排除 fish
     const FAMILY_ACTIVE = {   // 家族主動技(套用到該卡屬性);效果見 _familyActive;🆕2026-09-25 批4 iconKey=自製圖(art/ui/sk_*.webp),icon(emoji)保留當 fallback
       cat: { name: '疾風連擊', cd: 4, icon: '🐱', iconKey: 'sk_cat', desc: '對單敵 攻×1 連打 N 下(吃相剋,N 隨進化階 2→5)' },
       dog: { name: '群擊', cd: 5, icon: '🐶', iconKey: 'sk_dog', desc: '對全體敵 攻×2(吃相剋)' },
