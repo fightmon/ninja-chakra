@@ -414,7 +414,8 @@
       const fk = cardArtKey(cd.id, 'full', opt.ovEvo);
       if (fk && scene.textures.exists(fk)) {
         const artBot = aCY + Math.round(artH / 2);   // 🆕2026-10-30 比例通用:以寬 artW 等比縮放、底邊釘在原 3:2 圖底邊(aCY+artH/2),高於 3:2 的圖(如 6:5)多出的高度往上長;不再 setDisplaySize 強壓
-        const art = add(placeFullArt(scene.add.image(CX, artBot, fk), artW, CX, artBot));
+        const _tex = scene.textures.get(fk).getSourceImage(), _zm = (_tex && _tex.height > fullArtBaseH(_tex.width, _tex.height)) ? 1.20 : 1;   // 🆕新規格(6:5)圖在詳情頁放大 120%:底邊釘原位往上/往兩側長(2026-10-30 使用者調);3:2 舊圖不動
+        const art = add(placeFullArt(scene.add.image(CX, artBot, fk), artW * _zm, CX, artBot));
         const twf = scene.tweens.add({ targets: art, y: artBot - 8, duration: 1900, yoyo: true, repeat: -1, ease: 'Sine.inOut', onUpdate: () => { if (!art.active) twf.stop(); } });
       }   // 浮動;面板銷毀自動停
       else txt(CX, aCY, tr(EL[cd.el].name), '60px', TK.ink3, 0.5, true);
@@ -2663,10 +2664,11 @@
         if (!natW || !natH) { img.setDisplaySize(tw, th).setVisible(true); return; }   // 保底:原圖尺寸讀不到就退回填滿
         // 🆕2026-10-30 比例通用:baseH=同寬「3:2 舊圖等效高」(3:2 圖=自身高,行為與舊版逐位元相同;6:5 等較高的圖,多出的頂部 natH−baseH 被裁掉)。cover 縮放與裁切都只看底部 baseH 這一段(底邊對齊),格子外框不動
         const baseH = fullArtBaseH(natW, natH);
-        const scale = Math.max(tw / natW, th / baseH);   // cover:取較大比例,兩軸都蓋滿
+        const tall = natH > baseH;   // 🆕新規格(6:5)構圖偏小(1★留白多)→格內放大 115%、取景窗=貼底再上提 10%(角色下沉,腳略出框;2026-10-30 使用者調定);3:2 舊圖兩者都不動
+        const scale = Math.max(tw / natW, th / baseH) * (tall ? 1.15 : 1);   // cover:取較大比例,兩軸都蓋滿
         img.setScale(scale);
-        const cw = tw / scale, ch = th / scale;   // 反算要保留的原圖區域(橫向置中;縱向取底部 baseH 段的中央)
-        const cx0 = (natW - cw) / 2, cy0 = (natH - baseH) + (baseH - ch) / 2;
+        const cw = tw / scale, ch = th / scale;   // 反算要保留的原圖區域(橫向置中;縱向:新圖貼底上提/舊圖取底部 baseH 段的中央)
+        const cx0 = (natW - cw) / 2, cy0 = tall ? Math.max(0, natH - ch - ch * 0.10) : (natH - baseH) + (baseH - ch) / 2;
         img.setCrop(cx0, cy0, cw, ch);
         // Phaser 裁切區顯示在它於原圖中的原位 → 把可見區中心對到格子中心(3:2 圖此偏移為 0,與舊版相同)
         img.setPosition(slot.x - (cx0 + cw / 2 - natW / 2) * scale, slot.y - (cy0 + ch / 2 - natH / 2) * scale).setVisible(true);
@@ -2698,7 +2700,7 @@
         const key = (dk && this.textures.exists(dk)) ? dk : ((dk2 && this.textures.exists(dk2)) ? dk2 : null);
         const top = -panelH / 2, artCY = top + PADT + artH / 2, txtY = top + PADT + artH + GAP;   // 文字資訊區頂端=卡圖底 + GAP 間隔
         if (key) {   // 🆕2026-10-30 比例通用:full 圖用「3:2 等效高」bH 算 cover 並取底部 bH 段裁切(3:2 圖行為不變,6:5 圖頂部被裁);thumb 後備(方形)bH=自身高→照舊
-          const im = this.add.image(0, artCY, key); const nW = im.width, nH = im.height, bH = (key === dk) ? fullArtBaseH(nW, nH) : nH, sc = Math.max(W2 / nW, artH / bH), cw = W2 / sc, ch = artH / sc, cx0 = (nW - cw) / 2, cy0 = (nH - bH) + (bH - ch) / 2;
+          const im = this.add.image(0, artCY, key); const nW = im.width, nH = im.height, bH = (key === dk) ? fullArtBaseH(nW, nH) : nH, _tall = nH > bH, sc = Math.max(W2 / nW, artH / bH) * (_tall ? 1.15 : 1), cw = W2 / sc, ch = artH / sc, cx0 = (nW - cw) / 2, cy0 = _tall ? Math.max(0, nH - ch - ch * 0.10) : (nH - bH) + (bH - ch) / 2;   // 🆕同 _fitSlotImg:新規格放大115%+貼底上提10%(角色下沉)
           im.setScale(sc); im.setCrop(cx0, cy0, cw, ch); im.setPosition(-(cx0 + cw / 2 - nW / 2) * sc, artCY - (cy0 + ch / 2 - nH / 2) * sc); g.add(im);
         }
         else g.add(this.add.text(0, artCY, cardName(cd.id, ovEvo), { fontFamily: EMOJIFONT, fontSize: '13px', color: '#fff', fontStyle: 'bold' }).setOrigin(0.5));
