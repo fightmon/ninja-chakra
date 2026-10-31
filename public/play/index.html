@@ -10183,7 +10183,24 @@
       }
       mailRow(g, m, L, y, w, T) {   // 單封信卡片(標題大字/內文/附件預覽/領取狀態);回傳實際高度供上層疊列
         const summary = mailAttachSummary(m.attach), hasAttach = !!summary, bodyTxt = String(m.body || '');
-        const h = 34 + 40 + (hasAttach ? 24 : 0) + 54;
+        // 🆕2026-10-31 附件摘要折行:送卡一多單行會爆出卡片右緣→以「部件」(每張卡/每種資源)為單位量寬,超過可用寬就換行,卡片高度跟著長
+        const sumLH = 22, sumLines = [];
+        if (hasAttach) {
+          const ww = w - 50, parts = summary.split('  ');
+          const _mt = this.add.text(0, 0, '', { fontFamily: EMOJIFONT, fontSize: FS.cap, fontStyle: 'bold' }).setVisible(false);
+          const meas = s => { _mt.setText(s); return _mt.width; };
+          const spW = meas('  ');
+          let cur = '', curW = 0;
+          parts.forEach(p => {
+            const pw2 = meas(p);
+            if (!cur) { cur = p; curW = pw2; return; }
+            if (curW + spW + pw2 > ww) { sumLines.push(cur); cur = p; curW = pw2; }
+            else { cur += '  ' + p; curW += spW + pw2; }
+          });
+          if (cur) sumLines.push(cur);
+          _mt.destroy();
+        }
+        const h = 34 + 40 + (hasAttach ? sumLines.length * sumLH + 2 : 0) + 54;
         const cx = L + w / 2, cy = y + h / 2;
         g.add(roundRectG(this, cx, cy, w, h, 14, m.claimed ? T.surf2 : T.surf, 1, m.claimed ? T.divider : T.gold, m.claimed ? 1 : 2));
         let ty = y + 22;
@@ -10197,7 +10214,16 @@
         ty += 28;
         g.add(this.add.text(L + 14, ty, bodyTxt, { fontFamily: EMOJIFONT, fontSize: FS.cap, color: T.ink2, wordWrap: { width: w - 110 }, lineSpacing: 4 }).setOrigin(0, 0));
         ty += 40;
-        if (hasAttach) { const _giftReady = _iconReady(this, 'ui_gift'); if (_giftReady) { g.add(this.add.image(L + 14 + 9, ty, 'ui_gift').setDisplaySize(18, 18)); if (!emoRow(this, o => g.add(o), L + 14 + 22, ty, summary, { fs: FS.cap, col: T.goldTx, ox: 0, gap: 5 })) g.add(this.add.text(L + 14 + 22, ty, summary, { fontFamily: EMOJIFONT, fontSize: FS.cap, color: T.goldTx, fontStyle: 'bold' }).setOrigin(0, 0.5)); }   /* 🆕2026-10-28b 摘要內 💎/🪙/屬晶 emoji→icon */ else g.add(this.add.text(L + 14, ty, '🎁 ' + summary, { fontFamily: EMOJIFONT, fontSize: FS.cap, color: T.goldTx, fontStyle: 'bold' }).setOrigin(0, 0.5)); }   // 🆕2026-09-23 開頭 🎁 前綴→icon_gift;未載到 fallback 原文字
+        if (hasAttach) {   // 🆕2026-10-31 摘要逐行畫(折行見上方 sumLines);🎁 icon 只畫在第一行左側
+          const _giftReady = _iconReady(this, 'ui_gift');
+          if (_giftReady) g.add(this.add.image(L + 14 + 9, ty, 'ui_gift').setDisplaySize(18, 18));
+          const sx = L + 14 + (_giftReady ? 22 : 0);
+          sumLines.forEach((ln, i) => {
+            const ly = ty + i * sumLH, txt0 = (!_giftReady && i === 0) ? '🎁 ' + ln : ln;
+            if (!emoRow(this, o => g.add(o), sx, ly, txt0, { fs: FS.cap, col: T.goldTx, ox: 0, gap: 5 }))   /* 🆕2026-10-28b 摘要內 💎/🪙/屬晶 emoji→icon */
+              g.add(this.add.text(sx, ly, txt0, { fontFamily: EMOJIFONT, fontSize: FS.cap, color: T.goldTx, fontStyle: 'bold' }).setOrigin(0, 0.5));   // 🆕2026-09-23 開頭 🎁 前綴→icon_gift;未載到 fallback 原文字
+          });
+        }
         const by = y + h - 30, bw = 100, bh = 44, bcx = L + w - bw / 2 - 8;
         if (m.claimed) {
           g.add(roundRectG(this, bcx, by, bw, bh, bh / 2, T.surf2, 1, T.divider, 1.5));
