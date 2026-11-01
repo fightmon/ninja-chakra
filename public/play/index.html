@@ -6593,7 +6593,7 @@
         const tgt = this.targetEnemy(); if (!tgt) return null;
         const data = computeClears(sim, this.boxElement, this.boxCard, tgt.el, this.amp, this.neutralAtkBase);   // 預覽與實際結算同一個無屬基準(neutralAtkBase)
         if (!data) return null;   // 這個落點不會產生任何清除(清線或清宮皆算)→不預覽
-        const previewCombo = this.combo + (data.groups || 1);   // 這一手放下會到的 combo 值(照 resolve() 的真實遞增規則:這塊有清→combo+清掉的組數)
+        const previewCombo = this.combo + 1;                    // 這一手放下會到的 combo 值(照 resolve() 的真實遞增規則:這塊有清→combo+1)
         const plan = planResolve(data, this.lead, this.teamRcv, previewCombo, this.leadEvo);
         const perVictim = plan.hits.reduce((s, h) => s + h.dmg, 0);
         const victims = plan.aoe ? this.enemies.filter(e => !e.dead && e.hp > 0) : [tgt];   // 單體只落在鎖定目標;🔒AoE 排除瀕死(與 resolve 同源),AoE(≥15格)才全體存活
@@ -7264,7 +7264,7 @@
         if (this._eatCast && (this.enemyLab || Object.keys(data.fx || {}).some(el => EL[el] && EL[el].beats === this._eatCast.boss.el))) this._breakEatCast();   // 🌀魔王消屬塊預告中:清到「剋魔王的屬」(火剋風)→打斷黑洞(對齊敵情簡報「用火清宮打斷」+補血/復活同一套)
         if (this.enemies) for (const en of this.enemies) { if (en._absorbFx) { this._breakAbsorb(en); break; } }   // 吸收盾在時被清行 → 打破   // 炸彈宮「現有的塊被這次消除清光」= 清宮 → 拆彈
         this.handCleared = true;
-        this.combo += (data.groups || 1);   // combo 新定義:這塊有清→+清掉的組數(宮/行/列各一組,computeClears.groups;2026-11-01 大消多算,原固定 +1);整手全沒清才由 afterAction 歸零
+        this.combo += 1;   // combo:這塊有清→+1(大消的獎勵走 HIT 數加成,combo 不重複疊);整手全沒清才由 afterAction 歸零
         SFX.clear(this.combo);   // 消塊音(隨 combo 升調)
         const plan = planResolve(data, this.lead, this.teamRcv, this.combo, this.leadEvo);   // battle-core:整包傷害計畫(combo倍率/隊長技/AoE/每段傷害/回血)→ 場景照演;帶隊長卡 evo 給 leadDamageMult(貓·自我爆發 vByEvo 用)
         const { aoe, heal } = plan;

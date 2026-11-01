@@ -195,7 +195,7 @@ class BattleSim {
     const tgt = this.targetEnemy(); if(!tgt) return null;
     const data = computeClears(this.board, this.boxElement, this.boxCard, tgt.el, this.amp, this.neutralAtk);
     if(!data) return null;
-    this.combo += (data.groups || 1);                           // 逐塊 combo:這塊有清→+清掉的組數(宮/行/列各一組,2026-11-01 大消多算;原固定 +1)
+    this.combo += 1;                                            // 逐塊 combo:這塊有清→+1(大消的獎勵走 HIT 數加成,combo 不重複疊)
     const plan = planResolve(data, this.lead, this.teamRcv, this.combo, this.leadEvo);
     const n = data.cells.length, aoe = plan.aoe;
     const victims = aoe ? this.enemies.filter(e=>!e.dead && e.hp>0) : [tgt];
