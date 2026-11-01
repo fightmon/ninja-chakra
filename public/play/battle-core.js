@@ -38,17 +38,20 @@ const CONFIG = {
   ATTR:{ fire_burn_rate:0.4, wind_immune:1, earth_dr:0.3, yang_heal_rate:0.25, yin_amp:1.5 },   // 陽回血砍到已驗證平衡值(1.2→0.5→0.25);陰改傷害×2(見 fireAttr)
 };
 // === combo / 傷害倍率(resolve 與風主動技共用的同一套數學;伺服器重算傷害靠這些)===
-const COMBO_K = 0.25;            // combo 傷害係數(線性段斜率)。也乘回血
-const COMBO_RAMP = 0.5;          // combo「越高越爆」二次加速:sim 實測 combo 真實頂在 3~4(6幾乎不出現)→ 把獎勵堆到 3~4,6 當傳說 jackpot
+// 【2026-11-01 combo 手制重調】舊 COMBO_K=0.25/COMBO_RAMP=0.5(二次加速)已換成「兩段斜率、無封頂」;sim 依據:003_plan/sim-combo-20261031/report.md(第三輪 F 組)
+const COMBO_S1 = 0.08;           // 第一段斜率:c ≤ BRK 時每 +1 combo 加 0.08(也乘回血)
+const COMBO_S2 = 0.02;           // 第二段斜率:c > BRK 後每 +1 combo 加 0.02(後段平緩、不封頂)
+const COMBO_BRK = 6;             // 兩段斜率轉折點(c6=×1.40, c15=×1.58, c20=×1.68)
 const AOE_HIT = 15;              // 單次清格數 ≥ 此值 → 該次攻擊變全體(全額打每隻)
 const WIND_SKILL_MUL = 1.8;     // 風主動技傷害倍率:(底傷+卡攻段)×combo ×此值。1.8 讓風@combo3≈火單發、又抬高開局地板(火主動技=atk×3,風靠這個追)
 const NEUTRAL_HEAL_MUL = 0.8;    // 清無屬區回血倍率(回血=隊伍RCV總和×此值×combo)。0.5→0.8:無屬改成「= 屬·普通傷害 + 回血」,要讓清無屬有感(配合未來清無屬關)
-// 連段倍率(傷害+回血共用):1 + ck×[ (c-1) + RAMP×(c-1)(c-2)/2 ]。線性段給基礎、二次段讓 3↑ 越疊越猛。
-// 對照:c1=×1.0 c2=×1.25 c3=×1.625 c4=×2.125 c5=×2.75 c6=×3.5(隊長技 comboBoost 再加大 ck)
+// 連段倍率(傷害+回血共用):mult = 1 + S1×min(c−1, BRK−1) + S2×max(c−BRK, 0)。2026-11-01 手制後 combo 可堆很高(中位 13~14),故前段有感、後段緩升且不封頂。
+// 對照:c1=×1.0 c2=×1.08 c3=×1.16 c6=×1.40 c10=×1.48 c15=×1.58 c20=×1.68。隊長技 comboBoost(v)加在兩段斜率上(S1+v、S2+v),語意仍是「每連多 +v」。
 function comboMultiplier(combo, lead){
-  const ck = COMBO_K + ((lead && lead.type==='comboBoost') ? lead.v : 0);
+  const b = (lead && lead.type==='comboBoost') ? lead.v : 0;
+  const s1 = COMBO_S1 + b, s2 = COMBO_S2 + b;
   const c = Math.max(1, combo);
-  return 1 + ck*((c-1) + COMBO_RAMP*(c-1)*(c-2)/2);
+  return 1 + s1*Math.min(c-1, COMBO_BRK-1) + s2*Math.max(c-COMBO_BRK, 0);
 }
 function leadDamageMult(lead, fx, hitN, combo, leadEvo){       // 隊長技傷害加成(家族扛):allAtk=全體;其餘多為「該屬有參戰才吃」;leadEvo=隊長卡個體進化階(0~3),lead.vByEvo 存在時取代 lead.v(目前只有🐱貓·自我爆發用,見 FAMILY_LEADER.cat)
   if(!lead)return 1;
@@ -192,7 +195,7 @@ class BattleSim {
     const tgt = this.targetEnemy(); if(!tgt) return null;
     const data = computeClears(this.board, this.boxElement, this.boxCard, tgt.el, this.amp, this.neutralAtk);
     if(!data) return null;
-    this.combo += 1;                                            // 逐塊 combo:這塊有清→+1
+    this.combo += (data.groups || 1);                           // 逐塊 combo:這塊有清→+清掉的組數(宮/行/列各一組,2026-11-01 大消多算;原固定 +1)
     const plan = planResolve(data, this.lead, this.teamRcv, this.combo, this.leadEvo);
     const n = data.cells.length, aoe = plan.aoe;
     const victims = aoe ? this.enemies.filter(e=>!e.dead && e.hp>0) : [tgt];
@@ -228,7 +231,7 @@ class BattleSim {
 
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = { N, EL, ELEMENT_BOXES, NEUTRAL_FILL, NEUTRAL_DARK, SHAPES, WSUM, CONFIG, SHAPES_BY_EL,
-    COMBO_K, COMBO_RAMP, AOE_HIT, WIND_SKILL_MUL, NEUTRAL_HEAL_MUL, comboMultiplier, leadDamageMult, planResolve, BattleSim,
+    COMBO_S1, COMBO_S2, COMBO_BRK, AOE_HIT, WIND_SKILL_MUL, NEUTRAL_HEAL_MUL, comboMultiplier, leadDamageMult, planResolve, BattleSim,
     chakraShape, normCells, rot90, randOrient, rnd, mulberry32, brnd, startBattleSeed, pickShape, boxOf, canPlace, computeClears,
     _setBRNG:(fn)=>{BRNG=fn;} };
 }

@@ -638,7 +638,7 @@
     const HP_BAR_W = 0.32;           // 敵 HP 條寬度 = 敵格邊長 × 此值(集中站位時不重疊)
     const ENEMY_SPREAD = 0.75;       // 敵人橫向集中係數:1=鋪滿、越小越往中央靠攏
     // BOSS_ATK_MUL / ENEMY_HP_MUL / ENEMY_ATK_MUL + spawnStage(headless 生敵)→ data-stages.js(sim 與遊戲共用同一份生敵)
-    // COMBO_K / AOE_HIT / NEUTRAL_HEAL_MUL + comboMultiplier/leadDamageMult → battle-core.js
+    // COMBO_S1/S2/BRK / AOE_HIT / NEUTRAL_HEAL_MUL + comboMultiplier/leadDamageMult → battle-core.js
     // ELEMENT_BOXES / NEUTRAL_FILL/DARK / SHAPES / WSUM → battle-core.js
     // 角色:個人名 + 種族(human/yokai/beast) + 三圍(攻/血/回,同星總量公平、分配不同) + rank(沿用:gacha/掉落/★用,genin=★1…kage=★4)
     const ROSTER = [
@@ -1066,7 +1066,7 @@
       c27: { name: '輕風', desc: '出擊體力 −5%', type: 'stamina', v: 0.95 },
       c28: { name: '烈風', desc: '全體傷害 ×1.15', type: 'allAtk', v: 1.15 },
       c29: { name: '風遁', desc: '全體傷害 ×1.2', type: 'allAtk', v: 1.2 },
-      c30: { name: '猴群偷襲', desc: '每塊有清→隊長偷打(攻×0.25)+1 combo', type: 'steal', v: 0.25, ik: 'lk_monkey' },   // 🐒獼猴(台灣隊)
+      c30: { name: '猴群偷襲', desc: '每下完一手(3塊)→隊長偷襲:攻×0.25~×1(隨進化階),滿階+2 combo', type: 'steal', v: 0.25, mulByEvo: [0.25, 0.5, 0.75, 1.0], comboByEvo: [1, 1, 1, 2], ik: 'lk_monkey' },   // 🐒獼猴(台灣隊)
     };
     const TW_IDS = new Set(['c15', 'c18', 'c22', 'c26', 'c30']);   // 台灣隊:各卡專屬技能,即使被標家族 synergy 也優先
     function leadSkill(id) {
@@ -1438,6 +1438,11 @@
       try { const v = window._nbConfig && window._nbConfig.econ && window._nbConfig.econ.resonanceRate, n = Number(v); if (v != null && v !== '' && isFinite(n)) return Math.min(0.5, Math.max(0, n)); } catch (e) { }
       return 0.10;
     }
+    // 🆕2026-10-31 戰敗保留獎勵比例:讀 /api/config 的 econ.failKeepRate(後台 econ.fail_keep_rate,夾 0~1);讀不到(離線/舊後端)fallback 0.5。僅供敗北面板「預估」顯示,真錢包以伺服器 run/complete 戰敗結算為準
+    function failKeepRate() {
+      try { const v = window._nbConfig && window._nbConfig.econ && window._nbConfig.econ.failKeepRate, n = Number(v); if (v != null && v !== '' && isFinite(n)) return Math.min(1, Math.max(0, n)); } catch (e) { }
+      return 0.5;
+    }
     function resonanceK(els, i) { if (!els[i]) return 0; let k = 0; for (let j = 0; j < els.length; j++) if (j !== i && els[j] === els[i]) k++; return Math.min(4, k); }   // 隊上「其他」同屬卡數(cap 4)
     function maybeConfigToast(scene) {   // 大廳 create 呼叫:公告/維護各 toast 一次(每 session);維護不鎖,仍可離線遊玩
       const cfg = window._nbConfig; if (!cfg) return; let dly = 700;
@@ -1659,12 +1664,12 @@
     function cardsFetch() { authedFetch('/api/cards').then(r => r.ok ? r.json() : null).then(d => { if (d) syncCards(d); }).catch(() => { }); }   // 🔐 fire-and-forget 拉收藏(離線/失敗靜默,沿用本地快取);開場/切帳/找回後強制校正用
     async function _sendRunComplete(item) {   // 🔐 送出單筆通關(POST /api/run/complete,idem 靠 runId);成功→syncWallet(coins/stones/gem_*)+從 pendingRuns 佇列移除,回 {ok:true,drops};冪等重放 drops 會是空陣列;失敗/離線→回 null(呼叫端自行決定要不要保留佇列等下次)
       let r;
-      try { r = await authedFetch('/api/run/complete', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ dungeonId: item.dungeonId, diff: item.diff, runId: item.runId, name: item.name || getMeta().name, bonusKilled: item.bonusKilled || [], comboCount: item.comboCount }) }); }   // 🆕2026-08-02 bonusKilled 隨行帶給伺服器(見 _grantRun 組 item);離線佇列裡的舊 item 沒這欄→||[] 保底;🆕2026-08-17 comboCount=每日修煉 T3 任務進度(item.comboCount undefined→JSON.stringify 略過該欄,非 daily/舊佇列項目不受影響,見 run/complete.ts daily 分支預設 0)
+      try { r = await authedFetch('/api/run/complete', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ dungeonId: item.dungeonId, diff: item.diff, runId: item.runId, name: item.name || getMeta().name, bonusKilled: item.bonusKilled || [], comboCount: item.comboCount, clearedStages: item.clearedStages }) }); }   // 🆕2026-10-31 clearedStages=戰敗結算(已清小關數;勝利/舊佇列項目無此欄→JSON.stringify 略過)   // 🆕2026-08-02 bonusKilled 隨行帶給伺服器(見 _grantRun 組 item);離線佇列裡的舊 item 沒這欄→||[] 保底;🆕2026-08-17 comboCount=每日修煉 T3 任務進度(item.comboCount undefined→JSON.stringify 略過該欄,非 daily/舊佇列項目不受影響,見 run/complete.ts daily 分支預設 0)
       catch (e) { return null; }   // 網路失敗:保留該筆,下次再試
       if (r.ok) {
         const d = await r.json(); syncWallet(d); if (d.gems) syncGems(d.gems);
         mutSave(s => { s.pendingRuns = (s.pendingRuns || []).filter(x => x.runId !== item.runId); });
-        return { ok: true, drops: Array.isArray(d.drops) ? d.drops : [], firstClearStones: d.firstClearStones || 0, bagFull: !!d.bagFull, clearSec: (typeof d.clearSec === 'number' ? d.clearSec : null), bestSec: (typeof d.bestSec === 'number' ? d.bestSec : null), leveledUp: !!d.leveledUp, rank: (typeof d.rank === 'number' ? d.rank : null) };   // 🔐[首通石]非首通/序章/重放=0,伺服器已算好直接帶出;bagFull=背包滿→伺服器跳過部分/全部掉落,前端要提示玩家清背包;clearSec=這趟耗時、bestSec=全服最速(皆伺服器算,離線 fallback 為 null);leveledUp/rank=伺服器升級判定(rank/exp/體力已在上面 syncWallet 落地),給結算慶祝用
+        return { ok: true, drops: Array.isArray(d.drops) ? d.drops : [], firstClearStones: d.firstClearStones || 0, bagFull: !!d.bagFull, clearSec: (typeof d.clearSec === 'number' ? d.clearSec : null), bestSec: (typeof d.bestSec === 'number' ? d.bestSec : null), leveledUp: !!d.leveledUp, rank: (typeof d.rank === 'number' ? d.rank : null), fail: !!d.fail };   // 🔐[首通石]非首通/序章/重放=0,伺服器已算好直接帶出;bagFull=背包滿→伺服器跳過部分/全部掉落,前端要提示玩家清背包;clearSec=這趟耗時、bestSec=全服最速(皆伺服器算,離線 fallback 為 null);leveledUp/rank=伺服器升級判定(rank/exp/體力已在上面 syncWallet 落地),給結算慶祝用
       }
       if (r.status === 400 || r.status === 429) { mutSave(s => { s.pendingRuns = (s.pendingRuns || []).filter(x => x.runId !== item.runId); }); console.warn('run/complete rejected', r.status, item.runId); return { ok: false, rejected: true }; }   // 非法/被限流:不重試,丟棄該筆
       return null;   // 其他失敗狀態:保留該筆,下次再試
@@ -3851,7 +3856,7 @@
         //   c.atk 來自 leveledTeam→cardAtk=純面板(不含隊長技/amp;隊長技走 planResolve→leadDamageMult 另乘),故此處不會把隊長技重複算兩次。
         { const _atks = (this.presetTeam || []).map(c => (c && c.atk) || 0), _sum = _atks.reduce((s, a) => s + a, 0), _mx = _atks.reduce((m, a) => Math.max(m, a), 0);
           this.neutralAtkBase = Math.max(Math.round(0.24 * _sum), Math.round(0.8 * _mx)) || 0; }
-        this.playerHP = this.maxHP; this.stage = 1; this.resultOpen = false; this.chests = 0; this.gold = 0; this.runDrops = []; this._runDropsPending = false; this._runDropsMsg = ''; this._runDropsBagFull = false; this._resultWin = false; this._resultG = null; this.runExp = 0; this.runCoins = 0; this._runGranted = false; this._runRw = null; this._firstClearStones = 0; this._clearSec = null; this._bestSec = null;   // 🔐 掉落/寶玉改伺服器 run/complete 決定,不再前端 runGems 預累積;🔐[首通石]每場重置,避免殘留上一場的值;⏱ 通關時間/最速同理每場重置
+        this.playerHP = this.maxHP; this.stage = 1; this.resultOpen = false; this.chests = 0; this.gold = 0; this.runDrops = []; this._runDropsPending = false; this._runDropsMsg = ''; this._runDropsBagFull = false; this._resultWin = false; this._resultG = null; this.runExp = 0; this.runCoins = 0; this._runGranted = false; this._failSettled = false; this._leavingFail = false; this._runRw = null; this._firstClearStones = 0; this._clearSec = null; this._bestSec = null;   // 🔐 掉落/寶玉改伺服器 run/complete 決定,不再前端 runGems 預累積;🔐[首通石]每場重置,避免殘留上一場的值;⏱ 通關時間/最速同理每場重置
         this.charge = [0, 0, 0, 0, 0];   // 主動技蓄力(整場累積、跨關保留)
         this.stored = [null, null, null, null, null];   // 每卡存放的屬塊 {el,lv}(跨關保留,新局/重挑才清)
         this.firstClear = true;   // 新手鉤子:本場第一次消除=隆重慶祝
@@ -4497,7 +4502,7 @@
         this._atkLockReset();   // 🔒攻擊演出鎖:換場/重來一律歸位(epoch 作廢舊關殘留的解鎖回呼)
         this.camCine = false; if (this.cameras && this.cameras.main) { this.cameras.main.setZoom(DPR); this.cameras.main.centerOn(CX, Math.round(H / 2)); }   // 防護:確保鏡頭特寫不會卡住跨關
         if (!keepBoard) { this.board = Array.from({ length: N }, () => Array(N).fill(null)); this.stored = [null, null, null, null, null]; }   // 跨關保留盤面+屬塊:只有新局/重挑才清,過關時累積到下一關的怪
-        this.resetWave(); this.combo = 0; this.handCleared = false; if (!keepBoard) this.refill();   // 新關/新局 combo 歸零;托盤跨關保留(只新局/重挑才重置)
+        this.resetWave(); this.combo = 0; this.handCleared = false; this._handCleared = false; if (!keepBoard) this.refill();   // 新關/新局 combo 歸零;托盤跨關保留(只新局/重挑才重置)
         if (this.comboBg) this.renderCombo();   // combo 指示器歸零熄掉
         // 🆕2026-08-26(使用者實測回饋):拿掉開戰時彈出的「隊長技名稱+效果」浮字公告(所有戰鬥,不只教學)——常駐小徽章(updLeadBadge/this.leadBg 等)不受影響、照常顯示。
         // if (this.stage === 1 && this.lead && !this.hitLab && !this.enemyLab && !this.dive) this.time.delayedCall(450, () => {   // 隊長技:進關時在盤面中央彈出清楚橫幅(技名+效果),停留可讀(原本上緣快閃小字看不清)
@@ -4535,7 +4540,7 @@
         const tgt = this.targetEnemy(); if (!tgt || !this.boxCard) return;
         const data = computeClears(this.board, this.boxElement, this.boxCard, tgt.el, this.amp, this.neutralAtkBase); if (!data) return;   // 沒有可清→什麼都不做
         this.fromBlock = false; this._placeCleared = false; try { this.resolve(); } catch (err) { console.error('sweep resolve', err); }
-        this.combo = 0; this.handCleared = false; this.renderCombo && this.renderCombo();   // 補掃不算「玩家一手」:不留 combo+1 / 不讓下一手白賺主動技蓄力
+        this.combo = 0; this.handCleared = false; this._handCleared = false; this.renderCombo && this.renderCombo();   // 補掃不算「玩家一手」:不留 combo+1 / 不讓下一手白賺主動技蓄力
       }
       spawnEnemies() {
         if (this.enemyG) this.enemyG.destroy();
@@ -5533,7 +5538,7 @@
         const br = Math.floor(b / 3) * 3, bc = (b % 3) * 3, cellsB = [];
         for (let r = br; r < br + 3; r++)for (let c = bc; c < bc + 3; c++)if (this.board[r][c]) cellsB.push([r, c]);
         if (!cellsB.length) return;
-        this.combo += 1; const comboMult = comboMultiplier(this.combo, this.lead);   // battle-core 共用 combo 倍率
+        this.combo += 1; const comboMult = comboMultiplier(this.combo, this.lead);   // battle-core 共用 combo 倍率;風技只清單一宮=1 組,維持 +1(與「+組數」一致)
         const tgt = this.targetEnemy() || this.enemies.find(e => !e.dead);
         const wmul = tgt ? (EL.wind.beats === tgt.el ? CONFIG.ADV_MULT : ((EL[tgt.el] && EL[tgt.el].beats === 'wind') ? CONFIG.WEAK_MULT : CONFIG.NORM_MULT)) : 1;
         const dmgN = cellsB.reduce((s, rc) => s + ((this.board[rc[0]][rc[1]] && this.board[rc[0]][rc[1]].el === 'iron') ? 0 : 1), 0);   // 🔩鐵塊清了不計攻擊(風技清宮同理,排除鐵塊格)
@@ -5678,7 +5683,7 @@
         lockSurvivors.forEach(([r, c, lock]) => { this.board[r][c] = { el: 'iron', lock }; });   // 🔒分層鐵塊蓋回固定排法(蓋在 fill() 之後,同 junk survivors 的作法)
         this.refreshBoard();
         if (this.enemyLab) this._syncLabIronKi && this._syncLabIronKi();   // 重置後鬥氣狀態跟著現存 lock 鐵塊同步
-        this.tray = [{ c: [[0, 0], [1, 0]], used: false }, { c: [[0, 0]], used: false }, { c: [[0, 0]], used: false }]; this.combo = 0; this.renderTray();
+        this.tray = [{ c: [[0, 0], [1, 0]], used: false }, { c: [[0, 0]], used: false }, { c: [[0, 0]], used: false }]; this.combo = 0; this._handCleared = false; this.renderTray();
       }
       _bez(a, c, b, t) { const u = 1 - t; return { x: u * u * a.x + 2 * u * t * c.x + t * t * b.x, y: u * u * a.y + 2 * u * t * c.y + t * t * b.y }; }
       _hearts(x, y) {
@@ -6588,7 +6593,7 @@
         const tgt = this.targetEnemy(); if (!tgt) return null;
         const data = computeClears(sim, this.boxElement, this.boxCard, tgt.el, this.amp, this.neutralAtkBase);   // 預覽與實際結算同一個無屬基準(neutralAtkBase)
         if (!data) return null;   // 這個落點不會產生任何清除(清線或清宮皆算)→不預覽
-        const previewCombo = this.combo + 1;   // 這一手放下會到的 combo 值(照 resolve() 的真實遞增規則:這手有清→combo+1)
+        const previewCombo = this.combo + (data.groups || 1);   // 這一手放下會到的 combo 值(照 resolve() 的真實遞增規則:這塊有清→combo+清掉的組數)
         const plan = planResolve(data, this.lead, this.teamRcv, previewCombo, this.leadEvo);
         const perVictim = plan.hits.reduce((s, h) => s + h.dmg, 0);
         const victims = plan.aoe ? this.enemies.filter(e => !e.dead && e.hp > 0) : [tgt];   // 單體只落在鎖定目標;🔒AoE 排除瀕死(與 resolve 同源),AoE(≥15格)才全體存活
@@ -6712,12 +6717,15 @@
         this.stopStuckFX();   // 玩家一行動就收掉卡死循環提示(若仍卡死,handleStuck 會再開)
         this.refreshBoard(); this.renderTray();
         this.fromBlock = !!fromBlock; this._placeCleared = false; try { this.resolve(); } catch (err) { console.error('resolve error', err); } this.fromBlock = false;   // 防遞迴:塊清出的消除不再生塊;try 防展演例外卡死整手
-        if (!this._placeCleared) { this.combo = 0; this.renderCombo(); }   // 逐塊:這塊沒清→連段斷、combo 歸零、指示器熄掉
+        // 2026-10-31 combo 改手制:整手(3 塊)都沒清才斷,單塊沒清只是不+1(combo 不歸零);斷線判斷在下面「整手放完」處(_handCleared)
         if (this._tutBuildKind && this._buildSegs && !this._placeCleared && this._buildSeg < this._buildSegs.length - 1) {   // 建線步驟放對一塊(未消成線)→手指推進到下一段(上→中→下),tutTarget 換成下一段擋放錯
           this._buildSeg++; this.tutTarget = this._buildSegs[this._buildSeg];
           if (this.tut) { const d = TUT_STEPS[this.tut.i]; if (d && d.hint) { this.tutClearHint(); this.time.delayedCall(120, () => { if (this.tut && TUT_STEPS[this.tut.i] === d) this.tutHint(d.hint); }); } }
         }
         if (this.tray.every(t => t.used || t.locked)) {
+          const _handMissed = !this._handCleared; this._handCleared = false;   // 手制 combo:本手任一塊有清(resolve 設 _handCleared)就不斷;整手 0 清才歸零。無論走哪條出口都重置旗標
+          if (_handMissed && !this._tutBuildKind && !this.enemyLab) { this.combo = 0; this.renderCombo(); }   // 教學建線/敵技實驗室不走 endHand,維持原行為(教學自行 tutSetup 重置)
+          if (this.lead && this.lead.type === 'steal') this._monkeySteal();   // 🐒猴群偷襲:每手下完必定偷打一次;順序=先歸零、後偷襲(沒清的手:0→偷襲+1/滿階+2,猴隊長軟化斷連但不會讓連段永不斷)(2026-11-01 修正順序,verifier 抓到原本反了會把偷襲加的 combo 洗掉)
           if (this._tutBuildKind) {   // 教學建線步驟(place4/place5):絕不 endHand(不換敵回合/不補隨機塊)
             if (!this._placeCleared) { this.tutSetup(this._tutBuildKind); if (this.tut) { const d = TUT_STEPS[this.tut.i]; if (d && d.hint) { this.tutClearHint(); this.time.delayedCall(150, () => { if (this.tut && TUT_STEPS[this.tut.i] === d) this.tutHint(d.hint); }); } } }   // 3 塊都放了卻沒拼成線→重置這步(空盤+重給塊)讓玩家再試;有拼成線(_placeCleared)→'clear' 已排定推進,啥都不做
             return;
@@ -6727,6 +6735,22 @@
         }  // 一手放完→敵攻+補手;敵技實驗室=不推進回合,擺完自動重置固定排法
         if (!this.anyPlaceable()) { this.time.delayedCall(420, () => this.handleStuck()); }
         this.updateAll();
+      }
+      // 🐒猴群偷襲(獼猴隊長技 type:'steal'):2026-10-31 改手制——每手(3 塊)下完必定偷打一次(不看有沒有清;原:每塊有清各一次)。威力/combo 隨隊長卡個體 evo(this.leadEvo,同貓·自我爆發):lead.mulByEvo=[.25,.5,.75,1]×相剋、lead.comboByEvo=[1,1,1,2]。由 afterAction 在「整手沒清→combo 歸零」判斷之後呼叫
+      _monkeySteal() {
+        const LEAD = (this.tut || this.lesson) ? 460 : 220;   // 與 resolve 的 LEAD 同值(演出前搖)
+        let t2 = this.targetEnemy(); if (t2 && t2.hp <= 0) t2 = this.enemies.find(e => !e.dead && e.hp > 0) || null;   // 🔒瀕死不偷襲(targetEnemy 已優先活敵;只在全員瀕死 fallback 時才會落到這→skip)
+        if (t2) {
+          const ev = this.leadEvo || 0, cbN = (this.lead.comboByEvo && this.lead.comboByEvo[ev] != null) ? this.lead.comboByEvo[ev] : 1, mulV = (this.lead.mulByEvo && this.lead.mulByEvo[ev] != null) ? this.lead.mulByEvo[ev] : (this.lead.v || 1);
+          this.combo += cbN; this.renderCombo(true); const lc = this.presetTeam && this.presetTeam[2], latk = (lc && lc.atk) || 200, lcard = this.teamCards[2];
+          const m = (EL.wind.beats === t2.el) ? CONFIG.ADV_MULT : ((EL[t2.el] && EL[t2.el].beats === 'wind') ? CONFIG.WEAK_MULT : CONFIG.NORM_MULT), sd = Math.round(latk * mulV * m);
+          if (t2.dispHp == null) t2.dispHp = t2.hp; t2.hp = Math.max(0, t2.hp - sd);   // 同步入帳(顯示值彈著才扣)
+          this.time.delayedCall(LEAD + 120, () => {
+            if (lcard) this.floatText(lcard.rect.x, lcard.rect.y - 28, '🐾', '#b6ffae');   // 隊長卡冒猴爪→看得出是它偷打
+            this.chakraBolt(lcard ? lcard.rect.x : CX, lcard ? lcard.rect.y : CARDS_Y, t2.sprite.x, t2.sprite.y, EL.wind.color, t2, sd, 2);
+            this.time.delayedCall(360, () => { this.labSnd('s_hit_wind', 0.6); if (t2.dispHp != null) t2.dispHp = Math.max(0, t2.dispHp - sd); if (t2.sprite) this.floatText(t2.sprite.x, t2.sprite.y - 30, tr('偷襲 +{n}', { n: cbN }), '#b6ffae'); this.updateEnemies(); if (t2.hp <= 0) this.killEnemy(t2); });
+          });
+        }
       }
       // 一手結束:combo/燒傷立即結算(屬我方展演),敵方出手+補新手延後到展演完才發動(以「手」為節奏)
       endHand() {
@@ -7240,7 +7264,7 @@
         if (this._eatCast && (this.enemyLab || Object.keys(data.fx || {}).some(el => EL[el] && EL[el].beats === this._eatCast.boss.el))) this._breakEatCast();   // 🌀魔王消屬塊預告中:清到「剋魔王的屬」(火剋風)→打斷黑洞(對齊敵情簡報「用火清宮打斷」+補血/復活同一套)
         if (this.enemies) for (const en of this.enemies) { if (en._absorbFx) { this._breakAbsorb(en); break; } }   // 吸收盾在時被清行 → 打破   // 炸彈宮「現有的塊被這次消除清光」= 清宮 → 拆彈
         this.handCleared = true;
-        this.combo += 1;   // combo 新定義:這塊有清→連續 +1(沒清的塊由 afterAction 歸零);取代舊「擊中次數」
+        this.combo += (data.groups || 1);   // combo 新定義:這塊有清→+清掉的組數(宮/行/列各一組,computeClears.groups;2026-11-01 大消多算,原固定 +1);整手全沒清才由 afterAction 歸零
         SFX.clear(this.combo);   // 消塊音(隨 combo 升調)
         const plan = planResolve(data, this.lead, this.teamRcv, this.combo, this.leadEvo);   // battle-core:整包傷害計畫(combo倍率/隊長技/AoE/每段傷害/回血)→ 場景照演;帶隊長卡 evo 給 leadDamageMult(貓·自我爆發 vByEvo 用)
         const { aoe, heal } = plan;
@@ -7280,7 +7304,7 @@
         if (_ironCleared.length) this.time.delayedCall(420, () => { _ironCleared.forEach(([r, c]) => this._junkShatter && this._junkShatter(BX0 + c * CS + RECT / 2, BY0 + r * CS + RECT / 2, 0x9aa8bd, 'break')); _lockCleared.forEach(([r, c]) => this._ironLockSpark && this._ironLockSpark(BX0 + c * CS + RECT / 2, BY0 + r * CS + RECT / 2)); this.labSnd && this.labSnd('s_block', 0.55); });   // 🔩清宮/清線連鐵塊一起清→金屬碎裂演出(同溶解時機);有 lock 的額外播壓軸大爆碎(_ironLockSpark)
         if (_lockDec.length) this.time.delayedCall(420, () => { _lockDec.forEach(([r, c, oldLock]) => this._ironLockChip && this._ironLockChip(BX0 + c * CS + RECT / 2, BY0 + r * CS + RECT / 2, oldLock)); });   // 🔒扣層但沒移除→砸碎版回饋(_ironLockChip,小砸碎):碎片四濺+電花+白閃+震屏+撞擊音,提示「剝了一層」
         const n = data.cells.length;
-        this._placeCleared = true;   // 逐塊 combo:這塊有清到(沒清的塊由 afterAction 把 combo 歸零)
+        this._placeCleared = true; this._handCleared = true;   // 這塊有清到→combo +1;並標記「本手有清」(2026-10-31 手制:整手都沒清才由 afterAction 歸零 combo)
         this.showCombo(); this.renderCombo(true);   // combo 已在頂端 +1(每塊有清才+1)+ 常駐指示器彈一下
         this.runMaxHit = Math.max(this.runMaxHit || 0, n); this.runMaxCombo = Math.max(this.runMaxCombo || 0, this.combo);   // 本局最佳 HIT/combo(我的紀錄/成就用)
         if (this.dungeon && this.dungeon.daily && this.combo >= 3) this._dailyComboHits = (this._dailyComboHits || 0) + 1;   // 🆕2026-08-17 每日修煉 T3 任務:單次攻擊(這次清宮)combo≥3 累計次數,回報 run/complete 的 comboCount(spec-daily-island.md §5,伺服器單場上限20次)
@@ -7332,19 +7356,7 @@
             this.time.delayedCall(LEAD + 240, () => { this.labSnd('s_heal', 0.7); this.animPlayerHP(true); this.floatText(CX, PHP_Y - 44, tr('🐟 活水 +{n}', { n: fb }), '#7fe0ff'); });
           }
         }
-        if (this.lead && this.lead.type === 'steal') {   // 🐒猴群偷襲:每塊有清→隊長(中央卡)偷打目標 1 次 +1 combo
-          let t2 = this.targetEnemy(); if (t2 && t2.hp <= 0) t2 = this.enemies.find(e => !e.dead && e.hp > 0) || null;   // 🔒瀕死不偷襲(targetEnemy 已優先活敵;只在全員瀕死 fallback 時才會落到這→skip)
-          if (t2) {
-            this.combo += 1; this.renderCombo(true); const lc = this.presetTeam && this.presetTeam[2], latk = (lc && lc.atk) || 200, lcard = this.teamCards[2];
-            const m = (EL.wind.beats === t2.el) ? CONFIG.ADV_MULT : ((EL[t2.el] && EL[t2.el].beats === 'wind') ? CONFIG.WEAK_MULT : CONFIG.NORM_MULT), sd = Math.round(latk * (this.lead.v || 1) * m);
-            if (t2.dispHp == null) t2.dispHp = t2.hp; t2.hp = Math.max(0, t2.hp - sd);   // 同步入帳(顯示值彈著才扣)
-            this.time.delayedCall(LEAD + 120, () => {
-              if (lcard) this.floatText(lcard.rect.x, lcard.rect.y - 28, '🐾', '#b6ffae');   // 隊長卡冒猴爪→看得出是它偷打
-              this.chakraBolt(lcard ? lcard.rect.x : CX, lcard ? lcard.rect.y : CARDS_Y, t2.sprite.x, t2.sprite.y, EL.wind.color, t2, sd, 2);
-              this.time.delayedCall(360, () => { this.labSnd('s_hit_wind', 0.6); if (t2.dispHp != null) t2.dispHp = Math.max(0, t2.dispHp - sd); if (t2.sprite) this.floatText(t2.sprite.x, t2.sprite.y - 30, tr('偷襲 +1'), '#b6ffae'); this.updateEnemies(); if (t2.hp <= 0) this.killEnemy(t2); });
-            });
-          }
-        }
+        // 🐒猴群偷襲 2026-10-31 改手制:不再「每塊有清就偷打+1 combo」,改由 afterAction 在整手 3 塊下完時觸發一次(見 _monkeySteal);此處不處理
         this.updateEnemies();
         this.time.delayedCall(LEAD - 80, () => {   // 清除的格平滑溶解(逐格淡化的波 → 化進各區集氣)
           this.drawGloss();   // 被清的格(board 已 null)→ 立刻收掉玻璃光澤,塊乾淨淡出
@@ -7771,6 +7783,27 @@
           this.playerHP = this.maxHP; this.animPlayerHP(true); try { SFX.heal(); } catch (e) { } this.cameras.main.flash(240, 120, 220, 150, false); this.tonFloat(tr('✨ 復活!HP 回滿'), '#74e09a');
         }, T.ok, 'ui_gem');   // 🆕2026-10-28b 💎→ui_gem
         this.mkBtn(g, cy + 78, tr('✖ 放棄(認輸)'), () => { g.destroy(); this.resultOpen = false; this._recordFail(); this.creditRun(); this.showResult(false); }, T.bad);
+      }
+      // 🆕2026-10-31 戰敗保留獎勵:回傳「可結算的已清小關數」(伺服器口徑 1..2;0=不結算)。只有簽章票券的真戰鬥才有(教學/課程/實驗室/每日修煉/離線 fallback 一律 0)。
+      //   bonus 關不算小關(_bonusStagePos);關數隨難度 stageDelta 變 → 按比例換算成伺服器的 3 關制(floor,至少 1、最多 2)。
+      _failClearedStages() {
+        if (this.tut || this.lesson || this.hitLab || this.enemyLab || this._runGranted) return 0;
+        if (!this.dungeon || this.dungeon.daily) return 0;
+        const rid = this.serverRunId; if (!rid || rid.indexOf('.') < 0) return 0;
+        const tot = Math.max(1, (this.stagesEff || []).length - (this._bonusStagePos ? 1 : 0));
+        const done = (this.stage - 1) - ((this._bonusStagePos && this.stage > this._bonusStagePos) ? 1 : 0);
+        if (done < 1) return 0;
+        return Math.max(1, Math.min(2, Math.floor(done * 3 / tot)));
+      }
+      // 戰敗結算:玩家按敗北面板「回大廳」時才送(面板上還有「再挑戰本關」沿用同一張票券→若先結算,票券已被戰敗兌換,之後再打贏會領不到通關獎勵)。
+      //   走 pendingRuns 同一條路(離線/暫時失敗留佇列補發;400/429 丟棄);最多等 2.5 秒讓大廳讀到新錢包,逾時不擋離開。回傳 Promise<res|null>。
+      _settleFail() {
+        const n = this._failClearedStages(); if (!n || this._failSettled) return Promise.resolve(null);
+        this._failSettled = true;
+        const item = { dungeonId: this.dungeon.id, diff: (this.diff && this.diff.key) || 'normal', runId: this.serverRunId, name: getMeta().name, clearedStages: n };
+        mutSave(s => { const q = (s.pendingRuns = s.pendingRuns || []); q.push(item); while (q.length > 20) { q.shift(); s.meta._pendingRunsDropped = (s.meta._pendingRunsDropped || 0) + 1; } });
+        const send = _sendRunComplete(item).then(res => { if (res && res.ok && res.leveledUp) mutSave(s => { s.meta._lvUp = { rank: res.rank }; }); return res; }).catch(() => null);
+        return Promise.race([send, new Promise(r => setTimeout(() => r(null), 2500))]);
       }
       creditRun() { bumpRecords(this.runMaxHit || 0, this.runMaxCombo || 0); const nw = checkAchievements(); nw.forEach((t, i) => this.time.delayedCall(i * 320, () => { try { this.tonFloat(tr('🏅 解鎖稱號:{n}', { n: t }), '#ffe04a'); } catch (e) { } })); }   // 提交本局紀錄 + 檢查成就解鎖(過關與戰敗都跑)
       _grantRun() {
@@ -8357,8 +8390,12 @@
           panel.add(roundRectG(this, CX, PCY, PW, PH, 16, T.surf, 1, T.divider, 1.5));
           if (!menuLabelIcon(this, o => panel.add(o), CX, cy - 152, 'icon_skull', tr('☠️ 敗北'), { fs: FS.title, col: T.badTx, ics: 30, maxW: PW - 24 })) TX(cy - 152, tr('☠️ 敗北'), FS.title, T.badTx, true);   // 🆕2026-10-28 ☠️→icon_skull(同列置中);未載到 fallback 原字串
           TX(cy - 112, tr('第 {n} 關失敗', { n: this.stage }), FS.cap, T.ink, false);
+          { const _fn = this._failClearedStages();   // 🆕2026-10-31 戰敗保留獎勵預估(口徑同伺服器:已清關數×基數×難度倍率×保留比例;掉落物不給)。真錢包以伺服器為準,離開時才結算
+            if (_fn > 0) { const _kp = failKeepRate(), _rw = (this.diff && this.diff.rwd) || 1;
+              TX(cy - 74, tr('戰敗保留 {p}% 獎勵', { p: Math.round(_kp * 100) }), FS.sub, T.goldTx, true);
+              TX(cy - 40, tr('💰 +{coins}   EXP +{exp}', { coins: Math.round(_fn * 300 * _rw * _kp), exp: Math.round(_fn * 40 * _rw * _kp) }), FS.sub, T.goldTx, true); } }
           this.mkBtn(panel, cy + 30, tr('再挑戰本關'), () => { g.destroy(); this.resultOpen = false; this.restartStage(); });
-          this.mkBtn(panel, cy + 90, tr('🏠 回大廳'), () => { this.scene.manager.start('home'); this.scene.manager.stop('game'); }, null, 'home');
+          this.mkBtn(panel, cy + 90, tr('🏠 回大廳'), () => { if (this._leavingFail) return; this._leavingFail = true; this._settleFail().then(() => { this.scene.manager.start('home'); this.scene.manager.stop('game'); }); }, null, 'home');   // 🆕離開時結算戰敗保留獎勵(無資格→立刻 resolve);_leavingFail 防連點
         }
         if (redraw) { panel.y = 0; panel.alpha = 1; }   // 🆕補畫:不重播滑入(暗幕也不重閃),原地把「連線後發放」換成真實戰利品
         else { panel.y = 24; panel.alpha = 0; this.tweens.add({ targets: panel, y: 0, alpha: 1, duration: 380, ease: 'Back.out' }); }   // 首次登場:由下方滑入 + 淡入(Back.out 帶輕微回彈)
