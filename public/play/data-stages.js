@@ -74,14 +74,14 @@ const DAILY_DUNGEONS = {
       {es:[{el:'fire',hp:380,atk:45,turns:4,tier:1,beh:'finisher',finCD:4,finStages:3,finPct:0.12,finAnyHit:true},_metalMini(300)]},
     ]},
   daily_fire_2:{id:'daily_fire_2',el:'fire',name:'火之修煉·修行',emoji:'🔥',cost:10,daily:true,pieceSet:_DAILY_PIECE_SET,stages:[
-      {es:[{el:'fire',hp:420,atk:55,turns:4,tier:1,beh:'finisher',finCD:4,finStages:3,finPct:0.12,finAnyHit:true},_metalMini(),_metalMini()]},
-      {es:[{el:'fire',hp:420,atk:55,turns:4,tier:1,beh:'finisher',finCD:4,finStages:3,finPct:0.12,finAnyHit:true},{el:'fire',hp:420,atk:55,turns:4,tier:1,beh:'finisher',finCD:4,finStages:3,finPct:0.12,finAnyHit:true},_metalBig(800)]},
-      {es:[{el:'fire',hp:700,atk:85,turns:3,tier:2,beh:'finisher',finCD:4,finStages:3,finPct:0.20,finAnyHit:true},_metalBig(800)]},
+      {es:[{el:'fire',hp:1000,atk:1400,turns:4,tier:1,beh:'finisher',finCD:4,finStages:3,finPct:0.12,finAnyHit:true},_metalMini(),_metalMini()]},
+      {es:[{el:'fire',hp:1000,atk:1400,turns:4,tier:1,beh:'finisher',finCD:4,finStages:3,finPct:0.12,finAnyHit:true},{el:'fire',hp:1000,atk:1400,turns:4,tier:1,beh:'finisher',finCD:4,finStages:3,finPct:0.12,finAnyHit:true},_metalBig(800)]},
+      {es:[{el:'fire',hp:1800,atk:2400,turns:3,tier:2,beh:'finisher',finCD:4,finStages:3,finPct:0.20,finAnyHit:true},_metalBig(800)]},
     ]},
-  daily_fire_3:{id:'daily_fire_3',el:'fire',name:'火之修煉·極意',emoji:'🔥',cost:15,daily:true,pieceSet:_DAILY_PIECE_SET,stages:[
-      {es:[{el:'fire',hp:420,atk:55,turns:4,tier:1,beh:'finisher',finCD:4,finStages:3,finPct:0.12,finAnyHit:true},_metalBig()]},
-      {es:[{el:'fire',hp:700,atk:85,turns:3,tier:2,beh:'finisher',finCD:4,finStages:3,finPct:0.20,finAnyHit:true},_metalBig(),_metalBig()]},
-      {es:[{el:'fire',hp:1400,atk:150,turns:3,boss:true,tier:3,beh:'finisher',finCD:4,finStages:3,finPct:0.25,finAnyHit:true},_metalKing()]},
+  daily_fire_3:{id:'daily_fire_3',el:'fire',name:'火之修煉·極意',emoji:'🔥',cost:15,daily:true,stages:[
+      {es:[{el:'fire',hp:600,atk:1500,turns:4,tier:1,beh:'finisher',finCD:4,finStages:3,finPct:0.12,finAnyHit:true},_metalBig()]},
+      {es:[{el:'fire',hp:1000,atk:2800,turns:3,tier:2,beh:'finisher',finCD:4,finStages:3,finPct:0.20,finAnyHit:true},_metalBig(),_metalBig()]},
+      {es:[{el:'fire',hp:2000,atk:2300,turns:3,boss:true,tier:3,beh:'finisher',finCD:4,finStages:3,finPct:0.25,finAnyHit:true},_metalKing()]},
     ]},
 
   daily_water_1:{id:'daily_water_1',el:'water',name:'水之修煉·見習',emoji:'💧',cost:5,daily:true,pieceSet:_DAILY_PIECE_SET,stages:[
@@ -89,14 +89,14 @@ const DAILY_DUNGEONS = {
       {es:[{el:'water',hp:380,atk:45,turns:4,tier:1,beh:'healAlly',healPct:0.20,healCD:2},_metalMini(300)]},
     ]},
   daily_water_2:{id:'daily_water_2',el:'water',name:'水之修煉·修行',emoji:'💧',cost:10,daily:true,pieceSet:_DAILY_PIECE_SET,stages:[
-      {es:[{el:'water',hp:420,atk:55,turns:4,tier:1,beh:'healAlly',healPct:0.20,healCD:2},_metalMini(),_metalMini()]},
-      {es:[{el:'water',hp:420,atk:55,turns:4,tier:1,beh:'healAlly',healPct:0.20,healCD:2},{el:'water',hp:420,atk:55,turns:4,tier:1,beh:'healAlly',healPct:0.20,healCD:2},_metalBig(800)]},
-      {es:[{el:'water',hp:700,atk:85,turns:3,tier:2,beh:'healAlly',healPct:0.35,healCD:2},_metalBig(800)]},
+      {es:[{el:'water',hp:1000,atk:1400,turns:4,tier:1,beh:'healAlly',healPct:0.20,healCD:2},_metalMini(),_metalMini()]},
+      {es:[{el:'water',hp:1000,atk:1400,turns:4,tier:1,beh:'healAlly',healPct:0.20,healCD:2},{el:'water',hp:1000,atk:1400,turns:4,tier:1,beh:'healAlly',healPct:0.20,healCD:2},_metalBig(800)]},
+      {es:[{el:'water',hp:1800,atk:2400,turns:3,tier:2,beh:'healAlly',healPct:0.35,healCD:2},_metalBig(800)]},
     ]},
-  daily_water_3:{id:'daily_water_3',el:'water',name:'水之修煉·極意',emoji:'💧',cost:15,daily:true,pieceSet:_DAILY_PIECE_SET,stages:[
-      {es:[{el:'water',hp:420,atk:55,turns:4,tier:1,beh:'healAlly',healPct:0.20,healCD:2},_metalBig()]},
-      {es:[{el:'water',hp:700,atk:85,turns:3,tier:2,beh:'healAlly',healPct:0.35,healCD:2},_metalBig(),_metalBig()]},
-      {es:[{el:'water',hp:1400,atk:150,turns:3,boss:true,tier:3,beh:'healAlly',healPct:0.5,healCD:2,reviveMax:1},_metalKing()]},
+  daily_water_3:{id:'daily_water_3',el:'water',name:'水之修煉·極意',emoji:'💧',cost:15,daily:true,stages:[
+      {es:[{el:'water',hp:600,atk:1500,turns:4,tier:1,beh:'healAlly',healPct:0.20,healCD:2},_metalBig()]},
+      {es:[{el:'water',hp:1000,atk:2800,turns:3,tier:2,beh:'healAlly',healPct:0.35,healCD:2},_metalBig(),_metalBig()]},
+      {es:[{el:'water',hp:2000,atk:2300,turns:3,boss:true,tier:3,beh:'healAlly',healPct:0.5,healCD:2,reviveMax:1},_metalKing()]},
     ]},
 
   daily_thunder_1:{id:'daily_thunder_1',el:'thunder',name:'雷之修煉·見習',emoji:'⚡',cost:5,daily:true,pieceSet:_DAILY_PIECE_SET,stages:[
@@ -104,14 +104,14 @@ const DAILY_DUNGEONS = {
       {es:[{el:'thunder',hp:380,atk:45,turns:4,tier:1,iron:1,ironPunish:true},_metalMini(300)]},
     ]},
   daily_thunder_2:{id:'daily_thunder_2',el:'thunder',name:'雷之修煉·修行',emoji:'⚡',cost:10,daily:true,pieceSet:_DAILY_PIECE_SET,stages:[
-      {es:[{el:'thunder',hp:420,atk:55,turns:4,tier:1,iron:1,ironPunish:true},_metalMini(),_metalMini()]},
-      {es:[{el:'thunder',hp:420,atk:55,turns:4,tier:1,iron:1,ironPunish:true},{el:'thunder',hp:420,atk:55,turns:4,tier:1,iron:1,ironPunish:true},_metalBig(800)]},
-      {es:[{el:'thunder',hp:700,atk:85,turns:3,tier:2,iron:2,ironPunish:true},_metalBig(800)]},
+      {es:[{el:'thunder',hp:1000,atk:1400,turns:4,tier:1,iron:1,ironPunish:true},_metalMini(),_metalMini()]},
+      {es:[{el:'thunder',hp:1000,atk:1400,turns:4,tier:1,iron:1,ironPunish:true},{el:'thunder',hp:1000,atk:1400,turns:4,tier:1,iron:1,ironPunish:true},_metalBig(800)]},
+      {es:[{el:'thunder',hp:1800,atk:2400,turns:3,tier:2,iron:2,ironPunish:true},_metalBig(800)]},
     ]},
-  daily_thunder_3:{id:'daily_thunder_3',el:'thunder',name:'雷之修煉·極意',emoji:'⚡',cost:15,daily:true,pieceSet:_DAILY_PIECE_SET,stages:[
-      {es:[{el:'thunder',hp:420,atk:55,turns:4,tier:1,iron:1,ironPunish:true},_metalBig()]},
-      {es:[{el:'thunder',hp:700,atk:85,turns:3,tier:2,iron:2,ironPunish:true},_metalBig(),_metalBig()]},
-      {es:[{el:'thunder',hp:1400,atk:150,turns:3,boss:true,tier:3,iron:3,ironPunish:true},_metalKing()]},
+  daily_thunder_3:{id:'daily_thunder_3',el:'thunder',name:'雷之修煉·極意',emoji:'⚡',cost:15,daily:true,stages:[
+      {es:[{el:'thunder',hp:600,atk:1500,turns:4,tier:1,iron:1,ironPunish:true},_metalBig()]},
+      {es:[{el:'thunder',hp:1000,atk:2800,turns:3,tier:2,iron:2,ironPunish:true},_metalBig(),_metalBig()]},
+      {es:[{el:'thunder',hp:2000,atk:2300,turns:3,boss:true,tier:3,iron:3,ironPunish:true},_metalKing()]},
     ]},
 
   daily_earth_1:{id:'daily_earth_1',el:'earth',name:'土之修煉·見習',emoji:'🪨',cost:5,daily:true,pieceSet:_DAILY_PIECE_SET,stages:[
@@ -119,14 +119,14 @@ const DAILY_DUNGEONS = {
       {es:[{el:'earth',hp:380,atk:45,turns:4,tier:1,beh:'shield',shieldKind:'hit',hitGate:12},_metalMini(300)]},
     ]},
   daily_earth_2:{id:'daily_earth_2',el:'earth',name:'土之修煉·修行',emoji:'🪨',cost:10,daily:true,pieceSet:_DAILY_PIECE_SET,stages:[
-      {es:[{el:'earth',hp:420,atk:55,turns:4,tier:1,beh:'shield',shieldKind:'hit',hitGate:12},_metalMini(),_metalMini()]},
-      {es:[{el:'earth',hp:420,atk:55,turns:4,tier:1,beh:'shield',shieldKind:'hit',hitGate:12},{el:'earth',hp:420,atk:55,turns:4,tier:1,beh:'shield',shieldKind:'hit',hitGate:12},_metalBig(800)]},
-      {es:[{el:'earth',hp:700,atk:85,turns:3,tier:2,beh:'shield',shieldKind:'hit',hitGate:15},_metalBig(800)]},
+      {es:[{el:'earth',hp:1000,atk:1400,turns:4,tier:1,beh:'shield',shieldKind:'hit',hitGate:12},_metalMini(),_metalMini()]},
+      {es:[{el:'earth',hp:1000,atk:1400,turns:4,tier:1,beh:'shield',shieldKind:'hit',hitGate:12},{el:'earth',hp:1000,atk:1400,turns:4,tier:1,beh:'shield',shieldKind:'hit',hitGate:12},_metalBig(800)]},
+      {es:[{el:'earth',hp:1800,atk:2400,turns:3,tier:2,beh:'shield',shieldKind:'hit',hitGate:15},_metalBig(800)]},
     ]},
-  daily_earth_3:{id:'daily_earth_3',el:'earth',name:'土之修煉·極意',emoji:'🪨',cost:15,daily:true,pieceSet:_DAILY_PIECE_SET,stages:[
-      {es:[{el:'earth',hp:420,atk:55,turns:4,tier:1,beh:'shield',shieldKind:'hit',hitGate:12},_metalBig()]},
-      {es:[{el:'earth',hp:700,atk:85,turns:3,tier:2,beh:'shield',shieldKind:'hit',hitGate:15},_metalBig(),_metalBig()]},
-      {es:[{el:'earth',hp:1400,atk:150,turns:3,boss:true,tier:3,beh:'shield',shieldRandom:true},_metalKing()]},
+  daily_earth_3:{id:'daily_earth_3',el:'earth',name:'土之修煉·極意',emoji:'🪨',cost:15,daily:true,stages:[
+      {es:[{el:'earth',hp:600,atk:1500,turns:4,tier:1,beh:'shield',shieldKind:'hit',hitGate:12},_metalBig()]},
+      {es:[{el:'earth',hp:1000,atk:2800,turns:3,tier:2,beh:'shield',shieldKind:'hit',hitGate:15},_metalBig(),_metalBig()]},
+      {es:[{el:'earth',hp:2000,atk:2300,turns:3,boss:true,tier:3,beh:'shield',shieldRandom:true},_metalKing()]},
     ]},
 
   daily_wind_1:{id:'daily_wind_1',el:'wind',name:'風之修煉·見習',emoji:'🌪',cost:5,daily:true,pieceSet:_DAILY_PIECE_SET,stages:[
@@ -134,14 +134,14 @@ const DAILY_DUNGEONS = {
       {es:[{el:'wind',hp:380,atk:45,turns:4,tier:1,peck:1},_metalMini(300)]},
     ]},
   daily_wind_2:{id:'daily_wind_2',el:'wind',name:'風之修煉·修行',emoji:'🌪',cost:10,daily:true,pieceSet:_DAILY_PIECE_SET,stages:[
-      {es:[{el:'wind',hp:420,atk:55,turns:4,tier:1,peck:1},_metalMini(),_metalMini()]},
-      {es:[{el:'wind',hp:420,atk:55,turns:4,tier:1,peck:1},{el:'wind',hp:420,atk:55,turns:4,tier:1,peck:1},_metalBig(800)]},
-      {es:[{el:'wind',hp:700,atk:85,turns:3,tier:2,peck:1},_metalBig(800)]},
+      {es:[{el:'wind',hp:1000,atk:1400,turns:4,tier:1,peck:1},_metalMini(),_metalMini()]},
+      {es:[{el:'wind',hp:1000,atk:1400,turns:4,tier:1,peck:1},{el:'wind',hp:1000,atk:1400,turns:4,tier:1,peck:1},_metalBig(800)]},
+      {es:[{el:'wind',hp:1800,atk:2400,turns:3,tier:2,peck:1},_metalBig(800)]},
     ]},
-  daily_wind_3:{id:'daily_wind_3',el:'wind',name:'風之修煉·極意',emoji:'🌪',cost:15,daily:true,pieceSet:_DAILY_PIECE_SET,stages:[
-      {es:[{el:'wind',hp:420,atk:55,turns:4,tier:1,peck:1},_metalBig()]},
-      {es:[{el:'wind',hp:700,atk:85,turns:3,tier:2,peck:1},_metalBig(),_metalBig()]},
-      {es:[{el:'wind',hp:1400,atk:150,turns:3,boss:true,tier:3,peck:1,peckTray:true},_metalKing()]},
+  daily_wind_3:{id:'daily_wind_3',el:'wind',name:'風之修煉·極意',emoji:'🌪',cost:15,daily:true,stages:[
+      {es:[{el:'wind',hp:600,atk:1500,turns:4,tier:1,peck:1},_metalBig()]},
+      {es:[{el:'wind',hp:1000,atk:2800,turns:3,tier:2,peck:1},_metalBig(),_metalBig()]},
+      {es:[{el:'wind',hp:2000,atk:2300,turns:3,boss:true,tier:3,peck:1,peckTray:true},_metalKing()]},
     ]},
 };
 
