@@ -3529,6 +3529,8 @@
 
       create() {
         setupHiDPI(this);   // 🆕2026-10-28c 超採樣(下方 setBounds 後視野=W×H 恰好貼滿範圍,scroll 被夾成同一值)
+        this.junkFx = null; this.junkNums = [];   // 🩹2026-11-01 鐵塊金屬外觀消失 bug:Scene 實例跨進場重用,舊 junkFx(Graphics)已隨 shutdown 被 destroy 卻仍是 truthy→drawJunkFx 不重建→金屬框/鋼條不渲染;與 blockSprites 一樣每次 create 重置
+        this._finisher = null; this._stuckRetry = false; this._lockBadges = null; this._lockedStore = {}; this.comboTx = null; this.hitTx = null;   // 🩹同款隱患:跨進場殘留的實例欄位(物件已隨 shutdown 銷毀/delayedCall 隨場景消失→旗標永遠 true 會讓 handleStuck 重試失效)
         this.cells = []; this.blockSprites = null; this.boxLabels = []; this.trayIcons = []; this.trayTweens = []; this.teamCards = []; this.drag = null; this.enemies = [];
         BFX.makeTextures(this);   // 🆕2026-10-27 屬性爆發特效貼圖(soft/soft_e/ring/ring14/rock/leaf;已存在則跳過,restart 安全)
         if (this.dive) {   // 🎬進場:暗霧先蓋著→關卡橫幅(含隊長技)展開停~1.4秒→方塊粒子散→暗霧慢慢散開露出戰鬥
@@ -4781,7 +4783,7 @@
         this.drawJunkFx(); this.drawGloss();
       }
       drawJunkFx() {   // 封鎖鐵塊:深鋼底上疊「左上亮邊/右下暗邊」斜角 + 四角鉚釘 + 中央倒數數字 → 一看就是打不動的鐵障礙
-        if (!this.junkFx) this.junkFx = this.add.graphics().setDepth(DEPTH.board + 1); const g = this.junkFx; g.clear();
+        if (!this.junkFx || !this.junkFx.scene) this.junkFx = this.add.graphics().setDepth(DEPTH.board + 1); const g = this.junkFx; g.clear();
         if (this.junkNums) this.junkNums.forEach(t => t.destroy()); this.junkNums = [];
         for (let r = 0; r < N; r++)for (let c = 0; c < N; c++) {
           const cell = this.board[r][c]; if (!cell) continue; const x = BX0 + c * CS, y = BY0 + r * CS, s = RECT;
