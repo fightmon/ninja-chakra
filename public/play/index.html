@@ -4331,7 +4331,7 @@
         mutSave(s => { if (!s.settings) s.settings = {}; s.settings.tut = true; if (giveFreePull && !freePullDone()) s.settings.freePull = true; });   // 已領過(重玩後跳過)→不重設旗標,伺服器也會擋
         SFX.stopBgm(); this.scene.manager.start('home'); this.scene.manager.stop('game');
       }
-      tutDone(graduate = true) { this.tutClearHint(); if (this.tutG) { this.tutG.destroy(); this.tutG = null; } if (this.tutBg) { this.tutBg.destroy(); this.tutBg = null; } this.tut = null; if (graduate) mutSave(s => { if (!s.settings) s.settings = {}; s.settings.tut = true; if (s.settings.newbieStep == null && !s.settings.newbieDone && !freePullDone()) s.settings.newbieStep = 0; }); }   // ⚠️畢業當下就一併登記新手島進度(newbieStep=0):否則「tut=true 已寫入、但 newbieStep 要按下『開始特訓』才寫」,玩家在教學完成畫面重整/離開就會變成 已畢業+無特訓進度+無 freePull → 0 卡自由亂逛、點序章只能編空隊。已領過十連(freePullDone)/已破特訓(newbieDone)不重設,老手跳過走 _doTutSkip 也不會設   // graduate=false(教學打輸)只清 UI 不設 tutSeen→下次重進教學重試,避免「輸掉教學=畢業但沒卡沒freePull=0卡死鎖」;步驟跑完(贏)預設 graduate=true 畢業,勝利收尾交給正常 showResult
+      tutDone(graduate = true) { this.tutClearHint(); if (this.tutG) { this.tutG.destroy(); this.tutG = null; } if (this.tutBg) { this.tutBg.destroy(); this.tutBg = null; } this.tut = null; if (graduate) mutSave(s => { if (!s.settings) s.settings = {}; s.settings.tut = true; if (!freePullDone()) s.settings.freePull = true; }); }   // ⚠️2026-11-02 新手動線精簡:畢業當下就直接設 freePull(不再登記 newbieStep 強制三課)——否則「tut=true 已寫入、但 freePull 要按完成面板按鈕才寫」,玩家在完成畫面重整/離開就會變成 已畢業+無 freePull+0 卡;已領過十連(freePullDone)不重設(同 _doTutSkip)   // graduate=false(教學打輸)只清 UI 不設 tutSeen→下次重進教學重試,避免「輸掉教學=畢業但沒卡沒freePull=0卡死鎖」;步驟跑完(贏)預設 graduate=true 畢業,勝利收尾交給正常 showResult
       tutClearHint() {
         if (this._tutGlassSeq) { try { this._tutGlassSeq.remove(false); } catch (e) { } this._tutGlassSeq = null; }   // step4 兩段式手指的接續計時器:清提示時一併取消,避免 Phase2 在已離開此步時才觸發
         if (this._tutHints) this._tutHints.forEach(o => { try { this.tweens.killTweensOf(o); o.destroy(); } catch (e) { } }); this._tutHints = [];
@@ -8189,8 +8189,8 @@
         const mk = (str, fs, col, ls) => this.add.text(0, 0, str, { fontFamily: EMOJIFONT, fontSize: fs, color: col, fontStyle: 'bold', align: 'center', lineSpacing: ls, wordWrap: { width: innerW } }).setOrigin(0.5, 0).setResolution(2);
         const title = mk(tr('🎓 教學完成!'), '29px', '#c8912a', 0);   // 金標題(放大 27→29)
         const body = mk(tr('你已學會核心:\n放塊 → 清屬性宮 → 相剋打弱點 → 屬塊覆蓋'), '17px', '#2b333a', 9);   // 深墨內文(放大 15→17)
-        const _nb = emoBox(this, 0, 0, first ? tr('🏝️ 接下來教你幾招基本功,連闖 3 堂特訓!') : tr('複習完成!核心玩法已經熟囉 👍'), { fs: '17px', col: first ? '#c8912a' : '#2b333a', maxW: innerW, res: 2 });   // 🆕2026-10-28c 🏝️→icon_island(emoBox;圖未載→原 mk 文字);🆕2026-10-28d 複習版句尾 👍→icon_thumb(單行;同走 emoBox,圖未載→原 mk 文字)
-        const note = _nb || mk(first ? tr('🏝️ 接下來教你幾招基本功,連闖 3 堂特訓!') : tr('複習完成!核心玩法已經熟囉 👍'), '17px', first ? '#c8912a' : '#2b333a', 6);   // 階段二・新手島:首次完成不再直接說「送十連」,十連改到 3 堂特訓全破才發
+        const _nb = emoBox(this, 0, 0, first ? tr('接下來領取你的免費新手十連抽!') : tr('複習完成!核心玩法已經熟囉 👍'), { fs: '17px', col: first ? '#c8912a' : '#2b333a', maxW: innerW, res: 2 });   // 🆕2026-10-28c 🏝️→icon_island(emoBox;圖未載→原 mk 文字);🆕2026-10-28d 複習版句尾 👍→icon_thumb(單行;同走 emoBox,圖未載→原 mk 文字)
+        const note = _nb || mk(first ? tr('接下來領取你的免費新手十連抽!') : tr('複習完成!核心玩法已經熟囉 👍'), '17px', first ? '#c8912a' : '#2b333a', 6);   // 2026-11-02 新手動線精簡:首次完成直接導向免費十連(三課強制已隱藏)
         const ht = Math.ceil(title.height), hb = Math.ceil(body.height), hn = _nb ? 26 : Math.ceil(note.height);
         const btnBlock = bh;   // 單鈕(移除「之後再領」→教學完只給一顆「領取新手十連」)
         const PH = M + ht + G + hb + G + hn + G + btnBlock + M;   // 上M ┃ 標題 G 內文 G 提示 G 按鈕組 ┃ 下M → 四邊留白一致、區塊間距一致
@@ -8203,7 +8203,7 @@
         note.setX(CX).setY(_nb ? yy + hn / 2 : yy); g.add(note); yy += hn + G;
         const back = () => { this.scene.manager.start('home'); this.scene.manager.stop('game'); };
         if (first) {
-          this.tutBtn(g, yy + bh / 2, tr('▶ 開始特訓!'), () => { mutSave(s => { s.settings = s.settings || {}; s.settings.newbieStep = 0; }); startNewbieStep(this, 0); });   // 階段二・新手島:教學完不直接發十連,先強制連玩 NEWBIE_SEQ 3 堂課程,全破才 setFree(見 startNewbieStep idx>=3 分支)
+          this.tutBtn(g, yy + bh / 2, tr('▶ 領取新手十連!'), () => { mutSave(s => { s.settings = s.settings || {}; if (!freePullDone()) s.settings.freePull = true; }); back(); });   // 2026-11-02 新手動線精簡:教學完直接進免費十連引導(不再強制三課);freePull 已在 tutDone 設過,這裡冪等再設一次保險,back()=回大廳→HomeScene.create 讀 freePull 落在抽卡頁引導
         } else {
           this.tutBtn(g, yy + bh / 2, tr('🏠 回大廳'), back, false, 'home');   // 🔁 已領過十連(複習)→純回大廳(伺服器 free_pull_used 亦會擋)
         }
@@ -8758,6 +8758,11 @@
         setupHiDPI(this);   // 🆕2026-10-28c 超採樣
         this.add.rectangle(CX, H / 2, W, H, 0x160f18);
         this._diving = false; try { this.cameras.main.resetFX(); } catch (e) { }   // 🎬回大廳:重置出擊轉場鎖(否則第二次進火城被擋)+ 清相機殘留淡出
+        // 2026-11-02 新手動線精簡(隱藏強制三課):必須在下面讀 st/freePull 之前執行,否則補發的 freePull 這次進場不會落到抽卡引導頁
+        // (a) 過渡帳號:內測中卡在 newbieStep 0~2 → 不再導去上課;未領過十連就補發 freePull,並把 newbieStep 收斂成 3+newbieDone(=舊流程「三堂全破」終態,showLessonComplete 的新手序列分支因此不再命中)
+        { const _s = loadSave(), _st = _s.settings || {}; if (tutSeen() && _st.newbieStep != null && _st.newbieStep < 3) mutSave(s => { s.settings = s.settings || {}; s.settings.newbieStep = 3; s.settings.newbieDone = true; if (!freePullDone()) s.settings.freePull = true; }); }
+        // (b) 0 卡死鎖防護:已畢業卻「手上 0 張卡 + 沒有待領十連 + 還沒領過十連」→ 直接補發 freePull(0 卡的人需要的是卡,不是課)。涵蓋完成畫面重整、存檔被清、旗標寫一半等動線中斷
+        { const _s = loadSave(), _st = _s.settings || {}; if (tutSeen() && (_s.cards || []).length === 0 && !_st.freePull && !freePullDone()) mutSave(s => { s.settings = s.settings || {}; s.settings.freePull = true; }); }
         const st = loadSave().settings || {};
         if (st.freePull) { this.tab = 'gacha'; this._freeGuide = true; }   // 🎁 新手免費十連改「引導式」:落在抽卡頁,召喚勇者「十連」鈕脈動、其餘全禁用,玩家按下才抽(見 gachaBanner/switchTab/_doFreePull);不再進大廳自動抽
         this.rebuild();
@@ -8781,10 +8786,7 @@
           mutSave(s => { s.settings = s.settings || {}; s.settings.tutEntered = true; });
           this.time.delayedCall(300, () => { const team = TUTORIAL_TEAM.map(id => ROSTER.find(c => c.id === id)); this.scene.manager.start('game', { team: team, dungeonId: 'prologue', tutorial: true }); this.scene.manager.stop('home'); }); return;
         }
-        // 階段二・新手島:斷點續玩——教學已畢業(tutSeen)但 newbieStep 還 <3(3 堂特訓沒破完)→強制拉回還沒破的那堂,跳不掉;newbieStep 未定義(舊帳號/老手跳過)永不觸發此重導。此時 freePull 尚未設(只在三堂全破時才設),不會與下面的 freePull 引導十連判斷衝突
-        // 🛟 0 卡死鎖防護:已畢業卻「手上 0 張卡 + 沒有進行中的特訓 + 沒有待領十連」→ 補登記特訓(走完會發十連)。涵蓋任何造成動線中斷的情況(教學完成畫面重整、存檔被清、旗標寫一半),免玩家在世界地圖亂逛、點關卡只能編空隊
-        { const _s = loadSave(), _st = _s.settings || {}; if (tutSeen() && (_s.cards || []).length === 0 && !_st.freePull && _st.newbieStep == null) mutSave(s => { s.settings = s.settings || {}; s.settings.newbieStep = 0; }); }
-        { const _nStep = (loadSave().settings || {}).newbieStep; if (_nStep != null && _nStep < 3) { this.time.delayedCall(300, () => startNewbieStep(this, _nStep)); return; } }
+        // 2026-11-02 原「斷點續玩強制三課」與「0 卡補登記特訓」已移到本函式上方 const st 之前(改成補發 freePull),此處不再重導 startNewbieStep
         const _lu = getMeta()._lvUp; if (_lu) { mutSave(s => { delete s.meta._lvUp; }); this.time.delayedCall(400, () => this.toast(tr('🎉 升級! Lv.{n}\n⚡ 體力已補滿', { n: _lu.rank }))); }   // 戰鬥升級→回大廳彈 5 秒升級公告(體力已補滿)
         const _elemCleared = ELEM_DUNGEONS.some(id => isDungeonCleared(id));   // 有沒有破過任一五屬城→判斷玩家在 onboarding 的哪一段
         const _showPrologueGuide = tutSeen() && isDungeonCleared('prologue') && !_elemCleared && !st.prologueGuideSeen;   // 🧭 破序章、還沒破任何五屬城、還沒看過指引→彈一次「下一步」指路面板(既有玩家已破五屬城的不會被打擾)

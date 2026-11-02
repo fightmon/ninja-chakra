@@ -810,6 +810,7 @@ const I18N_DICT = {
     '🎁 首通獎勵 💎 +1': '🎁 First Clear Bonus 💎 +1',
     '▶ 下一課 ({n}/3)': '▶ Next Lesson ({n}/3)',
     '▶ 領取新手十連!': '▶ Claim Starter 10-Pull!',
+    '接下來領取你的免費新手十連抽!': 'Next, claim your free Starter 10-Pull!',
     '再試一次': 'Try Again',
 
     // === 第十五批:每日修煉關卡名(data-stages.js DAILY_DUNGEONS,顯示於 _renderDailyIsland tr(d.name)) ===
