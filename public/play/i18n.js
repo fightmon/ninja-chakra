@@ -179,6 +179,35 @@ const I18N_DICT = {
     // --- 教學/課程共用 UI ---
     '▸ 說明': '▸ Info',
     '▶ 點任意處繼續': '▶ Tap anywhere to continue',
+    // --- 2026-11-02 教學戰預告字卡(tutCardShow) ---  ('全體攻擊' 已有既存條目 'AOE Attack'(序章課程名共用),沿用不覆蓋)
+    '9 HIT': '9 HIT',
+    '單體攻擊': 'Single-Target Hit',
+    '15 HIT 以上': '15+ HIT',   // 15=battle-core AOE_HIT
+    '無屬宮回血': 'Clear Neutral Box to Heal',
+    '屬性相剋': 'Elemental Counters',
+    '攻擊加成・敵人倒數+1': 'Bonus Damage & Delay +1',
+    '敵人倒數歸零': 'Enemy Countdown Zero',
+    '倒數到 0': 'Countdown Hits 0',
+    '免費 10 連抽!': 'FREE 10-Pull!',
+    '出師之戰!': 'Your First Real Battle!',
+    '靠自己打贏這一局吧!': 'Win this one on your own!',
+    '你有信件!': "You've Got Mail!",
+    '獎勵送到信箱囉!': 'Rewards are waiting in your mailbox!',
+    '五城開放!': 'Five Cities Unlocked!',
+    '新的冒險開始了!': 'A new adventure begins!',
+    '敵人攻擊!': 'Enemy Strikes!',
+    '屬性魔塊': 'Element Blocks',
+    '主動技': 'Active Skill',
+    '蓄滿就能發動!': 'Charged — tap to unleash!',
+    '指定目標': 'Pick a Target',
+    '點敵人可以切換攻擊對象!': 'Tap an enemy to switch targets!',
+    '隊長': 'Leader',
+    '點卡片 放進中央!': 'Tap a card — it goes to the center!',
+    '隊員': 'Members',
+    '長按拖曳 放到想要的位置!': 'Hold & drag to any slot you like!',
+    '放滿 5 隻': 'Fill All 5',
+    '按 ✅ 確定出發!': 'Press ✅ to set out!',
+    '隨意填補': 'Place Anywhere',
     '跳過教學 ✕': 'Skip Tutorial ✕',
     '跳過 ✕': 'Skip ✕',
     '你已經不是新手了嗎?': 'Experienced player?',
@@ -699,7 +728,11 @@ const I18N_DICT = {
     '好友上限': 'Friend Limit',
     '{n} — 待做': '{n} · Soon',
     '轉蛋': 'Gacha',
-    '✨ 六星 限定 · 機率 3%': '✨ 6-Star Exclusive · 3% Rate',
+    '✨ 英雄卡 · 最高四星': '✨ Hero Cards · Up to 4★',   // 2026-11-02 取代舊「六星限定 3%」(召喚勇者 2★60/3★30/4★10,5★未開放)
+    '✨ 英雄卡 · 最高三星': '✨ Hero Cards · Up to 3★',   // 舊 key 保留(已不使用)
+    '金錢轉蛋': 'Coin Gacha',
+    '※ 機率已公示': '※ Rates disclosed',
+    '✨ 六星 限定 · 機率 3%': '✨ 6-Star Exclusive · 3% Rate',   // 舊 key 保留(已不使用)
     '金錢轉蛋（無六星）': 'Coin Gacha (No 6-Star)',
     '※ 機率已公示;六星僅「召喚勇者」可得': '※ Rates disclosed; 6★ only from Summon Hero',
     '召喚勇者': 'Summon Hero',
@@ -812,6 +845,8 @@ const I18N_DICT = {
     '▶ 領取新手十連!': '▶ Claim Starter 10-Pull!',
     '接下來領取你的免費新手十連抽!': 'Next, claim your free Starter 10-Pull!',
     '再試一次': 'Try Again',
+    '連線失敗,請再試一次': 'Connection failed, please try again',   // 轉蛋樂觀 UI 失敗重試對話框
+    '召喚中…': 'Summoning…',
 
     // === 第十五批:每日修煉關卡名(data-stages.js DAILY_DUNGEONS,顯示於 _renderDailyIsland tr(d.name)) ===
     '火之修煉·見習': 'Fire Training · Novice',
