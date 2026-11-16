@@ -31,7 +31,8 @@ const SHAPES = [
 const WSUM = SHAPES.reduce((a,s)=>a+s.w,0);
 const WSUM_SOFT = SHAPES.reduce((a,s)=>a+(s.hard?0:s.w),0);   // 排除 hard(1×5/5×1/十字)後的權重和→初級 noHard 用
 const CONFIG = {
-  ADV_MULT:1.6, WEAK_MULT:0.7, NORM_MULT:1.0,   // 相剋軟化(原2.0/0.5硬牆→1.6/0.7,讓手控能逆轉小劣勢)
+  ADV_MULT:2.0, WEAK_MULT:0.5, NORM_MULT:1.0,   // 2026-11-16 大毛拍板:改回 2/0.5,直覺、同龍族(原 2.0/0.5→曾軟化 1.6/0.7→現回 2.0/0.5);作用:玩家打敵人 + 主動技吃相剋;敵人打玩家不吃屬性相剋
+  COUNTER_DELAY:0,   // 2026-11-16 大毛拍板取消「剋屬打中→敵人倒數 +1」被動規則:0=關(預設);1=舊行為(+1,sim/舊測試對照用)。核心(enemy-core 剋屬 CD+1)、BattleSim、index.html 舊路徑都讀這個值;技能說明內的延後(剋屬 CD+2/封+3/延+2/纏+1/牆+1)不受影響
   NEUTRAL_BOX_BASE:40, LINE_BASE:30, LINE_SAME_RATE:0.5,
   HIT_BASE:8, ELEM_RATE:0.1073,   // 【2026-10-04 傷害結構改革(sim 出處:scratchpad f9_floor/f11_floor2,300 種子×26 關)】原 HIT_BASE16/ELEM_RATE0.08 → 底傷減半、屬傷率↑(Lv30 台灣隊錨點校準,基準隊風城中級每清除均傷 +1.7% 內),讓「等級/卡力」成長實戰有感(整隊 Lv20→80 +34%、單卡 Lv1→80 +13%,原僅 +25%/+6%)。無屬宮基準改 neutralAtkBase=max(round(0.24×全隊ATK合計),round(0.8×最高攻))(見 index.html 場景 neutralAtkBase),保底項保 carry 隊威力(一神四白板每清除均傷 0.91 vs 現行)。【舊註解】逐格傷害:每個被清的格(含中性)都給 HIT_BASE;屬區格再額外 +卡攻擊×相剋×ELEM_RATE。※底傷×1.33 補回「拿掉鬥志(舊平均×1.465)」的缺口,combo 改當技術加成
   PLAYER_HP_BASE:1000, RESHUFFLE_COST:120,
@@ -147,16 +148,26 @@ function computeClears(board, boxElement, boxCard, enemyEl, ampMult, neutralAtk)
   for(let b=0;b<9;b++){const br=Math.floor(b/3)*3,bc=(b%3)*3;let cn=0;
     for(let r=br;r<br+3;r++)for(let c=bc;c<bc+3;c++)if(cellSet.has(r+'_'+c)&&!isIron(r,c))cn++;   // 排除鐵塊→鐵塊不貢獻該宮攻擊(格仍在 cellSet 被移除)
     if(!cn)continue;
-    const el=boxElement[b],card=boxCard[b];let d=cn*CONFIG.HIT_BASE,hel='neutral';
-    if(el!=null&&card){d+=Math.round(card.atk*mult(el)*ampMult*CONFIG.ELEM_RATE*cn);hel=el;}
-    else if(neutralAtk>0){d+=Math.round(neutralAtk*CONFIG.NORM_MULT*ampMult*CONFIG.ELEM_RATE*cn);}   // 無屬宮:= 屬·普通(neutralAtkBase×1.0)
-    hits.push({b,el:hel,cells:cn,dmg:Math.round(d)});}
+    const el=boxElement[b],card=boxCard[b];let d=cn*CONFIG.HIT_BASE,hel='neutral',hatk=0,hrel=false;
+    if(el!=null&&card){d+=Math.round(card.atk*mult(el)*ampMult*CONFIG.ELEM_RATE*cn);hel=el;hatk=card.atk;hrel=true;}
+    else if(neutralAtk>0){d+=Math.round(neutralAtk*CONFIG.NORM_MULT*ampMult*CONFIG.ELEM_RATE*cn);hatk=neutralAtk;}   // 無屬宮:= 屬·普通(neutralAtkBase×1.0)
+    // base/atk/amp/rel:給 hitsVsEnemy 對「別隻敵人」重算(全體攻擊逐隻判相剋,2026-11-16);dmg 仍是對鎖定目標(enemyEl)的值
+    hits.push({b,el:hel,cells:cn,dmg:Math.round(d),base:cn*CONFIG.HIT_BASE,atk:hatk,amp:ampMult,rel:hrel});}
   // 🔒分層鐵塊:lock>1 的 iron 格「留下扣層」不進 cells(待移除),另收進 lockDec 給呼叫端扣層;
   //   沒有 lock(或 lock<=1)的 iron/一般格照舊進 cells(待移除)→ 零回歸(閘門= cell.lock>1)。
   const cells=[], lockDec=[];
   cellSet.forEach(k=>{ const p=k.split('_'), r=+p[0], c=+p[1], cell=board[r][c];
     if(cell && cell.el==='iron' && (cell.lock||1)>1) lockDec.push([r,c]); else cells.push([r,c]); });
   return {groups,cells,lockDec,parts,total,hitWeak,fx,hits};
+}
+// 2026-11-16 大毛拍板:全體攻擊每隻敵人各自判相剋(原:只看鎖定目標算一次、同倍率套全部敵人)。
+// 對「別隻敵人 enemyEl」重算每段傷害:與 computeClears 同一個式子與運算順序,所以 enemyEl===鎖定目標屬時與 plan.hits[i].dmg 逐位相同。
+// 回傳 {hits:[每段最終傷害(已乘 combo×隊長技 dmgMul)], total:加總}。遊戲(resolve/預覽)、BattleSim、nbsim2 共用這一份。
+function hitsVsEnemy(data, plan, enemyEl){
+  const mulOf=(h)=>{ if(!h.rel) return CONFIG.NORM_MULT; if(h.el==='neutral') return 1;
+    return (EL[h.el]&&EL[h.el].beats===enemyEl)?CONFIG.ADV_MULT:((EL[enemyEl]&&EL[enemyEl].beats===h.el)?CONFIG.WEAK_MULT:CONFIG.NORM_MULT); };
+  const hits=(data.hits||[]).map(h=>Math.round((h.base+Math.round(h.atk*mulOf(h)*h.amp*CONFIG.ELEM_RATE*h.cells))*plan.dmgMul));
+  return { hits, total:hits.reduce((a,b)=>a+b,0) };
 }
 // Node(headless/回放)用:export 同一份。瀏覽器 classic script 無 module → 跳過,定義仍是共用全域。
 // ===== BattleSim:headless 戰鬥模型(純狀態 + 同步運算,無 Phaser)=====
@@ -205,15 +216,16 @@ class BattleSim {
       if(a==='yang'){ const v=Math.round(f.atk*CONFIG.ATTR.yang_heal_rate*f.level); this.playerHP=Math.min(this.maxHP,this.playerHP+v); yangHeal+=v; }
       else if(a==='yin'){ this.amp=Math.max(this.amp,2); }
     });});
-    { const atkEls=Object.keys(data.fx); victims.forEach(en=>{ if(!en.dead && atkEls.some(e=>EL[e]&&EL[e].beats===en.el)) en.timer+=1; }); }   // 相剋打弱點→該敵延後出手:AoE(15HIT↑)對每隻被剋敵生效,單體只判鎖定目標
+    { const cdN=CONFIG.COUNTER_DELAY|0; if(cdN>0){ const atkEls=Object.keys(data.fx); victims.forEach(en=>{ if(!en.dead && atkEls.some(e=>EL[e]&&EL[e].beats===en.el)) en.timer+=cdN; }); } }   // 2026-11-16 大毛拍板取消剋屬延後:COUNTER_DELAY=0(預設)不動;>0=舊行為(相剋打弱點→該敵延後出手;AoE 對每隻被剋敵生效)
     data.cells.forEach(([r,c])=>{ this.board[r][c]=null; });   // 立即清盤(不含 lock>1 的 iron,已被 computeClears 排除在 cells 外)
     (data.lockDec||[]).forEach(([r,c])=>{ const cell=this.board[r][c]; if(cell) cell.lock=Math.max(1,(cell.lock||1)-1); });   // 🔒分層鐵塊:扣層不移除(cell 還在盤上)
     // 護盾門檻:本手 HIT/連段沒達標的 victim 這手不扣血
     this.enemies.forEach(e=>{ e._blocked=false; });
     victims.forEach(v=>{ v._blocked = ((v.hitGate&&n<v.hitGate)||(v.comboGate&&this.combo<v.comboGate)); });
     // 傷害:每宮 dmg 對每個未被擋的 victim 逐宮累加;盾住(_blocked)但有 shieldLeak(減傷盾)→放行部分傷害
-    const perVictim = plan.hits.reduce((s,h)=>s+h.dmg, 0);
-    victims.forEach(v=>{ if(!v._blocked){ v.hp=Math.max(0, v.hp-perVictim); } else { const lk=v.shieldLeak||0; if(lk>0) v.hp=Math.max(0, v.hp-Math.round(perVictim*lk)); } });
+    const perVictim = plan.hits.reduce((s,h)=>s+h.dmg, 0);   // 對鎖定目標的單隻傷害(回報用);全體攻擊每隻另算(逐隻相剋,2026-11-16)
+    const pvOf = (v)=> (v===tgt) ? perVictim : hitsVsEnemy(data, plan, v.el).total;
+    victims.forEach(v=>{ const pv=pvOf(v); if(!v._blocked){ v.hp=Math.max(0, v.hp-pv); } else { const lk=v.shieldLeak||0; if(lk>0) v.hp=Math.max(0, v.hp-Math.round(pv*lk)); } });
     // 無屬區回血:每個 neutral 宮按「被清格數」回血(heal×格數/3),teamRcv>0 才有
     let neutralHeal = 0;
     if(this.teamRcv>0) plan.hits.forEach(h=>{ if(h.el==='neutral'){ const hv=Math.max(1,Math.round(plan.heal*h.cells/3)); this.playerHP=Math.min(this.maxHP,this.playerHP+hv); neutralHeal+=hv; } });
@@ -231,7 +243,7 @@ class BattleSim {
 
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = { N, EL, ELEMENT_BOXES, NEUTRAL_FILL, NEUTRAL_DARK, SHAPES, WSUM, CONFIG, SHAPES_BY_EL,
-    COMBO_S1, COMBO_S2, COMBO_BRK, AOE_HIT, WIND_SKILL_MUL, NEUTRAL_HEAL_MUL, comboMultiplier, leadDamageMult, planResolve, BattleSim,
+    COMBO_S1, COMBO_S2, COMBO_BRK, AOE_HIT, WIND_SKILL_MUL, NEUTRAL_HEAL_MUL, comboMultiplier, leadDamageMult, planResolve, hitsVsEnemy, BattleSim,
     chakraShape, normCells, rot90, randOrient, rnd, mulberry32, brnd, startBattleSeed, pickShape, boxOf, canPlace, computeClears,
     _setBRNG:(fn)=>{BRNG=fn;} };
 }

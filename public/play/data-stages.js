@@ -885,8 +885,369 @@ function enemyTurn(state, dk){
   return state;
 }
 
+// ===== 遭遇表(五屬城「龍族拼圖式」隨機出怪)P1 — 2026-11-05 新增 =====
+// 規格:docs/spec-stage-encounters.md v1.5(§3 資料模型/§4.1 抽法/§4.2 魔王/§4.4 蓄力檔/§4.5 串場/§4.6 異屬)+ docs/spec-fire-encounter-pool.md v1.3(火城 18 張槽位表)。
+// ⚠️ 尚未接進遊戲:spawnStage / resolveStages / OVERRIDES 的既有路徑一行未動(遊戲目前不呼叫 drawEncounter / buildEncounterEnemies;E1 才接 index.html / run/start)。
+// 【E0 2026-11-06】五城資料層就位:ENC_STATS 五城 / ENC_CITY_CFG(城設定)+ ENC_TEMPLATE(6 難度×3 關共用槽位模板)→ _encCitySpec 生成 90 張表(ENCOUNTER_DEFAULT 五城各 18);sim(nbsim2.mjs)與遊戲共用這一份。
+//   蓄力檔三檔(速攻/標準/重砲)整套刪除:哥布林機制由 enemy-core.js 依 mon/star 決定(規格 §4.4),這裡 gob 只給「核心會覆蓋」的占位旗標。
+// 這一段只新增名字(ENC_* / _enc* / drawEncounter / buildEncounterEnemies / encounterSig / getEncounterSpec / ENCOUNTER_DEFAULT),不覆寫任何既有識別字。
+const ENC_EL_IDX = {fire:0,water:1,thunder:2,earth:3,wind:4};                      // 屬性→卡號偏移(cardId = 怪種 base + 此值)
+const ENC_MON_CARD = { gob:41, cube:66, healer:56, iron:36, rock:46, duck:51, jewel:61 };     // 怪種 base 卡號(火屬);哥布林 c41~45 / 方塊怪 c66~70 / 補師 c56~60 / 鐵機人 c36~40 / 石頭怪 c46~50 / 賊鴨 c51~55 / 寶玉怪 c61~65(2026-11-09:關內亂入,掉該屬寶玉卡)
+const ENC_GUEST_KINDS = ['healer','iron','rock','duck'];                            // 【舊預設】串場池 fallback:spec 沒帶 guestPool(舊格式/D1 舊表)時才用;E0 起各城表自帶 spec.guestPool(=其他四城招牌,含 gob、不含自家招牌)
+// 哥布林占位旗標(E0):蓄力檔已刪;gob 的實際機制(猛擊/終結猛擊/餘火/酋長)由 enemy-core.js 依 mon+star 決定並覆蓋 interval/timer。
+//   這三個值只讓「依旗標判斷怪種」的舊路徑認得這是哥布林(finisher>0 且 finCD>0)。finisher 取 0.15(≈舊速攻檔上緣):若有路徑沒接核心也不會一發秒人。
+const ENC_GOB_PLACEHOLDER = { finisher:0.15, finCD:4, finStages:3 };
+const ENC_CUBE_CD = { 1:[3,5], 2:[2,4], 3:[2,4], 4:[2,3] };   // 【2026-11-10 atk 收窄:原 1★4~7/2★3~6/3★2~5/4★2~4,為增加與怪互動】方塊怪出手間隔(CD)由星數決定,每隻生成時在範圍內均勻抽整數;再疊 ENC_CUBE_CD_OFF_BY_DIFF(入門~中級平移);串場怪不套此表
+const ENC_DROP_RATE = { 1:0.60, 2:0.50, 3:0.40, 4:0.30, boss4:0.10 };   // 逐隻掉率「星數基準」(母規格 §6.2 預設;1★60/2★50/3★40/4★30);boss4=4★魔王獨立 10%(定案,不受難度係數影響)
+// 【定案 2026-11-05 第三輪】掉率「越難越多」:每隻怪的掉率只看星數(ENC_DROP_RATE),不分難度;全難度共用同一個全域係數 0.88(讓入門維持 ≈2.8 張/趟,越難每趟怪越多→自然掉越多)。
+//   製作人原話:「越難本來就越花時間解盤,獲得也要一樣多,才會想要挑戰難的關卡」。第二輪的難度係數(0.88/0.63/0.79/0.91/0.67/0.57)是為了把六難度每趟都壓在 2.8 張,結果同一隻 2★ 方塊怪地獄掉率(0.285)比入門(0.44)還低,與「難=多賺」相反,故撤回。
+//   結構保留(六個值全 0.88),未來還要調再改這張表;4★ 魔王仍固定 10%(encDropRate 對 boss4 直接回傳,不乘係數)。基準 2.8 張=現行內建預設 RUN_DROP_DEFAULT.fire(S1 0.8+S2 1.0+S3 1.0,不含 S3 的 c61 寶玉——寶玉改由寶玉怪掉,P4 移除)。
+const ENC_DROP_DIFF_MUL = { baby:0.88, beginner:0.88, normal:0.88, advanced:0.88, super:0.88, hell:0.88 };
+function encDropRate(star,isBoss,diffKey){ if(isBoss&&star>=4) return ENC_DROP_RATE.boss4; const r=ENC_DROP_RATE[star]||0, m=(diffKey&&ENC_DROP_DIFF_MUL[diffKey]!=null)?ENC_DROP_DIFF_MUL[diffKey]:1; return Math.round(r*m*1000)/1000; }
+function encMonDropRate(mon,star,isBoss,diffKey){ return mon==='jewel' ? 1 : encDropRate(star,isBoss,diffKey); }   // 【2026-11-09 拍板】寶玉怪(關內亂入)被打倒必掉該屬寶玉卡(rate 1),不吃星數掉率/全域係數;其餘怪照 encDropRate
+const ENC_CUBE_CD_OFF_BY_DIFF = { baby: -2, beginner: -1, normal: -1 };   // 2026-11-10 atk:方塊怪出手間隔依難度平移量(整數,負=縮短;抽籤不變、只平移結果,最低 2);沒列=0
+const ENC_STAR_STEP = { hp:1.09, atk:1.05 };   // 每升一星的數值倍率:取現行 OVERRIDES「同城同難度內相鄰星級(非魔王、非指定 cardId)」平均 hp/atk 比的中位數(18 組:hp 1.089 / atk 1.053)
+// 數值底盤(raw=還沒乘 DIFFS 與全域倍率,與 OVERRIDES/DUNGEONS 的 def 同一層級;之後走與 spawnStage 完全相同的公式):
+//   unit[難度][關]={star,hp,atk}:該難度該關「現行火城標準雜兵」的 raw 值與其星級(入門雜兵貼圖=1★;初級 S1/S2=2★、S3 護衛=1★;中級/上級哥布林=2★;超級/地獄=3★);其他星級以 ENC_STAR_STEP 往上下推。
+//   【E0】wind/thunder/earth/water 同結構、同推法(S1/S2=該城標準招牌怪、S3=護衛的 raw;魔王=現行 S3 魔王 raw)。入門/初級魔王沿用「各城現行值」(不用火城 P1 校準的 1400/200、1600/98),試玩期值、待 sim 校準。
+//   boss[難度]=[hp,atk,turns]:現行火城魔王 raw 值(星階由槽位表決定,數值沿用現行,不另造);mobTurns=現行火城雜兵 raw turns=2;ironTurns=現行雷城鐵機人各難度 raw turns(讓最終 interval=2~3)。
+const ENC_STATS = { fire:{
+  unit:{
+    baby:    [{star:1,hp:650,atk:100},{star:1,hp:560,atk:90 },{star:1,hp:480,atk:90 }],
+    beginner:[{star:2,hp:560,atk:90 },{star:2,hp:540,atk:88 },{star:1,hp:520,atk:85 }],
+    normal:  [{star:2,hp:650,atk:100},{star:2,hp:560,atk:90 },{star:2,hp:480,atk:90 }],
+    advanced:[{star:2,hp:650,atk:100},{star:2,hp:560,atk:90 },{star:2,hp:480,atk:90 }],
+    super:   [{star:3,hp:820,atk:172},{star:3,hp:800,atk:168},{star:3,hp:820,atk:172}],
+    hell:    [{star:3,hp:900,atk:226},{star:3,hp:880,atk:222},{star:3,hp:900,atk:226}],
+  },
+  boss:{ baby:[1400,200,3], beginner:[1600,98,2], normal:[1900,200,3], advanced:[1900,200,3], super:[2600,300,2], hell:[2800,378,2] },   // 【第二輪定案方向,sim 校準】魔王 raw hp 入門→地獄單調遞增(最終 hp×df×1.8:1764/2016/3420/4617/7722/12096)。第一輪沿用現行 baby 1900(最終2394)/beginner 640(最終806)是倒過來的;新值取兩者「平均擊殺手數」(約 9 手)的折衷再拉開
+  mobTurns:2,
+  ironTurns:{ baby:1, beginner:2, normal:3, advanced:3, super:4, hell:4 },
+},
+  wind:{   // 風城(招牌=賊鴨);【試玩期值,待 sim 校準】unit=現行 resolveStages(OVERRIDES/DUNGEONS)該難度該關標準雜兵 raw(S1/S2=標準招牌怪、S3=護衛),魔王=現行 S3 魔王 raw
+    unit:{
+      baby:     [{star:1,hp:500,atk:70 },{star:1,hp:480,atk:68 },{star:1,hp:460,atk:66 }],
+      beginner: [{star:2,hp:560,atk:90 },{star:2,hp:540,atk:88 },{star:1,hp:520,atk:85 }],
+      normal:   [{star:2,hp:640,atk:100},{star:2,hp:660,atk:100},{star:2,hp:700,atk:100}],
+      advanced: [{star:3,hp:760,atk:118},{star:3,hp:760,atk:118},{star:2,hp:800,atk:118}],
+      super:    [{star:3,hp:800,atk:230},{star:3,hp:800,atk:230},{star:2,hp:800,atk:230}],
+      hell:     [{star:3,hp:900,atk:270},{star:3,hp:900,atk:270},{star:3,hp:900,atk:270}],
+    },
+    boss:{ baby:[620,80,2], beginner:[660,100,2], normal:[1900,200,2], advanced:[2100,205,2], super:[2600,370,2], hell:[2800,420,2] },
+    mobTurns:2,
+    ironTurns:{ baby:1, beginner:2, normal:3, advanced:3, super:4, hell:4 },
+  },
+  thunder:{   // 雷城(招牌=鐵機人);【試玩期值,待 sim 校準】unit=現行 resolveStages(OVERRIDES/DUNGEONS)該難度該關標準雜兵 raw(S1/S2=標準招牌怪、S3=護衛),魔王=現行 S3 魔王 raw
+    unit:{
+      baby:     [{star:1,hp:500,atk:70 },{star:1,hp:480,atk:68 },{star:1,hp:460,atk:66 }],
+      beginner: [{star:2,hp:560,atk:90 },{star:2,hp:540,atk:88 },{star:1,hp:520,atk:85 }],
+      normal:   [{star:2,hp:640,atk:100},{star:2,hp:640,atk:100},{star:2,hp:660,atk:100}],
+      advanced: [{star:3,hp:640,atk:100},{star:3,hp:640,atk:100},{star:3,hp:680,atk:100}],
+      super:    [{star:3,hp:800,atk:172},{star:3,hp:800,atk:172},{star:3,hp:820,atk:174}],
+      hell:     [{star:3,hp:880,atk:196},{star:3,hp:880,atk:196},{star:3,hp:900,atk:198}],
+    },
+    boss:{ baby:[620,80,1], beginner:[640,98,2], normal:[1900,200,3], advanced:[1900,200,3], super:[2600,300,4], hell:[2800,330,4] },
+    mobTurns:2,
+    ironTurns:{ baby:1, beginner:2, normal:3, advanced:3, super:4, hell:4 },
+  },
+  earth:{   // 土城(招牌=石頭怪);【試玩期值,待 sim 校準】unit=現行 resolveStages(OVERRIDES/DUNGEONS)該難度該關標準雜兵 raw(S1/S2=標準招牌怪、S3=護衛),魔王=現行 S3 魔王 raw
+    unit:{
+      baby:     [{star:1,hp:600,atk:80 },{star:1,hp:580,atk:78 },{star:1,hp:580,atk:78 }],
+      beginner: [{star:2,hp:700,atk:92 },{star:2,hp:700,atk:92 },{star:1,hp:620,atk:85 }],
+      normal:   [{star:2,hp:760,atk:100},{star:2,hp:760,atk:100},{star:2,hp:760,atk:100}],
+      advanced: [{star:3,hp:920,atk:122},{star:3,hp:920,atk:122},{star:3,hp:920,atk:122}],
+      super:    [{star:3,hp:980,atk:128},{star:3,hp:980,atk:128},{star:3,hp:980,atk:128}],
+      hell:     [{star:3,hp:1040,atk:136},{star:3,hp:1040,atk:136},{star:3,hp:1040,atk:136}],
+    },
+    boss:{ baby:[700,88,2], beginner:[800,100,2], normal:[2200,180,2], advanced:[2500,195,2], super:[2600,200,2], hell:[2800,210,2] },
+    mobTurns:2,
+    ironTurns:{ baby:1, beginner:2, normal:3, advanced:3, super:4, hell:4 },
+  },
+  water:{   // 水城(招牌=補師);【試玩期值,待 sim 校準】unit=現行 resolveStages(OVERRIDES/DUNGEONS)該難度該關標準雜兵 raw(S1/S2=標準招牌怪、S3=護衛),魔王=現行 S3 魔王 raw
+    unit:{
+      baby:     [{star:1,hp:520,atk:78 },{star:1,hp:500,atk:76 },{star:1,hp:500,atk:76 }],
+      beginner: [{star:2,hp:560,atk:88 },{star:2,hp:600,atk:90 },{star:1,hp:540,atk:85 }],
+      normal:   [{star:2,hp:640,atk:100},{star:2,hp:640,atk:100},{star:2,hp:640,atk:100}],
+      advanced: [{star:3,hp:760,atk:115},{star:3,hp:760,atk:115},{star:3,hp:760,atk:115}],
+      super:    [{star:3,hp:880,atk:130},{star:3,hp:880,atk:130},{star:3,hp:820,atk:170}],
+      hell:     [{star:3,hp:900,atk:185},{star:3,hp:940,atk:190},{star:3,hp:900,atk:185}],
+    },
+    boss:{ baby:[600,85,2], beginner:[680,98,2], normal:[1900,190,2], advanced:[2100,200,2], super:[2300,270,2], hell:[2200,290,2] },
+    mobTurns:2,
+    ironTurns:{ baby:1, beginner:2, normal:3, advanced:3, super:4, hell:4 },
+  },
+};
+
+// ── 抽籤(純函式,rng 外部注入:()=>[0,1))──
+function _encInt(rng,a,b){ return a+Math.floor(rng()*(b-a+1)); }
+function _encPickW(rng,keys,w){ let sum=0; keys.forEach(k=>{sum+=w[k];}); let r=rng()*sum; for(let i=0;i<keys.length;i++){ r-=w[keys[i]]; if(r<0) return keys[i]; } return keys[keys.length-1]; }
+function _encShuffle(a,rng){ for(let i=a.length-1;i>0;i--){ const j=Math.floor(rng()*(i+1)); const t=a[i]; a[i]=a[j]; a[j]=t; } return a; }
+function _encEl(spec,rule,rng){   // 槽 el 規則(母規格 §3.3/§4.6):self 本屬/lock 初級鎖屬/all 全屬(spec.elw 權重)/off 異屬(spec.off 順序權重)/其他=指定屬
+  if(rule==='self') return spec.el;
+  if(rule==='lock') return spec.lock;
+  if(rule==='off') return _encPickW(rng,Object.keys(spec.off),spec.off);
+  if(rule==='all') return _encPickW(rng,Object.keys(spec.elw),spec.elw);
+  return rule;
+}
+function _encIsSig(slot,spec){ return slot.el==='self' && (slot.mon==='sig' || slot.mon===((spec&&spec.sig)||'gob')); }   // 招牌槽=本城本屬招牌怪(槽的 mon 用抽象名 'sig',由 spec.sig 解析;舊格式直接寫 mon:'gob' 的火城表仍認得)
+function _encMake(spec,slot,rng,usedGuest){   // 第 5 步「逐隻具現化」:星數→屬性→(招牌解析/串場抽種,同一關不重複)→(方塊怪 CD)。蓄力檔抽籤已刪(E0)
+  const star=_encInt(rng,slot.star[0],slot.star[1]);
+  const el=_encEl(spec,slot.el,rng);
+  let mon=slot.mon, guest=false;
+  if(mon==='sig') mon=spec.sig||'gob';   // 招牌怪抽象名 → 本城招牌(火 gob/風 duck/雷 iron/土 rock/水 healer);不消耗 rng
+  else if(mon==='guest'){   // 串場怪同一關不重複(2026-11-05 第二輪定案):已出現過的種類排除;池用盡(>4 隻)才允許重複。池=spec.guestPool(其他四城招牌,含 gob、不含自家招牌)
+    const pool=spec.guestPool||ENC_GUEST_KINDS, used=usedGuest||[]; let keys=pool.filter(k=>used.indexOf(k)<0); if(!keys.length) keys=pool.slice();
+    const w={}; keys.forEach(k=>{ w[k]=(spec.guestW&&spec.guestW[k]!=null)?spec.guestW[k]:1; });
+    mon=_encPickW(rng,keys,w); guest=true; used.push(mon); }
+  const m={slot:slot.id,mon,el,star,role:slot.role||null,guest,cd:0};
+  if(mon==='cube'){ const R=ENC_CUBE_CD[star]||ENC_CUBE_CD[3]; m.cd=_encInt(rng,R[0],R[1]); }   // 方塊怪 CD:星數決定、每隻各自抽(不吃難度 dt)
+  return m;
+}
+function encounterSig(lineup){ return lineup.map(m=>m.safe?('safe:'+(m.mon||'')+':'+m.el+':'+m.star):(m.mon+':'+m.el+':'+m.star)).sort().join(','); }   // 陣容簽名(ban 比對用;不含站位/蓄力檔)
+function _encDrawSlots(spec,rng){
+  const slots=spec.slots, out=[], usedGuest=[];
+  // 1. 方塊海特例(僅有 spec.sea 的表):獨立擲 sea.p;命中=整關替換成 sea.n 隻同型方塊怪(cap 放寬、招牌保底與其餘槽一併不出)→ 直接進第 8 步站位
+  if(spec.sea && rng()<spec.sea.p){
+    const sea=spec.sea; let els=null;
+    if(sea.mix){   // 異屬方塊海「同屬/混屬」變化(2026-11-05 第二輪定案):先等機率抽 1/2/3 種屬性→從屬性池(預設=spec.off 異屬池,可由 sea.pool 改)依順序權重不重複抽出→5 隻隨機分配、每種至少 1 隻
+      const pool=sea.pool||spec.off, keys=Object.keys(pool), k=Math.min(_encInt(rng,sea.mix[0],sea.mix[1]),keys.length), chosen=[], left=keys.slice();
+      for(let i=0;i<k;i++){ const w={}; left.forEach(x=>{w[x]=pool[x];}); const e=_encPickW(rng,left,w); chosen.push(e); left.splice(left.indexOf(e),1); }
+      els=chosen.slice(); while(els.length<sea.n) els.push(chosen[Math.floor(rng()*chosen.length)]);
+    }
+    for(let i=0;i<sea.n;i++) out.push(_encMake(spec,{id:'sea',mon:'cube',el:els?els[i]:sea.el,star:[sea.star,sea.star]},rng));
+    return _encShuffle(out,rng);
+  }
+  // 2. 逐槽骰隻數(魔王槽有 dual:以機率 dual 出 2 隻、否則 1 隻,§4.2)
+  const ns=slots.map(s=>{ if(s.role==='boss' && s.dual!=null) return rng()<s.dual?2:1; return _encInt(rng,s.n[0],s.n[1]); });
+  const mins=slots.map(s=>s.n[0]);   // 保證槽=隻數下限≥1;填充槽=0
+  // 3. 招牌保底(sigGuard 開):骰完本屬招牌怪總數為 0 → 把表中第一個招牌槽改 1 隻(該槽視為保證槽)。表中沒有招牌槽的關=保底為「關」
+  if(spec.sigGuard){
+    let sigN=0, firstSig=-1; slots.forEach((s,i)=>{ if(_encIsSig(s,spec)){ sigN+=ns[i]; if(firstSig<0) firstSig=i; } });
+    if(firstSig>=0 && sigN===0){ ns[firstSig]=1; mins[firstSig]=1; }
+  }
+  // 4. 裁切(Σn>cap):三輪、同輪內表序由上而下——①保證槽下限 ②保證槽超出下限部分 ③填充槽
+  let take=ns.slice();
+  if(ns.reduce((a,b)=>a+b,0)>spec.cap){
+    take=ns.map(()=>0); let left=spec.cap;
+    slots.forEach((s,i)=>{ if(mins[i]>=1){ const t=Math.min(mins[i],ns[i],left); take[i]+=t; left-=t; } });
+    slots.forEach((s,i)=>{ if(mins[i]>=1){ const t=Math.min(ns[i]-take[i],left); take[i]+=t; left-=t; } });
+    slots.forEach((s,i)=>{ if(mins[i]<1){ const t=Math.min(ns[i],left); take[i]+=t; left-=t; } });
+  }
+  // 5. 逐隻具現化
+  slots.forEach((s,i)=>{ for(let k=0;k<take[i];k++) out.push(_encMake(spec,s,rng,usedGuest)); });
+  // 6. 每關最少 1 隻:裁切後為 0 → 表中第一個槽補成 1 隻
+  if(out.length===0) out.push(_encMake(spec,slots[0],rng,usedGuest));
+  // 8. 站位(2026-11-05 第二輪定案):魔王固定站中間 C 位(索引 floor((n-1)/2));雙魔王=第一隻站 C 位、第二隻站 C 位旁一格(左或右隨機,同一 rng;n=2 時只有右邊);其餘怪隨機
+  const bosses=out.filter(m=>m.role==='boss'), others=_encShuffle(out.filter(m=>m.role!=='boss'),rng), n=out.length, c=Math.floor((n-1)/2), pos=new Array(n).fill(null);
+  if(bosses.length>=1) pos[c]=bosses[0];
+  if(bosses.length>=2){ const sides=[]; if(c-1>=0) sides.push(c-1); if(c+1<n) sides.push(c+1); const sd=sides.length>1?sides[Math.floor(rng()*2)]:sides[0]; pos[sd]=bosses[1]; }
+  let oi=0; for(let i=0;i<n;i++) if(pos[i]===null) pos[i]=others[oi++];
+  return pos;
+}
+// 7. ban/pinned:pinned=[{w:機率,lineup:[...]}](w 為獨立機率質量,Σw<1;命中即回該手排陣容);ban=[encounterSig 字串](命中→重抽最多 20 次,仍失敗用 safe)
+function drawEncounter(spec,rng){
+  const pin=spec.pinned||[];
+  if(pin.length){ const tot=pin.reduce((a,p)=>a+p.w,0), r=rng(); if(r<tot){ let acc=0; for(const p of pin){ acc+=p.w; if(r<acc) return p.lineup.map(m=>Object.assign({},m)); } } }
+  const ban=spec.ban||[]; let l=null;
+  for(let t=0;t<20;t++){ l=_encDrawSlots(spec,rng); if(!ban.length || ban.indexOf(encounterSig(l))<0) return l; }
+  return (spec.safe && spec.safe.length) ? spec.safe.map(m=>Object.assign({},m)) : l;
+}
+
+// ── 稀有怪亂入(2026-11-09 寶玉怪 P4-1;與伺服器 encounter.ts 的 VERBATIM D 逐字同源,test-encounter-server-sync.cjs 會比對)──
+// 規則(母規格 §5.1-2/§5.4、製作人 2026-11-09 拍板):S1/S2 才有、入門與首次保護關(safe)不出、每關最多 1 隻、換掉一隻「填充槽」怪(保證槽/魔王不換),沒有填充槽怪就額外加 1 隻;該關已 5 隻則不亂入。
+// 本期只開寶玉;金屬/金錢在表裡 rate 0 留接點(之後把 base/day/weekend 填數字、補 ENC_MON_CARD 即可,不必動 injectRare)。
+// 寶玉星數:初級 1★/中級 2★/上級↑ 3★(5★ 開放前最高 3★,不產 4★)。
+const ENC_RARE_ORDER = ['jewel','metal','money'];                                                          // 依序擲(寶玉→金屬→金錢),中一個即停
+const ENC_RARE_STAR = { jewel:{ baby:1, beginner:1, normal:2, advanced:3, super:3, hell:3 }, metal:{ baby:1, beginner:1, normal:2, advanced:2, super:3, hell:3 }, money:{ baby:1, beginner:1, normal:2, advanced:2, super:3, hell:3 } };
+const ENC_RARE_RULES = {                                                                                   // base=平時保底、day=曜日加倍(僅 dayCity 命中的城)、weekend=週末全城;入門一律 0(injectRare 與 encRareRate 皆擋)
+  jewel:{ base:0.06, day:0.18, weekend:0.12 },                                                             // 寶玉:保底 6%、寶玉日當城 18%(≈保底 3 倍)、週末祭全城 12%
+  metal:{ base:0, day:0, weekend:0 },                                                                      // 接點:金銀(金屬/金錢)曜日規則另議,目前亂入關閉(驚喜關另走 run/start bonus)
+  money:{ base:0, day:0, weekend:0 },
+};
+const ENC_JEWEL_CITIES = ['fire','water','thunder','earth','wind'];
+function _encMulberry(a){ return function(){ a|=0; a=a+0x6D2B79F5|0; let t=Math.imul(a^a>>>15,1|a); t=t+Math.imul(t^t>>>7,61|t)^t; return ((t^t>>>14)>>>0)/4294967296; }; }   // 自帶 PRNG(不依賴 battle-core,前後端同源)
+function _encTwDays(ms){ return Math.floor((ms+28800000)/86400000); }                                      // 台灣時區(UTC+8)的「自 1970-01-01 起第幾天」(換日 00:00 台灣時間)
+function jewelWeekOrder(weekIdx){   // 第 weekIdx 週(台灣時區、週一起算)週一~週五的寶玉日城:五屬隨機排列、同週不重複;全體玩家同一份(純函式,只吃週序號)
+  const a=ENC_JEWEL_CITIES.slice(), r=_encMulberry((Math.imul((weekIdx|0)+1,0x9E3779B1)^0x5EED1234)>>>0);
+  for(let i=a.length-1;i>0;i--){ const j=Math.floor(r()*(i+1)); const t=a[i]; a[i]=a[j]; a[j]=t; }
+  return a;
+}
+function jewelDayCity(date){   // 今日寶玉日的城(週一~五各一屬);週末(台灣時區)回 null。date=Date 或 epoch 毫秒,省略=現在。前後端共用(大廳「今日寶玉城」用)
+  const ms=(date instanceof Date)?date.getTime():(typeof date==='number'?date:Date.now());
+  const d=_encTwDays(ms), mon=(((d+3)%7)+7)%7;   // 1970-01-01 是週四 → (d+3)%7:0=週一…6=週日
+  if(mon>4) return null;
+  return jewelWeekOrder(Math.floor((d+3)/7))[mon];
+}
+// ── 金銀日(2026-11-11 大毛拍板):金銀怪(驚喜關)也有「每日城」,與寶玉城錯開 ──
+// 週一~五每天一座城(每週把五城隨機排一次、同週不重複,且每天 ≠ 當天寶玉城);週六日五城全算。當日金銀城的驚喜關(run/start bonus)機率 ×2,其餘 ×1。純函式、全體玩家同一份、前後端同源。
+function metalWeekOrder(weekIdx){   // 第 weekIdx 週週一~週五的金銀日城:用另一組種子洗牌五屬;只要有任一天撞到寶玉城就換下一組種子(salt+1)重洗,直到五天都不同(上限 64 次,極端兜底取 jewel 順序輪移 1 格——必不撞)
+  const J=jewelWeekOrder(weekIdx);
+  for(let salt=0;salt<64;salt++){
+    const a=ENC_JEWEL_CITIES.slice(), r=_encMulberry((Math.imul((weekIdx|0)+1,0x85EBCA6B)^0xA11CE777^Math.imul(salt,0x27D4EB2F))>>>0);
+    for(let i=a.length-1;i>0;i--){ const j=Math.floor(r()*(i+1)); const t=a[i]; a[i]=a[j]; a[j]=t; }
+    if(a.every((c,i)=>c!==J[i])) return a;
+  }
+  return J.map((_,i)=>J[(i+1)%J.length]);
+}
+function metalDayCity(date){   // 今日金銀日的城;週末(台灣時區)回 null(=五城全算)。date=Date 或 epoch 毫秒,省略=現在
+  const ms=(date instanceof Date)?date.getTime():(typeof date==='number'?date:Date.now());
+  const d=_encTwDays(ms), mon=(((d+3)%7)+7)%7;
+  if(mon>4) return null;
+  return metalWeekOrder(Math.floor((d+3)/7))[mon];
+}
+function isJewelDay(city,date){ const ms=(date instanceof Date)?date.getTime():(typeof date==='number'?date:Date.now()); const d=_encTwDays(ms), mon=(((d+3)%7)+7)%7; return mon>4 || jewelDayCity(ms)===city; }   // 該城今天是不是寶玉日(週末五城全是)
+function isMetalDay(city,date){ const ms=(date instanceof Date)?date.getTime():(typeof date==='number'?date:Date.now()); const d=_encTwDays(ms), mon=(((d+3)%7)+7)%7; return mon>4 || metalDayCity(ms)===city; }   // 該城今天是不是金銀日(週末五城全是)
+function surpriseRateMul(city,date){ return isMetalDay(city,date)?2:1; }   // 該城今天「驚喜關(金銀怪)」機率倍率:金銀日 2、其餘 1(基準 econ.bonusRate=12% → 24%);run/start 擲 bonus 時乘上去
+function encRareRate(kind,city,diffKey,ms){   // 該種稀有怪在「城 × 難度 × 時間」的亂入機率(每關擲一次);入門/未知種=0
+  const R=ENC_RARE_RULES[kind]; if(!R||diffKey==='baby') return 0;
+  const d=_encTwDays(typeof ms==='number'?ms:Date.now()), mon=(((d+3)%7)+7)%7;
+  if(mon>4) return R.weekend||0;                                    // 週末祭:全城
+  if(kind==='jewel' && jewelDayCity(ms)===city) return R.day||0;    // 寶玉日:當日屬城加倍
+  return R.base||0;
+}
+function injectRare(lineup,spec,city,diffKey,si,rng,ms){   // 回新陣容(不改原陣列);沒中/不合條件回原陣列。只對 drawEncounter 抽出的一般陣容用——保護關(safe)伺服器根本不呼叫
+  if(!lineup||!lineup.length||diffKey==='baby'||si>1||lineup.length>=5||lineup.some(m=>m&&m.safe)) return lineup;
+  let kind=null;
+  for(let i=0;i<ENC_RARE_ORDER.length;i++){ const k=ENC_RARE_ORDER[i], p=encRareRate(k,city,diffKey,ms); if(p>0 && rng()<p){ kind=k; break; } }
+  if(!kind) return lineup;
+  const slots=(spec&&spec.slots)||[], fill=[];
+  lineup.forEach((m,i)=>{ const sl=slots.find(x=>x.id===m.slot); if(sl && sl.n[0]===0 && m.role!=='boss') fill.push(i); });   // 填充槽=n 下限 0 且非魔王(方塊海 'sea' 不在 spec.slots → 不算填充槽)
+  const re={slot:'rare',mon:kind,el:(kind==='jewel')?city:'neutral',star:ENC_RARE_STAR[kind][diffKey],role:null,guest:false,cd:0};
+  const nl=lineup.slice(); if(fill.length) nl[fill[Math.floor(rng()*fill.length)]]=re; else nl.push(re);
+  return nl;
+}
+// ── 稀有怪亂入 END ──
+
+// ── 陣容描述 → 敵人物件(與 spawnStage 回傳同格式,多帶 mon/star/guest/chargeTier/dropCard 供 P2 掉落用)──
+// hp/atk/turns 公式與 spawnStage 完全相同:hp=round(raw×df.hp×ENEMY_HP_MUL)、atk=round(raw×df.atk×(魔王?BOSS_ATK_MUL:1)×ENEMY_ATK_MUL)、turns=max(1,raw+df.dt−1);
+// 顯式陣容路徑(母規格 §7.2):不做 pun/SIG/specialIdx/covered/noSkill 自動注入。safe 條目(m.safe)=現行陣容的最終敵人物件(+mon/star/guest 三欄),原封複製。
+// 前端轉接欄位(E1 用):每隻帶 mon/star/guest/el/cardId/tier(=星數;4★ 魔王 tier 0、cardId null → 沿用 king 圖分支)/boss/dropCard/dropRate。
+// 非火城招牌怪(duck/iron/rock/healer)帶「串場 1★ 近似」舊旗標(peck 1/CD3、iron 1 格 1 層、shield combo2 漏 40%、healAlly 0.25/CD2)當核心未接線時的保底;核心接線後一律由 enemy-core.js 依 mon+star 覆蓋。
+const ENC_JEWEL_HP_MUL = { baby:1, beginner:1, normal:1, advanced:1, super:1, hell:0.8 };   // 寶玉怪 HP 難度乘數(nbsim2 RHP_DK.jewel:盾破後約 1~2 手打倒;地獄 0.8)
+function buildEncounterEnemies(dungeonId,diffKey,stageIdx,lineup){
+  const S=ENC_STATS[dungeonId]; if(!S||!lineup) return [];
+  const df=DIFFS_BY[diffKey]||DIFFS_BY.normal, dk=df.key;
+  const hasBoss=lineup.some(m=>m.safe?(m.enemy&&m.enemy.boss):m.role==='boss');
+  return lineup.map(m=>{
+    if(m.safe) return Object.assign({},m.enemy);
+    const isBoss=m.role==='boss';
+    let hpRaw,atkRaw,turnsRaw;
+    if(isBoss){ const B=S.boss[dk]; hpRaw=B[0]; atkRaw=B[1]; turnsRaw=B[2]; }
+    else { const u=S.unit[dk][Math.min(stageIdx,2)], k=m.star-u.star; hpRaw=u.hp*Math.pow(ENC_STAR_STEP.hp,k); atkRaw=u.atk*Math.pow(ENC_STAR_STEP.atk,k); turnsRaw=(m.mon==='iron')?S.ironTurns[dk]:S.mobTurns; }
+    const hp=Math.max(1,Math.round(hpRaw*df.hp*ENEMY_HP_MUL)),
+          atk=Math.max(1,Math.round(atkRaw*df.atk*(isBoss?BOSS_ATK_MUL:1)*ENEMY_ATK_MUL)),
+          turns=Math.max(1,turnsRaw+(df.dt||0)-1);
+    let beh=null;
+    if(m.mon==='gob') beh='finisher'; else if(m.mon==='healer') beh='healAlly'; else if(m.mon==='rock') beh='shield';
+    const g=behGates(beh,dk,isBoss);
+    let finCDV=0,finStagesV=0,finAnyHitV=false,peckN=0,peckCD=0,ironN=0,healCD=0;
+    if(m.mon==='gob'){ g.finisher=ENC_GOB_PLACEHOLDER.finisher; finCDV=ENC_GOB_PLACEHOLDER.finCD; finStagesV=ENC_GOB_PLACEHOLDER.finStages; finAnyHitV=!(isBoss&&m.star>=4); }   // 占位旗標(核心依 mon+star 覆蓋,見 ENC_GOB_PLACEHOLDER);打斷旗標沿用:1~3★ 任何攻擊可斷,4★ 魔王需剋屬
+    if(beh==='healAlly'){ g.healAlly=0.25; healCD=2; }                                                                           // 串場補師:補 25%、CD2(§4.5)
+    if(beh==='shield'){ g.shieldKind='combo'; g.comboGate=2; g.hitGate=0; g.shieldLeak=0.4; }                                    // 串場石頭怪:盾 60% 減傷(漏 40%)、破盾 COMBO 2(入門級)
+    if(m.mon==='duck'){ peckN=1; peckCD=3; }                                                                                     // 串場賊鴨:偷 1 格、CD3
+    if(m.mon==='iron'){ ironN=1; }                                                                                               // 串場鐵機人:鐵塊 1 格、1 層、免罰
+    const cubeCD=(m.mon==='cube'&&m.cd>0)?Math.max(2,m.cd+(ENC_CUBE_CD_OFF_BY_DIFF[dk]||0)):0;                                                                            // 方塊怪 CD:星數表抽出的值直接當出手間隔,不套難度 dt(第二輪定案);沒帶 cd 的舊陣容退回 turns
+    const ival=(finCDV>0)?finCDV:(peckCD>0)?peckCD:(healCD>0)?healCD:(cubeCD>0)?cubeCD:turns;
+    const bigBoss=(isBoss&&m.star>=4);                                                                                           // 4★ 魔王:無 cardId、tier 0 → 沿用現行 king 圖分支;掉落卡走 dropCard
+    const dropCard='c'+(ENC_MON_CARD[m.mon]+ENC_EL_IDX[m.el]);
+    const jw=(m.mon==='jewel');   // 寶玉怪(2026-11-09,照 nbsim2 mkRare):HP=同城同難度同關同星數方塊怪模板 × ENC_JEWEL_HP_MUL[難度](地獄 0.8、其餘 1);ATK=同模板(核心再乘 enemy-core TUNING.JEWEL_K);行為由 enemy-core 依 mon='jewel' 的核心盾決定
+    const hpF=jw?Math.max(1,Math.round(hp*(ENC_JEWEL_HP_MUL[dk]!=null?ENC_JEWEL_HP_MUL[dk]:1))):hp;
+    return Object.assign({el:m.el,max:hpF,hp:hpF,atk:atk,interval:ival,timer:Math.max(2,ival),burn:0,dead:false,boss:isBoss,guard:(!isBoss&&hasBoss)},
+      g,{phases:null,phaseIdx:0,arch:null,tier:bigBoss?0:m.star,finStages:finStagesV,finAnyHit:finAnyHitV,finCD:finCDV,cardId:bigBoss?null:dropCard,peck:peckN,peckTray:false,stealStored:false,iron:ironN,ironPunish:false,reviveMax:2},
+      ironN>0?{lock:1}:{},
+      jw?{hitGate:0,comboGate:0,shield:false,healAlly:0,finCD:0,finisher:0,peck:0,iron:0,burn:0,boss:false,guard:false}:{},
+      {mon:m.mon,star:m.star,guest:!!m.guest,dropCard:dropCard,dropRate:encMonDropRate(m.mon,m.star,isBoss,dk)});
+  });
+}
+
+// ── 五城共用槽位模板 + 城設定(E0 2026-11-06)──
+// 五城 90 張表結構相同,只差:招牌怪(sig)、初級鎖屬(lock)、異屬順序(off)、串場池(guestPool)、水城補師上限(sigMax)。
+// 規格:docs/spec-{fire,wind,thunder,earth,water}-encounter-pool.md §3.2 屬性 / §3.3 串場池 / §3.4 槽位表;母規格 spec-stage-encounters.md §3.3/§4.5/§4.6/§7.3。
+// 模板的槽用抽象名:sig=本城招牌怪(spec.sig 解析)/cube=方塊怪/guest=他城機制怪(spec.guestPool 抽)/boss=魔王(招牌怪 role:'boss')。
+// slot:{id,role?,mon:'sig'|'cube'|'guest',el:'self'|'lock'|'all'|'off',star:[min,max],n:[min,max],dual?};n.min≥1=保證槽、0=填充槽(裁切優先序,表序即優先序)。
+const ENC_CITY_CFG = {
+  fire:   { sig:'gob',    lock:'wind',    off:['wind','thunder','water','earth'],  guestPool:['healer','iron','rock','duck'] },   // 異屬順序:風→雷→水→土
+  wind:   { sig:'duck',   lock:'thunder', off:['thunder','earth','fire','water'],  guestPool:['healer','iron','rock','gob']  },   // 雷→土→火→水
+  thunder:{ sig:'iron',   lock:'earth',   off:['earth','water','wind','fire'],     guestPool:['healer','gob','rock','duck']  },   // 土→水→風→火
+  earth:  { sig:'rock',   lock:'water',   off:['water','fire','thunder','wind'],   guestPool:['healer','iron','gob','duck']  },   // 水→火→雷→風
+  water:  { sig:'healer', lock:'fire',    off:['fire','wind','earth','thunder'],   guestPool:['gob','iron','rock','duck'],        // 火→風→土→雷
+            sigMax:{ baby:1, beginner:1, normal:1, advanced:1, super:2, hell:2 } },   // 水城補師上限(spec-water §1-8/§3.1):S1、S2 的招牌槽隻數上限(入門~上級 1/超級・地獄 2);魔王關 S3 不套
+};   // guestPool=其他四城招牌(含 gob、不含自家),四種等權重;排列依舊 ENC_GUEST_KINDS 順序、自家招牌原位換 gob(讓 sim 同種子抽出的陣容與 E0 前逐場對得上)
+const _ENC_SELF_W = { normal:0.75, advanced:0.70, super:0.70, hell:0.65 };                                                  // 方塊怪「全屬」權重:本屬(中級起;§3.2/母規格 §4.6)
+const _ENC_OFF_W  = { normal:[0.10,0.075,0.05,0.025], advanced:[0.12,0.09,0.06,0.03], super:[0.12,0.09,0.06,0.03], hell:[0.14,0.105,0.07,0.035] };   // 依各城 off 順序的異屬權重
+const ENC_TEMPLATE = (function(){
+  const boss=(star,n,dual)=>Object.assign({id:'boss',role:'boss',mon:'sig',el:'self',star:[star,star],n:n},dual!=null?{dual:dual}:{});
+  const sig=(star,n)=>({id:'sig',mon:'sig',el:'self',star:star,n:n});
+  const cube=(id,el,star,n)=>({id:id,mon:'cube',el:el,star:star,n:n});
+  const guest=(id,el,star,n)=>({id:id,mon:'guest',el:el,star:star,n:n});
+  return {   // [難度][關 0~2] = {cap,sg(招牌保底),sea?,slots};sea.pool:'elw' = 用該城全屬權重
+    baby: [
+      { cap:2, sg:false, slots:[cube('cube','self',[1,2],[1,2])] },
+      { cap:3, sg:false, slots:[cube('cube','self',[1,2],[1,3])] },
+      { cap:3, sg:true,  slots:[boss(1,[1,2],0.2), cube('cube','self',[1,1],[0,2])] },
+    ],
+    beginner: [
+      { cap:3, sg:true, slots:[sig([1,1],[0,1]), cube('cube','self',[1,2],[0,2]), cube('cubeLock','lock',[1,1],[0,1])] },
+      { cap:4, sg:true, slots:[sig([1,1],[0,2]), cube('cube','self',[1,3],[0,3]), cube('cubeLock','lock',[1,2],[0,2])] },
+      { cap:3, sg:true, slots:[boss(2,[1,2],0.2), cube('cube','self',[1,2],[0,2]), cube('cubeLock','lock',[1,2],[0,1])] },
+    ],
+    normal: [
+      { cap:3, sg:true, slots:[sig([1,2],[0,2]), cube('cube','all',[1,2],[0,2])] },
+      { cap:4, sg:true, slots:[sig([1,2],[0,2]), cube('cube','all',[1,3],[0,2])] },
+      { cap:3, sg:true, slots:[boss(3,[1,1]), sig([1,2],[0,1]), cube('cube','all',[1,3],[0,2])] },
+    ],
+    advanced: [
+      { cap:3, sg:true, sea:{p:0.10,n:5,star:1,el:'self'}, slots:[sig([1,2],[1,2]), cube('cube','all',[2,3],[0,2])] },
+      { cap:4, sg:true, slots:[sig([2,3],[0,2]), cube('cube','all',[2,3],[0,2])] },
+      { cap:3, sg:true, slots:[boss(4,[1,1]), sig([1,2],[0,2])] },
+    ],
+    super: [
+      { cap:3, sg:true, slots:[sig([1,2],[1,1]), guest('guest','self',[1,1],[1,1]), cube('cube','all',[1,2],[0,2])] },
+      { cap:4, sg:true, slots:[sig([2,3],[1,2]), guest('guest','self',[1,1],[1,1]), cube('cube','all',[2,3],[0,2])] },
+      { cap:3, sg:true, slots:[boss(4,[1,1]), guest('guest','self',[1,1],[1,1]), sig([1,2],[0,1])] },
+    ],
+    hell: [
+      { cap:4, sg:true, sea:{p:0.10,n:5,star:2,el:'off',mix:[1,3],pool:'elw'}, slots:[sig([2,3],[0,2]), guest('guest','self',[2,2],[1,1]), cube('cube','all',[2,3],[0,4])] },
+      { cap:4, sg:true, slots:[sig([2,3],[1,2]), guest('guest','self',[2,2],[1,2]), cube('cube','all',[2,3],[0,2])] },
+      { cap:4, sg:true, slots:[boss(4,[1,1]), guest('guest','self',[2,2],[1,1]), guest('guestOff','off',[2,2],[1,1]), sig([2,2],[0,2])] },
+    ],
+  };
+})();
+function _encCitySpec(city,diff,si){   // 城 × 難度 × 關 → spec(與 E0 前火城表同形;slots 保留抽象名 sig/cube/guest,抽籤時由 spec.sig / spec.guestPool 解析)。safe/ban/pinned 由 ENCOUNTER_DEFAULT 補
+  const C=ENC_CITY_CFG[city], t=ENC_TEMPLATE[diff]&&ENC_TEMPLATE[diff][si]; if(!C||!t) return null;
+  const off={}; [0.4,0.3,0.2,0.1].forEach((x,i)=>{ off[C.off[i]]=x; });   // 異屬槽:非本屬四屬 40/30/20/10(依 off 順序)
+  const ow=_ENC_OFF_W[diff]; let elw=null; if(ow){ elw={}; elw[city]=_ENC_SELF_W[diff]; C.off.forEach((el,i)=>{ elw[el]=ow[i]; }); }
+  const slots=JSON.parse(JSON.stringify(t.slots));
+  if(C.sigMax && si<2){ const cap=C.sigMax[diff]; slots.forEach(sl=>{ if(sl.id==='sig') sl.n=[Math.min(sl.n[0],cap),Math.min(sl.n[1],cap)]; }); }   // 水城補師上限(S1/S2)
+  const spec={mode:'slots',el:city,lock:C.lock,off:off,sig:C.sig,guestPool:C.guestPool.slice(),cap:t.cap,sigGuard:t.sg,slots:slots};
+  if(elw) spec.elw=elw;
+  if(slots.some(s=>s.mon==='guest')){ const w={}; C.guestPool.forEach(k=>{ w[k]=1; }); spec.guestW=w; }   // 串場池等權重【預設,sim 調】
+  if(t.sea){ spec.sea=JSON.parse(JSON.stringify(t.sea)); if(spec.sea.pool==='elw') spec.sea.pool=Object.assign({},elw); }
+  return spec;
+}
+function _encSafeFromCurrent(dungeonId,diffKey,stageIdx){   // safe=現行 spawnStage 陣容原封轉入(最終敵人物件)。【2026-11-05 第二輪定案】撤回「上級↑ pun 土屬那隻改回火屬」的例外:一個字都不改
+  // E0:依旗標判怪種(peck→賊鴨/iron→鐵機人/healAlly→補師/shield→石頭怪/finisher+finCD→哥布林,其餘=方塊怪),並在敵人物件上補 mon/star/guest 三欄讓核心認得(其餘欄位一字不動)
+  return spawnStage(dungeonId,diffKey,stageIdx).map(e=>{ const o=Object.assign({},e), star=o.boss?(o.tier||4):(o.tier||1); let mon='cube';
+    if(o.peck>0) mon='duck'; else if(o.iron>0) mon='iron'; else if(o.healAlly>0) mon='healer'; else if(o.shield) mon='rock'; else if(o.finisher>0&&o.finCD>0) mon='gob';
+    Object.assign(o,{mon:mon,star:star,guest:false});
+    return {safe:true,mon:mon,el:o.el,star:star,role:o.boss?'boss':null,enemy:o}; });
+}
+const ENCOUNTER_DEFAULT = (function(){   // 五城各 18 張(6 難度 × S1~S3),首次保護 safe 由現行陣容轉入
+  try{
+    const R={};
+    Object.keys(ENC_CITY_CFG).forEach(city=>{ const F={};
+      DIFFS.forEach(df=>{ F[df.key]=[0,1,2].map(si=>{ const spec=_encCitySpec(city,df.key,si); spec.safe=_encSafeFromCurrent(city,df.key,si); spec.safeFirstTime=(si<2); spec.ban=[]; spec.pinned=[]; return spec; }); });   // 首次保護只保 S1/S2(§6、母規格 §7.3);S3 的 safe 僅供 ban 重抽失敗的兜底
+      R[city]=F; });
+    return R;
+  }catch(err){ if(typeof console!=='undefined') console.warn('ENCOUNTER_DEFAULT build failed',err); return {}; }
+})();
+function getEncounterSpec(dungeonId,diffKey,stageIdx){ const d=ENCOUNTER_DEFAULT[dungeonId]; return (d&&d[diffKey]&&d[diffKey][stageIdx])||null; }
+
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = { DUNGEONS, STAGES, ELEM_DUNGEONS, DIFFS, DIFFS_BY, counterOf, ARCH, DIFF_RULES, OVERRIDES, resolveStages,
     BOSS_ATK_MUL, ENEMY_HP_MUL, ENEMY_ATK_MUL, IRON_LOCK_LADDER, behGates, spawnStage, spawnDailyStage, phaseCheck, enemyTurn,
-    DAILY_DUNGEONS, TOWER_FLOORS };
+    DAILY_DUNGEONS, TOWER_FLOORS,
+    drawEncounter, buildEncounterEnemies, encounterSig, getEncounterSpec, ENCOUNTER_DEFAULT, ENC_STATS, ENC_STAR_STEP, ENC_CUBE_CD, ENC_CUBE_CD_OFF_BY_DIFF, ENC_DROP_RATE, ENC_DROP_DIFF_MUL, encDropRate, encMonDropRate,
+    injectRare, ENC_RARE_RULES, ENC_RARE_STAR, ENC_RARE_ORDER, encRareRate, jewelDayCity, jewelWeekOrder, metalDayCity, metalWeekOrder, isJewelDay, isMetalDay, surpriseRateMul, ENC_JEWEL_HP_MUL,
+    ENC_CITY_CFG, ENC_TEMPLATE, _encCitySpec, ENC_GOB_PLACEHOLDER };   // 遭遇表 P1(2026-11-05);E0(2026-11-06)加城設定/模板/生成器
 }
