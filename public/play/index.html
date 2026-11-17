@@ -330,8 +330,8 @@
     // 🆕2026-11-06 P2 機制字卡(docs/spec-mechanic-cards.md):key 以 mech_ 開頭 → mechImgSrc;美術未入庫前用占位圖(TODO)
     const METAL_TAUNT_ART_READY = true;   // 🆕2026-11-09 金屬怪「嘲笑」立繪(逃跑倒數 ≤3 搞笑臉,取代冒汗):美術交件入庫後改 true;檔案 art/cards/c71~c73_taunt_full.webp(需求見 docs/art-request-metal-taunt.md)
     const CHIEF_HOT_ART_READY = true;   // 🆕2026-11-09 酋長兩段立繪(大毛 2026-11-08 拍板):有骷髏=燃起版 art/cards/c41_king_full_hot.webp(雙手舉棒怒吼,美術正式版)/拆除後=平氣版 c41_king_full;NEWMECH 下火城預載,_ecChiefArt 換圖;false 或圖缺=永遠平氣版
-    const MECH_LONGPRESS_ART_READY = false;   // 🆕2026-11-11 「長按敵人」教學字卡插圖 art/tutorial/mech_longpress.webp(需求見 docs/art-request-backlog-20261110.md)到貨後改 true;false=占位 art/ui/icon_tap.webp
-    const DUCK_SEEK_ART_READY = false;   // 🆕2026-11-11 賊鴨「待標」(想標記但盤面沒有塊可標)頭上圖示 art/ui/icon_duck_seek.webp(128×128,需求見 docs/art-request-backlog-20261110.md 4b)到貨後改 true;false=程式畫的閃爍空標記框占位(比照盤面食物標記虛線框)
+    const MECH_LONGPRESS_ART_READY = true;   // 🆕2026-11-11 「長按敵人」教學字卡插圖 art/tutorial/mech_longpress.webp(需求見 docs/art-request-backlog-20261110.md)到貨後改 true;false=占位 art/ui/icon_tap.webp
+    const DUCK_SEEK_ART_READY = true;   // 🆕2026-11-11 賊鴨「待標」(想標記但盤面沒有塊可標)頭上圖示 art/ui/icon_duck_seek.webp(128×128,需求見 docs/art-request-backlog-20261110.md 4b)到貨後改 true;false=程式畫的閃爍空標記框占位(比照盤面食物標記虛線框)
     const SKULL3_ART_READY = true;   // 🆕2026-11-08 三階骷髏圖示(art/ui/icon_cd_skull3|icon_cd_skull|icon_cd_skull1.webp)製作人驗收後改 true → 預載並依酋長剩餘次數換圖;false=沿用單張 icon_skull
     const MECH_ART_READY = {};   // TODO(美術入庫後):art/tutorial/mech_fire_smash|skull|ember|chief.webp 入庫 → 在此設 {mech_fire_smash:1,...}(或整表改成 true 判斷)即換真圖;未設=一律走下方占位,不會多發 404
     const MECH_IMG_PLACEHOLDER = {   // TODO 換成 mech_fire_*.webp:占位=既有哥布林卡圖/教學字卡圖
@@ -11914,22 +11914,27 @@
         const out = []; if (!NEWMECH || KEYS.indexOf(city) < 0) return out;
         try {
           if (ENC && typeof isJewelDay === 'function' && isJewelDay(city, ms)) out.push({ ids: ['c' + (61 + ['fire', 'water', 'thunder', 'earth', 'wind'].indexOf(city))] });   // 寶玉:該城屬性的寶玉怪(c61 火/c62 水/c63 雷/c64 土/c65 風)
-          if (typeof isMetalDay === 'function' && isMetalDay(city, ms)) out.push({ ids: ['c74', 'c71'] });   // 金銀:金(錢怪 c74)+銀(金屬怪 c71)併在同一格
+          if (typeof isMetalDay === 'function' && isMetalDay(city, ms)) out.push({ ids: ['c74'] });   // 金銀:只放金(錢怪 c74)一隻當代表(🆕2026-11-17 大毛:兩隻並排會以為兩種一起出現;原本是 c74+c71 併在同一格)
         } catch (e) { }
         return out;
       }
       _mapRareBubble(cont, city, dw, dh, sx) {   // 🆕2026-11-11 大毛拍板:島左上圓角白底+黃粗框泡泡(外觀沿用右上「!」泡泡:圓角框+小尾巴+上下彈跳,尺寸放大到 96×76 以便看清怪圖),無文字;多種加倍時同泡泡內輪播(每張 1.6 秒淡入淡出)
         const kinds = this._mapRareKinds(city, Date.now()); if (!kinds.length) return;   // 換日以台灣時間為準(data-stages 內 _encTwDays);大廳每次 draw/rebuild 重算
-        const BW = 96, BH = 76, frames = [];
+        const _thumbBB = key => {   // 縮圖的不透明範圍(每張只算一次,結果快取);算不出來回 null=照整張圖縮
+          const C = (window.__nbThumbBB = window.__nbThumbBB || {}); if (key in C) return C[key]; let r = null;
+          try { const src = this.textures.get(key).getSourceImage(), w = src.width, h = src.height, cv = document.createElement('canvas'); cv.width = w; cv.height = h; const cx = cv.getContext('2d', { willReadFrequently: true }); cx.drawImage(src, 0, 0); const d = cx.getImageData(0, 0, w, h).data; let x0 = w, y0 = h, x1 = -1, y1 = -1; for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) if (d[(y * w + x) * 4 + 3] > 8) { if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y; } if (x1 >= x0) r = { x: x0, y: y0, w: x1 - x0 + 1, h: y1 - y0 + 1 }; } catch (e) { r = null; }
+          return (C[key] = r);
+        };
+        const BW = 52, BH = 46, frames = [];   // 🆕2026-11-17 大毛:泡泡縮小(96×76 → 68×58 → 52×46),框線粗細同新手村「!」泡泡(3)
         const bub = this.add.container(0, -dh * 0.30);
         let lx = -dw * 0.30; if (sx + lx < BW / 2 + 4) lx = BW / 2 + 4 - sx;   // 貼左邊的島(雷/風)別讓泡泡被螢幕左緣切掉
         bub.x = lx;
-        const tail = this.add.graphics(); tail.fillStyle(0xffd54a, 1); tail.fillTriangle(-8, BH / 2 - 3, 9, BH / 2 - 3, 0, BH / 2 + 13); bub.add(tail);   // 小尾巴(黃,指向島)
-        bub.add(roundRectG(this, 0, 0, BW, BH, 14, 0xffffff, 1, 0xffd54a, 5));   // 圓角白底、黃色粗邊框
+        const tail = this.add.graphics(); tail.fillStyle(0xffd54a, 1); tail.fillTriangle(-6, BH / 2 - 2, 7, BH / 2 - 2, 0, BH / 2 + 11); bub.add(tail);   // 小尾巴(黃,指向島)
+        bub.add(roundRectG(this, 0, 0, BW, BH, 12, 0xffffff, 1, 0xffd54a, 3));   // 圓角白底、黃色邊框(粗細 3=新手村「!」泡泡;原 5)
         kinds.forEach(k => {
           const keys = k.ids.map(id => 'card_' + id + '_thumb').filter(key => this.textures.exists(key)); if (!keys.length) return;
-          const fr = this.add.container(0, 0), n = keys.length, slot = (BW - 12) / n, sz = Math.min(n === 1 ? 62 : 44, slot, BH - 12);
-          keys.forEach((key, i) => { const im = this.add.image((i - (n - 1) / 2) * slot, 0, key), fw = im.width || 1, fh = im.height || 1, sc = Math.min(sz / fw, sz / fh); im.setScale(sc); fr.add(im); });
+          const fr = this.add.container(0, 0), n = keys.length, slot = (BW - 12) / n, sz = n === 1 ? 38 : Math.min(34, slot - 2, BH - 16);   // 🆕2026-11-17 大毛:怪要小小的(=原本金怪在泡泡裡的大小);數字是怪本體(不含留白)的最長邊
+          keys.forEach((key, i) => { const im = this.add.image((i - (n - 1) / 2) * slot, 0, key), fw = im.width || 1, fh = im.height || 1, bb = _thumbBB(key), sc = bb ? Math.min(sz / bb.w, sz / bb.h) : Math.min(sz / fw, sz / fh); im.setScale(sc); if (bb) { im.x -= (bb.x + bb.w / 2 - fw / 2) * sc; im.y -= (bb.y + bb.h / 2 - fh / 2) * sc; } fr.add(im); });   // 🆕2026-11-17 以「怪本體」為準縮放置中:縮圖四周留白每張不同(寶玉佔圖 87%、金銀只佔 54%),照整張圖縮會一大一小
           bub.add(fr); frames.push(fr);
         });
         if (!frames.length) { bub.destroy(); return; }
