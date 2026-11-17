@@ -12012,11 +12012,11 @@
             const cells = RCELLS[r], cs = 8, sw = (Math.max(...cells.map(c => c[1])) + 1) * cs, sh = (Math.max(...cells.map(c => c[0])) + 1) * cs, sx = -_tw / 2 + 22 - sw / 2, sy = -sh / 2, sg = this.add.graphics();
             cells.forEach(c => { sg.fillStyle(un ? col : 0xa8a8a8, 1); sg.fillRoundedRect(sx + c[1] * cs + 0.5, sy + c[0] * cs + 0.5, cs - 1, cs - 1, 2); sg.fillStyle(0xffffff, un ? 0.45 : 0.3); sg.fillRect(sx + c[1] * cs + 2, sy + c[0] * cs + 1.5, cs - 4, 1.5); });
             kt.push(sg);
-            const lab = this.add.text(16, -12, roundName(r), { fontFamily: EMOJIFONT, fontSize: '22px', color: un ? (sel ? T.ink : T.ink2) : T.ink2, fontStyle: 'bold' }).setOrigin(0.5).setResolution(2); fitText(lab, _tw - 52); kt.push(lab);
-            const sub2 = this.add.text(un ? 16 : 8, 17, tr(RSUB[r - 1]), { fontFamily: EMOJIFONT, fontSize: '16px', color: un ? (sel ? col === 0xe0b020 ? '#b8860b' : '#' + col.toString(16).padStart(6, '0') : T.ink2) : T.ink2, fontStyle: 'bold' }).setOrigin(0.5).setResolution(2); fitText(sub2, _tw - 52); kt.push(sub2);
-            if (!un) { const lk = gameIcon(this, _tw / 2 - 18, 17, 'ui_lock', 20); if (lk) kt.push(lk.setAlpha(0.7)); }
+            const lab = this.add.text(un ? 16 : 8, 0, tr(RSUB[r - 1]), { fontFamily: EMOJIFONT, fontSize: '24px', color: un ? (sel ? T.ink : T.ink2) : T.ink2, fontStyle: 'bold' }).setOrigin(0.5).setResolution(2); fitText(lab, _tw - 52); kt.push(lab);   // 🆕2026-11-17 大毛:選關分頁不要「第N輪」字樣,只留 簡單/普通/困難(單行置中、24px)
+            const sub2 = this.add.text(un ? 16 : 8, 17, tr(RSUB[r - 1]), { fontFamily: EMOJIFONT, fontSize: '16px', color: un ? (sel ? col === 0xe0b020 ? '#b8860b' : '#' + col.toString(16).padStart(6, '0') : T.ink2) : T.ink2, fontStyle: 'bold' }).setOrigin(0.5).setResolution(2); fitText(sub2, _tw - 52); sub2.destroy();   // 🆕2026-11-17 原本第二行小字(簡單/普通/困難)已升成主標,不再顯示
+            if (!un) { const lk = gameIcon(this, _tw / 2 - 18, 0, 'ui_lock', 20); if (lk) kt.push(lk.setAlpha(0.7)); }
             const th = this.add.rectangle(0, 0, _tw, _th, 0x000000, 0.001).setInteractive(); kt.push(th);
-            th.on('pointerup', () => { if (!ready) return; if (!un) { showWhiteToast(this, tr('先打通{r}全部難度\n才能開啟{s}', { r: roundName(r - 1), s: roundName(r) }), { fs: '26px', big: true, hold: 1700 }); return; } if (r === curR) return; setLastRound(id, r); this.showDiffPicker(id, true); });
+            th.on('pointerup', () => { if (!ready) return; if (!un) { showWhiteToast(this, tr('先打通{r}全部難度\n才能開啟{s}', { r: tr(RSUB[r - 2]), s: tr(RSUB[r - 1]) }), { fs: '26px', big: true, hold: 1700 }); return; } if (r === curR) return; setLastRound(id, r); this.showDiffPicker(id, true); });
             const tc = this.add.container(tx, _ty, kt); g.add(tc);
             if (!fast) { tc.alpha = 0; this.tweens.add({ targets: tc, alpha: 1, delay: 40 + r * 30, duration: 220 }); }
           });
