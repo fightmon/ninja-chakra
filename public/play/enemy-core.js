@@ -63,9 +63,10 @@ var EnemyCore = (function () {
     IRON_MIN: 2,
     IRON_CELLS: [1, 1, 2, 3],   // 1★/2★/3★/4★ 鐵塊連體格數
     IRON_LAYERS: [1, 1, 1, 2],  // 每格層數
-    IRON_MAXLOCK: 3,            // 4★ 越放越硬:每格最多 3 層
+    IRON_MAXLOCK: 2,            // 4★ 越放越硬:每格最多 2 層(2026-11-17 大毛拍板,原 3)
     IRON_PUNISH_K: 0.5,         // 【預設】懲罰倍率 = 1 + 此值 × 該鐵機人剩餘鐵格數(2026-11-11 大毛拍板 0.25→0.5)
-    SHOCK_PCT: 0.01,            // 【預設】電擊(3★/4★):每放一塊扣 剩餘鐵格數 × 此值 × 最大血量
+    SHOCK_PCT: 0.01,            // 【預設】電擊 4★:每放一塊扣 剩餘鐵格數 × 此值 × 最大血量
+    SHOCK_PCT_3: 0.005,         // 電擊 3★ 每格比例(2026-11-17 大毛拍板:3★ 減半,原與 4★ 同為 1%);外部數值表同名數字鍵可覆寫
     IRON_EMPTY_FRAC: 0.25,      // 盤面空格 ≤ 81×此值 不放鐵塊(→普攻)
     FAT_MODE: 'each',           // 4★ 賊鴨越吃越壯【製作人 2026-11-06 拍板 each】:'each'(預設)=每吃到一份疊 1 層(兩份都吃到的一輪 +2),有一份沒吃到→歸零;'both'=2 份都吃到才疊 1 層(舊版,保留可切換)
     FAT_HUNGRY: 'keep',         // 4★ 餓到時飽足層怎麼處理【2026-11-11 大毛拍板:餓到不歸零】:'keep'(預設)=吃到幾份就疊幾層(each)/ 或 both 模式下「全部吃到才疊 1 層」;餓到那份只是不加、已有的層不扣;'reset'=舊版,只要有一份餓到,全部歸零(同輪吃到的也不留)。'both' 模式:keep=有餓到這輪不疊也不歸零,reset=歸零
@@ -542,12 +543,12 @@ var EnemyCore = (function () {
     _ironRoll(state, e, i, evs);
     return evs;
   }
-  // 電擊(afterBlock ③):3★/4★ 鐵塊還在 → 每放一塊扣 剩餘鐵格數 × SHOCK_PCT × 最大血量;多隻疊加、可致死、黑熊不擋(damagePlayer 'shock' 排除)
+  // 電擊(afterBlock ③):3★/4★ 鐵塊還在 → 每放一塊扣 剩餘鐵格數 × SHOCK_PCT(3★ 用 SHOCK_PCT_3=0.5%) × 最大血量;多隻疊加、可致死、黑熊不擋(damagePlayer 'shock' 排除)
   function _shockAfterBlock(state, evs) {
     state.enemies.forEach((e, i) => {
       const d = e._i; if (!d || e.dead || e.hp <= 0 || d.rule < 3 || state.ec.dead) return;
       const n = _ironAlive(state, d).length; if (!n) return;
-      const raw = state.maxHP * TUNING.SHOCK_PCT * n; evs.push({ t: 'shock', e: i, n, raw: Math.round(raw) });
+      const raw = state.maxHP * (d.rule === 3 ? TUNING.SHOCK_PCT_3 : TUNING.SHOCK_PCT) * n; evs.push({ t: 'shock', e: i, n, raw: Math.round(raw) });
       damagePlayer(state, raw, { kind: 'shock', e: i }).ev.forEach(x => evs.push(x));
     });
   }
