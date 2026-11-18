@@ -93,6 +93,9 @@ var EnemyCore = (function () {
     HEAL_RAGE_DEAD: [1.5, 2, 2, 2],   // 【定案 2026-11-11】第二段「暴怒」:任一隊友死亡 → 補師攻擊 × 此值(取代第一段,不相乘);鎖存。LOW/DEAD 任一格 >1 就停用既有「急救/復活後憤怒」RAGE_MULT;全 1=舊行為
     HEAL_RAGE_NOHEAL: 1,        // 【定案 2026-11-11,製作人採用;原旋鈕說明如下】1=補師進入憤怒/暴怒態(rageStage≥1)後不補血、不急救,一律攻擊(魔王位博士〔d.boss〕不受影響,維持詠唱補血/復活招牌)。設 1 會啟用新兩段憤怒系統(停用舊「急救/復活後憤怒」);倍率仍讀 HEAL_RAGE_LOW/DEAD
     HEAL_RAGE_TRIG: 'healed',      // 【定案 2026-11-11,預設改 healed;原說明如下】第一段憤怒觸發:'low'=現行(任一隊友曾 < HEAL_LOW);'healed'=這隻補師成功補血(含急救)一次之後才鎖存。第二段暴怒(隊友死亡)兩者相同
+    HEAL_FURY_K_BY_DIFF: { beginner: [17.55, 26.43, 35.4], normal: [21.241, 25.487, 33.682], advanced: [22.706, 26.551, 26.545], super: [15.547, 18.077, 18.03], hell: [11.48, 13.197, 13.089] },   // 2026-11-18 水城「先殺誰」:第二段暴怒(rageStage=2,隊友死亡)的補師攻擊 = ATK × K(絕對傷害,同骷髏:除回普攻係數 _pm);依難度、[r1,r2,r3] 依輪(格式同 SKULL_K_BY_DIFF)。校準=該難度該輪適當等級平衡隊吃最痛的非魔王 2★↑ 補師一發剩 1/3(003_plan/enc-sim-20261118-water/calib-fury.mjs)。入門 baby 不在表內=維持 HEAL_RAGE_DEAD(新手保護);查不到格 → 退回 HEAL_RAGE_DEAD。2026-11-18 大毛:初級(beginner)= 1/3 表 × 0.5(剩約 2/3;初級是教先殺補師,不是殺玩家)
+    BOSS_HEAL_FURY_K_BY_DIFF: { beginner: [8.851, 13.364, 17.849], normal: [8.576, 10.318, 13.635], advanced: [10.058, 11.725, 11.748], super: [7.186, 8.346, 8.327], hell: [5.779, 6.647, 6.588] },   // 2026-11-18 魔王位補師(初級 2★/中級 3★ 魔王、上級↑ 4★ 博士)暴怒另表(比照 BOSS_SKULL_K_BY_DIFF);缺格 → 退回小怪表 → 再退回 HEAL_RAGE_DEAD
+    HEAL_FURY_MINOR: 0.75,      // 2026-11-18 1★ 補師(含串場補師:串場一律 rule 1)吃小怪表 × 此值(對應舊 HEAL_RAGE_DEAD 1.5/2 的比例)
     RAGE_MULT: 1.5,             // 【預設】憤怒:攻擊 ×1.5,到本關結束,只觸發一次
     REVIVE_MAX: 2,              // 魔王位 ≥3★ 全滅復活次數(一場)
     CAST_HITS: 2,               // 詠唱成功前累計打中幾下就中止
@@ -117,7 +120,7 @@ var EnemyCore = (function () {
     JEWEL_MIN: 2,
     JEWEL_K: 1,                 // 【數值待 sim】寶玉怪攻擊 = ATK × 此值
   };
-  const _RANGE_KEYS = ['CD1', 'CD23', 'CD4', 'DUCK_RAND', 'IRON_RAND', 'ROCK_RAND', 'HEAL_RAND', 'METAL_FLEE', 'METAL_ATK_CD', 'MONEY_CD', 'JEWEL_RAND'], _LIST_KEYS = ['COOL', 'BURN', 'DUCK_BASE', 'IRON_CELLS', 'IRON_LAYERS', 'ROCK_LEAK', 'HEAL_RATE', 'JEWEL_BLOCK', 'ROCK_SHIELD_ATK', 'HEAL_RAGE_LOW', 'HEAL_RAGE_DEAD'], _STR_KEYS = ['FAT_MODE', 'FAT_HUNGRY', 'HEAL_RAGE_TRIG'], _JSON_KEYS = ['MINION_SKULL_DMG_BY_STAGE', 'MONEY_BY_ROUND'], _MAP_KEYS = ['METAL_HIT', 'SKULL_K_BY_DIFF', 'BOSS_SKULL_K_BY_DIFF', 'CHIEF_K_BY_DIFF', 'CHIEF_DEFUSED_K_BY_DIFF'];
+  const _RANGE_KEYS = ['CD1', 'CD23', 'CD4', 'DUCK_RAND', 'IRON_RAND', 'ROCK_RAND', 'HEAL_RAND', 'METAL_FLEE', 'METAL_ATK_CD', 'MONEY_CD', 'JEWEL_RAND'], _LIST_KEYS = ['COOL', 'BURN', 'DUCK_BASE', 'IRON_CELLS', 'IRON_LAYERS', 'ROCK_LEAK', 'HEAL_RATE', 'JEWEL_BLOCK', 'ROCK_SHIELD_ATK', 'HEAL_RAGE_LOW', 'HEAL_RAGE_DEAD'], _STR_KEYS = ['FAT_MODE', 'FAT_HUNGRY', 'HEAL_RAGE_TRIG'], _JSON_KEYS = ['MINION_SKULL_DMG_BY_STAGE', 'MONEY_BY_ROUND'], _MAP_KEYS = ['METAL_HIT', 'SKULL_K_BY_DIFF', 'BOSS_SKULL_K_BY_DIFF', 'CHIEF_K_BY_DIFF', 'CHIEF_DEFUSED_K_BY_DIFF', 'HEAL_FURY_K_BY_DIFF', 'BOSS_HEAL_FURY_K_BY_DIFF'];
   // sim 用:applyEnv(process.env)——鍵名同 TUNING(例 SKULL_K=8 CD4=6~7 COOL=1,0.5,0.25);回傳實際被覆寫的鍵
   function applyEnv(env) {
     const hit = {};
@@ -318,7 +321,7 @@ var EnemyCore = (function () {
     const E = state.enemies;
     E.forEach((h, i) => {
       const d = h._h; if (!d || !_alive(h) || (d.rageStage | 0) >= 2) return;
-      if (E.some(x => x !== h && x.dead && !_isRare(x))) { d.rageStage = 2; evs.push({ t: 'heal_rage', e: i, stage: 2, mult: _healRageMult(d), rule: d.rule }); }
+      if (E.some(x => x !== h && x.dead && !_isRare(x))) { d.rageStage = 2; evs.push(Object.assign({ t: 'heal_rage', e: i, stage: 2, mult: _healRageMult(d), rule: d.rule }, _furyK(state, h, d) > 0 ? { fury: true } : {})); }   // 2026-11-18 fury=這隻會套暴怒重擊表(入門/查不到表 → 無此欄)→ 前端字卡 water_fury
       else if (!(d.rageStage | 0) && TUNING.HEAL_RAGE_TRIG !== 'healed' && E.some(x => x !== h && _alive(x) && !_isRare(x) && x.hp < x.max * TUNING.HEAL_LOW)) { d.rageStage = 1; evs.push({ t: 'heal_rage', e: i, stage: 1, mult: _healRageMult(d), rule: d.rule }); }
     });
   }
@@ -658,9 +661,24 @@ var EnemyCore = (function () {
     evs.push({ t: 'heal', e: i, rule: d.rule, rate, total, n: cnt, boss: d.boss });
     _healedRage(d, i, evs);
   }
+  // 2026-11-18 暴怒重擊倍率(相對 e.atk;已除回 _pm)。只在 rageStage=2;入門 baby 不套;魔王位先查 BOSS 表,缺格退小怪表(1★/串場 ×HEAL_FURY_MINOR);查不到 → 0(呼叫端退回 _healRageMult = HEAL_RAGE_DEAD,舊行為)
+  function _furyK(state, e, d) {
+    if (!d || (d.rageStage | 0) !== 2) return 0;
+    const dk = (state.ec && state.ec.dk) || state.dk; if (!dk || dk === 'baby') return 0;
+    const rd = state.ec && (state.ec.round === 1 || state.ec.round === 3) ? state.ec.round : 2;   // 輪欄位取法同 kFor(寫法刻意不同字面:kFor 那行是突變測試的錨點,須全檔唯一)
+    let k = d.boss ? _kLookup(TUNING.BOSS_HEAL_FURY_K_BY_DIFF, dk, rd) : 0;
+    if (!(k > 0)) { k = _kLookup(TUNING.HEAL_FURY_K_BY_DIFF, dk, rd); if (k > 0 && (d.rule | 0) <= 1) k *= TUNING.HEAL_FURY_MINOR; }
+    return k > 0 ? k / (e._pm > 0 ? e._pm : 1) : 0;
+  }
+  // 2026-11-18 暴怒補師下一擊預覽(只供顯示:骷髏圖示/光暈;同 nextHitDamage 語意)。非魔王:NOHEAL 態必出手;魔王位:詠唱中=下一動是補血/復活 → 0(未詠唱時可能改起手詠唱,預覽偏保守=照出手算)
+  function _healNext(state, e) {
+    const d = e && e._h; if (!d || e.dead || e.hp <= 0 || (d.rageStage | 0) !== 2) return 0;
+    if (d.boss ? !!d.cast : !_noHeal(d)) return 0;
+    const fk = _furyK(state, e, d); return e.atk * (fk > 0 ? fk : _healRageMult(d));
+  }
   function _healerAttack(state, e, i, evs) {
-    const d = e._h, nw = _newRageOn(), nm = nw ? _healRageMult(d) : 1, raged = nw ? nm > 1 : d.rage, raw = e.atk * (nw ? nm : (raged ? TUNING.RAGE_MULT : 1));
-    evs.push(nw ? { t: 'healer_attack', e: i, rule: d.rule, rage: raged, raw: Math.round(raw), stage: d.rageStage | 0, mult: nm } : { t: 'healer_attack', e: i, rule: d.rule, rage: raged, raw: Math.round(raw) });
+    const d = e._h, nw = _newRageOn(), fk = nw ? _furyK(state, e, d) : 0, nm = fk > 0 ? fk : (nw ? _healRageMult(d) : 1), raged = nw ? nm > 1 : d.rage, raw = e.atk * (nw ? nm : (raged ? TUNING.RAGE_MULT : 1));   // 2026-11-18 fk>0=暴怒重擊(K 表)取代 HEAL_RAGE_DEAD
+    evs.push(nw ? Object.assign({ t: 'healer_attack', e: i, rule: d.rule, rage: raged, raw: Math.round(raw), stage: d.rageStage | 0, mult: nm }, fk > 0 ? { fury: true } : {}) : { t: 'healer_attack', e: i, rule: d.rule, rage: raged, raw: Math.round(raw) });
     damagePlayer(state, raw, { kind: raged ? 'rage' : 'attack', e: i }).ev.forEach(x => evs.push(x));
   }
   function _fireRevive(state, e, i, evs) {
@@ -853,7 +871,7 @@ var EnemyCore = (function () {
     return { skull: false, mult: g.cd * TUNING.PER_CD };
   }
   // 這隻哥布林下一次出手的原始傷害(未四捨五入;不含餘火)。非哥布林/已死 → 0。遊戲與 sim 的 enemyAct 實際出手走同一函式。
-  function nextHitDamage(state, e) { const g = e && e._g; if (!g || e.dead || e.hp <= 0) return 0; return e.atk * _hitMult(state, e, g).mult; }
+  function nextHitDamage(state, e) { if (e && e._h && !e._g) return _healNext(state, e); const g = e && e._g; if (!g || e.dead || e.hp <= 0) return 0; return e.atk * _hitMult(state, e, g).mult; }
   // 致死判定(只供顯示:骷髏圖示/光暈;不影響傷害):下一擊(不含餘火,四捨五入同 damagePlayer)>= 隊伍「最大」血量
   function isLethal(state, e) { const d = nextHitDamage(state, e); return d > 0 && Math.round(d) >= state.maxHP; }
   function enemyAct(state, i) {   // 單隻;sim 為了維持與舊碼相同的出手順序,逐隻呼叫(順序請用 actOrder)

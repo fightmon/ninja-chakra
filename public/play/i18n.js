@@ -1127,6 +1127,10 @@ const I18N_DICT = {
     '打斷詠唱!': 'Interrupt the Cast!',
     '牠在詠唱,': 'It is casting.',
     '攻擊牠就能阻止!': 'Hit it to stop the spell!',
+    // 2026-11-18 字卡 water_fury(暴怒重擊:同伴倒下後補師下一擊很痛)
+    '暴怒!': 'Fury!',
+    '同伴倒下牠就暴怒,': 'When an ally falls, it rages —',
+    '下一擊超痛,快打倒!': 'its next hit hurts. Take it down!',
     '補血!': 'Heal!',
     '急救!': 'Rescue!',
     '憤怒! +{p}%': 'Enraged! +{p}%',
