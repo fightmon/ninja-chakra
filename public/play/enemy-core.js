@@ -536,7 +536,7 @@ var EnemyCore = (function () {
       let hardened = false;
       if (touched || d.rule < 2) { mode = 'plain'; damagePlayer(state, e.atk, { kind: 'iron', e: i }).ev.forEach(x => evs.push(x)); }
       else { mode = 'punish'; damagePlayer(state, e.atk * (1 + TUNING.IRON_PUNISH_K * alive.length), { kind: 'punish', e: i }).ev.forEach(x => evs.push(x)); }
-      if (!touched && d.rule === 4) { alive.forEach(x => { x.obj.lock = Math.min(TUNING.IRON_MAXLOCK, (x.obj.lock || 1) + 1); }); hardened = true; evs.push({ t: 'iron_harden', e: i, locks: alive.map(x => x.obj.lock) }); }
+      if (!touched && d.rule === 4) { alive.forEach(x => { const _l = x.obj.lock || 1; if (_l < TUNING.IRON_MAXLOCK) { x.obj.lock = _l + 1; hardened = true; } }); if (hardened) evs.push({ t: 'iron_harden', e: i, locks: alive.map(x => x.obj.lock) }); }   // 2026-11-17 P2-14:只有至少一格層數真的增加才算變硬/發事件(已達上限不空播;不下調超過上限的舊值)
       d.cells = alive; d.cells.forEach(x => { x.lock0 = x.obj.lock; });
       evs.push({ t: 'iron_act', e: i, rule: d.rule, mode, alive: alive.length, touched, hardened });
     }
