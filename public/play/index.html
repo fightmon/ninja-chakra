@@ -382,6 +382,16 @@
       im.onerror = () => im.remove();
       box.appendChild(im);
     }
+    // 2026-11-18 觸控卡死修正(線上手機:點掉字卡後整個遊戲不能點):字卡在 pointerup 當下 destroy → 隨後的 touchend 發在已脫離文件的節點、冒不到 window →
+    //   Phaser(activePointers=1→觸控指標只有 pointers[1] 一個)收不到 touchend → 指標永遠 active → InputManager.onTouchStart 找不到空指標,之後所有觸控被丟。四處 DOM 字卡共用下面兩個 helper:
+    //   domCardShield(root):字卡根擋 touchstart 往上冒(只 stopPropagation、不 preventDefault → pointerdown/pointerup 照常);Phaser 的 window 監聽收不到=不會為點字卡的手指佔用指標,也不會穿透點到字卡底下的遊戲物件
+    //   domCardDismiss(dom):關閉當下只隱藏+不吃指標(畫面立刻消失、不擋下一張),真正 destroy 延後 250ms(setTimeout,不依賴 scene.time;場景已關也不報錯)→ touchend 仍在文件內可冒到 window
+    function domCardShield(root) { try { root.addEventListener('touchstart', ev => { ev.stopPropagation(); }, { passive: true }); } catch (e) { } }
+    function domCardDismiss(dom) {
+      if (!dom) return;
+      try { dom.pointerEvents = 'none'; const n = dom.node; if (n && n.style) { n.style.visibility = 'hidden'; n.style.pointerEvents = 'none'; } } catch (e) { }   // dom.pointerEvents:Phaser DOM 渲染器每幀會用它覆寫 style.pointerEvents
+      setTimeout(() => { try { dom.destroy(); } catch (e) { } }, 250);
+    }
     function showTutCardDom(scene, mainTxt, subTxt, imgKey, onClose) {   // 🆕2026-11-03 通用引導字卡(同 tutCardShow/_ttCard 版型:全螢幕半黑遮罩+白框+插圖,2.5秒自動關/點擊提前關);scene 特定的輸入鎖/UI 藏顯由呼叫端自理;首用:教學後免費十連前的「召喚勇者」(HomeScene)
       const root = document.createElement('div');
       root.style.cssText = 'position:relative;box-sizing:border-box;width:' + W + 'px;height:' + H + 'px;background:rgba(0,0,0,.5);cursor:pointer;user-select:none;-webkit-user-select:none;touch-action:manipulation;pointer-events:auto;opacity:0;transition:opacity .22s;';   // 根只當遮罩(Phaser DOMElement 強制根 display:block),置中靠內層 wrap
@@ -394,8 +404,8 @@
       if (subTxt) box.appendChild(mk(subTxt, 'font-family:' + EMOJIFONT + ';font-size:28px;line-height:1.3;margin-top:14px;color:#2b333a;'));
       const dom = scene.add.dom(CX, Math.round(H / 2), root).setDepth(5000);
       requestAnimationFrame(() => { root.style.opacity = '1'; box.style.transform = 'scale(1)'; });
-      let done = false; const close = () => { if (done) return; done = true; if (tm) tm.remove(false); try { dom.destroy(); } catch (e) { } if (onClose) onClose(); };
-      root.addEventListener('pointerup', close);
+      let done = false; const close = () => { if (done) return; done = true; if (tm) tm.remove(false); domCardDismiss(dom); if (onClose) onClose(); };
+      domCardShield(root); root.addEventListener('pointerup', close);
       const tm = scene.time.delayedCall(2500, close);
       return close;
     }
@@ -464,8 +474,8 @@
       }
       const dom = scene.add.dom(CX, Math.round(H / 2), root).setDepth(5000);
       requestAnimationFrame(() => { root.style.opacity = '1'; box.style.transform = 'scale(1)'; });
-      const born = Date.now(); let done = false;
-      const close = () => { if (done || Date.now() - born < 400) return; done = true; try { dom.destroy(); } catch (e) { } if (onClose) onClose(); };
+      domCardShield(root); const born = Date.now(); let done = false;
+      const close = () => { if (done || Date.now() - born < 400) return; done = true; domCardDismiss(dom); if (onClose) onClose(); };
       if (opts.needDown) { let _dn = false; root.addEventListener('pointerdown', () => { _dn = true; }); root.addEventListener('pointerup', () => { if (_dn) close(); }); }   // 長按觸發的字卡:手指/滑鼠還按著時彈出,放開那下不能關
       else root.addEventListener('pointerup', close);
       return close;
@@ -3080,8 +3090,8 @@
         if (subTxt) box.appendChild(mk(subTxt, 'font-family:' + EMOJIFONT + ';font-size:28px;line-height:1.3;margin-top:14px;color:#2b333a;'));
         const dom = this.add.dom(CX, Math.round(H / 2), root).setDepth(5000);
         requestAnimationFrame(() => { root.style.opacity = '1'; box.style.transform = 'scale(1)'; });
-        let done = false; const close = () => { if (done) return; done = true; if (tm) tm.remove(false); try { dom.destroy(); } catch (e) { } this._setDomUI(true); cb(); };
-        root.addEventListener('pointerup', close);
+        let done = false; const close = () => { if (done) return; done = true; if (tm) tm.remove(false); domCardDismiss(dom); this._setDomUI(true); cb(); };
+        domCardShield(root); root.addEventListener('pointerup', close);
         const tm = this.time.delayedCall(2500, close);   // 2.5 秒自動關(同戰鬥 tutCardShow)
       }
       _ttHandKill() { if (this._ttHandTm) { this._ttHandTm.remove(false); this._ttHandTm = null; } if (this._ttHand) { this.tweens.killTweensOf(this._ttHand); this._ttHand.destroy(); this._ttHand = null; } }
@@ -4568,7 +4578,7 @@
         const dom = this.add.dom(CX, Math.round(H / 2), root).setDepth(5000);
         this._tutCardDom = dom;
         requestAnimationFrame(() => { root.style.opacity = '1'; box.style.transform = 'scale(1)'; });
-        root.addEventListener('pointerup', () => this.tutCardClose());   // 點遮罩任意處提前關
+        domCardShield(root); root.addEventListener('pointerup', () => this.tutCardClose());   // 點遮罩任意處提前關
         this._tutCardTimer = this.time.delayedCall(2500, () => this.tutCardClose());   // 2.5 秒自動關(2026-11-03 由 2 秒放寬,配插圖後資訊量變多)
       }
       tutCardClose() {
@@ -4580,7 +4590,7 @@
       }
       _tutCardKill() {
         if (this._tutCardTimer) { try { this._tutCardTimer.remove(false); } catch (e) { } this._tutCardTimer = null; }
-        if (this._tutCardDom) { try { this._tutCardDom.destroy(); } catch (e) { } this._tutCardDom = null; }
+        if (this._tutCardDom) { domCardDismiss(this._tutCardDom); this._tutCardDom = null; }
       }
       tutShow(def) {
         if (this.tutG) this.tutG.destroy(); this.tutClearHint(); if (def.hint) this.time.delayedCall(300, () => { if (this.tut && TUT_STEPS[this.tut.i] === def) this.tutHint(def.hint); });
@@ -14199,6 +14209,16 @@
         scale: { mode: Phaser.Scale.FIT, autoCenter: Phaser.Scale.CENTER_BOTH, width: W * DPR, height: Math.round(H * DPR) },   // 🆕2026-10-28c 超採樣:畫布內部解析度 ×DPR(CSS 顯示大小仍由 FIT 決定),各場景 create 首行 setupHiDPI 把鏡頭 zoom 到 DPR
         scene: [HomeScene, TeamScene, GameScene, CollectionScene, FuseScene, DexScene],
       });
+      if (!window._nbTouchGuard) {   // 2026-11-18 全域保險:任何 DOM 視窗再犯「節點在 touchend 前被移除」也不會鎖死整個遊戲。capture 階段掛 window → 比 Phaser 自己的 canvas/window 監聽先跑
+        window._nbTouchGuard = true;   //   條件:這次 touchstart 的手指=畫面上全部的手指(沒有別的手指按著)卻還有 active 的 Phaser 觸控指標(pointers[1..])→ 必為殘留假按壓 → 放掉
+        window.addEventListener('touchstart', ev => {   //   直接重設欄位(=Phaser Pointer.touchcancel 會設的那幾個),不走 InputManager.onTouchCancel:那條要靠 identifier 對應(新手指對不上)且會對場景發 up/out 事件(副作用)
+          try {
+            if (!ev.touches || !ev.changedTouches || ev.touches.length !== ev.changedTouches.length) return;
+            const g = window.GAME, ps = g && g.input && g.input.pointers; if (!ps) return;
+            for (let k = 1; k < ps.length; k++) { const p = ps[k]; if (p && p.active) { p.active = false; p.isDown = false; p.primaryDown = false; p.buttons = 0; p.wasCanceled = true; p.upTime = ev.timeStamp; } }
+          } catch (e) { }
+        }, { capture: true, passive: true });
+      }
       track('open');   // 開遊戲心跳(回流追蹤;ANALYTICS_URL 空時自動 no-op)
       mutSave(s => { if (!s.stats) s.stats = { playMs: 0, sessions: 0 }; s.stats.sessions++; });   // 📊 開場次數 +1
       _playTick = Date.now();   // 📊 前景遊玩計時起點(見下方 _flushPlayMs)
