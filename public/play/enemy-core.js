@@ -64,9 +64,12 @@ var EnemyCore = (function () {
     IRON_CELLS: [1, 1, 2, 3],   // 1★/2★/3★/4★ 鐵塊連體格數
     IRON_LAYERS: [1, 1, 1, 2],  // 每格層數
     IRON_MAXLOCK: 2,            // 4★ 越放越硬:每格最多 2 層(2026-11-17 大毛拍板,原 3)
-    IRON_PUNISH_K: 0.5,         // 【預設】懲罰倍率 = 1 + 此值 × 該鐵機人剩餘鐵格數(2026-11-11 大毛拍板 0.25→0.5)
-    SHOCK_PCT: 0.01,            // 【預設】電擊 4★:每放一塊扣 剩餘鐵格數 × 此值 × 最大血量
-    SHOCK_PCT_3: 0.005,         // 電擊 3★ 每格比例(2026-11-17 大毛拍板:3★ 減半,原與 4★ 同為 1%);外部數值表同名數字鍵可覆寫
+    IRON_PUNISH_K: 0.5,         // 【預設】懲罰倍率 = 1 + 此值 × 該鐵機人剩餘鐵格數(2026-11-11 大毛拍板 0.25→0.5);2026-11-19 起只在下方校準表查不到時使用(入門/K_BY_DIFF=0/表缺格)
+    SHOCK_PCT: 0.02,            // 2026-11-19 大毛拍板 0.01→0.02(小額電擊被無屬宮回血吃掉); 【預設】電擊 4★:每放一塊扣 剩餘鐵格數 × 此值 × 最大血量
+    IRON_PUNISH_K_BY_DIFF: { beginner: [8.851, 13.363, 17.849], normal: [21.241, 25.487, 33.682], advanced: [26.061, 30.484, 30.505], super: [14.683, 17.06, 17.004], hell: [11.13, 12.786, 12.674] },   // 2026-11-19 雷城懲罰改校準重擊:傷害 = 基礎 ATK(除回普攻係數 _pm,同骷髏)× K × IRON_PUNISH_CELL_MUL[剩餘格數-1];依難度、[r1,r2,r3] 依輪(格式同 SKULL_K_BY_DIFF)。校準=該難度該輪適當等級平衡隊吃最痛的非魔王 2★↑ 鐵機人「剩 2 格」一發剩 1/3(003_plan/enc-sim-20261119-thunder/calib-iron.mjs);初級 = 1/3 表 ×0.5(初級無 2★↑ 小怪 → 沿用魔王值);入門 baby 不在表內=舊公式(新手保護);K_BY_DIFF=0 或查不到 → 舊公式 1+IRON_PUNISH_K×格數
+    BOSS_IRON_PUNISH_K_BY_DIFF: { beginner: [8.851, 13.363, 17.849], normal: [8.17, 9.803, 12.969], advanced: [10.058, 11.725, 11.748], super: [6.464, 7.505, 7.493], hell: [5.077, 5.846, 5.798] },   // 2026-11-19 魔王位鐵機人(初級 2★/中級 3★/上級↑ 4★)另表,同樣以「剩 2 格」剩 1/3 校準;缺格 → 退回小怪表 → 再退回舊公式
+    IRON_PUNISH_CELL_MUL: [0.4, 1, 1.3],   // 2026-11-19 剩 1/2/3 格的倍率(2 格=1 為校準錨點):適當等級 1 格約 27%、2 格約 67%、3 格約 87% 最大血(2★ 最多 1 格、3★ 2 格、4★ 3 格)
+    SHOCK_PCT_3: 0.01,          // 2026-11-19 大毛拍板加重回 1%(11-17 曾減半 0.5%); 電擊 3★ 每格比例(2026-11-17 大毛拍板:3★ 減半,原與 4★ 同為 1%);外部數值表同名數字鍵可覆寫
     IRON_EMPTY_FRAC: 0.25,      // 盤面空格 ≤ 81×此值 不放鐵塊(→普攻)
     FAT_MODE: 'each',           // 4★ 賊鴨越吃越壯【製作人 2026-11-06 拍板 each】:'each'(預設)=每吃到一份疊 1 層(兩份都吃到的一輪 +2),有一份沒吃到→歸零;'both'=2 份都吃到才疊 1 層(舊版,保留可切換)
     FAT_HUNGRY: 'keep',         // 4★ 餓到時飽足層怎麼處理【2026-11-11 大毛拍板:餓到不歸零】:'keep'(預設)=吃到幾份就疊幾層(each)/ 或 both 模式下「全部吃到才疊 1 層」;餓到那份只是不加、已有的層不扣;'reset'=舊版,只要有一份餓到,全部歸零(同輪吃到的也不留)。'both' 模式:keep=有餓到這輪不疊也不歸零,reset=歸零
@@ -120,7 +123,7 @@ var EnemyCore = (function () {
     JEWEL_MIN: 2,
     JEWEL_K: 1,                 // 【數值待 sim】寶玉怪攻擊 = ATK × 此值
   };
-  const _RANGE_KEYS = ['CD1', 'CD23', 'CD4', 'DUCK_RAND', 'IRON_RAND', 'ROCK_RAND', 'HEAL_RAND', 'METAL_FLEE', 'METAL_ATK_CD', 'MONEY_CD', 'JEWEL_RAND'], _LIST_KEYS = ['COOL', 'BURN', 'DUCK_BASE', 'IRON_CELLS', 'IRON_LAYERS', 'ROCK_LEAK', 'HEAL_RATE', 'JEWEL_BLOCK', 'ROCK_SHIELD_ATK', 'HEAL_RAGE_LOW', 'HEAL_RAGE_DEAD'], _STR_KEYS = ['FAT_MODE', 'FAT_HUNGRY', 'HEAL_RAGE_TRIG'], _JSON_KEYS = ['MINION_SKULL_DMG_BY_STAGE', 'MONEY_BY_ROUND'], _MAP_KEYS = ['METAL_HIT', 'SKULL_K_BY_DIFF', 'BOSS_SKULL_K_BY_DIFF', 'CHIEF_K_BY_DIFF', 'CHIEF_DEFUSED_K_BY_DIFF', 'HEAL_FURY_K_BY_DIFF', 'BOSS_HEAL_FURY_K_BY_DIFF'];
+  const _RANGE_KEYS = ['CD1', 'CD23', 'CD4', 'DUCK_RAND', 'IRON_RAND', 'ROCK_RAND', 'HEAL_RAND', 'METAL_FLEE', 'METAL_ATK_CD', 'MONEY_CD', 'JEWEL_RAND'], _LIST_KEYS = ['COOL', 'BURN', 'DUCK_BASE', 'IRON_CELLS', 'IRON_LAYERS', 'ROCK_LEAK', 'HEAL_RATE', 'JEWEL_BLOCK', 'ROCK_SHIELD_ATK', 'HEAL_RAGE_LOW', 'HEAL_RAGE_DEAD', 'IRON_PUNISH_CELL_MUL'], _STR_KEYS = ['FAT_MODE', 'FAT_HUNGRY', 'HEAL_RAGE_TRIG'], _JSON_KEYS = ['MINION_SKULL_DMG_BY_STAGE', 'MONEY_BY_ROUND'], _MAP_KEYS = ['METAL_HIT', 'SKULL_K_BY_DIFF', 'BOSS_SKULL_K_BY_DIFF', 'CHIEF_K_BY_DIFF', 'CHIEF_DEFUSED_K_BY_DIFF', 'IRON_PUNISH_K_BY_DIFF', 'BOSS_IRON_PUNISH_K_BY_DIFF', 'HEAL_FURY_K_BY_DIFF', 'BOSS_HEAL_FURY_K_BY_DIFF'];
   // sim 用:applyEnv(process.env)——鍵名同 TUNING(例 SKULL_K=8 CD4=6~7 COOL=1,0.5,0.25);回傳實際被覆寫的鍵
   function applyEnv(env) {
     const hit = {};
@@ -524,6 +527,16 @@ var EnemyCore = (function () {
     evs.push({ t: 'iron_place', e: i, rule: d.rule, cells: pick.cells.map(x => x.slice()), lock: layers, empty });
     return true;
   }
+  // 2026-11-19 鐵機人懲罰校準倍率(相對 e.atk;已除回 _pm;已乘格數倍率)。0=查不到 → 呼叫端走舊公式。吃 K_BY_DIFF 總開關;入門不套;魔王位先查魔王表,缺格退小怪表
+  function _ironPunishK(state, e, n) {
+    if (!TUNING.K_BY_DIFF) return 0;
+    const dk = (state.ec && state.ec.dk) || state.dk; if (dk === 'baby' || !dk) return 0;
+    const rd = (state.ec && state.ec.round === 1) ? 1 : (state.ec && state.ec.round === 3) ? 3 : 2;   // 輪欄位取法同 kFor(沒給/0 → 第 2 輪欄)
+    let k = e.boss ? _kLookup(TUNING.BOSS_IRON_PUNISH_K_BY_DIFF, dk, rd) : 0;
+    if (!(k > 0)) k = _kLookup(TUNING.IRON_PUNISH_K_BY_DIFF, dk, rd);
+    const cm = TUNING.IRON_PUNISH_CELL_MUL, f = cm && cm[Math.max(1, Math.min(cm.length, n | 0)) - 1];
+    return k > 0 && f > 0 ? k * f / (e._pm > 0 ? e._pm : 1) : 0;
+  }
   function _ironAct(state, e, i) {
     const d = e._i, evs = [];
     e.timer--;
@@ -538,7 +551,7 @@ var EnemyCore = (function () {
       const touched = alive.length < d.cells.length || alive.some(x => x.obj.lock < x.lock0);   // B2:上次出手以來有格被剝層或消失(含被賊鴨吃)
       let hardened = false;
       if (touched || d.rule < 2) { mode = 'plain'; damagePlayer(state, e.atk, { kind: 'iron', e: i }).ev.forEach(x => evs.push(x)); }
-      else { mode = 'punish'; damagePlayer(state, e.atk * (1 + TUNING.IRON_PUNISH_K * alive.length), { kind: 'punish', e: i }).ev.forEach(x => evs.push(x)); }
+      else { mode = 'punish'; const pk = _ironPunishK(state, e, alive.length); damagePlayer(state, e.atk * (pk > 0 ? pk : (1 + TUNING.IRON_PUNISH_K * alive.length)), { kind: 'punish', e: i }).ev.forEach(x => evs.push(x)); }   // 2026-11-19 校準重擊(查不到表 → 舊公式)
       if (!touched && d.rule === 4) { alive.forEach(x => { const _l = x.obj.lock || 1; if (_l < TUNING.IRON_MAXLOCK) { x.obj.lock = _l + 1; hardened = true; } }); if (hardened) evs.push({ t: 'iron_harden', e: i, locks: alive.map(x => x.obj.lock) }); }   // 2026-11-17 P2-14:只有至少一格層數真的增加才算變硬/發事件(已達上限不空播;不下調超過上限的舊值)
       d.cells = alive; d.cells.forEach(x => { x.lock0 = x.obj.lock; });
       evs.push({ t: 'iron_act', e: i, rule: d.rule, mode, alive: alive.length, touched, hardened });
