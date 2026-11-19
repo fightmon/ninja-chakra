@@ -47,8 +47,9 @@ const desc = `${card.name}（${card.en}${card.species ? '・' + card.species : '
       </div>
       {card.dropOnly
         ? <div class="stars">★<small>基礎 ★1 · 進化上限 ★2</small></div>
-        : <div class="stars">★★★<small>基礎 ★3 · 可進化 +2</small></div>}
-      {card.evo && <div class="evo-badge">{card.dropOnly ? '★2 進化 → ' : '★4 進化 → '}{card.evo.name} {card.evo.en}</div>}
+        : <div class="stars">★★★<small>基礎 ★3 · 可進化</small></div>}
+      {/* 2026-11-20 先不露出 ★4：英雄卡的 ★4 進化名暫時不顯示，只留雜牌卡的 ★2 */}
+      {card.evo && card.dropOnly && <div class="evo-badge">★2 進化 → {card.evo.name} {card.evo.en}</div>}
     </div>
   </div>
 

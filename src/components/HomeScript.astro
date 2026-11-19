@@ -1,0 +1,292 @@
+<script is:inline>
+/* 首頁互動：捲動進場、主視覺視差、實機影片、畫面輪播、地圖、進化切換、數字、試玩小遊戲 */
+(function () {
+  var $ = function (s, r) { return (r || document).querySelector(s); };
+  var $$ = function (s, r) { return Array.prototype.slice.call((r || document).querySelectorAll(s)); };
+  var reduce = window.matchMedia && matchMedia('(prefers-reduced-motion:reduce)').matches;
+  var D = {}; try { D = JSON.parse($('#hp-data').textContent); } catch (e) {}
+  var EL = D.EL || {}, T = D.t || {};
+  var fill = function (tpl, k, v) { return String(tpl || '').replace('{' + k + '}', v); };
+  var esc = function (s) { return String(s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); };
+
+  /* ── header：捲動後變實底 ── */
+  var hd = $('header');
+  function onScroll() { if (hd) hd.classList.toggle('sc', window.scrollY > 40); }
+  onScroll(); addEventListener('scroll', onScroll, { passive: true });
+
+  /* ── 捲動進場(同一層的 .rv 依序錯開) ── */
+  var rvs = $$('.hp .rv');
+  rvs.forEach(function (el) {
+    var sib = Array.prototype.filter.call(el.parentNode.children, function (c) { return c.classList.contains('rv'); });
+    el.style.setProperty('--rd', Math.min(sib.indexOf(el), 6) * 0.08 + 's');
+  });
+  if ('IntersectionObserver' in window && !reduce) {
+    var io = new IntersectionObserver(function (es) {
+      es.forEach(function (e) { if (e.isIntersecting) { e.target.classList.add('in'); io.unobserve(e.target); } });
+    }, { threshold: 0.12, rootMargin: '0px 0px -6% 0px' });
+    rvs.forEach(function (el) { io.observe(el); });
+  } else rvs.forEach(function (el) { el.classList.add('in'); });
+
+  /* ── 主視覺：滑鼠視差 ── */
+  var hero = $('.hero');
+  if (hero && !reduce && matchMedia('(pointer:fine)').matches) {
+    hero.addEventListener('pointermove', function (e) {
+      var r = hero.getBoundingClientRect();
+      hero.style.setProperty('--mx', ((e.clientX - r.left) / r.width * 2 - 1).toFixed(3));
+      hero.style.setProperty('--my', ((e.clientY - r.top) / r.height * 2 - 1).toFixed(3));
+    });
+    hero.addEventListener('pointerleave', function () { hero.style.setProperty('--mx', 0); hero.style.setProperty('--my', 0); });
+  }
+
+  /* ── 實機影片：進畫面才載入、才播放 ── */
+  var vid = $('.phone video');
+  if (vid && 'IntersectionObserver' in window) {
+    new IntersectionObserver(function (es) {
+      es.forEach(function (e) {
+        if (e.isIntersecting) {
+          if (!vid.src) vid.src = vid.getAttribute('data-src');
+          var p = vid.play(); if (p && p.catch) p.catch(function () {});
+        } else if (!vid.paused) vid.pause();
+      });
+    }, { threshold: 0.25 }).observe(vid);
+  }
+
+  /* ── 畫面輪播：按鈕 + 滑鼠拖曳 ── */
+  var rail = $('#rail');
+  if (rail) {
+    var step = function () { var s = $('.shot', rail); return s ? s.getBoundingClientRect().width + 24 : 260; };
+    $$('.rail-nav button').forEach(function (b) {
+      b.addEventListener('click', function () { rail.scrollBy({ left: step() * 2 * (+b.getAttribute('data-dir')), behavior: reduce ? 'auto' : 'smooth' }); });
+    });
+    var dn = false, sx = 0, sl = 0, moved = 0;
+    rail.addEventListener('pointerdown', function (e) { if (e.pointerType !== 'mouse') return; dn = true; sx = e.clientX; sl = rail.scrollLeft; moved = 0; });
+    addEventListener('pointermove', function (e) { if (!dn) return; var dx = e.clientX - sx; moved = Math.max(moved, Math.abs(dx)); if (moved > 4) rail.classList.add('dragging'); rail.scrollLeft = sl - dx; });
+    addEventListener('pointerup', function () { dn = false; rail.classList.remove('dragging'); });
+  }
+
+  /* ── 世界地圖 ── */
+  var map = $('#map'), panel = $('#panel');
+  if (map && panel && D.places) {
+    var byId = {}; D.places.forEach(function (p) { byId[p.id] = p; });
+    var pnBg = $('.pn-bg', panel), pnFoes = $('.pn-foes', panel), pnChips = $('.pn-chips', panel), pnName = $('.pn-name', panel), pnTip = $('.pn-tip', panel), pnFoe = $('.pn-foe', panel);
+    var LB = ['★1', '★2', '★3', T.king || '王'];
+    var curPlace = '', touched = false, timer = null;
+    var show = function (id) {
+      var p = byId[id]; if (!p || id === curPlace) return; curPlace = id;
+      $$('.isl', map).forEach(function (b) { b.classList.toggle('on', b.getAttribute('data-id') === id); });
+      pnBg.style.backgroundImage = 'url(' + p.bgUrl + ')';
+      pnFoes.innerHTML = p.foes.map(function (f, i) {
+        return '<div class="fo" style="--i:' + i + '"><div class="fi crop" style="--z:' + f.z + ';--cx:' + f.cx + ';--cy:' + f.cy + ';--by:97%"><img src="' + f.u + '" alt="" loading="lazy" draggable="false"></div><span>' + LB[f.k] + '</span></div>';
+      }).join('');
+      var chips = '';
+      if (p.el && EL[p.el]) chips += '<span class="chip" style="--c:' + EL[p.el].c + '">' + esc(fill(T.elMon, 'el', EL[p.el].n)) + '</span>';
+      if (p.weak && EL[p.weak]) chips += '<span class="chip plain"><i style="color:' + EL[p.weak].c + '"></i>' + esc(fill(T.weak, 'el', EL[p.weak].n)) + '</span>';
+      if (!p.el) chips += '<span class="chip plain">' + esc(id === 'tower' ? T.towerChip : T.homeChip) + '</span>';
+      pnChips.innerHTML = chips;
+      pnName.textContent = p.name; pnTip.textContent = p.tip;
+      pnFoe.textContent = p.foe ? fill(T.lives, 'foe', p.foe) : '';
+      panel.classList.remove('sw'); void panel.offsetWidth; panel.classList.add('sw');
+    };
+    $$('.isl', map).forEach(function (b) {
+      b.addEventListener('click', function () { touched = true; clearInterval(timer); show(b.getAttribute('data-id')); });
+    });
+    show('fire');
+    // 沒人動它的時候自己輪播；在畫面外不跑
+    var order = ['fire', 'water', 'thunder', 'earth', 'wind', 'tower', 'home'];
+    if (!reduce && 'IntersectionObserver' in window) {
+      new IntersectionObserver(function (es) {
+        es.forEach(function (e) {
+          clearInterval(timer);
+          if (e.isIntersecting && !touched) timer = setInterval(function () { if (touched) return clearInterval(timer); show(order[(order.indexOf(curPlace) + 1) % order.length]); }, 4200);
+        });
+      }, { threshold: 0.3 }).observe(map);
+    }
+  }
+
+  /* ── 英雄與進化 ── */
+  var box = $('#stagebox');
+  if (box && D.teams) {
+    var img = $('#sbImg'), tabs = $$('#tabs button'), evoB = $('#evoB'), mates = $('#mates');
+    var st = { t: 0, h: 0, s: 0 }, hTouched = false, hTimer = null, STG = ['★1', '★2', '★3'];
+    var art = img.parentNode, tok = 0;
+    var setImg = function (g) {
+      var pre = new Image(), my = ++tok;
+      pre.onload = function () {
+        if (my !== tok) return;
+        art.classList.toggle('tease', !!g.t);
+        ['sc', 'ox', 'oy', 'tx', 'ty'].forEach(function (k) { img.style.setProperty('--' + k, g[k] + (k === 'sc' ? '' : '%')); });
+        img.src = g.u; img.classList.remove('sw'); void img.offsetWidth; img.classList.add('sw');
+      };
+      pre.src = g.u;
+    };
+    var renderStage = function () {
+      var h = D.teams[st.t].heroes[st.h];
+      $$('button', evoB).forEach(function (b, i) { b.classList.toggle('on', i === st.s); });
+      var g = h.st[st.s]; setImg(g);
+      $('#sbName').textContent = h.name; $('#sbEn').textContent = g.t ? (T.tease || '') : (h.sub || '');
+    };
+    var renderHero = function () {
+      var team = D.teams[st.t], h = team.heroes[st.h], e = EL[h.el] || { n: '', c: '#ccc' };
+      box.style.setProperty('--el', e.c);
+      $('#sbTeam').textContent = team.name + (T.sep || ' · ') + team.note;
+      $('#sbChips').innerHTML = '<span class="chip" style="--c:' + e.c + '">' + esc(fill(T.elAttr, 'el', e.n)) + '</span>' + (h.sp ? '<span class="chip plain">' + esc(h.sp) + '</span>' : '') + '<span class="chip plain">' + esc(fill(T.stages, 'n', h.st.length)) + '</span>';
+      evoB.innerHTML = h.st.map(function (_, i) { return '<button type="button" aria-label="' + esc(fill(T.stageAria, 'n', i + 1)) + '">' + STG[i] + '</button>'; }).join('');
+      $$('button', evoB).forEach(function (b, i) { b.addEventListener('click', function () { stopAuto(); st.s = i; renderStage(); }); });
+      mates.innerHTML = team.heroes.map(function (m, i) {
+        var c = (EL[m.el] || {}).c || '#ccc';
+        return '<button type="button" class="' + (i === st.h ? 'on' : '') + '" style="--c:' + c + '" aria-label="' + esc(m.name) + '"><img src="' + m.thumb + '" alt="" loading="lazy" draggable="false"></button>';
+      }).join('');
+      $$('button', mates).forEach(function (b, i) { b.addEventListener('click', function () { stopAuto(); st.h = i; st.s = 0; renderHero(); }); });
+      renderStage();
+    };
+    var stopAuto = function () { hTouched = true; clearInterval(hTimer); };
+    tabs.forEach(function (b, i) {
+      b.addEventListener('click', function () {
+        stopAuto(); st.t = i; st.h = 0; st.s = 0;
+        tabs.forEach(function (x, j) { x.setAttribute('aria-selected', j === i ? 'true' : 'false'); });
+        renderHero();
+      });
+    });
+    renderHero();
+    // 沒人動它：自動一階一階演給你看
+    if (!reduce && 'IntersectionObserver' in window) {
+      new IntersectionObserver(function (es) {
+        es.forEach(function (e) {
+          clearInterval(hTimer);
+          if (e.isIntersecting && !hTouched) hTimer = setInterval(function () {
+            if (hTouched) return clearInterval(hTimer);
+            var h = D.teams[st.t].heroes[st.h];
+            if (st.s < h.st.length - 1) st.s++; else { st.s = 0; st.h = (st.h + 1) % D.teams[st.t].heroes.length; renderHero(); return; }
+            renderStage();
+          }, 1900);
+        });
+      }, { threshold: 0.35 }).observe(box);
+    }
+  }
+
+  /* ── 數字跑表 ── */
+  if ('IntersectionObserver' in window && !reduce) {
+    var nio = new IntersectionObserver(function (es) {
+      es.forEach(function (e) {
+        if (!e.isIntersecting) return; nio.unobserve(e.target);
+        var el = e.target, n = +el.getAttribute('data-n'), t0 = performance.now(), dur = 900;
+        if (!n) return;
+        (function tick(t) { var k = Math.min(1, (t - t0) / dur), v = Math.round(n * (1 - Math.pow(1 - k, 3))); el.textContent = v; if (k < 1) requestAnimationFrame(tick); })(t0);
+      });
+    }, { threshold: 0.6 });
+    $$('.num b').forEach(function (b) { nio.observe(b); });
+  }
+
+  /* ── 試玩小遊戲：把方塊拖上去，補滿一排就消除 ── */
+  var demo = $('#demo');
+  if (demo) {
+    var cells = $$('.board .c', demo), boardEl = $('.board', demo), piece = $('#demoPiece'), msg = $('#demoMsg');
+    var hitEl = $('.hit', demo), hpBar = $('.hpbar i', demo), foe = $('.foe', demo), foeArea = $('.demo-foe', demo);
+    var idx = function (r, c) { return r * 9 + c; };
+    var rowExcept = function (r, miss) { var a = []; for (var c = 0; c < 9; c++) if (miss.indexOf(c) < 0) a.push(idx(r, c)); return a; };
+    var PUZ = [
+      { fill: rowExcept(4, [3, 4, 5]), shape: [[0, 0], [0, 1], [0, 2]], at: [4, 3], dmg: 45,
+        msg: T.m1, ok: T.ok1 },
+      { fill: rowExcept(7, [6, 7]).concat([idx(6, 7), idx(6, 8), idx(8, 6), idx(8, 7), idx(8, 8)]), shape: [[0, 0], [1, 0], [1, 1]], at: [6, 6], dmg: 55,
+        msg: T.m2, ok: T.ok2 }
+    ];
+    var grid, pi = 0, hp = 100, busy = false, shape, drag = null;
+
+    var paint = function () {
+      cells.forEach(function (c, k) { c.classList.toggle('f', !!grid[k]); c.classList.remove('gh', 'no', 'pop', 'tg'); });
+      var p = PUZ[pi]; shape.forEach(function (d) { cells[idx(p.at[0] + d[0], p.at[1] + d[1])].classList.add('tg'); });
+    };
+    var buildPiece = function (el, size) {
+      var w = 0, h = 0; shape.forEach(function (d) { h = Math.max(h, d[0] + 1); w = Math.max(w, d[1] + 1); });
+      el.style.gridTemplateColumns = 'repeat(' + w + ',' + (size ? size + 'px' : 'auto') + ')';
+      var html = '';
+      for (var r = 0; r < h; r++) for (var c = 0; c < w; c++) {
+        var on = shape.some(function (d) { return d[0] === r && d[1] === c; });
+        html += on ? '<i' + (size ? ' style="width:' + size + 'px;height:' + size + 'px"' : '') + '></i>' : '<b style="visibility:hidden' + (size ? ';width:' + size + 'px;height:' + size + 'px' : '') + '"></b>';
+      }
+      el.innerHTML = html;
+    };
+    var load = function (i) {
+      pi = i; grid = new Array(81); for (var k = 0; k < 81; k++) grid[k] = 0;
+      PUZ[i].fill.forEach(function (k) { grid[k] = 1; });
+      shape = PUZ[i].shape; buildPiece(piece, 0);
+      piece.classList.remove('gone'); piece.classList.add('hint');
+      paint(); msg.textContent = PUZ[i].msg; busy = false;
+    };
+    var reset = function () {
+      hp = 100; hpBar.style.width = '100%'; foe.classList.remove('dead', 'hurt'); demo.setAttribute('data-state', 'idle'); load(0);
+    };
+    var canPlace = function (r, c) {
+      return shape.every(function (d) { var rr = r + d[0], cc = c + d[1]; return rr >= 0 && rr < 9 && cc >= 0 && cc < 9 && !grid[idx(rr, cc)]; });
+    };
+    var clearMarks = function () { cells.forEach(function (c) { c.classList.remove('gh', 'no'); }); };
+    var place = function (r, c) {
+      busy = true; clearMarks(); piece.classList.add('gone'); piece.classList.remove('hint');
+      shape.forEach(function (d) { grid[idx(r + d[0], c + d[1])] = 1; });
+      cells.forEach(function (el, k) { el.classList.toggle('f', !!grid[k]); el.classList.remove('tg'); });
+      var hitSet = {}, lines = 0, i, j, full;
+      for (i = 0; i < 9; i++) { full = true; for (j = 0; j < 9; j++) if (!grid[idx(i, j)]) full = false; if (full) { lines++; for (j = 0; j < 9; j++) hitSet[idx(i, j)] = 1; } }
+      for (j = 0; j < 9; j++) { full = true; for (i = 0; i < 9; i++) if (!grid[idx(i, j)]) full = false; if (full) { lines++; for (i = 0; i < 9; i++) hitSet[idx(i, j)] = 1; } }
+      for (var b = 0; b < 9; b++) { var br = Math.floor(b / 3) * 3, bc = (b % 3) * 3; full = true; for (i = 0; i < 3; i++) for (j = 0; j < 3; j++) if (!grid[idx(br + i, bc + j)]) full = false; if (full) { lines++; for (i = 0; i < 3; i++) for (j = 0; j < 3; j++) hitSet[idx(br + i, bc + j)] = 1; } }
+      var keys = Object.keys(hitSet);
+      if (!keys.length) {
+        msg.textContent = T.miss;
+        setTimeout(function () { load(pi); }, 1100); return;
+      }
+      keys.forEach(function (k) { cells[k].classList.add('pop'); });
+      hitEl.textContent = keys.length + ' HIT'; hitEl.classList.remove('show'); void hitEl.offsetWidth; hitEl.classList.add('show');
+      msg.textContent = PUZ[pi].ok;
+      setTimeout(function () {
+        hp = Math.max(0, hp - PUZ[pi].dmg); hpBar.style.width = hp + '%';
+        foe.classList.remove('hurt'); void foe.offsetWidth; foe.classList.add('hurt');
+        var dm = document.createElement('span'); dm.className = 'dmg'; dm.textContent = '-' + keys.length * 13; foeArea.appendChild(dm);
+        setTimeout(function () { dm.remove(); foe.classList.remove('hurt'); }, 950);
+      }, 260);
+      setTimeout(function () {
+        keys.forEach(function (k) { grid[k] = 0; });
+        if (hp <= 0) { foe.classList.add('dead'); setTimeout(function () { demo.setAttribute('data-state', 'won'); }, 750); }
+        else load(pi + 1);
+      }, 1250);
+    };
+
+    var cellAt = function (left, top) {
+      var r0 = cells[0].getBoundingClientRect(), r1 = cells[1].getBoundingClientRect(), pitch = r1.left - r0.left;
+      return { r: Math.round((top - r0.top) / pitch), c: Math.round((left - r0.left) / pitch) };
+    };
+    var moveDrag = function (e) {
+      if (!drag) return;
+      var left = e.clientX - drag.w / 2, top = e.clientY - drag.lift - drag.h;
+      drag.el.style.transform = 'translate3d(' + left + 'px,' + top + 'px,0)';
+      var p = cellAt(left, top); drag.r = p.r; drag.c = p.c; clearMarks();
+      var inside = shape.every(function (d) { var rr = p.r + d[0], cc = p.c + d[1]; return rr >= 0 && rr < 9 && cc >= 0 && cc < 9; });
+      if (!inside) { drag.ok = false; return; }
+      drag.ok = canPlace(p.r, p.c);
+      shape.forEach(function (d) { cells[idx(p.r + d[0], p.c + d[1])].classList.add(drag.ok ? 'gh' : 'no'); });
+    };
+    var endDrag = function () {
+      if (!drag) return;
+      var d = drag; drag = null; d.el.remove();
+      removeEventListener('pointermove', moveDrag); removeEventListener('pointerup', endDrag); removeEventListener('pointercancel', endDrag);
+      if (d.ok) place(d.r, d.c); else { clearMarks(); piece.classList.remove('gone'); piece.classList.add('hint'); }
+    };
+    piece.addEventListener('pointerdown', function (e) {
+      if (busy || drag) return; e.preventDefault();
+      var cs = cells[0].getBoundingClientRect().width, gap = 3, w = 0, h = 0;
+      shape.forEach(function (d) { h = Math.max(h, d[0] + 1); w = Math.max(w, d[1] + 1); });
+      var el = document.createElement('div'); el.className = 'hp-drag'; document.body.appendChild(el);
+      var keep = shape; buildPiece(el, cs);
+      drag = { el: el, w: w * cs + (w - 1) * gap, h: h * cs + (h - 1) * gap, lift: e.pointerType === 'touch' ? cs * 1.5 : cs * 0.35, ok: false, r: 0, c: 0 };
+      piece.classList.add('gone'); piece.classList.remove('hint');
+      addEventListener('pointermove', moveDrag); addEventListener('pointerup', endDrag); addEventListener('pointercancel', endDrag);
+      moveDrag(e);
+    });
+    // 鍵盤也能玩：Enter / 空白鍵直接放到正確位置
+    piece.addEventListener('keydown', function (e) {
+      if (busy || (e.key !== 'Enter' && e.key !== ' ')) return; e.preventDefault();
+      place(PUZ[pi].at[0], PUZ[pi].at[1]);
+    });
+    $('#demoAgain').addEventListener('click', reset);
+    reset();
+  }
+})();
+</script>

@@ -1,0 +1,472 @@
+---
+// 首頁(2026-11 改版)，中英共用同一份版型：<Home /> = 繁中、<Home lang="en" /> = 英文。
+// 美術一律引用 /play/art/(=遊戲本體同一份檔)，所以遊戲換圖這裡自動跟著換。
+import Base from '../layouts/Base.astro';
+import HomeStyle from './HomeStyle.astro';
+import HomeScript from './HomeScript.astro';
+import fs from 'node:fs';
+import path from 'node:path';
+import { byId } from '../data/cards';
+
+export interface Props { lang?: 'zh-TW' | 'en' }
+const { lang = 'zh-TW' } = Astro.props;
+const en = lang === 'en';
+function L<V>(zh: V, e: V): V { return en ? e : zh; }
+
+const ART = '/play/art';
+const root = process.cwd();
+const cardDir = path.join(root, 'public/play/art/cards');
+const has = (f: string) => fs.existsSync(path.join(cardDir, f));
+const ico = (n: string, size = 20) =>
+  fs.readFileSync(path.join(root, 'node_modules/lucide-static/icons', n + '.svg'), 'utf8')
+    .replace(/<!--[\s\S]*?-->/g, '').replace('width="24"', `width="${size}"`).replace('height="24"', `height="${size}"`).replace(/\s+/g, ' ').trim();
+
+// 進化階段：遊戲裡有哪幾階的圖就列哪幾階
+const stageFiles = (id: string, king = false) => {
+  const s = [`${id}_full.webp`];
+  for (const k of ['e', 'e2', 'e3']) if (has(`${id}_${k}_full.webp`)) s.push(`${id}_${k}_full.webp`);
+  if (king && has(`${id}_king_full.webp`)) s.push(`${id}_king_full.webp`);
+  return s.map((f) => `${ART}/cards/${f}`);
+};
+// 量每張圖去掉透明邊後的實際內容範圍，裁切與縮放都照這個算，怪和角色才不會被切到
+let sharpLib: any = null;
+try { sharpLib = (await import('sharp')).default; } catch {}
+const bboxCache = new Map<string, { cx: number; bot: number; bw: number; bh: number; ar: number }>();
+const bbox = async (url: string) => {
+  const hit = bboxCache.get(url); if (hit) return hit;
+  let r = { cx: 0.5, bot: 0.94, bw: 0.62, bh: 0.6, ar: 900 / 1080 };
+  try {
+    if (sharpLib) {
+      const file = path.join(root, 'public', url);
+      const m = await sharpLib(file).metadata();
+      const { info } = await sharpLib(file).trim({ threshold: 60 }).toBuffer({ resolveWithObject: true });
+      const x0 = -(info.trimOffsetLeft ?? 0), y0 = -(info.trimOffsetTop ?? 0);
+      r = { cx: (x0 + info.width / 2) / m.width, bot: (y0 + info.height) / m.height, bw: info.width / m.width, bh: info.height / m.height, ar: m.height / m.width };
+    }
+  } catch {}
+  bboxCache.set(url, r); return r;
+};
+const r4 = (n: number) => +n.toFixed(4);
+// 地圖面板的怪：方形框，內容完整放進去、腳貼底，四階由小到大
+const foeCrops = (urls: string[]) => Promise.all(urls.map(async (u, i) => {
+  const b = await bbox(u), k = urls.length === 4 ? i : Math.min(i + (4 - urls.length), 3);
+  const fit = Math.min(0.94 / b.bw, 0.9 / (b.bh * b.ar));
+  return { u, k, z: r4(fit * [0.8, 0.87, 0.94, 1][k]), cx: r4(b.cx), cy: r4(b.bot * b.ar / (900 / 1080)) };
+}));
+// 首頁最多演到第幾階(目前先不露出第 4 階)；最後一階要不要只給剪影
+const MAX_STAGE = 3, TEASE_LAST = true;
+const heroStages = async (id: string) => {
+  const urls = stageFiles(id).slice(0, MAX_STAGE), lad = urls.length >= 3 ? [0.85, 0.93, 1] : [0.9, 1];
+  return Promise.all(urls.map(async (u, i) => {
+    const b = await bbox(u);
+    return { u, sc: r4(Math.min(1.9, Math.min(0.88 / b.bw, 0.84 / b.bh) * (lad[i] ?? 1))), ox: r4(b.cx * 100), oy: r4(b.bot * 100), tx: r4(50 - b.cx * 100), ty: r4(88 - b.bot * 100), t: TEASE_LAST && urls.length >= 3 && i === urls.length - 1 ? 1 : 0 };
+  }));
+};
+const cardCount = new Set(fs.readdirSync(cardDir).map((f) => f.split('_')[0])).size;
+
+const EL: Record<string, { n: string; c: string }> = {
+  fire: { n: L('火', 'Fire'), c: '#ff5b37' }, water: { n: L('水', 'Water'), c: '#3b9eff' }, thunder: { n: L('雷', 'Thunder'), c: '#f5b800' },
+  earth: { n: L('土', 'Earth'), c: '#c98842' }, wind: { n: L('風', 'Wind'), c: '#55c24a' },
+};
+const WEAK: Record<string, string> = { fire: 'water', water: 'earth', earth: 'thunder', thunder: 'wind', wind: 'fire' };
+
+// 英雄隊(每隊照 火→水→雷→土→風)
+const teamDefs = [
+  { key: 'cat', name: L('貓隊', 'Cats'), note: L('西方奇幻的劍與魔法，帶頭的就是那隻橘貓。', 'Sword-and-sorcery fantasy, led by that orange tabby.'), ids: ['c02', 'c05', 'c08', 'c09', 'c11'] },
+  { key: 'dog', name: L('狗隊', 'Dogs'), note: L('勇者小隊：劍盾、補師、刺客，一個都不少。', 'A proper hero party: sword and shield, healer, assassin.'), ids: ['c03', 'c06', 'c19', 'c10', 'c12'] },
+  { key: 'rat', name: L('鼠隊', 'Rats'), note: L('蒸汽龐克工程師，手上的發明一階比一階誇張。', 'Steampunk engineers whose gadgets get wilder every stage.'), ids: ['c13', 'c16', 'c20', 'c23', 'c27'] },
+  { key: 'fish', name: L('魚隊', 'Fish'), note: L('魚就是魚，但會一路長成魚龍。', 'Just fish, until they grow into dragons.'), ids: ['c14', 'c17', 'c21', 'c24', 'c28'] },
+  { key: 'taiwan', name: L('台灣隊', 'Taiwan'), note: L('雲豹、櫻花鉤吻鮭、藍鵲、黑熊、獼猴，都是台灣特有種。', 'Clouded leopard, Formosan salmon, blue magpie, black bear and rock macaque, all native to Taiwan.'), ids: ['c15', 'c18', 'c22', 'c26', 'c30'] },
+];
+const teams = await Promise.all(teamDefs.map(async (t) => ({
+  ...t,
+  heroes: await Promise.all(t.ids.map(async (id) => {
+    const c = byId[id];
+    return {
+      id, el: c?.el ?? 'fire', thumb: `${ART}/cards/${id}_thumb.webp`, st: await heroStages(id),
+      name: en ? (c?.en ?? id) : (c?.name ?? id), sub: en ? '' : (c?.en ?? ''),
+      sp: en ? '' : (c?.species ?? ''),
+    };
+  })),
+})));
+
+// 大廳地圖：座標抄自遊戲的 MAP_ISLES(原圖 1080×1920)，這裡取 y=120~1890 這一段
+const SY0 = 120, SH = 1770;
+const isle = (ax: number, ay: number, w: number, h: number) => ({
+  left: (((ax - w / 2) / 1080) * 100).toFixed(2), top: (((ay - h / 2 - SY0) / SH) * 100).toFixed(2), width: ((w / 1080) * 100).toFixed(2), z: Math.round(ay),
+});
+const places = await Promise.all([
+  { id: 'fire', name: L('火之洞窟', 'Fire Cavern'), el: 'fire', tip: L('火山裡充滿強力攻擊的怪，別忘了注意自己的血量。', 'A volcano full of heavy hitters. Keep an eye on your own HP.'), foe: L('哥布林', 'Goblins'), fid: 'c41', bg: 'fire', pos: isle(874, 434, 377, 591) },
+  { id: 'water', name: L('水之神殿', 'Water Temple'), el: 'water', tip: L('會補血、復活的怪都在這，小心變成持久戰。', 'Healers and revivers live here. Expect a long fight.'), foe: L('小護理', 'Nurse Slimes'), fid: 'c57', bg: 'water', pos: isle(878, 984, 384, 467) },
+  { id: 'thunder', name: L('雷之高原', 'Thunder Plateau'), el: 'thunder', tip: L('充滿影響盤面的技能怪，要用高技巧排盤面。', 'Monsters here mess with your board. Bring your best block-placing.'), foe: L('鐵機人', 'Iron Bots'), fid: 'c38', bg: 'thunder', pos: isle(215, 940, 430, 481) },
+  { id: 'earth', name: L('土之遺跡', 'Earth Ruins'), el: 'earth', tip: L('各種防禦怪，用高 COMBO 和高 HIT 打倒牠。', 'Defenders everywhere. Break them with long COMBOs and big HITs.'), foe: L('石頭怪', 'Stone Imps'), fid: 'c49', bg: 'earth', pos: isle(509, 1156, 383, 560) },
+  { id: 'wind', name: L('風之峽谷', 'Wind Canyon'), el: 'wind', tip: L('各種盜賊聚集的峽谷，小心別被偷。', 'A canyon full of thieves. Don’t let them steal from you.'), foe: L('賊鴨', 'Thief Ducks'), fid: 'c55', bg: 'wind', pos: isle(234, 484, 464, 485) },
+  { id: 'tower', name: L('召喚之塔', 'Summoning Tower'), el: '', tip: L('五座城都打穿，塔才會開門。頂樓有誰，自己上去看。', 'Clear all five cities and the tower opens. Who’s on the top floor? Go find out.'), foe: '', fid: '', bg: 'tower', pos: isle(535, 670, 429, 577) },
+  { id: 'home', name: L('初始島', 'Starter Isle'), el: '', tip: L('新手教學和每日修煉都在這裡，每天輪流練一種屬性。', 'The tutorial and daily training live here, with a different element each day.'), foe: '', fid: '', bg: 'prologue', pos: isle(535, 1735, 308, 270) },
+].map(async (p) => ({ ...p, isl: `${ART}/map/island_${p.id}.webp`, bgUrl: `${ART}/bg/${p.bg}_back.webp`, weak: p.el ? WEAK[p.el] : '', foes: p.fid ? await foeCrops(stageFiles(p.fid, true)) : [] })));
+
+const shots = [
+  { f: 'fire', t: L('火之洞窟', 'Fire Cavern'), d: L('消 9 格就是 9 HIT', 'Clear 9 cells, land 9 HIT') },
+  { f: 'combo', t: 'COMBO', d: L('連著消，傷害一路疊上去', 'Keep clearing and the damage stacks') },
+  { f: 'water', t: L('水之神殿', 'Water Temple'), d: L('補師不先處理，就打不完', 'Deal with the healer first') },
+  { f: 'wind', t: L('風之峽谷', 'Wind Canyon'), d: L('賊鴨盯上你盤面上的方塊', 'Thief ducks eye your blocks') },
+  { f: 'thunder', t: L('雷之高原', 'Thunder Plateau'), d: L('鐵機人往你的盤面丟鐵塊', 'Iron bots drop metal on your board') },
+  { f: 'earth', t: L('土之遺跡', 'Earth Ruins'), d: L('石頭怪舉盾，要連擊才破得了', 'Stone shields only break to combos') },
+  { f: 'lobby', t: L('大廳', 'Lobby'), d: L('五座屬性城，圍著一座塔', 'Five cities around one tower') },
+  { f: 'team', t: L('編隊', 'Team'), d: L('五隻一隊，隊長技看帶頭的是誰', 'Five to a team; the leader sets the skill') },
+  { f: 'box', t: L('卡冊', 'Card box'), d: L('抽到、打到的卡都收在這', 'Everything you pull or drop') },
+  { f: 'dex', t: L('卡片圖鑑', 'Card dex'), d: L(`${cardCount} 張卡，慢慢收`, `${cardCount} cards to collect`) },
+];
+
+const posts = [
+  { href: '/devlog/2026-10-04-damage-formula-overhaul/', date: '2026.10.04', t: L('獼猴練到滿級 80，打起來跟 1 級差不多？我把傷害公式拆了重做', 'My level-80 macaque hit like level 1, so I rebuilt the damage formula') },
+  { href: '/devlog/2026-08-18-daily-borrow-city/', date: '2026.08.18', t: L('「每日修煉」我沒有重做一座城——我讓它把五屬城整個借過來', 'Daily Training borrows the five cities instead of building a new one') },
+  { href: '/devlog/2026-06-11-origin/', date: '2026.06.11', t: L('我只是想做個消消樂，結果縫出一個沒人做過的東西', 'I only wanted a block-clearing game and stitched together something new') },
+];
+
+const faqs = en ? [
+  { q: 'Does it cost anything?', a: 'No. It’s free, and you don’t pay anything to start.' },
+  { q: 'Do I need to download or install it?', a: 'No. Open it in a phone or desktop browser and play. You can add it to your home screen if you like.' },
+  { q: 'Do I have to sign up?', a: 'No. You can play as a guest right away. Link a Google account later if you want to keep your progress across devices.' },
+  { q: 'How is it different from a regular block puzzle?', a: 'Clearing is how you attack: every cell you clear is a hit, and consecutive clears build a COMBO. Blocks also come in five elements that counter each other.' },
+  { q: 'What does “open beta” mean?', a: 'The full game is playable, and it’s still being tuned. If something feels stuck or just isn’t fun, tell me.' },
+] : [
+  { q: '要錢嗎？', a: '免費。開網頁就能玩，不用先付任何費用。' },
+  { q: '要下載或安裝嗎？', a: '不用。用手機或電腦的瀏覽器打開就能玩，想要的話也可以加到手機主畫面。' },
+  { q: '一定要註冊嗎？', a: '不用，可以先用訪客身分直接玩。想保留進度、換裝置接著玩，再綁定 Google 帳號就好。' },
+  { q: '跟一般的方塊消除有什麼不一樣？', a: '消除在這裡是攻擊手段：消幾格就打幾下，連著消就疊 COMBO。方塊還有火、水、雷、土、風五種屬性，會互相剋。' },
+  { q: '「開放測試中」是什麼意思？', a: '遊戲已經可以完整玩，但還在邊做邊調。有哪裡卡住、哪裡不好玩，歡迎直接跟我說。' },
+];
+
+// 介面文字
+const T = {
+  title: L('塊頭勇者 Blockyusha｜方塊消除 × RPG，免下載的免費網頁遊戲', 'Blockyusha | Block Puzzle × RPG, a free browser game'),
+  desc: L('塊頭勇者是把方塊消除縫進 RPG 的免費網頁遊戲：拖方塊、湊滿一排就消除，消幾格就打幾下。帶著貓、狗、鼠、魚和台灣特有種，打穿五座屬性城。免下載，手機電腦都能玩。',
+    'Blockyusha stitches block puzzles into an RPG: drag blocks, fill a line to clear it, and every cell you clear is a hit. Team up cats, dogs, rats, fish and Taiwan’s native animals across five elemental cities. Free, no download, phone or desktop.'),
+  logoAlt: L('塊頭勇者 Blockyusha', 'Blockyusha'),
+  pill: L('開放測試中', 'Open beta'), free: L('免費', 'Free'),
+  tagA: L('拖方塊、湊一排，', 'Drag blocks, clear lines,'), tagEm: L('放大招', 'land the big hit'), tagZ: L('。', '.'),
+  sub: L('把方塊消除縫進 RPG 的網頁遊戲。帶著貓、狗、鼠、魚和台灣特有種，一路打穿五座屬性城。', 'Block puzzle meets RPG, right in your browser. Team up cats, dogs, rats, fish and Taiwan’s native animals.'),
+  play: L('立即開玩', 'Play now'), playS: L('免費 · 免下載', 'Free · No download'), playS2: L('免費 · 免下載 · 不用註冊', 'Free · No download · No sign-up'),
+  tryIt: L('先試一手', 'Try one move'),
+  b1: L('開網頁就能玩', 'Runs in your browser'), b2: L('手機、電腦都可以', 'Phone or desktop'), b3: L('不用註冊，先玩再說', 'No sign-up needed'),
+  scroll: L('往下看', 'Scroll down'),
+  tick: en ? ['Block puzzle × RPG', 'No download', '5 elements', `${cardCount} cards`, 'Heroes that evolve', 'Open beta', 'Phone & desktop']
+    : ['方塊消除 × RPG', '免下載', '五屬相剋', `${cardCount} 張卡片`, '養成進化', '開放測試中', '手機電腦都能玩'],
+  h_play: L(['消掉的每一格，', '都', '打在怪身上', '。'], ['Every cell you clear', '', 'hits a monster', '.']),
+  lead_play: L('規則一句話講完：把方塊排滿一列、一行或一宮，它就消掉；消幾格，就打幾下。', 'The whole rule in one line: fill a row, a column or a 3×3 box and it clears. Every cell you clear is one hit.'),
+  steps: en ? [['Drag', 'Drag a block onto the 9×9 board.'], ['Fill', 'Fill a row, a column or a 3×3 box to clear it.'], ['Boom', '9 cells cleared is 9 HIT. Clear on every move and the COMBO keeps climbing.']]
+    : [['拖', '把下面的方塊拖進 9×9 的盤面。'], ['湊', '排滿一列、一行或一個九宮格，整排消除。'], ['轟', '消 9 格就是 9 HIT；每一手都消得掉，COMBO 就一路疊。']],
+  demoTag: L('試一手 · 不用下載', 'Try it · no download'), foeAlt: L('火哥布林', 'Fire goblin'), boardAria: L('9×9 盤面', '9×9 board'), pieceAria: L('拖這個方塊到盤面', 'Drag this block onto the board'),
+  deT: L('打倒了！', 'Down it goes!'), deD: L('真正的遊戲裡，還有屬性相剋、主動技，和各種會找你麻煩的怪。', 'The real game adds elemental counters, active skills, and monsters that mess with your board.'),
+  full: L('玩完整版', 'Play the full game'), again: L('再打一次', 'Play again'),
+  h_scr: L(['這些畫面，', '都是', '遊戲裡直接錄的', '。'], ['Everything here', 'is ', 'captured in-game', '.']),
+  lead_scr: L('沒有概念圖，也沒有「示意畫面」。這段是真的在打火之洞窟，下面每一張也都是遊戲裡截出來的。', 'No concept art, no mock-ups. This clip is a real run through the Fire Cavern, and every screenshot below comes straight from the game.'),
+  rec: L('實機錄影', 'Live gameplay'), railAria: L('遊戲畫面', 'Game screenshots'), prev: L('上一張', 'Previous'), next: L('下一張', 'Next'),
+  h_world: L(['五座屬性城，', '有各種不同', '找你麻煩', '的方式。'], ['Five elemental cities,', 'all kinds of ways to ', 'ruin your day', '.']),
+  lead_world: L('這張地圖就是遊戲的大廳。點一座島，看看裡面住的是誰。', 'This map is the game’s lobby. Tap an island to see who lives there.'),
+  h_hero: L(['收集、養大，', '看牠一階一階', '換裝', '。'], ['Collect them, raise them,', 'watch them ', 'gear up', '.']),
+  evoL: L('進化階段', 'EVOLUTION'), dex: L('看全部角色圖鑑', 'See every character'),
+  nums: en ? [[String(cardCount), 'cards to collect'], ['5', 'elements that counter each other'], ['3', 'evolution stages'], ['0', 'cost, and nothing to download']]
+    : [[String(cardCount), '張卡片可以收'], ['5', '種屬性互相剋'], ['3', '階進化'], ['0', '元，也不用下載']],
+  h_maker: L(['這款遊戲，', '是一個人做的。'], ['This game was made', 'by one person.']),
+  say: en ? [
+    'It started as a simple block-clearing game… and then it got out of hand.',
+    'I took the “drop blocks into a 9×9 grid, fill a line to clear it” idea and stitched it onto an RPG. Blocks got elements, clearing a line became an attack, and enemies got skills that force you to play the board differently.',
+    'Then I did something a little self-indulgent. Besides the cats, dogs, rabbits, rats and fish everyone loves, I made a Team Taiwan. No business reason. I just want Taiwan to be remembered.',
+    'It’s rough in places. If it looks off, feels too hard, or you get stuck somewhere, tell me straight.',
+  ] : [
+    '一開始只是想做個消消樂⋯⋯結果愈做愈歪～',
+    '把「九宮格塞方塊、湊一排就消」的玩法，硬是跟 RPG 縫在一起。方塊有了屬性，消一排就放招，敵人還有各種技能，逼你排出不同的盤面。',
+    '然後做了一件有點任性的事：除了大家喜歡的貓、狗、兔、鼠、魚，還做了一支台灣隊。沒什麼商業考量，就是想讓台灣被記住而已～',
+    '它一定有鏘的地方。嫌醜、嫌難、嫌哪裡卡，都歡迎直接跟我說。',
+  ],
+  sig: L('— 大毛', '— Damao'),
+  h_log: L('做的過程，都寫在開發日誌。', 'The whole journey is in the devlog.'), logNote: L('', 'Posts are written in Chinese.'), allLog: L('全部日誌', 'All posts'),
+  h_faq: L(['開玩之前，', '先回答幾個問題。'], ['Before you play,', 'a few quick answers.']), moreFaq: L('更多問題', 'More questions'), faqHref: L('/faq/', '/en/faq/'),
+  h_final: L(['好了，別看了，', '去玩吧。'], ['Enough reading.', 'Go play.']), follow: L('追蹤最新消息', 'Follow along'),
+};
+// 給前端程式用的文字
+const js = {
+  elMon: L('{el}屬性的怪', '{el} monsters'), weak: L('怕{el}', 'Weak to {el}'),
+  lives: L('住在這裡的是「{foe}」，由弱到強有四種。', 'Home of the {foe}: four tiers, weakest to strongest.'),
+  towerChip: L('最後才開', 'Opens last'), homeChip: L('從這裡出發', 'Start here'), king: L('王', 'BOSS'),
+  elAttr: L('{el}屬性', '{el}'), stages: L('{n} 階進化', '{n} stages'), stageAria: L('第 {n} 階', 'Stage {n}'), tease: L('★3 長什麼樣子？養到了才知道。', 'What does ★3 look like? Raise one and see.'),
+  sep: L('｜', ' · '),
+  m1: L('把下面的方塊拖上去，補滿發亮的那一排', 'Drag the block up and fill the glowing gap'), ok1: L('消 9 格，就是 9 HIT！', '9 cells cleared. That’s 9 HIT!'),
+  m2: L('再一手：這次一排加一宮，一起清掉', 'One more: clear a row and a box at once'), ok2: L('一次清兩條，打得更痛！', 'Two clears in one move hits harder!'),
+  miss: L('差一點！要補滿一整排才會消。再試一次', 'So close! Fill the whole line to clear it. Try again'),
+};
+
+const data = { teams, places, EL, t: js };
+const ld = {
+  '@context': 'https://schema.org', '@type': 'VideoGame', name: '塊頭勇者 Blockyusha', alternateName: 'Blockyusha', url: en ? 'https://blockyusha.com/en/' : 'https://blockyusha.com/',
+  description: T.desc, genre: ['Puzzle', 'RPG'], gamePlatform: ['Web Browser', 'Android', 'iOS'], applicationCategory: 'Game', operatingSystem: 'Any',
+  inLanguage: ['zh-TW', 'en'], image: 'https://blockyusha.com/home/og.jpg',
+  offers: { '@type': 'Offer', price: '0', priceCurrency: 'TWD' }, author: { '@type': 'Person', name: L('大毛', 'Damao') },
+};
+const boxEl = ['fire', '', 'water', '', 'thunder', '', 'earth', '', 'wind'];
+const tkEl = ['fire', 'water', 'thunder', 'earth', 'wind', 'fire', 'water'];
+---
+<Base title={T.title} description={T.desc} path={en ? '/en/' : '/'} alt={en ? '/' : '/en/'} lang={lang} navActive="home" home image="/home/og.jpg">
+<Fragment slot="head">
+  <script is:inline>document.documentElement.classList.add("js");</script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chiron+GoRound+TC:wght@500;900&family=Russo+One&display=swap" />
+  <link rel="preload" as="image" href="/home/hero-island.webp" fetchpriority="high" />
+  <link rel="preload" as="image" href="/home/sky.webp" />
+  <script type="application/ld+json" set:html={JSON.stringify(ld)} />
+</Fragment>
+
+<main class={'hp' + (en ? ' is-en' : '')}>
+
+<!-- ═════════ HERO ═════════ -->
+<section class="hero" id="top">
+  <div class="sky" aria-hidden="true">
+    <i class="sun"></i>
+    <i class="cube c-fire" style="--x:7%;--y:22%;--s:54px;--r:-14deg;--t:7s"></i>
+    <i class="cube c-water" style="--x:44%;--y:13%;--s:34px;--r:18deg;--t:9s"></i>
+    <i class="cube c-thunder" style="--x:93%;--y:20%;--s:46px;--r:10deg;--t:8s"></i>
+    <i class="cube c-wind" style="--x:3%;--y:72%;--s:38px;--r:22deg;--t:10s"></i>
+    <i class="cube c-earth" style="--x:96%;--y:66%;--s:30px;--r:-20deg;--t:11s"></i>
+  </div>
+  <div class="w hero-in">
+    <div class="hero-copy">
+      <p class="pill"><i></i>{T.pill}<span>{T.free}</span></p>
+      <h1 class="logo"><img src="/home/logo-clean.webp" alt={T.logoAlt} width="801" height="602" />{en && <span class="logo-en">BLOCKYUSHA</span>}</h1>
+      <p class="tag">{T.tagA}<br /><em>{T.tagEm}</em>{T.tagZ}</p>
+      <p class="sub">{T.sub}</p>
+      <div class="cta-row">
+        <a class="btn btn-go" href="/play/"><span class="bi" set:html={ico('play', 22)} /><span><b>{T.play}</b><small>{T.playS}</small></span></a>
+        <a class="btn btn-ghost" href="#play">{T.tryIt}<span class="bi" set:html={ico('arrow-down', 18)} /></a>
+      </div>
+      <ul class="badges">
+        <li><span set:html={ico('globe', 17)} />{T.b1}</li>
+        <li><span set:html={ico('smartphone', 17)} />{T.b2}</li>
+        <li><span set:html={ico('gift', 17)} />{T.b3}</li>
+      </ul>
+    </div>
+    <div class="hero-art" aria-hidden="true">
+      <div class="float">
+        <img class="island" src="/home/hero-island.webp" srcset="/home/hero-island-640.webp 640w, /home/hero-island.webp 1034w" sizes="(max-width:900px) 60vw, 620px" alt="" width="1034" height="1011" fetchpriority="high" />
+      </div>
+      <i class="isl-shadow"></i>
+    </div>
+  </div>
+  <a class="scrollcue" href="#play" aria-label={T.scroll}><i></i></a>
+  <div class="edge" aria-hidden="true"></div>
+</section>
+
+<!-- ═════════ TICKER ═════════ -->
+<div class="ticker" aria-hidden="true">
+  <div class="tk">
+    {[0, 1].map(() => (
+      <span>{T.tick.map((s, i) => <><b>{s}</b><i class={'c-' + tkEl[i]}></i></>)}</span>
+    ))}
+  </div>
+</div>
+
+<!-- ═════════ PLAY：玩法 + 可以玩的小示範 ═════════ -->
+<section class="play sec" id="play">
+  <div class="w play-grid">
+    <div class="play-copy">
+      <p class="eyebrow rv">HOW TO PLAY</p>
+      <h2 class="h2 rv">{T.h_play[0]}<br />{T.h_play[1]}<mark>{T.h_play[2]}</mark>{T.h_play[3]}</h2>
+      <p class="lead rv">{T.lead_play}</p>
+      <ol class="steps">
+        {T.steps.map((s, i) => <li class="rv"><b>{'0' + (i + 1)}</b><div><h3>{s[0]}</h3><p>{s[1]}</p></div></li>)}
+      </ol>
+    </div>
+
+    <div class="demo rv" id="demo" data-state="idle">
+      <span class="demo-tag">{T.demoTag}</span>
+      <div class="demo-foe" style={`background-image:url(${ART}/bg/fire_back.webp)`}>
+        <div class="foe">
+          <div class="fi crop" style="--z:1.95;--cx:.516;--cy:.952;--by:97%"><img src={`${ART}/cards/c41_full.webp`} alt={T.foeAlt} width="1080" height="900" loading="lazy" draggable="false" /></div>
+          <div class="hpbar"><i></i></div>
+        </div>
+      </div>
+      <div class="demo-body">
+        <div class="board" role="img" aria-label={T.boardAria}>
+          {Array.from({ length: 81 }, (_, i) => {
+            const b = Math.floor(Math.floor(i / 9) / 3) * 3 + Math.floor((i % 9) / 3);
+            return <i class={'c ' + (boxEl[b] ? 'z-' + boxEl[b] : '')} data-i={i}></i>;
+          })}
+          <div class="hit" aria-live="polite"></div>
+        </div>
+        <div class="tray"><div class="piece" id="demoPiece" tabindex="0" role="button" aria-label={T.pieceAria}></div></div>
+        <p class="demo-msg" id="demoMsg">{js.m1}</p>
+      </div>
+      <div class="demo-end">
+        <p class="de-t">{T.deT}</p>
+        <p class="de-d">{T.deD}</p>
+        <a class="btn btn-go" href="/play/"><span class="bi" set:html={ico('play', 20)} /><span><b>{T.full}</b></span></a>
+        <button class="again" type="button" id="demoAgain"><span set:html={ico('rotate-ccw', 15)} />{T.again}</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═════════ SCREENS：實機畫面 ═════════ -->
+<section class="screens sec" id="screens">
+  <div class="w scr-top">
+    <div class="phone rv">
+      <video muted loop playsinline preload="none" poster="/home/play-poster.webp" data-src="/home/play.mp4" width="480" height="982"></video>
+      <span class="rec"><i></i>{T.rec}</span>
+    </div>
+    <div class="scr-copy">
+      <p class="eyebrow rv">REAL GAMEPLAY</p>
+      <h2 class="h2 rv">{T.h_scr[0]}<br />{T.h_scr[1]}<mark>{T.h_scr[2]}</mark>{T.h_scr[3]}</h2>
+      <p class="lead rv">{T.lead_scr}</p>
+      <div class="stickers rv" aria-hidden="true"><span class="st st-hit">9 HIT</span><span class="st st-combo">3 COMBO</span></div>
+    </div>
+  </div>
+  <div class="rail-wrap rv">
+    <div class="rail" id="rail" tabindex="0" aria-label={T.railAria}>
+      {shots.map((s) => (
+        <figure class="shot">
+          <img src={`/home/shots/${s.f}.webp`} alt={`${s.t}: ${s.d}`} width="600" height="1229" loading="lazy" draggable="false" />
+          <figcaption><b>{s.t}</b>{s.d}</figcaption>
+        </figure>
+      ))}
+    </div>
+    <div class="rail-nav"><button type="button" data-dir="-1" aria-label={T.prev} set:html={ico('chevron-left', 22)} /><button type="button" data-dir="1" aria-label={T.next} set:html={ico('chevron-right', 22)} /></div>
+  </div>
+</section>
+
+<!-- ═════════ WORLD：大廳地圖 ═════════ -->
+<section class="world sec" id="world">
+  <div class="w">
+    <div class="world-head">
+      <p class="eyebrow rv">THE WORLD</p>
+      <h2 class="h2 rv">{T.h_world[0]}<br />{T.h_world[1]}<mark>{T.h_world[2]}</mark>{T.h_world[3]}</h2>
+      <p class="lead rv">{T.lead_world}</p>
+    </div>
+    <div class="world-grid">
+      <div class="map rv" id="map">
+        <img class="mc mc1" src={`${ART}/map/cloud_lbb.webp`} alt="" aria-hidden="true" loading="lazy" />
+        <img class="mc mc2" src={`${ART}/map/cloud_rbb.webp`} alt="" aria-hidden="true" loading="lazy" />
+        {places.map((p, i) => (
+          <button type="button" class={'isl' + (i === 0 ? ' on' : '')} data-id={p.id} aria-label={p.name}
+            style={`left:${p.pos.left}%;top:${p.pos.top}%;width:${p.pos.width}%;z-index:${p.pos.z};--fd:${(i * 0.7).toFixed(1)}s`}>
+            <img src={p.isl} alt="" loading="lazy" draggable="false" />
+            <span class="isl-tag">{p.name}</span>
+          </button>
+        ))}
+        <img class="mc mc3" src={`${ART}/map/cloud_r.webp`} alt="" aria-hidden="true" loading="lazy" />
+      </div>
+      <div class="panel rv" id="panel" aria-live="polite">
+        <div class="pn-bg"><div class="pn-foes"></div></div>
+        <div class="pn-body">
+          <div class="pn-chips"></div>
+          <h3 class="pn-name"></h3>
+          <p class="pn-tip"></p>
+          <p class="pn-foe"></p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═════════ HEROES：隊伍與進化 ═════════ -->
+<section class="heroes sec" id="heroes">
+  <div class="w">
+    <div class="heroes-head">
+      <p class="eyebrow rv">HEROES</p>
+      <h2 class="h2 rv">{T.h_hero[0]}<br />{T.h_hero[1]}<mark>{T.h_hero[2]}</mark>{T.h_hero[3]}</h2>
+    </div>
+    <div class="tabs rv" role="tablist" id="tabs">
+      {teams.map((t, i) => <button type="button" role="tab" aria-selected={i === 0 ? 'true' : 'false'} data-t={i}>{t.name}</button>)}
+    </div>
+    <div class="stagebox rv" id="stagebox">
+      <div class="sb-art">
+        <i class="sb-glow"></i>
+        <img id="sbImg" src={teams[0].heroes[0].st[0].u} alt="" width="1080" height="900" />
+        <span class="q" aria-hidden="true">?</span>
+        <i class="sb-ped"></i>
+      </div>
+      <div class="sb-info">
+        <p class="sb-team" id="sbTeam"></p>
+        <h3 class="sb-name"><span id="sbName"></span><small id="sbEn"></small></h3>
+        <div class="sb-chips" id="sbChips"></div>
+        <div class="evo">
+          <p class="evo-l">{T.evoL}</p>
+          <div class="evo-b" id="evoB"></div>
+        </div>
+        <div class="mates" id="mates"></div>
+      </div>
+    </div>
+    <p class="more rv"><a class="lnk" href="/dex/">{T.dex}<span set:html={ico('arrow-right', 16)} /></a></p>
+  </div>
+</section>
+
+<!-- ═════════ NUMBERS ═════════ -->
+<section class="nums" aria-label="Numbers">
+  <div class="w nums-in">
+    {T.nums.map((n) => <div class="num rv"><b data-n={n[0]}>{n[0]}</b><span>{n[1]}</span></div>)}
+  </div>
+</section>
+
+<!-- ═════════ MAKER：開發者 ═════════ -->
+<section class="maker sec" id="maker">
+  <div class="w maker-grid">
+    <div class="note rv">
+      <img class="av" src="/home/avatar.webp" alt="" width="256" height="256" loading="lazy" />
+      <p class="eyebrow">FROM THE MAKER</p>
+      <h2 class="h2 sm">{T.h_maker[0]}<br />{T.h_maker[1]}</h2>
+      <div class="say">{T.say.map((s) => <p>{s}</p>)}</div>
+      <p class="sig">{T.sig}</p>
+    </div>
+    <div class="logs">
+      <p class="eyebrow rv">DEVLOG</p>
+      <h3 class="h3 rv">{T.h_log}</h3>
+      {T.logNote && <p class="lognote rv">{T.logNote}</p>}
+      <ul>
+        {posts.map((p) => <li class="rv"><a href={p.href}><time>{p.date}</time><span>{p.t}</span><i set:html={ico('arrow-right', 18)} /></a></li>)}
+      </ul>
+      <p class="rv"><a class="lnk" href="/devlog/">{T.allLog}<span set:html={ico('arrow-right', 16)} /></a></p>
+    </div>
+  </div>
+</section>
+
+<!-- ═════════ FAQ ═════════ -->
+<section class="faq sec" id="faq">
+  <div class="w faq-in">
+    <div>
+      <p class="eyebrow rv">FAQ</p>
+      <h2 class="h2 sm rv">{T.h_faq[0]}<br />{T.h_faq[1]}</h2>
+      <p class="rv"><a class="lnk" href={T.faqHref}>{T.moreFaq}<span set:html={ico('arrow-right', 16)} /></a></p>
+    </div>
+    <div class="qa">
+      {faqs.map((f) => <details class="rv"><summary>{f.q}<i></i></summary><p>{f.a}</p></details>)}
+    </div>
+  </div>
+</section>
+
+<!-- ═════════ FINAL CTA ═════════ -->
+<section class="final">
+  <div class="sky" aria-hidden="true">
+    <i class="sun"></i>
+    <i class="cube c-fire" style="--x:12%;--y:26%;--s:44px;--r:-14deg;--t:7s"></i>
+    <i class="cube c-water" style="--x:86%;--y:18%;--s:36px;--r:16deg;--t:9s"></i>
+    <i class="cube c-wind" style="--x:90%;--y:70%;--s:30px;--r:-18deg;--t:10s"></i>
+  </div>
+  <div class="w final-in">
+    <img class="final-isl rv" src="/home/hero-island-640.webp" alt="" width="640" height="626" loading="lazy" />
+    <h2 class="h2 rv">{T.h_final[0]}<br />{T.h_final[1]}</h2>
+    <a class="btn btn-go big rv" href="/play/"><span class="bi" set:html={ico('play', 24)} /><span><b>{T.play}</b><small>{T.playS2}</small></span></a>
+    <p class="follow rv"><span>{T.follow}</span>
+      <a href="https://www.facebook.com/profile.php?id=61596736017983" target="_blank" rel="noopener">Facebook</a>
+      <a href="https://www.instagram.com/blockyusha" target="_blank" rel="noopener">Instagram</a>
+      <a href="https://x.com/blockyusha" target="_blank" rel="noopener">X</a>
+      <a href="https://youtube.com/@blockyusha" target="_blank" rel="noopener">YouTube</a>
+    </p>
+  </div>
+</section>
+
+</main>
+<script type="application/json" id="hp-data" set:html={JSON.stringify(data)} />
+<HomeStyle />
+<HomeScript />
+</Base>

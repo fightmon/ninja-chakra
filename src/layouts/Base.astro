@@ -9,6 +9,7 @@ export interface Props {
   navActive?: 'dex' | 'devlog' | 'howto' | 'faq' | 'tier' | 'home' | '';
   lang?: 'zh-TW' | 'en';   // 頁面語言；預設繁中
   alt?: string;            // 另一語言版本的路徑；有值才輸出 hreflang 互指
+  home?: boolean;          // 首頁：header 疊在主視覺上(透明→捲動後變實底)
 }
 const {
   title,
@@ -18,6 +19,7 @@ const {
   navActive = '',
   lang = 'zh-TW',
   alt,
+  home = false,
 } = Astro.props;
 const isEn = lang === 'en';
 const desc = description ?? (isEn
@@ -72,10 +74,11 @@ const switchLabel = isEn ? '中' : 'EN';
 <meta name="twitter:title" content={title} />
 <meta name="twitter:description" content={desc} />
 <meta name="twitter:image" content={ogImage} />
-<link rel="icon" href="/play/art/cards/c15_thumb.webp" />
-<link rel="apple-touch-icon" href="/play/art/cards/c15_thumb.webp" />
+<link rel="icon" type="image/png" href="/favicon.png" />
+<link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+<slot name="head" />
 </head>
-<body>
+<body class={home ? "is-home" : undefined}>
 
 <header>
   <div class="nav wrap">
@@ -84,10 +87,10 @@ const switchLabel = isEn ? '中' : 'EN';
       {nav.map((n) => <a href={n.href} class={navActive === n.key ? 'on' : ''}>{n.label}</a>)}
     </nav>
     <div class="navr">
-      <a class="langsw" href={switchHref} aria-label="Switch language / 切換語言">{switchLabel}</a>
-      <button class="themebtn" type="button" onclick="toggleTheme()" aria-label="切換日夜模式"><Icon name="moon" size={19} /></button>
+      <a class="langsw" href={switchHref} aria-label={isEn ? 'Switch to Chinese' : '切換語言 (English)'}>{switchLabel}</a>
+      <button class="themebtn" type="button" onclick="toggleTheme()" aria-label={isEn ? 'Toggle light / dark mode' : '切換日夜模式'}><Icon name="moon" size={19} /></button>
       <a class="miniplay" href="/play/">{playLabel}</a>
-      <button class="hambtn" type="button" onclick="toggleMenu(this)" aria-label="選單" aria-expanded="false"><Icon name="menu" size={20} /></button>
+      <button class="hambtn" type="button" onclick="toggleMenu(this)" aria-label={isEn ? 'Menu' : '選單'} aria-expanded="false"><Icon name="menu" size={20} /></button>
     </div>
   </div>
   <nav class="mobmenu" id="mobmenu">
@@ -102,8 +105,9 @@ const switchLabel = isEn ? '中' : 'EN';
   {isEn
     ? <><a href="/en/">Home</a><a href="/dex/">Characters</a><a href="/play/">Play</a><a href="/en/faq/">FAQ</a><a href="/terms/">Terms</a><a href="/privacy/">Privacy</a></>
     : <><a href="/">首頁</a><a href="/dex/">角色圖鑑</a><a href="/play/">開始遊戲</a><a href="/devlog/">開發日誌</a><a href="/terms/">服務條款</a><a href="/privacy/">隱私權政策</a></>}
+  <div class="soc"><a href="https://www.facebook.com/profile.php?id=61596736017983" target="_blank" rel="noopener">Facebook</a><a href="https://www.instagram.com/blockyusha" target="_blank" rel="noopener">Instagram</a><a href="https://x.com/blockyusha" target="_blank" rel="noopener">X</a><a href="https://youtube.com/@blockyusha" target="_blank" rel="noopener">YouTube</a></div>
   <div class="cp"><a href="mailto:hello@blockyusha.com"><Icon name="mail" size={14} /> hello@blockyusha.com</a></div>
-  <div class="cp">塊頭勇者 Blockyusha · {isEn ? 'in development' : '開發中'} · © 2026 fightmon</div>
+  <div class="cp">{isEn ? 'Blockyusha · in development' : '塊頭勇者 Blockyusha · 開發中'} · © 2026 fightmon</div>
 </footer>
 
 <script is:inline>
@@ -167,9 +171,11 @@ header{position:sticky;top:0;z-index:50;background:rgba(255,248,236,.92);backdro
 .mobmenu .mm-play{margin-top:8px;text-align:center;color:#3a1f00;background:linear-gradient(120deg,var(--cta1),var(--cta2));box-shadow:0 6px 16px rgba(255,140,40,.35)}
 /* ===== footer ===== */
 footer{background:#2c2114;color:#cbb99a;text-align:center;padding:34px 20px;font-size:14px}
-footer a{color:#ffcf6b;margin:0 10px}
+footer a{color:#ffcf6b;margin:3px 10px;display:inline-block}
 footer a:hover{color:#fff}
 footer .cp{margin-top:12px;font-size:12px;color:#8a795c}
+footer .soc{margin-top:16px;font-size:13px}
+footer .soc a{color:#cbb99a;margin:0 9px}
 /* ===== dark mode (shared) ===== */
 :root[data-theme="dark"]{--cream:#16120b;--ink:#f0e7d6;--ink2:#b9a988}
 [data-theme="dark"] body{background:#15120b}
