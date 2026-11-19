@@ -81,14 +81,14 @@
 
 <body>
   <div id="game"></div>
-  <!-- 2026-11-19 快取版本號(大毛拍板):自家 js 一律帶 ?v=;js 線上 max-age=4 小時且 Cloudflare 邊緣快取,換查詢字串才會拿新檔。【上線時:只要任何程式檔有變,把本檔所有「v=20261119a」與下一行 NB_ASSET_V 一起換新】格式 YYYYMMDD+英文小寫序號(同日第二次上線 b、c…);phaser.min.js 等第三方檔不加 -->
-  <script>window.NB_ASSET_V = '20261119a';</script>
-  <script src="i18n.js?v=20261119a"></script><!-- 多語(tr()/getLang/setLang):中文原文=key,查無回原文;要在所有遊戲腳本之前載 -->
-<script src="battle-core.js?v=20261119a"></script>
-<script src="battle-vfx.js?v=20261119a"></script>
-  <script src="round-core.js?v=20261119a"></script><!-- 🆕2026-11-06 三輪(階段(a)前端):塊池/怪倍率共用核心;只定義全域 RoundCore、無副作用;接線全在 ROUNDS 開關(?rounds=1 / localStorage nb_rounds=1)後,預設關 -->
-  <script src="enemy-core.js?v=20261119a"></script><!-- 🆕2026-11-06 P2:敵人機制核心(遊戲與 sim 共用);只定義全域 EnemyCore、無副作用;接線全在 NEWMECH 開關(?newmech=1 / localStorage nb_newmech=1)後,預設關 -->
-  <script src="data-stages.js?v=20261119a"></script>
+  <!-- 2026-11-19 快取版本號(大毛拍板):自家 js 一律帶 ?v=;js 線上 max-age=4 小時且 Cloudflare 邊緣快取,換查詢字串才會拿新檔。【上線時:只要任何程式檔有變,把本檔所有「v=20261120a」與下一行 NB_ASSET_V 一起換新】格式 YYYYMMDD+英文小寫序號(同日第二次上線 b、c…);phaser.min.js 等第三方檔不加 -->
+  <script>window.NB_ASSET_V = '20261120a';</script>
+  <script src="i18n.js?v=20261120a"></script><!-- 多語(tr()/getLang/setLang):中文原文=key,查無回原文;要在所有遊戲腳本之前載 -->
+<script src="battle-core.js?v=20261120a"></script>
+<script src="battle-vfx.js?v=20261120a"></script>
+  <script src="round-core.js?v=20261120a"></script><!-- 🆕2026-11-06 三輪(階段(a)前端):塊池/怪倍率共用核心;只定義全域 RoundCore、無副作用;接線全在 ROUNDS 開關(?rounds=1 / localStorage nb_rounds=1)後,預設關 -->
+  <script src="enemy-core.js?v=20261120a"></script><!-- 🆕2026-11-06 P2:敵人機制核心(遊戲與 sim 共用);只定義全域 EnemyCore、無副作用;接線全在 NEWMECH 開關(?newmech=1 / localStorage nb_newmech=1)後,預設關 -->
+  <script src="data-stages.js?v=20261120a"></script>
   <script>
     /* ===== 純邏輯(N/EL/SHAPES/CONFIG/computeClears/種子亂數 等戰鬥核心已抽到 battle-core.js,瀏覽器當共用全域)===== */
     const KEYS = ['fire', 'wind', 'thunder', 'earth', 'water'];
@@ -5268,14 +5268,14 @@
         const ring = this.add.rectangle(cen.x, cen.y, CS * 3 - 2, CS * 3 - 2, 0, 0).setStrokeStyle(4, col, 1).setDepth(2556); this._tutHints.push(ring);
         this.tweens.add({ targets: ring, alpha: 0.25, scaleX: 1.07, scaleY: 1.07, duration: 660, yoyo: true, repeat: -1, ease: 'Sine.inOut' });
       }
-      resetWave() { this.immune = 0; this.armor = 0; this.amp = 1; }   // combo 不在此重置(敵攻擊不打斷連段);改為「整手沒清才歸零」(見 endHand)+新關歸零(startStage)
+      resetWave() { this.immune = 0; this.armor = 0; this.amp = 1; }   // combo 不在此重置(敵攻擊不打斷連段);改為「整手沒清才歸零」(見 endHand)+新局歸零(startStage keepBoard=false;2026-11-20 起換關不歸零)
       startStage(keepBoard) {
         if (!keepBoard) { this._handGen = (this._handGen || 0) + 1; this._resultTerminal = false; if (this._finPending) { this._finPending = false; this.locked = false; } }   // 2026-11-18 P1-1 回歸修:上一局 endHand 收尾還沒跑完(首次延遲未到/輪詢中)就重開→舊收尾因世代不符不會再跑,由這裡放掉它代扣的 locked(俯衝/教學之後各自再鎖)   // 🩹2026-11-17 P1-1:整場重開(newGame/再挑戰/再試一次)→作廢舊的待補收尾輪詢、清掉「真結算」旗標
         this.stopStuckFX && this.stopStuckFX();   // 新關/新局清掉殘留的卡死提示
         this._atkLockReset();   // 🔒攻擊演出鎖:換場/重來一律歸位(epoch 作廢舊關殘留的解鎖回呼)
         this.camCine = false; if (this.cameras && this.cameras.main) { this.cameras.main.setZoom(DPR); this.cameras.main.centerOn(CX, Math.round(H / 2)); }   // 防護:確保鏡頭特寫不會卡住跨關
         if (!keepBoard) { this.board = Array.from({ length: N }, () => Array(N).fill(null)); this.stored = [null, null, null, null, null]; }   // 跨關保留盤面+屬塊:只有新局/重挑才清,過關時累積到下一關的怪
-        this.resetWave(); this.combo = 0; this.handCleared = false; this._handCleared = false; if (!keepBoard) this.refill();   // 新關/新局 combo 歸零;托盤跨關保留(只新局/重挑才重置)
+        this.resetWave(); this.handCleared = false; if (!keepBoard) { this.combo = 0; this._handCleared = false; this._stkReset(); this.refill(); }   // 2026-11-20 連擊輸出排行榜:combo 跨關延續——只有新局/重挑/重來(keepBoard=false)才把 combo 與本場連擊累計歸零;換下一關時 combo、_handCleared(跨關那一手前段已清就不算整手沒清)與累計傷害都保留;托盤跨關保留(只新局/重挑才重置)
         if (this.comboBg) this.renderCombo();   // combo 指示器歸零熄掉
         // 🆕2026-08-26(使用者實測回饋):拿掉開戰時彈出的「隊長技名稱+效果」浮字公告(所有戰鬥,不只教學)——常駐小徽章(updLeadBadge/this.leadBg 等)不受影響、照常顯示。
         // if (this.stage === 1 && this.lead && !this.hitLab && !this.enemyLab && !this.dive) this.time.delayedCall(450, () => {   // 隊長技:進關時在盤面中央彈出清楚橫幅(技名+效果),停留可讀(原本上緣快閃小字看不清)
@@ -5313,8 +5313,9 @@
         if (this.resultOpen || this.locked || this.camCine || this._atkLock || this.drag || this.earthSel || this.earthDrag || this.windPick) { if (n < 6) this.time.delayedCall(500, () => this._sweepBoardClears(n + 1)); return; }   // 忙(彈窗/敵回合展演/拖曳/土風技選取中)→稍後重試,最多 6 次;放棄也無妨(下次任何放塊的 resolve 本就全盤掃描);🩹補 earthSel/earthDrag/windPick(verifier 2026-10-07,與 startDrag 的擋法對齊)
         const tgt = this.targetEnemy(); if (!tgt || !this.boxCard) return;
         const data = computeClears(this.board, this.boxElement, this.boxCard, tgt.el, this.amp, this.neutralAtkBase); if (!data) return;   // 沒有可清→什麼都不做
+        const _c0 = this.combo || 0, _hc0 = !!this._handCleared; this.combo = 0;   // 2026-11-20 combo 跨關延續:補掃照舊以 combo 0→1 的倍率打(不吃延續中的 combo),結束後還原玩家原本的 combo 與本手已清旗標
         this.fromBlock = false; this._placeCleared = false; try { this.resolve(); } catch (err) { console.error('sweep resolve', err); }
-        this.combo = 0; this.handCleared = false; this._handCleared = false; this.renderCombo && this.renderCombo();   // 補掃不算「玩家一手」:不留 combo+1 / 不讓下一手白賺主動技蓄力
+        this.combo = _c0; this.handCleared = false; this._handCleared = _hc0; this.renderCombo && this.renderCombo();   // 補掃不算「玩家一手」:不留 combo+1 / 不讓下一手白賺主動技蓄力
       }
       _headUp(e) { if (!e || !e.boss || !e.cardH) return 0; const y0 = e.cy - e.cardH / 2 + 11; return y0 - Math.min(y0, Math.max(40, y0 - Math.round(e.cardH * 0.3))); }   // 2026-11-18 大毛:魔王頭上指標(沙漏/目標箭頭/弱點徽章/守護½)整組上移 0.3×體型(szc 108≈32px),躲開盾罩中央大字(石頭怪 n COMBO);沙漏中心不高於 y=40(不頂到上緣),本來就更高(極矮螢幕)則不動
       _turnY(e) { return e.cy - e.cardH / 2 + 11 - this._headUp(e); }   // 沙漏休止 y(建立/跳動回位共用;雜兵 _headUp=0=原值)
@@ -7755,8 +7756,8 @@
           if (this.tut) { const d = TUT_STEPS[this.tut.i]; if (d && d.hint) { this.tutClearHint(); this.time.delayedCall(120, () => { if (this.tut && TUT_STEPS[this.tut.i] === d) this.tutHint(d.hint); }); } }
         }
         if (this.tray.every(t => t.used || t.locked)) {
-          const _handMissed = !this._handCleared; this._handCleared = false;   // 手制 combo:本手任一塊有清(resolve 設 _handCleared)就不斷;整手 0 清才歸零。無論走哪條出口都重置旗標
-          if (_handMissed && !this._tutBuildKind && !this.enemyLab) { this.combo = 0; this.renderCombo(); }   // 教學建線/敵技實驗室不走 endHand,維持原行為(教學自行 tutSetup 重置)
+          const _handMissed = !this._handCleared; this._handCleared = false; this._runHands = (this._runHands || 0) + 1;   // 2026-11-20 _runHands=整場手數(連擊輸出排行榜同分排序用,目前只記不送)   // 手制 combo:本手任一塊有清(resolve 設 _handCleared)就不斷;整手 0 清才歸零。無論走哪條出口都重置旗標
+          if (_handMissed && !this._tutBuildKind && !this.enemyLab) { this._stkEnd(); this.combo = 0; this.renderCombo(); }   // 教學建線/敵技實驗室不走 endHand,維持原行為(教學自行 tutSetup 重置)
           if (this.lead && this.lead.type === 'steal' && !(this._nm && _handMissed)) this._monkeySteal();   // 🩹2026-11-08 製作人:新制下這一手有消塊才偷襲(整手 0 清不出手),免得每手必偷把哥布林蓄力白白解掉;NEWMECH 關閉時維持每手必偷 // 🐒猴群偷襲:每手下完必定偷打一次;順序=先歸零、後偷襲(沒清的手:0→偷襲+1/滿階+2,猴隊長軟化斷連但不會讓連段永不斷)(2026-11-01 修正順序,verifier 抓到原本反了會把偷襲加的 combo 洗掉)
           if (this._tutBuildKind) {   // 教學建線步驟(place4/place5):絕不 endHand(不換敵回合/不補隨機塊)
             if (!this._placeCleared) { this.tutSetup(this._tutBuildKind); if (this.tut) { const d = TUT_STEPS[this.tut.i]; if (d && d.hint) { this.tutClearHint(); this.time.delayedCall(150, () => { if (this.tut && TUT_STEPS[this.tut.i] === d) this.tutHint(d.hint); }); } } }   // 3 塊都放了卻沒拼成線→重置這步(空盤+重給塊)讓玩家再試;有拼成線(_placeCleared)→'clear' 已排定推進,啥都不做
@@ -7796,7 +7797,7 @@
         this.enemies.forEach(e => {
           if (!e.dead && e.hp > 0 && e.burn > 0) {
             this._ecHurt(e, e.burn);   // 燒傷=我方 DoT(🆕水城急救在場時走核心 damageEnemy,其餘原樣扣血),屬展演,立即;hp>0:這手已被打死(真 hp 同步結清)的敵人交給彈著收尾演死亡,別在這裡提前 killEnemy
-            this.floatText(e.sprite.x, e.sprite.y - 24, '🔥' + e.burn, '#ff7a63'); if (e.hp <= 0) this.killEnemy(e);
+            this.floatText(e.sprite.x, e.sprite.y - 24, '🔥' + e.burn, '#ff7a63'); this._stkAdd(e.burn); if (e.hp <= 0) this.killEnemy(e);   // 2026-11-20 連擊輸出:燒傷數字也是我方造成、畫面有跳的傷害→計入(整手沒清時 combo 已歸零,不計)
           }
         });
         this.updateAll();   // 立即反映combo字/燒傷後血量(別等延遲回呼)
@@ -8244,7 +8245,7 @@
           if (shakeBig) this.shakeCam(180, 0.007);
           victims.forEach((v, k) => { if (!v.sprite) return; const _d = (vdmg && vdmg[k] != null) ? vdmg[k] : dmg; this.time.delayedCall(k * 45, () => this.chakraBolt(cx, cy, v.sprite.x, v.sprite.y, color, v, _d, 1, hot, 230)); });
           this.time.delayedCall(240, () => {   // ⏱2026-10-11 飛行 330→240(視覺飛行 230,結算點仍略晚於 chakraImpact)
-            let anyHit = false, anyBlock = false; victims.forEach((v, _k) => { const dmg = (vdmg && vdmg[_k] != null) ? vdmg[_k] : dmg0; if (v._ecR) { const _er = v._ecR; if (_er.blocked) anyBlock = true; else anyHit = true; if (v.dispHp != null) { v.dispHp = Math.max(0, v.dispHp - Math.round(dmg * _er.ratio)); if (_er.broke && !_er.bonusShown) { _er.bonusShown = true; v.dispHp = Math.max(0, v.dispHp - _er.bonus); } } return; } if (v._blocked) { anyBlock = true; const lk = v.shieldLeak || 0; if (lk > 0 && v.dispHp != null) v.dispHp = Math.max(0, v.dispHp - Math.round(dmg * lk)); if (v.sprite && !v.dead) { if (lk > 0) this.floatText(v.sprite.x, v.sprite.y - 18, '🛡 −' + Math.round(dmg * lk), '#a9c4e8'); else if (v._nearMiss) { this._shieldNearMiss(v, v._nearMiss); v._nearMiss = null; } else this.floatText(v.sprite.x, v.sprite.y - 18, tr('🛡 擋下'), '#cfe0ff'); } } else { anyHit = true; if (v.dispHp != null) v.dispHp = Math.max(0, v.dispHp - dmg); if (v._shieldBreak) { v._shieldBreak = false; this._breakEnemyShield(v); if (v._breakBonus > 0) { if (v.dispHp != null) v.dispHp = Math.max(0, v.dispHp - v._breakBonus); if (v.sprite) this.floatText(v.sprite.x, v.sprite.y - 42, tr('破盾 +{n}', { n: v._breakBonus }), '#ffe08a'); } } } if (v._finOrb && !v._g && el && el !== 'neutral' && (v.finAnyHit || (EL[el] && EL[el].beats === v.el))) this._breakEnemyOrb(v); }); this.updateEnemies();   // 彈著→扣「顯示血量」逐宮下降(真 hp 已在 resolve 同步結清);蓄力中被命中→此刻(彈著後)才打斷:一般需剋屬,finAnyHit(初級哥布林)=任何攻擊屬性即斷
+            let anyHit = false, anyBlock = false; victims.forEach((v, _k) => { const dmg = (vdmg && vdmg[_k] != null) ? vdmg[_k] : dmg0; if (v._ecR) { const _er = v._ecR; if (_er.blocked) anyBlock = true; else anyHit = true; if (v.dispHp != null) { v.dispHp = Math.max(0, v.dispHp - Math.round(dmg * _er.ratio)); if (_er.broke && !_er.bonusShown) { _er.bonusShown = true; v.dispHp = Math.max(0, v.dispHp - _er.bonus); } } return; } if (v._blocked) { anyBlock = true; const lk = v.shieldLeak || 0; if (lk > 0 && v.dispHp != null) v.dispHp = Math.max(0, v.dispHp - Math.round(dmg * lk)); if (v.sprite && !v.dead) { if (lk > 0) this.floatText(v.sprite.x, v.sprite.y - 18, '🛡 −' + Math.round(dmg * lk), '#a9c4e8'); else if (v._nearMiss) { this._shieldNearMiss(v, v._nearMiss); v._nearMiss = null; } else this.floatText(v.sprite.x, v.sprite.y - 18, tr('🛡 擋下'), '#cfe0ff'); } } else { anyHit = true; if (v.dispHp != null) v.dispHp = Math.max(0, v.dispHp - dmg); if (v._shieldBreak) { v._shieldBreak = false; this._breakEnemyShield(v); if (v._breakBonus > 0) { if (v.dispHp != null) v.dispHp = Math.max(0, v.dispHp - v._breakBonus); if (v.sprite) { this.floatText(v.sprite.x, v.sprite.y - 42, tr('破盾 +{n}', { n: v._breakBonus }), '#ffe08a'); this._stkAdd(v._breakBonus); } } } } if (v._finOrb && !v._g && el && el !== 'neutral' && (v.finAnyHit || (EL[el] && EL[el].beats === v.el))) this._breakEnemyOrb(v); }); this.updateEnemies();   // 彈著→扣「顯示血量」逐宮下降(真 hp 已在 resolve 同步結清);蓄力中被命中→此刻(彈著後)才打斷:一般需剋屬,finAnyHit(初級哥布林)=任何攻擊屬性即斷
             if (anyHit) { if (el && el !== 'neutral') this.labSnd('s_hit_' + el, 0.75); if (bigHit) { this.labSnd('s_boom', 0.6); this.labSnd('s_punch', 0.75); } } else if (anyBlock) { this.labSnd('s_block', 0.75); }
           });   // 彈著配音:各屬命中音 / ≥18重擊疊爆破+重拳 / 擋下用 flying_pan
         });
@@ -8252,12 +8253,45 @@
       // 🆕2026-11-03 combo 搬離敵人頭上(使用者拍板:敵人身上原本 combo+傷害+剋屬+1 三組字疊在一起看不懂)→盤面中央、HIT 同位置;敵人身上只留傷害數字與沙漏+1
       showCombo() {
         if (this.comboTx) { this.tweens.killTweensOf(this.comboTx); this.comboTx.destroy(); this.comboTx = null; }
+        this._stkHide();
         if (this.combo < 2) return;   // 1 combo 不顯示,2 combo 以上才出
         const sz = Math.min(40, 20 + this.combo * 1.6);   // 數字越大字越大
         const t = this.comboTx = this.add.text(CX, BOARD_CY, this.combo + ' COMBO', { fontFamily: HITFONT, fontSize: sz + 'px', color: '#5fd8ff', fontStyle: 'bold', stroke: '#0e3a66', strokeThickness: 5 }).setOrigin(0.5).setDepth(DEPTH.fx).setScale(0.4);
         this.tweens.add({ targets: t, scale: 1, duration: 220, ease: 'Back.out' });
         this.tweens.add({ targets: t, scaleX: 1.07, scaleY: 1.07, duration: 520, yoyo: true, delay: 220, ease: 'Sine.inOut' });   // 緩呼吸滯留
         this.tweens.add({ targets: t, alpha: 0, delay: 1150, duration: 380, onComplete: () => { t.destroy(); if (this.comboTx === t) this.comboTx = null; } });
+        if (this._stkOn && this._stkCur > 0) this._stkShow(BOARD_CY + Math.round(sz * 0.5) + 26);   // 2026-11-20 連擊輸出:最速榜涵蓋的地城在「n COMBO」正下方顯示這一段的累計傷害
+      }
+      // 🆕2026-11-20 連擊輸出排行榜 第1+2期(spec-combo-leaderboard.md §5.1/§5.2):一段=combo 0→1 起到歸零;累計=這段期間敵人身上跳出的傷害數字(chakraImpact→dmgPop 同一個值);只在最速榜涵蓋的地城(RANK_DUNGEONS:五屬城+塔)真戰鬥
+      _stkReset() {
+        this._stkOn = RANK_DUNGEONS.includes(this.dungeonId) && !this.tut && !this.lesson && !this.hitLab && !this.enemyLab && !(this.dungeon && this.dungeon.daily);   // 範圍=現行最速榜畫面(bRankBoard)列出的地城:五屬城+塔;實驗室借塔的 id,另外排除;序章/每日修煉/教學/課程不顯示
+        this._stkCur = 0; this._stkShown = 0; this._stkBest = 0; this._stkBestCombo = 0; this._stkIsBest = false; this._runHands = 0; this._stkHide();
+      }
+      _stkAdd(n) {   // 跳傷害數字時呼叫:combo≥1 才算;本段一超過本場最佳就即時記成最佳(過關時最後一段還沒斷也不漏)
+        if (!this._stkOn || !((this.combo || 0) >= 1)) return; n = Math.max(0, Math.round(n) || 0); if (!n) return;
+        this._stkCur += n;
+        if (this._stkCur > this._stkBest) { if (!this._stkIsBest) { this._stkIsBest = true; this._stkBestCombo = 0; } this._stkBest = this._stkCur; }
+        this._stkSettle();
+        const s = this.stkTx; if (s && s.active) { this._stkCount(); if (!s._intro) { if (s._pt) s._pt.stop(); s.setScale(1); s._pt = this.tweens.add({ targets: s, scaleX: 1.18, scaleY: 1.18, duration: 110, yoyo: true, ease: 'Quad.out' }); } }   // 顯示中→數字往上跳+放大一下
+      }
+      _stkSettle() { if (this._stkIsBest) this._stkBestCombo = Math.max(this._stkBestCombo || 0, this.combo || 0); }   // 最佳那段的 combo 數=該段達到的最高 combo
+      _stkEnd() {   // combo 斷了:這段跟本場最佳比完就清空,畫面上的 COMBO 與累計一起收掉
+        this._stkSettle(); this._stkCur = 0; this._stkShown = 0; this._stkIsBest = false;
+        if (this._stkOn) { this._stkHide(); if (this.comboTx) { this.tweens.killTweensOf(this.comboTx); this.comboTx.destroy(); this.comboTx = null; } }
+      }
+      _stkHide() { const s = this.stkTx; if (s) { if (s._ct) s._ct.stop(); this.tweens.killTweensOf(s); if (s.active) s.destroy(); this.stkTx = null; } }
+      _stkSet(s, v) { s.setText(tr('{n} 傷害', { n: Math.round(v).toLocaleString('en-US') })); }   // 千分位;數字不翻譯
+      _stkShow(y) {
+        const s = this.stkTx = this.add.text(CX, y, '', { fontFamily: '"Russo One",GenSen,"Microsoft JhengHei",sans-serif', fontSize: '32px', color: '#ffe08a', fontStyle: 'bold', stroke: '#4a2a00', strokeThickness: 6 }).setOrigin(0.5).setDepth(DEPTH.fx).setScale(0.4);
+        s._v = Math.min(this._stkShown || 0, this._stkCur); this._stkSet(s, s._v); s._intro = true;
+        this.tweens.add({ targets: s, scale: 1, duration: 220, ease: 'Back.out', onComplete: () => { s._intro = false; } });
+        this._stkCount();   // 從上次顯示的值往上數到目前累計
+        this.tweens.add({ targets: s, alpha: 0, delay: 1150, duration: 380, onComplete: () => { s.destroy(); if (this.stkTx === s) this.stkTx = null; } });   // 與上方「n COMBO」同時淡出
+      }
+      _stkCount() {
+        const s = this.stkTx; if (!s || !s.active) return; if (s._ct) s._ct.stop();
+        const o = { v: s._v || 0 }; s._ct = this.tweens.add({ targets: o, v: this._stkCur, duration: 420, ease: 'Quad.out', onUpdate: () => { if (s.active) { s._v = o.v; this._stkSet(s, o.v); } }, onComplete: () => { if (s.active) { s._v = o.v; this._stkSet(s, o.v); } } });
+        this._stkShown = this._stkCur;
       }
       _comboStageAfterHit(n) {   // 🆕2026-11-03 HIT→COMBO 接棒(使用者拍板案2,不靠手速的節奏):「n HIT」數完+落定彈後→HIT 快速縮小淡出→同位置換「x COMBO」彈出;捕捉當下 combo 值,排程期間又清了一手(combo 必變)→舊排程靜默跳過,由新那手的排程接演
         const cv = this.combo; if (cv < 2) return;
@@ -8704,7 +8738,7 @@
             case 'iron_harden': if (e) this._ecIronHarden(e, ev, dl); break;   // 4★ 越放越硬:每格 +1 層
             case 'rock_attack': if (e) at(() => { if (e.dead) return; this._ecImpactAt = Math.max(this._ecImpactAt || 0, (this.time.now || 0) + 360 + 440 + 120); this.enemyAttack(e, { dmg: e.atk * (ev.mult > 1 ? ev.mult : 1) }); if (ev.mult > 1) { const sh = e.labShield; if (sh && sh.active) this.tweens.add({ targets: sh, scaleX: 1.45, scaleY: 1.45, duration: 140, yoyo: true, repeat: 1, ease: 'Sine.inOut', onComplete: () => { if (sh.active) sh.setScale(1); } }); this.shakeCam(240, 0.009); } }); break;   // 🆕P2 土城:有盾時 CD 歸 0 = 普攻(2026-11-11 press2:核心帶 mult>1 → 傷害乘上、盾罩放大縮小兩下+多震屏;2026-11-11 大毛:不浮字)(走遊戲 enemyAttack:護甲/迴避/黑熊/鮭魚)
             case 'rock_sk': if (e) at(() => this._ecRockSkPop(e)); break;   // 主動技打中 combo 盾:盾上不倒數;扣血數字消失後才浮「+N COMBO」(2026-11-10 拍板)
-            case 'break_bonus': if (e) at(() => { if (!e.dead && e.sprite) this.floatText(e.sprite.x, Math.max(e.sprite.y - 42, 62), tr('破盾 +{n}', { n: ev.bonus }), '#ffe08a'); }); break;   // 🆕主動技破盾後的下一擊:全額 +50%
+            case 'break_bonus': if (e) at(() => { if (!e.dead && e.sprite) { this.floatText(e.sprite.x, Math.max(e.sprite.y - 42, 62), tr('破盾 +{n}', { n: ev.bonus }), '#ffe08a'); if (!ev._inPop) this._stkAdd(ev.bonus); } }); break;   // 🆕主動技破盾後的下一擊:全額 +50%
             case 'shield_block': if (e) at(() => this._ecRockBlockFx(e, ev)); break;       // 被擋(盾閃+「擋下 N%」+漏傷;3★↑ 另有反震彈射)
             case 'shield_break': if (e) at(() => this._ecRockBreakFx(e, ev)); break;       // 破盾(大演出+「破盾! +50%」);盾罩碎裂→守護光帶同步消失
             case 'shield_rebuild': if (e) at(() => this._ecRockRebuildFx(e, ev)); break;   // 重建盾(集氣→成形;隨機盾每次重抽,門檻直接寫在盾上)
@@ -9533,7 +9567,7 @@
           if (ev.t === 'shield_block') { o.blocked = true; o.ratio = dmg > 0 ? ev.chip / dmg : 0; }
           else if (ev.t === 'shield_break') { o.broke = true; o.bonus = ev.bonus | 0; }
           else if (ev.t === 'guard') o.ratio = dmg > 0 ? ev.taken / dmg : 1;
-          else if (ev.t === 'break_bonus') { o.ratio = dmg > 0 ? (dmg + ev.bonus) / dmg : 1; }   // 🆕主動技破盾後的下一擊(一般消除也可能是這一下):顯示血量多扣 +50%
+          else if (ev.t === 'break_bonus') { o.ratio = dmg > 0 ? (dmg + ev.bonus) / dmg : 1; ev._inPop = true; }   // _inPop:這份加成已併進彈著數字(dmg×ratio),連擊輸出累計不再另計   // 🆕主動技破盾後的下一擊(一般消除也可能是這一下):顯示血量多扣 +50%
           else if (ev.t === 'core_block') { o.blocked = true; o.ratio = dmg > 0 ? ev.chip / dmg : 0; }   // 🆕寶玉核心盾:彈著數字=核心實扣(已被擋 95~99%)
           info.set(v, o);
         });
@@ -10732,7 +10766,7 @@
           emS.explode(Math.round(14 + pw * 6));   // 亮點火花補閃
           this.time.delayedCall(840, () => { if (emB && emB.active) emB.destroy(); if (emS && emS.active) emS.destroy(); });
         }
-        if (tgt && tgt.sprite) this.dmgPop(tgt.sprite.x, tgt.sprite.y, tgt._ecR ? Math.round(dmg * tgt._ecR.ratio) : dmg);   // 🆕土城石頭怪:彈著數字=核心實扣(擋傷/守護後),不是名目傷害(破盾追加另有浮字)
+        if (tgt && tgt.sprite) { const _pv = tgt._ecR ? Math.round(dmg * tgt._ecR.ratio) : dmg; this.dmgPop(tgt.sprite.x, tgt.sprite.y, _pv); this._stkAdd(_pv); }   // 2026-11-20 連擊輸出:跳出的數字原值累加(清除攻擊/猴偷襲/主動技都走這裡)   // 🆕土城石頭怪:彈著數字=核心實扣(擋傷/守護後),不是名目傷害(破盾追加另有浮字)
         this.shakeCam(200 + pw * 40, 0.009 + pw * 0.003);                  // 震幅隨 HIT 加重(不做 hitstop:凍格會被誤認成 lag)
       }
       tonFloat(str, color) {
@@ -11079,12 +11113,13 @@
           const drops = this.runDrops || [], m = Math.min(drops.length, 8), pending = !!this._runDropsPending;
           const cols = m <= 5 ? m : Math.ceil(m / 2), rows = m ? Math.ceil(m / cols) : 0, per = m ? Math.min(86, Math.floor((PW - 24) / cols)) : 0, sq = m ? Math.min(per - 6, 74) : 0;   // 🆕2026-11-09 逐隻掉落常 4~6 張:寬度以面板 PW 算(原用 W 會撐出面板),>5 張排兩行
           const hasFC = this._firstClearStones > 0;
+          if (this._stkOn) this._stkSettle(); const _stkL = (this._stkOn && this._stkBest > 0) ? tr('最佳連擊　{c} COMBO · {d} 傷害', { c: this._stkBestCombo, d: this._stkBest.toLocaleString('en-US') }) : '', Hst = 26;   // 2026-11-20 連擊輸出:最速榜涵蓋的地城過關顯示本場最佳一段(戰敗不顯示)
           const _isDailyR = !!(this.dungeon && this.dungeon.daily);
           const _rv = rqRewardView({ granted: !!this._runGranted, isDaily: _isDailyR, res: this._runRes, localExp: this.runExp || 0, localCoins: this.runCoins || 0 });   // 🆕2026-11-16 獎勵列狀態(純函式,見 RQ 區):server=伺服器數字/pending=待結算(淡化+沙漏)/replayed=已入帳打勾/none=被拒不顯示/legacy=舊後端本地數字
           const _rowN = _rv.kind === 'none' ? 0 : (_rv.kind === 'server' && _isDailyR) ? ((_rv.stones > 0 ? 1 : 0) + ((_rv.coins > 0 || _rv.exp > 0) ? 1 : 0)) : 1;   // 每日修煉(新後端):只列魔法石,金幣/經驗非 0 才多一行;全 0 就不畫這列
           const G = 16, PAD = 22, Ht = 34, Hl = 22, Hnew = 26, Hrw = 24, Hfc = 20, Hts = 20, Hb = 50;
           const dropsH = (!pending && m) ? rows * (Hnew + sq) : 0;   // Hnew=✦NEW 掛在卡上緣的頭頂空間(不再與「戰利品×N」擠在一起)
-          const contentH = Ht + G + Hl + (dropsH ? G + dropsH : 0) + (_rowN ? G + _rowN * Hrw : 0) + (hasFC ? 10 + Hfc : 0) + G + Hts + 6 + Hts + G + Hb;
+          const contentH = Ht + G + Hl + (dropsH ? G + dropsH : 0) + (_rowN ? G + _rowN * Hrw : 0) + (hasFC ? 10 + Hfc : 0) + G + (_stkL ? Hst + 6 : 0) + Hts + 6 + Hts + G + Hb;
           const PH = contentH + PAD * 2, top = cy - PH / 2;
           panel.add(roundRectG(this, CX, cy, PW, PH, 16, T.surf, 1, T.divider, 1.5));   // 白色圓角面板(暗背幕之上承載結算內容)
           let y = top + PAD;
@@ -11130,6 +11165,7 @@
           }
           if (hasFC) { y += 10; TX(y + Hfc / 2, tr('🎁 首次通關獎勵 +{n} 💎', { n: this._firstClearStones }), FS.cap, T.goldTx, true); y += Hfc; }   // 🔐[首通石]非首通/序章/重放為 0 不顯示
           y += G;
+          if (_stkL) { TX(y + Hst / 2, _stkL, FS.sub, T.goldTx, true); y += Hst + 6; }
           const localSec = Math.round((Date.now() - (this._runStartMs || Date.now())) / 1000);   // 離線 fallback:伺服器沒回 clearSec 時用本地起算(僅顯示)
           TX(y + Hts / 2, tr('⏱ 通關時間　{t}', { t: fmtT(this._clearSec != null ? this._clearSec : localSec) }), FS.cap, T.ink, true); y += Hts + 6;
           TX(y + Hts / 2, tr('🏁 最速通關　{t}', { t: fmtT(this._bestSec) }), FS.cap, T.ink2, false); y += Hts + G;   // 全服(該城×該難度)歷來最快;尚無紀錄/離線→--:--:--
