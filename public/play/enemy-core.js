@@ -887,6 +887,28 @@ var EnemyCore = (function () {
   function nextHitDamage(state, e) { if (e && e._h && !e._g) return _healNext(state, e); const g = e && e._g; if (!g || e.dead || e.hp <= 0) return 0; return e.atk * _hitMult(state, e, g).mult; }
   // 致死判定(只供顯示:骷髏圖示/光暈;不影響傷害):下一擊(不含餘火,四捨五入同 damagePlayer)>= 隊伍「最大」血量
   function isLethal(state, e) { const d = nextHitDamage(state, e); return d > 0 && Math.round(d) >= state.maxHP; }
+  // 2026-11-19 鐵機人懲罰致死預警(只供顯示:骷髏圖示/光暈;不影響傷害)
+  // ironPunishNext:這隻鐵機人下一次出手若打懲罰的原始傷害(判定同 _ironAct:2★↑、鐵塊都在且沒被剝層;傷害同校準重擊/舊公式);不會懲罰 → 0
+  function ironPunishNext(state, e) {
+    const d = e && e._i; if (!d || e.dead || e.hp <= 0 || d.rule < 2) return 0;
+    const live = _ironAlive(state, d); if (!live.length || live.length !== d.cells.length || live.some(c => c.obj.lock < c.lock0)) return 0;
+    const pk = _ironPunishK(state, e, live.length); return e.atk * (pk > 0 ? pk : (1 + TUNING.IRON_PUNISH_K * live.length));
+  }
+  // punishLethal:下一次敵方行動會出手的敵人(倒數 ≤1、未封印)依出手順序累加預估傷害,總和(四捨五入)≥ hp(玩家「目前」血量)→ 回傳這回合會打懲罰的鐵機人索引;否則 []。
+  //   預估:懲罰=ironPunishNext;哥布林/暴怒補師=nextHitDamage(哥布林本手被中止 skipTick 不計);其他鐵機人(普攻)與一般怪=e.atk;
+  //   賊鴨/石頭怪/稀有怪不計(出手內容依盤面/盾,預估不準 → 只少算不多算);黑熊/護甲/迴避不計(同 isLethal)
+  function punishLethal(state, hp) {
+    let sum = 0; const out = [];
+    actOrder(state).forEach(i => {
+      const e = state.enemies[i]; if (!e || e.dead || e.hp <= 0 || (e.sealed | 0) > 0 || (e.timer | 0) > 1) return;
+      if (e._i) { const p = ironPunishNext(state, e); if (p > 0) { out.push(i); sum += p; } else sum += e.atk > 0 ? e.atk : 0; return; }
+      if (e._g) { if (!e._g.skipTick) sum += nextHitDamage(state, e); return; }
+      if (e._h) { sum += nextHitDamage(state, e); return; }
+      if (e._d || e._r || e._m || e._y || e._j) return;
+      sum += e.atk > 0 ? e.atk : 0;
+    });
+    return out.length && Math.round(sum) >= hp ? out : [];
+  }
   function enemyAct(state, i) {   // 單隻;sim 為了維持與舊碼相同的出手順序,逐隻呼叫(順序請用 actOrder)
     const e = state.enemies[i], evs = [], g = e && e._g;
     if (e && !e.dead && e.hp > 0) { if (e._m) return _metalAct(state, e, i); if (e._y) return _moneyAct(state, e, i); if (e._j) return _jewelAct(state, e, i); if (e._d) return _duckAct(state, e, i); if (e._i) return _ironAct(state, e, i); if (e._r) return _rockAct(state, e, i); if (e._h) return _healerAct(state, e, i); }
@@ -958,7 +980,7 @@ var EnemyCore = (function () {
   }
 
   return { TUNING, inWindow, applyEnv, bind, classify, classifyDuck, classifyIron, classifyRock, classifyHealer, classifyMetal, classifyMoney, classifyJewel, syncCores, coreCells, coreShield: _jewelShield, applyClear, urgentCast, rollCD, initMech, initState, damagePlayer, damageEnemy, resolveVictims, delayEnemy,
-    enemyAct, endEnemyPhase, enemyPhase, afterBlock, urgentGob, hooks, actOrder, useStored, markedCells, kFor, nextHitDamage, isLethal };
+    enemyAct, endEnemyPhase, enemyPhase, afterBlock, urgentGob, hooks, actOrder, useStored, markedCells, kFor, nextHitDamage, isLethal, ironPunishNext, punishLethal };
 })();
 
 if (typeof module !== 'undefined' && module.exports) { module.exports = EnemyCore; }

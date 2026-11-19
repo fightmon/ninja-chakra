@@ -81,12 +81,14 @@
 
 <body>
   <div id="game"></div>
-  <script src="i18n.js"></script><!-- 多語(tr()/getLang/setLang):中文原文=key,查無回原文;要在所有遊戲腳本之前載 -->
-<script src="battle-core.js"></script>
-<script src="battle-vfx.js"></script>
-  <script src="round-core.js"></script><!-- 🆕2026-11-06 三輪(階段(a)前端):塊池/怪倍率共用核心;只定義全域 RoundCore、無副作用;接線全在 ROUNDS 開關(?rounds=1 / localStorage nb_rounds=1)後,預設關 -->
-  <script src="enemy-core.js"></script><!-- 🆕2026-11-06 P2:敵人機制核心(遊戲與 sim 共用);只定義全域 EnemyCore、無副作用;接線全在 NEWMECH 開關(?newmech=1 / localStorage nb_newmech=1)後,預設關 -->
-  <script src="data-stages.js"></script>
+  <!-- 2026-11-19 快取版本號(大毛拍板):自家 js 一律帶 ?v=;js 線上 max-age=4 小時且 Cloudflare 邊緣快取,換查詢字串才會拿新檔。【上線時:只要任何程式檔有變,把本檔所有「v=20261119a」與下一行 NB_ASSET_V 一起換新】格式 YYYYMMDD+英文小寫序號(同日第二次上線 b、c…);phaser.min.js 等第三方檔不加 -->
+  <script>window.NB_ASSET_V = '20261119a';</script>
+  <script src="i18n.js?v=20261119a"></script><!-- 多語(tr()/getLang/setLang):中文原文=key,查無回原文;要在所有遊戲腳本之前載 -->
+<script src="battle-core.js?v=20261119a"></script>
+<script src="battle-vfx.js?v=20261119a"></script>
+  <script src="round-core.js?v=20261119a"></script><!-- 🆕2026-11-06 三輪(階段(a)前端):塊池/怪倍率共用核心;只定義全域 RoundCore、無副作用;接線全在 ROUNDS 開關(?rounds=1 / localStorage nb_rounds=1)後,預設關 -->
+  <script src="enemy-core.js?v=20261119a"></script><!-- 🆕2026-11-06 P2:敵人機制核心(遊戲與 sim 共用);只定義全域 EnemyCore、無副作用;接線全在 NEWMECH 開關(?newmech=1 / localStorage nb_newmech=1)後,預設關 -->
+  <script src="data-stages.js?v=20261119a"></script>
   <script>
     /* ===== 純邏輯(N/EL/SHAPES/CONFIG/computeClears/種子亂數 等戰鬥核心已抽到 battle-core.js,瀏覽器當共用全域)===== */
     const KEYS = ['fire', 'wind', 'thunder', 'earth', 'water'];
@@ -124,14 +126,14 @@
     }
     if (NEWMECH) {
       try { EnemyCore.bind({ brnd, EL }); } catch (e) { }   // 用遊戲 battle-core 的種子亂數(同種子可重現)
-      try { if (window.NB_ENEMY_TUNING) applyEnemyTuning(window.NB_ENEMY_TUNING); fetch('enemy-tuning.json', { cache: 'no-store' }).then(r => r.ok ? r.json() : null).then(j => { if (j) applyEnemyTuning(j); }).catch(() => { }); } catch (e) { }   // TODO(階段5 數值表):之後把 tuning-table.json 的 core TUNING 部分放到 001_website/enemy-tuning.json 即自動套用;檔案不存在=404 靜默忽略(僅開關開啟時才會請求)
+      try { if (window.NB_ENEMY_TUNING) applyEnemyTuning(window.NB_ENEMY_TUNING); fetch('enemy-tuning.json?v=' + (window.NB_ASSET_V || ''), { cache: 'no-store' }).then(r => r.ok ? r.json() : null).then(j => { if (j) applyEnemyTuning(j); }).catch(() => { }); } catch (e) { }   // TODO(階段5 數值表):之後把 tuning-table.json 的 core TUNING 部分放到 001_website/enemy-tuning.json 即自動套用;檔案不存在=404 靜默忽略(僅開關開啟時才會請求)
     }
     // ===== 🆕2026-11-06 三輪(階段(a)前端):同一座五屬城同六難度,分第一輪(簡單池·怪×0.65)/第二輪(標準池·×1.0 恆等)/第三輪(困難池·×1.34) =====
     // 2026-11-18 起預設開:URL ?rounds=0 強制關(其他值=開)→ localStorage nb_rounds='0' 關 → 否則開。(舊說明:URL ?rounds=1(=0 強制關)→ localStorage nb_rounds='1' → 否則關。)關閉時:refill/怪數值/選關畫面/橫幅/結算標題/run/start body 全部同現行(不帶 round 欄位)。
     // 倍率表 ROUND_TUNING 預設 RoundCore.ROUND_DEFAULT;可被 window.NB_ROUND_TUNING 或 round-tuning.json(404 靜默)覆寫,壞格式一律回退預設。解鎖真相/票券/掉率=階段(b)後端,本版解鎖是本機暫用(m.roundCleared)。
     const ROUNDS = (() => { try { if (typeof RoundCore === 'undefined') return false; const m = /[?&]rounds=([^&#]*)/.exec(location.search); if (m) return m[1] !== '0'; let v = null; try { v = localStorage.getItem('nb_rounds'); } catch (e2) { } return v !== '0'; } catch (e) { return false; } })();   // 2026-11-18 大毛:改預設開(一般玩家也玩得到三輪;同 ENC 寫法);關閉=?rounds=0 或 localStorage nb_rounds='0';RoundCore 沒載到仍回 false;localStorage 被擋視同沒設定=開
     let ROUND_TUNING = (typeof RoundCore !== 'undefined') ? RoundCore.ROUND_DEFAULT : null;
-    if (ROUNDS) { try { if (window.NB_ROUND_TUNING) ROUND_TUNING = RoundCore.mergeTuning(RoundCore.ROUND_DEFAULT, window.NB_ROUND_TUNING); fetch('round-tuning.json', { cache: 'no-store' }).then(r => r.ok ? r.json() : null).then(j => { if (j) ROUND_TUNING = RoundCore.mergeTuning(RoundCore.ROUND_DEFAULT, j); }).catch(() => { }); } catch (e) { ROUND_TUNING = RoundCore.ROUND_DEFAULT; } }   // TODO(階段(b)):倍率表改由後端/後台下發;戰鬥開場在 init 快照 this._roundTune,中途 fetch 回來不影響進行中的戰鬥
+    if (ROUNDS) { try { if (window.NB_ROUND_TUNING) ROUND_TUNING = RoundCore.mergeTuning(RoundCore.ROUND_DEFAULT, window.NB_ROUND_TUNING); fetch('round-tuning.json?v=' + (window.NB_ASSET_V || ''), { cache: 'no-store' }).then(r => r.ok ? r.json() : null).then(j => { if (j) ROUND_TUNING = RoundCore.mergeTuning(RoundCore.ROUND_DEFAULT, j); }).catch(() => { }); } catch (e) { ROUND_TUNING = RoundCore.ROUND_DEFAULT; } }   // TODO(階段(b)):倍率表改由後端/後台下發;戰鬥開場在 init 快照 this._roundTune,中途 fetch 回來不影響進行中的戰鬥
     const ROUND_CITIES = ['fire', 'wind', 'thunder', 'earth', 'water'];   // 三輪只套五屬城(序章/塔/每日/教學/課程/實驗室不套)
     function roundName(r) { return tr(['', '第一輪', '第二輪', '第三輪'][r] || ''); }
     function roundClearedLocal(m, city, diffKey, r) { return r <= 1 ? !!(m.diffCleared || {})[city + ':' + diffKey] : !!(m.roundCleared || {})[city + ':' + diffKey + ':' + r]; }   // 第一輪沿用既有 diffCleared(伺服器真相);第二/三輪=本機 roundCleared(鍵 city:diff:round,階段(b)改伺服器)
@@ -9908,10 +9910,11 @@
         return lvl === 3 ? 'icon_cd_skull3' : lvl === 2 ? 'icon_cd_skull' : 'icon_cd_skull1';
       }
       _ecLethal(e) {   // 🆕2026-11-09 骷髏「會死才亮」:核心 isLethal(下一擊不含餘火 >= 隊伍最大血量 this.maxHP;比最大血量→圖示不隨回血閃動);只供顯示,不影響傷害
+        if (e && e._i && !e._g) return !!e._ironSk && !e.dead;   // 2026-11-19 鐵機人懲罰致死預警:由 _ecIronSkTick 依 EnemyCore.punishLethal(同回合出手全體累加 ≥ 目前血量)算好的快取
         const st = this._ec, g = e && (e._g || e._h); if (!st || !g || e.dead) return false;   // 2026-11-18 含水城暴怒補師(核心 nextHitDamage 已涵蓋 e._h)
         try { this._ecSync(); return !!EnemyCore.isLethal(st, e); } catch (err) { console.error('ecLethal', err); return false; }
       }
-      _ecSk(e) { const g = e && (e._g || e._h); return !!(g && !e.dead && this._ecLethal(e)); }   // 現在該不該顯示骷髏(圖示/光暈共用):🆕2026-11-09 統一=這隻哥布林下一擊(不含餘火)>= 隊伍最大血量就亮,不分骷髏大招/普攻/拆除後
+      _ecSk(e) { const g = e && (e._g || e._h || e._i); return !!(g && !e.dead && this._ecLethal(e)); }   // 現在該不該顯示骷髏(圖示/光暈共用):🆕2026-11-09 統一=這隻哥布林下一擊(不含餘火)>= 隊伍最大血量就亮,不分骷髏大招/普攻/拆除後
       _ecCoolFx(e, stage) {   // 🆕2026-11-08 酋長降溫各階動畫(stage=打完剩幾下 2/1/0):整隻青白閃+x 微震+青白冷卻環+白蒸氣團+骷髏圖示彈跳(最大時換圖)+頭頂大字;青白語彙(火城底是橘色岩漿,橘 ADD 看不見)
         if (!e || e.dead || !e.sprite || !e.sprite.scene) return;
         const sp = e.sprite, x = sp.x, y = sp.y, cw = e.cardW || 64, ch = e.cardH || 80, last = stage <= 0;
@@ -9942,7 +9945,7 @@
       }
       _ecGlass(e, bounce) {   // 沙漏:骷髏(終結猛擊)換骷髏圖示,否則沙漏;bounce=翻轉/跳動演出
         const g = e && e._g;
-        if (!g) { if (e && e._h) { this._ecHealGlass(e, bounce); return; } if (bounce && e && e._r && !e.dead && e.glass && e.turnG) this.animTurnGlass(e); return; }   // 🆕土城石頭怪(_r)沒有骷髏圖示,只要沙漏翻轉演出(剋屬 CD+1 等)
+        if (!g) { if (e && (e._h || e._i)) { this._ecHealGlass(e, bounce); return; } if (bounce && e && e._r && !e.dead && e.glass && e.turnG) this.animTurnGlass(e); return; }   // 🆕土城石頭怪(_r)沒有骷髏圖示,只要沙漏翻轉演出(剋屬 CD+1 等)
         if (!e.glass || !e.turnG) return;
         const sk = this._ecSk(e), k = sk ? this._ecSkullKey(g) : 'icon_hourglass';   // 🆕2026-11-09 會死才亮:g.skull 且這一擊 >= 隊伍最大血量才是骷髏,否則沙漏
         if (e.glass.setTexture && this.textures.exists(k) && (sk || e._glassKey) && e._glassKey !== k) { this.tweens.killTweensOf(e.glass); e.glass.setTexture(k); const _gs = sk ? (g.rule === 4 ? 34 : 26) : 22; e.glass.setDisplaySize(_gs, _gs); e.glass.setAngle(0); e._glassKey = k; if (e.turnTx) e.turnTx.setX(sk && g.rule === 4 ? 18 : 11); }   // 🆕2026-11-08 酋長骷髏放大 34px(數字右移讓位)   // TODO 製作人驗收 icon_cd_skull 後換圖
@@ -9950,6 +9953,12 @@
         if (!bounce) return;
         if (sk) { const restY = this._turnY(e); this.tweens.killTweensOf(e.turnG); e.turnG.setY(restY); this.tweens.add({ targets: e.turnG, y: restY - 7, duration: 170, yoyo: true, ease: 'Quad.out' }); }   // 骷髏不翻轉(翻了會倒立),只跳一下
         else this.animTurnGlass(e);
+      }
+      _ecIronSkTick() {   // 2026-11-19 鐵機人懲罰致死預警:重算「下一次敵方行動會出手的全體預估傷害 ≥ 玩家目前血量」→ 會打懲罰的鐵機人亮骷髏;鐵塊被動/回血/被電/倒數/死亡都會在下一輪反映;狀態有變才換圖(無字)
+        if (!this._ec || !this.enemies || !this.sys || !this.sys.isActive()) return;
+        let set = [];
+        if (!this.resultOpen && !this.dive) { try { this._ecSync(); set = (EnemyCore.punishLethal(this._ec, this.playerHP) || []).map(i => this.enemies[i]); } catch (err) { console.error('ironSk', err); } }
+        this.enemies.forEach(e => { if (!e || !e._i) return; const want = !e.dead && set.indexOf(e) >= 0; if (want !== !!e._ironSk) { e._ironSk = want; if (!e.dead) this._ecGlass(e, want); } });
       }
       _ecHealGlass(e, bounce) {   // 2026-11-18 水城暴怒補師:下一擊會打死(核心 isLethal)→ 沙漏換骷髏+光暈,沿用火城 2★/3★ 骷髏那套(圖示/三層光暈/身後鬥氣);否則沙漏。無字;非暴怒補師 → 不動(維持原行為)
         if (!e || e.dead || !e.glass || !e.turnG) return;
@@ -9960,6 +9969,8 @@
       }
       _ecAfterSpawn() {   // 新一關敵人建好後:沙漏圖示;酋長的集氣球要等進場演出完才現身(_ecOrbSync 擋 this.dive)
         if (!this._nm || !this._ec) return;
+        if (this._ironSkLoop) { this._ironSkLoop.remove(false); this._ironSkLoop = null; }   // 2026-11-19 鐵機人懲罰致死預警:本關有會懲罰的鐵機人(2★↑)才輪詢(每 300ms)
+        if (this.enemies.some(e => e._i && e._i.rule >= 2)) this._ironSkLoop = this.time.addEvent({ delay: 300, loop: true, callback: () => this._ecIronSkTick() });
         this.enemies.forEach(e => { if (e._g) this._ecGlass(e, false); if (e._g && e._g.rule === 4) this._ecChiefArt(e, !!e._g.skull); });   // 🆕2026-11-09 開場首次 rollCD 的事件不經 _ecPlay(initMech 回傳被丟),酋長燃起版在這裡依核心狀態補換(驗收員抓到:第一輪蓄力顯示平氣版)
         if (this.enemies.some(e => e._d)) this._ecDuckReveal();   // 🆕風城賊鴨:進場演出結束後才畫標記/待標/圓點
         if (!this.enemies.some(e => e._g)) return;   // 任何哥布林都有球(1★~4★)
@@ -10525,6 +10536,7 @@
       // 每回合:沙漏跳一下 + 翻轉到下一個 90°(累積),數字隨 updateEnemies 更新
       animTurnGlass(e) {
         if (!e.glass || !e.turnG) return;
+        if ((e._i || e._h) && /skull/.test(e._glassKey || '')) { const restY = this._turnY(e); this.tweens.killTweensOf(e.turnG); e.turnG.setY(restY); this.tweens.add({ targets: e.turnG, y: restY - 7, duration: 170, yoyo: true, ease: 'Quad.out' }); return; }   // 2026-11-19 鐵機人/補師顯示骷髏時不翻轉(翻了會倒立),只跳一下(同哥布林骷髏)
         const tgt = (Math.round(e.glass.angle / 180) + 1) * 180;   // 對齊到下一個 180°(翻半圈)→ 只在直立↔翻面切換,不會側躺像扯鈴
         this.tweens.killTweensOf(e.glass); this.tweens.add({ targets: e.glass, angle: tgt, duration: 340, ease: 'Cubic.out' });
         const restY = this._turnY(e); this.tweens.killTweensOf(e.turnG); e.turnG.setY(restY);   // 🐛修:休止位置用各自 e.cy(非固定 BATTLE_CY)→CD 跳動後回到「自己那排」,前3後2/前2後1的後排CD才會在上面(原本全落回同一排)
