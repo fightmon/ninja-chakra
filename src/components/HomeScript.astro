@@ -76,7 +76,7 @@
       $$('.isl', map).forEach(function (b) { b.classList.toggle('on', b.getAttribute('data-id') === id); });
       pnBg.style.backgroundImage = 'url(' + p.bgUrl + ')';
       pnFoes.innerHTML = p.foes.map(function (f, i) {
-        return '<div class="fo" style="--i:' + i + '"><div class="fi crop" style="--z:' + f.z + ';--cx:' + f.cx + ';--cy:' + f.cy + ';--by:97%"><img src="' + f.u + '" alt="" loading="lazy" draggable="false"></div><span>' + LB[f.k] + '</span></div>';
+        return '<div class="fo' + (f.t ? ' tease' : '') + '" style="--i:' + i + '"><div class="fi crop" style="--z:' + f.z + ';--cx:' + f.cx + ';--cy:' + f.cy + ';--by:97%"><img src="' + f.u + '" alt="" loading="lazy" draggable="false"></div>' + (f.t ? '<b class="q" aria-hidden="true">?</b>' : '') + '<span>' + LB[f.k] + '</span></div>';
       }).join('');
       var chips = '';
       if (p.el && EL[p.el]) chips += '<span class="chip" style="--c:' + EL[p.el].c + '">' + esc(fill(T.elMon, 'el', EL[p.el].n)) + '</span>';

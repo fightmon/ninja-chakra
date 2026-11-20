@@ -48,10 +48,12 @@ const bbox = async (url: string) => {
 };
 const r4 = (n: number) => +n.toFixed(4);
 // 地圖面板的怪：方形框，內容完整放進去、腳貼底，四階由小到大
+// TEASE_BOSS：「王」那格只給剪影＋問號(魔王先不公開)；要公開時改 false
+const TEASE_BOSS = true;
 const foeCrops = (urls: string[]) => Promise.all(urls.map(async (u, i) => {
   const b = await bbox(u), k = urls.length === 4 ? i : Math.min(i + (4 - urls.length), 3);
   const fit = Math.min(0.94 / b.bw, 0.9 / (b.bh * b.ar));
-  return { u, k, z: r4(fit * [0.8, 0.87, 0.94, 1][k]), cx: r4(b.cx), cy: r4(b.bot * b.ar / (900 / 1080)) };
+  return { u, k, z: r4(fit * [0.8, 0.87, 0.94, 1][k]), cx: r4(b.cx), cy: r4(b.bot * b.ar / (900 / 1080)), t: TEASE_BOSS && k === 3 ? 1 : 0 };
 }));
 // 首頁最多演到第幾階(目前先不露出第 4 階)；最後一階要不要只給剪影
 const MAX_STAGE = 3, TEASE_LAST = true;
