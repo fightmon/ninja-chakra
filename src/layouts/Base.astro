@@ -23,8 +23,8 @@ const {
 } = Astro.props;
 const isEn = lang === 'en';
 const desc = description ?? (isEn
-  ? 'Blockyusha is a free browser game that fuses Woodoku block puzzles with a card-battle RPG: drag blocks to clear lines, unleash 5-element attacks, and collect cute blocky animal heroes. No download — just open your browser and play.'
-  : '塊頭勇者 Blockyusha 是一款把 Woodoku 方塊消除縫進轉珠 RPG 的卡片收集手機遊戲：拖方塊消除觸發五屬攻擊，收集可愛的方塊頭動物勇者一路闖塔。免下載，開網頁就能玩。');
+  ? 'Blockyusha is a free block-puzzle adventure RPG you play in your browser. Solve the board, turn every cleared cell into an attack, and collect partners with unique skills.'
+  : '塊頭勇者 Blockyusha 是免下載的解方塊冒險 RPG：動腦解方塊，每消一格都是一次攻擊，收集夥伴闖過五座屬性城。開網頁就能玩。');
 const site = Astro.site ?? 'https://blockyusha.com';
 const canonical = new URL(path, site).href;
 const ogImage = new URL(image, site).href;
