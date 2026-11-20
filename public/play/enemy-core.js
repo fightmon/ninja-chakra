@@ -86,6 +86,7 @@ var EnemyCore = (function () {
     ROCK_SHIELD_ATK: [1.5, 2.5, 2.5, 2.5],   // 【2026-11-11 製作人定案(press2)】預設 1★×1.5/2★↑×2.5(1=關;關閉對照用 ROCK_SHIELD_ATK=1,1,1,1);盾在時的普攻傷害 × 依星倍率(1★/2★/3★/4★;串場石頭怪固定 1★ 規則=第 1 格)。sim 掃描:ROCK_SHIELD_ATK=1.5,2,2,2
     RECOIL_PCT: 0.2,            // 【預設】反震:被擋下傷害的 20% 反彈給玩家(3★/4★)
     GUARD_PCT: 0.5,             // 【預設】守護:盾在的 4★ 石頭王,左右相鄰且當下沒盾的同伴「承受」比例(減半)
+    ROCK_GUARD_ATK_MUL: 1.5,    // 2026-11-20 大毛拍板:4★ 石頭王「正在守護」至少一隻活著的同伴(判定同守護:自己盾在、非串場、左右相鄰活著且當下沒盾)→ 自己的攻擊 × 此值(乘在 ROCK_SHIELD_ATK 之上);同伴全倒/沒有守護對象 → 恢復(1=關)。純數字旋鈕,applyEnv 走一般數字分支(不必列進清單鍵)
     // ── 水城補師(spec-water v0.4.8 §2.3)──
     HEAL_BASE: 2,               // 出手 CD = 基本 + 隨機 HEAL_RAND,最低 HEAL_MIN(每輪重擲)
     HEAL_RAND: [0, 2],
@@ -299,7 +300,8 @@ var EnemyCore = (function () {
   }
   function _settle0(state, list, evs) {
     const dying = list.filter(x => !x.dead && x.hp <= 0); if (!dying.length) return;
-    const rescuers = state.enemies.filter(h => h._h && !h.dead && h.hp > 0 && _canRescue(h._h));   // 該批扣完血後仍存活、還沒用過急救
+    // 2026-11-20 藍鵲麻痺:這一手敵人全部停住 → 補師不急救(被打倒就倒)
+    const rescuers = (state.ec && state.ec.stun) ? [] : state.enemies.filter(h => h._h && !h.dead && h.hp > 0 && _canRescue(h._h));   // 該批扣完血後仍存活、還沒用過急救
     dying.forEach(x => {
       const xi = state.enemies.indexOf(x);
       if (x._rescHand) { x.hp = 1; return; }   // 同手已被救過:剩餘傷害不再追殺
@@ -454,22 +456,22 @@ var EnemyCore = (function () {
     return evs;
   }
   // 每放一塊之後(afterBlock ②):偵測標記格「變空」→ 3★/4★ 當下反擊(整隻一手最多一次、CD 不重置、待標不觸發);再補標待標份數
-  function _duckAfterBlock(state, evs) {
+  function _duckAfterBlock(state, evs, stun) {   // stun=2026-11-20 藍鵲時間靜止中:照常記下標記格變空/被餵回,但不反咬、不補標;2026-11-20 大毛:靜止中變空的那份標 quiet(事件帶 quiet:true → 畫面不亮生氣符號;之後被餵回也帶 quiet → 不扣別份的生氣),解除後不追討、不補亮
     state.enemies.forEach((e, i) => {
       const d = e._d; if (!d || e.dead || e.hp <= 0) return;
       let trig = false;
       d.food.forEach((sl, k) => {
         if (sl.kind === 'cell' && !sl.pos) return;   // 待標:沒有格子可「變空」,不顯示生氣、不反擊
         const em = sl.kind === 'store' ? !!sl.used : !state.board[sl.pos[0]][sl.pos[1]];
-        if (em && !sl.empty) { sl.empty = true; sl.ever = true; d.emptied++; trig = true; evs.push({ t: 'duck_empty', e: i, slot: k, store: sl.kind === 'store' }); }
-        else if (!em && sl.empty) { sl.empty = false; evs.push({ t: 'duck_refed', e: i, slot: k }); }
+        if (em && !sl.empty) { sl.empty = true; sl.ever = true; d.emptied++; trig = true; if (stun) sl.quiet = true; evs.push(stun ? { t: 'duck_empty', e: i, slot: k, store: sl.kind === 'store', quiet: true } : { t: 'duck_empty', e: i, slot: k, store: sl.kind === 'store' }); }
+        else if (!em && sl.empty) { sl.empty = false; const q = !!sl.quiet; sl.quiet = false; evs.push(q ? { t: 'duck_refed', e: i, slot: k, quiet: true } : { t: 'duck_refed', e: i, slot: k }); }
       });
-      if (trig && d.rule >= 3 && !d.counterHand && !state.ec.dead) {
+      if (trig && !stun && d.rule >= 3 && !d.counterHand && !state.ec.dead) {
         d.counterHand = true;
         const raw = e.atk * TUNING.COUNTER_K * _fatMult(d); evs.push({ t: 'duck_counter', e: i, raw: Math.round(raw), fat: d.fat });
         damagePlayer(state, raw, { kind: 'counter', e: i }).ev.forEach(x => evs.push(x));
       }
-      _duckFill(state, e, i, evs);
+      if (!stun) _duckFill(state, e, i, evs);
     });
   }
   // 玩家用掉卡上的屬塊 → 所有活賊鴨已標記的屬塊食物變空(下一個 afterBlock 偵測並觸發反擊);回傳被用掉的份數
@@ -590,11 +592,18 @@ var EnemyCore = (function () {
     e._r.gate = _rockGate(c.rule); evs.push({ t: 'shield_up', e: i, rule: c.rule, kind: e._r.gate.kind, n: e._r.gate.n, open: true });
     _rockRoll(state, e, i, evs);
   }
+  // 2026-11-20 大毛拍板:4★ 石頭王「正在守護」= 自己盾在、非串場、活著,且左右相鄰(陣列序=站位序,死亡空位不補不跨)至少一隻活著、當下沒盾的同伴(同 applyClear 守護判定);供 _rockAct 攻擊倍率與畫面憤怒圖示共用
+  function rockGuarding(state, e) {
+    const r = e && e._r; if (!r || r.rule !== 4 || r.guest || !r.up || e.dead || e.hp <= 0) return false;
+    const E = state.enemies, i = E.indexOf(e);
+    return [i - 1, i + 1].some(j => { const x = E[j]; return !!x && !x.dead && x.hp > 0 && !(x._r && x._r.up); });
+  }
+  function _rockGuardMul(state, e) { return rockGuarding(state, e) && TUNING.ROCK_GUARD_ATK_MUL > 0 ? TUNING.ROCK_GUARD_ATK_MUL : 1; }
   function _rockAct(state, e, i) {
     const d = e._r, evs = [];
     e.timer--;
     if (e.timer > 0) { evs.push({ t: 'cd_tick', e: i, timer: e.timer, mon: 'rock' }); return evs; }
-    if (d.up) { const sm = TUNING.ROCK_SHIELD_ATK[d.rule - 1] > 0 ? TUNING.ROCK_SHIELD_ATK[d.rule - 1] : 1; evs.push(sm === 1 ? { t: 'rock_attack', e: i, rule: d.rule } : { t: 'rock_attack', e: i, rule: d.rule, mult: sm }); damagePlayer(state, e.atk * sm, { kind: 'attack', e: i }).ev.forEach(x => evs.push(x)); }   // press:盾在時普攻 × ROCK_SHIELD_ATK[星](預設 1)   // 有盾:CD 歸 0 = 普攻
+    if (d.up) { const gm = _rockGuardMul(state, e), sm = (TUNING.ROCK_SHIELD_ATK[d.rule - 1] > 0 ? TUNING.ROCK_SHIELD_ATK[d.rule - 1] : 1) * gm; evs.push(sm === 1 ? { t: 'rock_attack', e: i, rule: d.rule } : Object.assign({ t: 'rock_attack', e: i, rule: d.rule, mult: sm }, gm !== 1 ? { guard: gm } : {})); damagePlayer(state, e.atk * sm, { kind: 'attack', e: i }).ev.forEach(x => evs.push(x)); }   // press:盾在時普攻 × ROCK_SHIELD_ATK[星](預設 1)   // 有盾:CD 歸 0 = 普攻
     else { d.up = true; d.rebuilding = false; d.sk = 0; d.bonusNext = false; d.gate = _rockGate(d.rule); evs.push({ t: 'shield_rebuild', e: i, rule: d.rule, kind: d.gate.kind, n: d.gate.n }); }   // 無盾:重建(不攻擊),隨機盾重抽
     _rockRoll(state, e, i, evs);
     return evs;
@@ -622,7 +631,7 @@ var EnemyCore = (function () {
           const eff = combo + (r.sk | 0), reach = !g || (g.kind === 'hit' ? n >= g.n : eff >= g.n), blocked = !!g && !reach;
           if (blocked || (act && reach)) {   // 一般清除達標=破盾(全額 +50%);主動技達標=破盾但「這一下照樣被擋」,下一擊才吃全額 +50%(r.bonusNext)
             const leak = TUNING.ROCK_LEAK[r.rule - 1], chip = Math.round(dmg * leak), absorbed = Math.round(dmg * (1 - leak));
-            const recoil = (r.rule >= 3 && !r.guest) ? Math.round(absorbed * TUNING.RECOIL_PCT) : 0;   // C5:被擋下傷害(不含破盾追加)×20%
+            const recoil = (r.rule >= 3 && !r.guest && !(state.ec && state.ec.stun)) ? Math.round(absorbed * TUNING.RECOIL_PCT) : 0;   // C5:被擋下傷害(不含破盾追加)×20%;2026-11-20 藍鵲麻痺中不反震(盾照常擋)
             amt = chip; recoilSum += recoil;
             if (blocked) evs.push({ t: 'shield_block', e: vi, rule: r.rule, kind: g.kind, need: g.n, have: g.kind === 'hit' ? n : eff, diff: g.n - (g.kind === 'hit' ? n : eff), chip, absorbed, recoil });
             else { r.up = false; r.rebuilding = true; r.gate = null; r.sk = 0; r.bonusNext = true; v.timer = TUNING.ROCK_REBUILD; evs.push({ t: 'shield_break', e: vi, rule: r.rule, kind: g.kind, bonus: 0, total: amt, active: true, chip, absorbed, recoil }); }
@@ -898,6 +907,7 @@ var EnemyCore = (function () {
   //   預估:懲罰=ironPunishNext;哥布林/暴怒補師=nextHitDamage(哥布林本手被中止 skipTick 不計);其他鐵機人(普攻)與一般怪=e.atk;
   //   賊鴨/石頭怪/稀有怪不計(出手內容依盤面/盾,預估不準 → 只少算不多算);黑熊/護甲/迴避不計(同 isLethal)
   function punishLethal(state, hp) {
+    if (state.ec && state.ec.stun) return [];   // 2026-11-20 藍鵲麻痺中:下一次敵方行動整個跳過 → 沒有人出手
     let sum = 0; const out = [];
     actOrder(state).forEach(i => {
       const e = state.enemies[i]; if (!e || e.dead || e.hp <= 0 || (e.sealed | 0) > 0 || (e.timer | 0) > 1) return;
@@ -910,6 +920,7 @@ var EnemyCore = (function () {
     return out.length && Math.round(sum) >= hp ? out : [];
   }
   function enemyAct(state, i) {   // 單隻;sim 為了維持與舊碼相同的出手順序,逐隻呼叫(順序請用 actOrder)
+    if (state.ec && state.ec.stun) return [];   // 2026-11-20 藍鵲麻痺:這一手的敵方行動整個跳過(倒數不往下數=時間停住;稀有怪逃跑倒數、寶玉補放核心也停);endEnemyPhase 收尾解除
     const e = state.enemies[i], evs = [], g = e && e._g;
     if (e && !e.dead && e.hp > 0) { if (e._m) return _metalAct(state, e, i); if (e._y) return _moneyAct(state, e, i); if (e._j) return _jewelAct(state, e, i); if (e._d) return _duckAct(state, e, i); if (e._i) return _ironAct(state, e, i); if (e._r) return _rockAct(state, e, i); if (e._h) return _healerAct(state, e, i); }
     if (!g || e.dead || e.hp <= 0) return evs;
@@ -937,6 +948,7 @@ var EnemyCore = (function () {
     if (ec.bearCD > 0) { ec.bearCD--; if (ec.bearCD <= 0) ec.bearReady = (ec.lead === 'bear'); }
     if (ec.salmonCD > 0) { ec.salmonCD--; if (ec.salmonCD <= 0) ec.salmonReady = (ec.lead === 'salmon'); }
     state.enemies.forEach(e => { if (e._g) { e._g.hitClear = false; e._g.skipTick = false; } if (e._d) e._d.counterHand = false; if (e._h) e._h.hitClear = false; e._rescHand = false; });
+    stunEnd(state).forEach(x => evs.push(x));   // 2026-11-20 藍鵲麻痺只持續這一手:敵方回合(被跳過的那次)收尾即解除
     return evs;
   }
   function enemyPhase(state) {
@@ -955,6 +967,7 @@ var EnemyCore = (function () {
     const alive = state.enemies.some(e => !e.dead && e.hp > 0);
     if (!alive) { if (ec.burn) { evs.push({ t: 'burn_cancel', reason: 'victory' }); ec.burn = null; } return evs; }
     syncCores(state).forEach(x => evs.push(x));   // 寶玉核心:格子被清掉(任何原因,含主動技)= 敲碎
+    if (ec.stun) { if (!ec.dead) _duckAfterBlock(state, evs, true); return evs; }   // 2026-11-20 藍鵲麻痺:這一手敵人全部停住——賊鴨只記標記格變空(不反咬、不補標)、寶玉不補放核心、不電擊、外掛點不跑、餘火暫停不燒(剩餘塊數留到解除後);核心盾的敲碎照常(上一行)
     if (!ec.dead) _duckAfterBlock(state, evs);
     _jewelAfterBlock(state, evs);   // 待放的核心每放一塊檢查一次有沒有合適空位
     if (hooks.duck) (hooks.duck(state) || []).forEach(x => evs.push(x));
@@ -970,6 +983,13 @@ var EnemyCore = (function () {
     return evs;   // ⑤死亡判定:damagePlayer 已發 death 並設 ec.dead;呼叫端以 state.playerHP<=0 / ec.dead 收尾
   }
 
+  // ───────── 2026-11-20 藍鵲 c22「麻痺」(大毛拍板):只持續這一手(放完這手 3 塊、到這次敵方回合收尾)─────────
+  //   期間全體敵人什麼都不做:enemyAct 不跑(倒數不往下數=時間停住,之後照原數字繼續;不加倒數)、afterBlock 不反咬/不補標/不補放核心/不電擊/餘火暫停、applyClear 不反震、_settle 不急救、punishLethal 不預警;
+  //   盾照常:石頭盾/寶玉核心盾/石頭王守護照常擋傷,破盾照常(麻痺不破盾、不讓盾失效);玩家側(打中計數/拆除/詠唱中止/黑熊鮭魚冷卻)照常。endEnemyPhase 收尾時自動解除(事件 stun_off)。
+  function stunHand(state) { const ec = state && state.ec; if (!ec || ec.stun) return []; ec.stun = true; return [{ t: 'stun_on' }]; }
+  function stunEnd(state) { const ec = state && state.ec; if (!ec || !ec.stun) return []; ec.stun = false; return [{ t: 'stun_off' }]; }
+  function isStunned(state) { return !!(state && state.ec && state.ec.stun); }
+
   // 呼叫端輔助:最急且可中止的哥布林(給 sim 的 INTR policy 與遊戲提示用)。need=還要打幾下才中止;回傳 enemy 或 null。
   function urgentGob(state, slack, ignoreHitClear) {   // ignoreHitClear=true:主動技找目標(主動技命中另算 1 下,不受本手已被清除打中的限制)
     slack = (slack == null) ? 1 : slack; let best = null, bs = 1e9;
@@ -980,7 +1000,7 @@ var EnemyCore = (function () {
   }
 
   return { TUNING, inWindow, applyEnv, bind, classify, classifyDuck, classifyIron, classifyRock, classifyHealer, classifyMetal, classifyMoney, classifyJewel, syncCores, coreCells, coreShield: _jewelShield, applyClear, urgentCast, rollCD, initMech, initState, damagePlayer, damageEnemy, resolveVictims, delayEnemy,
-    enemyAct, endEnemyPhase, enemyPhase, afterBlock, urgentGob, hooks, actOrder, useStored, markedCells, kFor, nextHitDamage, isLethal, ironPunishNext, punishLethal };
+    enemyAct, endEnemyPhase, enemyPhase, afterBlock, urgentGob, hooks, actOrder, useStored, markedCells, kFor, nextHitDamage, isLethal, ironPunishNext, punishLethal, stunHand, stunEnd, isStunned, rockGuarding };
 })();
 
 if (typeof module !== 'undefined' && module.exports) { module.exports = EnemyCore; }
