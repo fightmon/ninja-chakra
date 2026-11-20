@@ -81,14 +81,14 @@
 
 <body>
   <div id="game"></div>
-  <!-- 2026-11-19 快取版本號(大毛拍板):自家 js 一律帶 ?v=;js 線上 max-age=4 小時且 Cloudflare 邊緣快取,換查詢字串才會拿新檔。【上線時:只要任何程式檔有變,把本檔所有「v=20261120a」與下一行 NB_ASSET_V 一起換新】格式 YYYYMMDD+英文小寫序號(同日第二次上線 b、c…);phaser.min.js 等第三方檔不加 -->
-  <script>window.NB_ASSET_V = '20261120a';</script>
-  <script src="i18n.js?v=20261120a"></script><!-- 多語(tr()/getLang/setLang):中文原文=key,查無回原文;要在所有遊戲腳本之前載 -->
-<script src="battle-core.js?v=20261120a"></script>
-<script src="battle-vfx.js?v=20261120a"></script>
-  <script src="round-core.js?v=20261120a"></script><!-- 🆕2026-11-06 三輪(階段(a)前端):塊池/怪倍率共用核心;只定義全域 RoundCore、無副作用;接線全在 ROUNDS 開關(?rounds=1 / localStorage nb_rounds=1)後,預設關 -->
-  <script src="enemy-core.js?v=20261120a"></script><!-- 🆕2026-11-06 P2:敵人機制核心(遊戲與 sim 共用);只定義全域 EnemyCore、無副作用;接線全在 NEWMECH 開關(?newmech=1 / localStorage nb_newmech=1)後,預設關 -->
-  <script src="data-stages.js?v=20261120a"></script>
+  <!-- 2026-11-19 快取版本號(大毛拍板):自家 js 一律帶 ?v=;js 線上 max-age=4 小時且 Cloudflare 邊緣快取,換查詢字串才會拿新檔。【上線時:只要任何程式檔有變,把本檔所有「v=20261120b」與下一行 NB_ASSET_V 一起換新】格式 YYYYMMDD+英文小寫序號(同日第二次上線 b、c…);phaser.min.js 等第三方檔不加 -->
+  <script>window.NB_ASSET_V = '20261120b';</script>
+  <script src="i18n.js?v=20261120b"></script><!-- 多語(tr()/getLang/setLang):中文原文=key,查無回原文;要在所有遊戲腳本之前載 -->
+<script src="battle-core.js?v=20261120b"></script>
+<script src="battle-vfx.js?v=20261120b"></script>
+  <script src="round-core.js?v=20261120b"></script><!-- 🆕2026-11-06 三輪(階段(a)前端):塊池/怪倍率共用核心;只定義全域 RoundCore、無副作用;接線全在 ROUNDS 開關(?rounds=1 / localStorage nb_rounds=1)後,預設關 -->
+  <script src="enemy-core.js?v=20261120b"></script><!-- 🆕2026-11-06 P2:敵人機制核心(遊戲與 sim 共用);只定義全域 EnemyCore、無副作用;接線全在 NEWMECH 開關(?newmech=1 / localStorage nb_newmech=1)後,預設關 -->
+  <script src="data-stages.js?v=20261120b"></script>
   <script>
     /* ===== 純邏輯(N/EL/SHAPES/CONFIG/computeClears/種子亂數 等戰鬥核心已抽到 battle-core.js,瀏覽器當共用全域)===== */
     const KEYS = ['fire', 'wind', 'thunder', 'earth', 'water'];
@@ -1997,13 +1997,13 @@
     /*RQ_END*/
     async function _sendRunComplete(item) {   // 🔐 送出單筆通關(POST /api/run/complete,idem 靠 runId);成功→syncWallet(coins/stones/gem_*)+從 pendingRuns 佇列移除,回 {ok:true,drops,coinsGained,expGained,replayed,daily…};冪等重放 drops 會是空陣列(replayed:true,不帶 coinsGained/expGained);🆕2026-11-16 429→不移出佇列,回 {ok:false,retryLater:true,retryAfterSec}(並排程補送);400 依 body.error 分流(永久無效→{ok:false,rejected:true,error};未知碼→保留+計次,滿 RQ_MAX_TRIES_400 才丟);失敗/離線/其他狀態→回 null(保留,呼叫端自行決定)
       let r;
-      try { r = await authedFetch('/api/run/complete', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ dungeonId: item.dungeonId, diff: item.diff, runId: item.runId, name: item.name || getMeta().name, bonusKilled: item.bonusKilled || [], comboCount: item.comboCount, clearedStages: item.clearedStages, round: item.round, encKilled: item.encKilled }) }); }   // 🆕2026-10-31 clearedStages=戰敗結算(已清小關數;勝利/舊佇列項目無此欄→JSON.stringify 略過)   // 🆕2026-08-02 bonusKilled 隨行帶給伺服器(見 _grantRun 組 item);離線佇列裡的舊 item 沒這欄→||[] 保底;🆕2026-08-17 comboCount=每日修煉 T3 任務進度(item.comboCount undefined→JSON.stringify 略過該欄,非 daily/舊佇列項目不受影響,見 run/complete.ts daily 分支預設 0)
+      try { r = await authedFetch('/api/run/complete', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ dungeonId: item.dungeonId, diff: item.diff, runId: item.runId, name: item.name || getMeta().name, bonusKilled: item.bonusKilled || [], comboCount: item.comboCount, clearedStages: item.clearedStages, round: item.round, encKilled: item.encKilled, bestStreakDmg: item.bestStreakDmg, bestStreakCombo: item.bestStreakCombo, hands: item.hands }) }); }   /* 🆕2026-11-20 連擊榜:bestStreakDmg/bestStreakCombo/hands(只有有榜關卡的 item 才有;undefined→不送;舊後端只讀具名欄位、多的忽略) */   // 🆕2026-10-31 clearedStages=戰敗結算(已清小關數;勝利/舊佇列項目無此欄→JSON.stringify 略過)   // 🆕2026-08-02 bonusKilled 隨行帶給伺服器(見 _grantRun 組 item);離線佇列裡的舊 item 沒這欄→||[] 保底;🆕2026-08-17 comboCount=每日修煉 T3 任務進度(item.comboCount undefined→JSON.stringify 略過該欄,非 daily/舊佇列項目不受影響,見 run/complete.ts daily 分支預設 0)
       catch (e) { return null; }   // 網路失敗:保留該筆,下次再試
       if (r.ok) {
         let d; try { d = await r.json(); } catch (e) { return null; }   // 回應壞掉:保留該筆,重送會回 replayed
         syncWallet(d); if (d.gems) syncGems(d.gems);
         mutSave(s => { s.pendingRuns = (s.pendingRuns || []).filter(x => x.runId !== item.runId); });
-        return { ok: true, drops: Array.isArray(d.drops) ? d.drops : [], firstClearStones: d.firstClearStones || 0, bagFull: !!d.bagFull, pending: (d.pending | 0), clearSec: (typeof d.clearSec === 'number' ? d.clearSec : null), bestSec: (typeof d.bestSec === 'number' ? d.bestSec : null), leveledUp: !!d.leveledUp, rank: (typeof d.rank === 'number' ? d.rank : null), fail: !!d.fail, coinsGained: (typeof d.coinsGained === 'number' ? d.coinsGained : undefined), expGained: (typeof d.expGained === 'number' ? d.expGained : undefined), replayed: !!d.replayed, daily: d.daily || null };   // 🔐[首通石]非首通/序章/重放=0,伺服器已算好直接帶出;bagFull=背包滿→伺服器跳過部分/全部掉落,前端要提示玩家清背包;clearSec=這趟耗時、bestSec=全服最速(皆伺服器算,離線 fallback 為 null);leveledUp/rank=伺服器升級判定(rank/exp/體力已在上面 syncWallet 落地),給結算慶祝用;🆕2026-11-16 coinsGained/expGained=伺服器實際入帳(舊後端沒這兩欄→undefined→結算走舊的本地顯示)、replayed=早已入帳(不帶數字)、daily=每日修煉回應(stonesGained)
+        return { ok: true, drops: Array.isArray(d.drops) ? d.drops : [], firstClearStones: d.firstClearStones || 0, bagFull: !!d.bagFull, pending: (d.pending | 0), clearSec: (typeof d.clearSec === 'number' ? d.clearSec : null), bestSec: (typeof d.bestSec === 'number' ? d.bestSec : null), leveledUp: !!d.leveledUp, rank: (typeof d.rank === 'number' ? d.rank : null), fail: !!d.fail, coinsGained: (typeof d.coinsGained === 'number' ? d.coinsGained : undefined), expGained: (typeof d.expGained === 'number' ? d.expGained : undefined), replayed: !!d.replayed, daily: d.daily || null, comboBoard: (d.comboBoard && typeof d.comboBoard === 'object') ? { newBest: d.comboBoard.newBest === true } : null };   /* 🆕2026-11-20 comboBoard.newBest=破了自己在這個連擊榜的紀錄(舊後端沒這欄→null) */   // 🔐[首通石]非首通/序章/重放=0,伺服器已算好直接帶出;bagFull=背包滿→伺服器跳過部分/全部掉落,前端要提示玩家清背包;clearSec=這趟耗時、bestSec=全服最速(皆伺服器算,離線 fallback 為 null);leveledUp/rank=伺服器升級判定(rank/exp/體力已在上面 syncWallet 落地),給結算慶祝用;🆕2026-11-16 coinsGained/expGained=伺服器實際入帳(舊後端沒這兩欄→undefined→結算走舊的本地顯示)、replayed=早已入帳(不帶數字)、daily=每日修煉回應(stonesGained)
       }
       let b = null; try { b = await r.json(); } catch (e) { b = null; }
       const c = rqClassifyRun(r.status, b, item.tries | 0);
@@ -2094,6 +2094,11 @@
       try { const r = await authedFetch('/api/leaderboard/list'); if (!r.ok) return null; const d = await r.json(); return Array.isArray(d.records) ? d.records : []; }
       catch (e) { return null; }
     }
+    async function comboBoardFetch(q) {   // 🆕2026-11-20 連擊輸出排行榜(後端第3期 API):不帶 q→{tops:[{dungeonId,diff,round,holderName,bestDmg,bestCombo,hands,achievedAt}]}(每個 城×難度×輪 第一名);q={dungeonId,diff,round}→{top:[{rank,holderName,bestDmg,bestCombo,hands,achievedAt,me}](前20),me:{rank,bestDmg,bestCombo,hands,achievedAt}|null};失敗(404 舊後端/離線/未登入/非 2xx/壞 JSON)一律回 null,呼叫端當空榜
+      try { const u = '/api/leaderboard/combo' + (q ? '?dungeonId=' + encodeURIComponent(q.dungeonId) + '&diff=' + encodeURIComponent(q.diff) + '&round=' + (q.round | 0) : ''); const r = await authedFetch(u); if (!r.ok) return null; return await r.json(); }
+      catch (e) { return null; }
+    }
+    const RSUB_CB = ['簡單', '普通', '困難'];   // 連擊榜單一榜視窗的輪字(同選關輪分頁)
     async function mailFetchList() {   // → mails[](陣列);失敗(離線/逾時/非 2xx)直接丟錯給呼叫端分流
       const r = await authedFetch('/api/mail/list');
       if (!r.ok) throw new Error('mail/list ' + r.status);
@@ -2223,6 +2228,8 @@
     function isDungeonCleared(id) { return !!(loadSave().progress.dungeonsCleared || {})[id]; }
     /* ===== 排行 / 我的紀錄 / 成就稱號 ===== */
     const RANK_DUNGEONS = ['fire', 'water', 'thunder', 'earth', 'wind', 'tower'];
+    const COMBO_DUNGEONS = ['fire', 'water', 'thunder', 'earth', 'wind'];   // 2026-11-20 連擊輸出排行榜(_stkOn/bRankBoard)範圍=五屬城;大毛:塔先不開放(關卡還沒討論)。RANK_DUNGEONS 仍含塔(成就/完成率用,不動)
+    const TOWER_OPEN = false;   // 2026-11-20 大毛:塔先不開放→isDungeonUnlocked('tower') 恆 false(大廳塔島=未解鎖樣式);開放時改 true(後端 COMBO_BOARD_DUNGEONS 也要加回 tower)
     const RANK_DIFFS = ['baby', 'beginner', 'normal', 'advanced', 'super', 'hell'];
     const KAGE_HEROES = ['c15', 'c18', 'c22', 'c26', 'c30'];   // 5 主角神
     function recordClear(dungeonId, diffKey, round) { if (ROUNDS && round >= 2) { mutSave(s => { s.meta.roundCleared = s.meta.roundCleared || {}; s.meta.roundCleared[dungeonId + ':' + diffKey + ':' + round] = true; }); return; }   /* 🆕三輪:第二/三輪本機樂觀記錄(不碰第一輪 diffCleared/clearsByDiff);關閉時 round 恆 undefined→走原路 */ mutSave(s => { s.progress.clearsByDiff = s.progress.clearsByDiff || {}; s.progress.clearsByDiff[dungeonId + ':' + diffKey] = true; s.meta.diffCleared = s.meta.diffCleared || {}; s.meta.diffCleared[dungeonId + ':' + diffKey] = true; }); }   // 🔐[難度解鎖]全清當下樂觀寫入 s.meta.diffCleared(跟伺服器同一份 key 空間),下一難度立刻在 UI 解鎖,不用等 wallet 重新同步;伺服器回應之後 union(syncWallet)也不會洗掉
@@ -2266,7 +2273,7 @@
     function isDungeonUnlocked(id) {
       const dc = loadSave().progress.dungeonsCleared || {};
       if (id === 'prologue') return true;
-      if (id === 'tower') return ELEM_DUNGEONS.every(e => dc[e]);
+      if (id === 'tower') return TOWER_OPEN && ELEM_DUNGEONS.every(e => dc[e]);   // 2026-11-20 塔先不開放(TOWER_OPEN=false)
       if (ELEM_DUNGEONS.indexOf(id) >= 0) return !!dc.prologue;
       return false;
     }
@@ -8264,11 +8271,11 @@
       }
       // 🆕2026-11-20 連擊輸出排行榜 第1+2期(spec-combo-leaderboard.md §5.1/§5.2):一段=combo 0→1 起到歸零;累計=這段期間敵人身上跳出的傷害數字(chakraImpact→dmgPop 同一個值);只在最速榜涵蓋的地城(RANK_DUNGEONS:五屬城+塔)真戰鬥
       _stkReset() {
-        this._stkOn = RANK_DUNGEONS.includes(this.dungeonId) && !this.tut && !this.lesson && !this.hitLab && !this.enemyLab && !(this.dungeon && this.dungeon.daily);   // 範圍=現行最速榜畫面(bRankBoard)列出的地城:五屬城+塔;實驗室借塔的 id,另外排除;序章/每日修煉/教學/課程不顯示
-        this._stkCur = 0; this._stkShown = 0; this._stkBest = 0; this._stkBestCombo = 0; this._stkIsBest = false; this._runHands = 0; this._stkHide();
+        this._stkOn = COMBO_DUNGEONS.includes(this.dungeonId) && !this.tut && !this.lesson && !this.hitLab && !this.enemyLab && !(this.dungeon && this.dungeon.daily);   // 範圍=現行最速榜畫面(bRankBoard)列出的地城:五屬城(2026-11-20 塔先不開放,已拿掉);實驗室借塔的 id,另外排除;序章/每日修煉/教學/課程不顯示
+        this._stkCur = 0; this._stkShown = 0; this._stkBest = 0; this._stkBestCombo = 0; this._stkIsBest = false; this._runHands = 0; this._stkLock = false; this._stkNbPlayed = false; this._stkHide();   // _stkLock=全清送出 run/complete 後鎖住累計(之後才落地的彈著不再加,結算顯示=送出值);_stkNbPlayed=破紀錄強調已播
       }
       _stkAdd(n) {   // 跳傷害數字時呼叫:combo≥1 才算;本段一超過本場最佳就即時記成最佳(過關時最後一段還沒斷也不漏)
-        if (!this._stkOn || !((this.combo || 0) >= 1)) return; n = Math.max(0, Math.round(n) || 0); if (!n) return;
+        if (!this._stkOn || this._stkLock || !((this.combo || 0) >= 1)) return; n = Math.max(0, Math.round(n) || 0); if (!n) return;
         this._stkCur += n;
         if (this._stkCur > this._stkBest) { if (!this._stkIsBest) { this._stkIsBest = true; this._stkBestCombo = 0; } this._stkBest = this._stkCur; }
         this._stkSettle();
@@ -8280,7 +8287,7 @@
         if (this._stkOn) { this._stkHide(); if (this.comboTx) { this.tweens.killTweensOf(this.comboTx); this.comboTx.destroy(); this.comboTx = null; } }
       }
       _stkHide() { const s = this.stkTx; if (s) { if (s._ct) s._ct.stop(); this.tweens.killTweensOf(s); if (s.active) s.destroy(); this.stkTx = null; } }
-      _stkSet(s, v) { s.setText(tr('{n} 傷害', { n: Math.round(v).toLocaleString('en-US') })); }   // 千分位;數字不翻譯
+      _stkSet(s, v) { s.setText(Math.round(v).toLocaleString('en-US') + ' DMG'); }   // 千分位;2026-11-20 大毛:單位一律英文 DMG、各語言相同,不走 tr()
       _stkShow(y) {
         const s = this.stkTx = this.add.text(CX, y, '', { fontFamily: '"Russo One",GenSen,"Microsoft JhengHei",sans-serif', fontSize: '32px', color: '#ffe08a', fontStyle: 'bold', stroke: '#4a2a00', strokeThickness: 6 }).setOrigin(0.5).setDepth(DEPTH.fx).setScale(0.4);
         s._v = Math.min(this._stkShown || 0, this._stkCur); this._stkSet(s, s._v); s._intro = true;
@@ -10525,9 +10532,10 @@
       _grantRun() {
         if (this._runGranted) return; this._runGranted = true;   // 🏆全清結算:整趟累積的 EXP 一次入帳(只有全清才呼叫→中途放棄/戰敗自然全沒收);🔐 卡片掉落/寶玉/金幣改由伺服器 run/complete 回應決定(見下),不再前端算
         // 🔐 等級/經驗改伺服器權威:通關 exp/升級/上限+補滿由 run/complete 決定,前端不再本地 addRewards 遞增(擋竄改);升級慶祝改由回應 leveledUp 觸發(見 _sendRunComplete().then)。金幣/掉卡入帳同樣走伺服器,displayed runCoins/runExp 照舊只是本場顯示。
+        const _stk = !!this._stkOn; if (_stk) { this._stkSettle(); this._stkLock = true; }   // 🆕2026-11-20 連擊輸出排行榜 第4期:有榜的關卡(_stkOn)才回報 bestStreakDmg/bestStreakCombo/hands;送出當下定案並鎖住,結算面板顯示同一組數字
         const _isDaily = !!(this.dungeon && this.dungeon.daily);   // 🆕2026-08-17 每日修煉:bonusKilled 欄位對 daily 分支語意不同(金屬怪擊殺清單,見 run/complete.ts daily 分支),要送 _dailyKilled 而非 _bonusKilled;另外多帶 comboCount(T3 任務進度)
         if (_isDaily) _dailyStateDirty = true;   // 🆕全清一層每日關→標記狀態已變,回地圖時 bDungeon 重抓 daily/state 更新初始島徽章(三關全清即消失)
-        const item = { dungeonId: this.dungeon.id, diff: (this.diff && this.diff.key) || 'normal', runId: this.serverRunId || ('r' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8)), name: getMeta().name, bonusKilled: (_isDaily ? this._dailyKilled : this._bonusKilled) || [], comboCount: _isDaily ? (this._dailyComboHits || 0) : undefined, round: this.round || undefined, encKilled: (this._encSrv && this._encKilled) ? this._encKilled.map(a => a.slice()) : undefined };   /* 🆕三輪:round 帶進 pendingRuns(undefined 不寫入 JSON;舊佇列無欄位=第一輪) */   // name=記錄保持者名字→run/complete 破全服最速榜時一起存(排行顯示是誰)   // 🔐 優先用開戰領到的伺服器票券(含'.',run/complete 走時間閘+一次性);拿不到→本地 runId 走離線 fallback(限流);🆕2026-08-02 bonusKilled=本場實際打死的獎勵怪卡id陣列,伺服器取「這個∩票券簽的」發獎勵
+        const item = { dungeonId: this.dungeon.id, diff: (this.diff && this.diff.key) || 'normal', runId: this.serverRunId || ('r' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8)), name: getMeta().name, bonusKilled: (_isDaily ? this._dailyKilled : this._bonusKilled) || [], comboCount: _isDaily ? (this._dailyComboHits || 0) : undefined, round: this.round || undefined, encKilled: (this._encSrv && this._encKilled) ? this._encKilled.map(a => a.slice()) : undefined, bestStreakDmg: _stk ? Math.max(0, Math.round(this._stkBest || 0)) : undefined, bestStreakCombo: _stk ? Math.max(0, this._stkBestCombo | 0) : undefined, hands: _stk ? Math.max(0, this._runHands | 0) : undefined };   /* 🆕2026-11-20 連擊榜三欄位:非 _stkOn=undefined→JSON 略過不送;隨 item 進 pendingRuns,離線補送原樣帶著 */   /* 🆕三輪:round 帶進 pendingRuns(undefined 不寫入 JSON;舊佇列無欄位=第一輪) */   // name=記錄保持者名字→run/complete 破全服最速榜時一起存(排行顯示是誰)   // 🔐 優先用開戰領到的伺服器票券(含'.',run/complete 走時間閘+一次性);拿不到→本地 runId 走離線 fallback(限流);🆕2026-08-02 bonusKilled=本場實際打死的獎勵怪卡id陣列,伺服器取「這個∩票券簽的」發獎勵
         this.runDrops = []; this._runDropsPending = true; this._runDropsMsg = ''; this._runDropsBagFull = false;   // showResult 顯示「連線後發放」暫態,直到下面拿到結果或確認離線
         mutSave(s => {
           const q = (s.pendingRuns = s.pendingRuns || []);
@@ -11101,7 +11109,7 @@
       }
       showResult(win, redraw) {   // 🆕redraw=true:run/complete 回應晚到、面板已開→原地重畫更新戰利品,略過勝利音效/成就/教學畢業等一次性副作用
         if (this.lesson) { this.showLessonComplete(this.overlay(), win); return; }   // 練習課程:專屬完成/再試畫面,短路在 tutDone 之前,不呼叫 tutDone/showTutComplete
-        if (redraw && this._resultG) { this._resultG.destroy(); this._resultG = null; }   // 補畫:先清掉舊面板再重建
+        if (redraw && this._resultG) { if (this._stkNbFx) { this._stkNbFx.forEach(o => { try { this.tweens.killTweensOf(o); } catch (e) { } }); this._stkNbFx = null; } this._resultG.destroy(); this._resultG = null; }   // 補畫:先清掉舊面板再重建
         this.resultOpen = true; this._resultTerminal = true; if (!redraw) { if (win) track('dungeon_win'); win ? SFX.win() : SFX.lose(); if (win && !this.tut) this._startClearBgm(); } const wasTut = !!this.tut; if (!redraw && this.tut) this.tutDone(win); const g = this.overlay(redraw); this._resultG = g; this._resultWin = win; const cy = H / 2, T = UI();   // 🔐[8] 教學打輸 tutDone(false):不畢業,下次重進教學重試(不會 0 卡死鎖);🆕記住面板 _resultG/_resultWin 供 run/complete 晚到時補畫(_refreshResult)
         if (wasTut && win) { this.showTutComplete(g); return; }   // 教學通關 → 專屬綠框完成畫面(導向編隊教學)
         const panel = this.add.container(0, 0); g.add(panel);   // 內容容器:整體滑入淡入
@@ -11113,13 +11121,13 @@
           const drops = this.runDrops || [], m = Math.min(drops.length, 8), pending = !!this._runDropsPending;
           const cols = m <= 5 ? m : Math.ceil(m / 2), rows = m ? Math.ceil(m / cols) : 0, per = m ? Math.min(86, Math.floor((PW - 24) / cols)) : 0, sq = m ? Math.min(per - 6, 74) : 0;   // 🆕2026-11-09 逐隻掉落常 4~6 張:寬度以面板 PW 算(原用 W 會撐出面板),>5 張排兩行
           const hasFC = this._firstClearStones > 0;
-          if (this._stkOn) this._stkSettle(); const _stkL = (this._stkOn && this._stkBest > 0) ? tr('最佳連擊　{c} COMBO · {d} 傷害', { c: this._stkBestCombo, d: this._stkBest.toLocaleString('en-US') }) : '', Hst = 26;   // 2026-11-20 連擊輸出:最速榜涵蓋的地城過關顯示本場最佳一段(戰敗不顯示)
+          if (this._stkOn) this._stkSettle(); const _stkL = (this._stkOn && this._stkBest > 0) ? ((this._stkBestCombo | 0) + ' COMBO · ' + Math.round(this._stkBest).toLocaleString('en-US') + ' DMG') : '', Hsl = 24, Hst = 34;   /* 2026-11-20 第4期:改兩行=「最佳連擊」(tr,FS.sub)+「n COMBO · n DMG」(單位英文不翻,FS.title 與面板標題同級) */   // 2026-11-20 連擊輸出:最速榜涵蓋的地城過關顯示本場最佳一段(戰敗不顯示)
           const _isDailyR = !!(this.dungeon && this.dungeon.daily);
           const _rv = rqRewardView({ granted: !!this._runGranted, isDaily: _isDailyR, res: this._runRes, localExp: this.runExp || 0, localCoins: this.runCoins || 0 });   // 🆕2026-11-16 獎勵列狀態(純函式,見 RQ 區):server=伺服器數字/pending=待結算(淡化+沙漏)/replayed=已入帳打勾/none=被拒不顯示/legacy=舊後端本地數字
           const _rowN = _rv.kind === 'none' ? 0 : (_rv.kind === 'server' && _isDailyR) ? ((_rv.stones > 0 ? 1 : 0) + ((_rv.coins > 0 || _rv.exp > 0) ? 1 : 0)) : 1;   // 每日修煉(新後端):只列魔法石,金幣/經驗非 0 才多一行;全 0 就不畫這列
           const G = 16, PAD = 22, Ht = 34, Hl = 22, Hnew = 26, Hrw = 24, Hfc = 20, Hts = 20, Hb = 50;
           const dropsH = (!pending && m) ? rows * (Hnew + sq) : 0;   // Hnew=✦NEW 掛在卡上緣的頭頂空間(不再與「戰利品×N」擠在一起)
-          const contentH = Ht + G + Hl + (dropsH ? G + dropsH : 0) + (_rowN ? G + _rowN * Hrw : 0) + (hasFC ? 10 + Hfc : 0) + G + (_stkL ? Hst + 6 : 0) + Hts + 6 + Hts + G + Hb;
+          const contentH = Ht + G + Hl + (dropsH ? G + dropsH : 0) + (_rowN ? G + _rowN * Hrw : 0) + (hasFC ? 10 + Hfc : 0) + G + (_stkL ? Hsl + Hst + 8 : 0) + Hts + 6 + Hts + G + Hb;
           const PH = contentH + PAD * 2, top = cy - PH / 2;
           panel.add(roundRectG(this, CX, cy, PW, PH, 16, T.surf, 1, T.divider, 1.5));   // 白色圓角面板(暗背幕之上承載結算內容)
           let y = top + PAD;
@@ -11165,7 +11173,12 @@
           }
           if (hasFC) { y += 10; TX(y + Hfc / 2, tr('🎁 首次通關獎勵 +{n} 💎', { n: this._firstClearStones }), FS.cap, T.goldTx, true); y += Hfc; }   // 🔐[首通石]非首通/序章/重放為 0 不顯示
           y += G;
-          if (_stkL) { TX(y + Hst / 2, _stkL, FS.sub, T.goldTx, true); y += Hst + 6; }
+          if (_stkL) {   // 🆕2026-11-20 第4期:兩行置中;回應帶 comboBoard.newBest→強調動畫只播一次(回應晚到時由 _refreshResult 補畫觸發)
+            const _sl = this.add.text(CX, y + Hsl / 2, tr('最佳連擊'), { fontFamily: EMOJIFONT, fontSize: FS.sub, color: T.ink, fontStyle: 'bold' }).setOrigin(0.5).setResolution(2); fitText(_sl, PW - 24); panel.add(_sl); y += Hsl;
+            const _sv = this.add.text(CX, y + Hst / 2, _stkL, { fontFamily: EMOJIFONT, fontSize: FS.title, color: T.goldTx, fontStyle: 'bold' }).setOrigin(0.5).setResolution(2); fitText(_sv, PW - 24); panel.add(_sv);
+            if (this._runRes && this._runRes.comboBoard && this._runRes.comboBoard.newBest && !this._stkNbPlayed) { this._stkNbPlayed = true; this._stkNewBestFx(panel, [_sl, _sv], y - Hsl / 2 + Hst / 2, PW - 20, redraw ? 60 : 450); }   // 首次登場等面板滑入(380ms)後再演
+            y += Hst + 8;
+          }
           const localSec = Math.round((Date.now() - (this._runStartMs || Date.now())) / 1000);   // 離線 fallback:伺服器沒回 clearSec 時用本地起算(僅顯示)
           TX(y + Hts / 2, tr('⏱ 通關時間　{t}', { t: fmtT(this._clearSec != null ? this._clearSec : localSec) }), FS.cap, T.ink, true); y += Hts + 6;
           TX(y + Hts / 2, tr('🏁 最速通關　{t}', { t: fmtT(this._bestSec) }), FS.cap, T.ink2, false); y += Hts + G;   // 全服(該城×該難度)歷來最快;尚無紀錄/離線→--:--:--
@@ -11185,6 +11198,13 @@
         }
         if (redraw) { panel.y = 0; panel.alpha = 1; }   // 🆕補畫:不重播滑入(暗幕也不重閃),原地把「連線後發放」換成真實戰利品
         else { panel.y = 24; panel.alpha = 0; this.tweens.add({ targets: panel, y: 0, alpha: 1, duration: 380, ease: 'Back.out' }); }   // 首次登場:由下方滑入 + 淡入(Back.out 帶輕微回彈)
+      }
+      _stkNewBestFx(panel, objs, cy, w, delay) {   // 🆕2026-11-20 連擊輸出排行榜 第4期:run/complete 回 comboBoard.newBest(破自己這個榜的紀錄)→「最佳連擊」兩行放大彈跳+金色閃光+火花,不加說明文字;只播一次由呼叫端 _stkNbPlayed 把關;_stkNbFx 記住物件,補畫(_refreshResult)拆面板前先停掉這些補間
+        const T = UI(), fx = this._stkNbFx = objs.slice();
+        const glow = roundRectG(this, 0, 0, w, 74, 16, T.gold, 1); glow.setPosition(CX, cy).setAlpha(0); panel.addAt(glow, Math.max(0, panel.getIndex(objs[0]))); fx.push(glow);   // 金色閃光底(在字後面)
+        this.tweens.add({ targets: glow, alpha: 0.55, duration: 160, delay: delay, hold: 60, yoyo: true, repeat: 2, onComplete: () => { if (glow.active) glow.destroy(); } });
+        objs.forEach(o => { const s0 = o.scaleX || 1; this.tweens.add({ targets: o, scaleX: s0 * 1.35, scaleY: s0 * 1.35, duration: 200, delay: delay, yoyo: true, repeat: 1, ease: 'Back.out' }); });   // 放大彈跳兩下(回到原尺寸)
+        this.time.delayedCall(delay, () => { if (!panel.active || !this.textures.exists('spark')) return; const em = this.add.particles(CX, cy, 'spark', { speed: { min: 80, max: 260 }, angle: { min: 0, max: 360 }, scale: { start: 0.8, end: 0 }, alpha: { start: 1, end: 0 }, lifespan: { min: 300, max: 650 }, tint: [0xffc94a, 0xf4a020], emitting: false }); panel.add(em); fx.push(em); em.explode(28); this.time.delayedCall(800, () => { if (em.active) em.destroy(); }); });   // 金色火花(白底面板不用 ADD 混色,否則看不到)
       }
       _refreshResult() { if (this._resultWin && this.resultOpen && this._resultG && this.scene && this.scene.isActive()) this.showResult(true, true); }   // 🆕run/complete 晚到:通關面板還開著就原地重畫,把「連線後發放」換成真實戰利品/背包滿提示;面板還沒畫或玩家已離開(resultOpen=false/scene 停用)則不動
       showMenu() {
@@ -11766,7 +11786,7 @@
       go(key) { this.scene.manager.start(key); this.scene.manager.stop('home'); }
       // 引導式免費十連的鎖是否生效:引導中 且 英雄卡池(premium)開放中。池未開放(時間窗外)→十連鈕與手指都不會建→暫時解鎖,免得玩家永遠卡在沒有按鈕的引導頁(池一開放這裡自動恢復為鎖)
       _guideOn() { return !!this._freeGuide && !this._poolInactive('premium'); }
-      switchTab(t) { if (this._summon) return; if (this._guideOn() && t !== 'other' && t !== 'gacha') { this.toast(tr('先領取免費新手十連!')); return; } if (t === 'other') this._otherScrollY = 0; if (t === 'friend') this._lbCache = undefined; this.tab = t; this.gachaResult = null; this.rebuild(); }   // 進殿堂→重抓全服榜(剛破的記錄即時反映)   // 進 'other' 捲回頂端;同分頁內 rebuild(如調音量)不重置,避免跳位。🎁 引導式新手十連期間鎖住換頁/齒輪(都經此)→只能按脈動的十連鈕
+      switchTab(t) { if (this._summon) return; if (this._guideOn() && t !== 'other' && t !== 'gacha') { this.toast(tr('先領取免費新手十連!')); return; } if (t === 'other') this._otherScrollY = 0; if (t === 'friend') { this._cbCache = undefined; this._cbDet = {}; } this.tab = t; this.gachaResult = null; this.rebuild(); }   // 進殿堂→重抓全服榜(剛破的記錄即時反映)   // 進 'other' 捲回頂端;同分頁內 rebuild(如調音量)不重置,避免跳位。🎁 引導式新手十連期間鎖住換頁/齒輪(都經此)→只能按脈動的十連鈕
       topBar() {
         const m = getMeta(), T = UI();
         this.rect(CX, 42, W, 84, T.surf); this.rect(CX, 84, W, 1.5, T.divider);   // 白底資源列(84 高,2 排) + 底部細線
@@ -11858,49 +11878,112 @@
         });
         if (tab === 'rec') this.bRankRecords(); else if (tab === 'ach') this.bRankAch(); else this.bRankBoard();
       }
-      bRankBoard() {   // 排行=各城「每個難度」全服最速通關 + 記錄保持者(伺服器 dungeon_best_clears);城標頭下列出各難度;放進可捲動容器(城×難度列數多)
-        const T = UI(), cTop = 84;
-        const fmt = (s) => { if (s == null) return '--:--'; const x = Math.max(0, Math.floor(s)); return String(Math.floor(x / 60)).padStart(2, '0') + ':' + String(x % 60).padStart(2, '0'); };
+      bRankBoard() {   // 🆕2026-11-20 連擊輸出排行榜 第4期(spec-combo-leaderboard.md §2/§5.5/§8):取代舊最速榜(舊表照寫、畫面不再顯示)。每城一個標頭(五屬城已解鎖≥2輪時右側畫輪切換,判斷同選關 showDiffPicker 的 _rUn/_rTabs;塔固定 round 0)+每難度一列(第一名名字/COMBO/DMG;沒紀錄=尚無記錄);點有紀錄的列→_cbOpen 開該榜前 20 名+自己名次。資料=GET /api/leaderboard/combo(comboBoardFetch);失敗(404/離線/未登入)→空陣列=全部尚無記錄,不重試(進殿堂分頁 switchTab 才重抓)
+        const T = UI(), cTop = 84, m = getMeta();
         this._achScroll = null;   // 先清:載入中的 early-return 路徑不要讓捲動閘門誤抓到上一輪的殘留容器
-        if (this._lbCache === undefined) {   // 尚未抓過→標記 pending、非同步抓,回來後 rebuild 重繪
-          this._lbCache = null;
-          leaderboardFetch().then(recs => { this._lbCache = recs || []; if (this.tab === 'friend' && (this.rankTab || 'board') === 'board' && this.scene.isActive()) this.rebuild(); });
+        if (this._cbCache === undefined) {   // 尚未抓過→標記 pending、非同步抓,回來後 rebuild 重繪
+          this._cbCache = null;
+          comboBoardFetch().then(d => { this._cbCache = (d && Array.isArray(d.tops)) ? d.tops : []; if (this.tab === 'friend' && (this.rankTab || 'board') === 'board' && this.scene.isActive()) this.rebuild(); });
         }
-        if (this._lbCache === null) { this.txt(CX, cTop + 130, tr('載入全服榜…'), FS.sub, T.ink3, 0.5); return; }   // 載入中
-        // 依 城→難度 收整(同城同難度取最快;dungeon_best_clears 本就每城每難一列,取 min 保險)
-        const byDun = {};
-        this._lbCache.forEach(r => { (byDun[r.dungeonId] = byDun[r.dungeonId] || {}); const c = byDun[r.dungeonId][r.diff]; if (!c || r.clearSec < c.sec) byDun[r.dungeonId][r.diff] = { sec: r.clearSec, name: r.holderName }; });
-        const DIFF_ORDER = ['baby', 'beginner', 'normal', 'advanced', 'super', 'hell'];   // 入門→地獄
-        const viewTop = cTop + 60, viewBot = H - 60, PAD = 16, ROWH = 44, GAP = 10, HEADGAP = 26, GRP = 48;   // GRP=城與城間留白(要明顯>HEADGAP,標頭才貼近它下方的組、遠離上一組)
+        if (this._cbCache === null) { this.txt(CX, cTop + 130, tr('載入全服榜…'), FS.sub, T.ink3, 0.5); return; }   // 載入中
+        const tops = {}; this._cbCache.forEach(t => { if (!t || !t.dungeonId) return; const k = t.dungeonId + '|' + t.diff + '|' + (t.round | 0), c = tops[k]; if (!c || (Number(t.bestDmg) || 0) > (Number(c.bestDmg) || 0)) tops[k] = t; });   // 城|難度|輪 → 第一名(同鍵多筆取傷害高的,保險)
+        const fmtN = n => Math.max(0, Math.round(Number(n) || 0)).toLocaleString('en-US');   // 千分位;數字與 COMBO/DMG 單位不翻譯
+        const viewTop = cTop + 60, viewBot = H - 60, PAD = 16, ROWH = 66, GAP = 8, HEADH = 40, HEADGAP = 12, GRP = 40, PILLH = 38;
+        const hits = [];   // 可點區(捲動容器內座標):輪切換鈕/有紀錄的列
+        const zone = this.rect(CX, (viewTop + viewBot) / 2, W, viewBot - viewTop, 0x000000, 0.001).setInteractive();   // 點擊區放在捲動容器「下面」、容器內不放可互動物件:Phaser 點擊不看遮罩,容器內的列捲到上方分頁鈕底下仍會搶走點擊→改由這一塊依「點的位置-捲動量」反查;tapBind 移動<16px 才算點(拖曳捲動不誤觸)
         const sc = this._achScroll = this.add.container(0, this._achScrollY || 0); this.L(sc);
-        const mkT = (x, y, s, size, col, ox, bold) => { const t = this.add.text(x, y, s, { fontFamily: EMOJIFONT, fontSize: Math.max(15, parseInt(size || '16', 10) || 16) + 'px', color: col || T.ink, fontStyle: bold ? 'bold' : 'normal' }).setOrigin(ox == null ? 0.5 : ox, 0.5); sc.add(t); return t; };
-        let y = viewTop + 26;   // 第一個城標頭
-        RANK_DUNGEONS.forEach((id, di) => {
+        tapBind(this, zone, p => { const q = ptW(this, p); if (q.y < viewTop || q.y > viewBot) return; const ly = q.y - sc.y, h = hits.find(o => q.x >= o.x0 && q.x <= o.x1 && ly >= o.y0 && ly <= o.y1); if (h) h.fn(); });
+        const mkT = (x, y, s, size, col, ox, bold) => { const t = this.add.text(x, y, s, { fontFamily: EMOJIFONT, fontSize: size, color: col || T.ink, fontStyle: bold ? 'bold' : 'normal' }).setOrigin(ox == null ? 0.5 : ox, 0.5).setResolution(2); sc.add(t); return t; };
+        const RSUB = ['簡單', '普通', '困難'];   // 同選關輪分頁的字(2026-11-17 大毛:不寫「第N輪」)
+        this._cbRound = this._cbRound || {};   // 每城目前看的輪(只在本頁記,不改選關的 lastRound)
+        let y = viewTop + 12 + HEADH / 2;   // 第一個城標頭中心
+        COMBO_DUNGEONS.forEach((id, di) => {   // 2026-11-20 塔先不開放:只列五屬城
           const dg = DUNGEONS[id]; if (!dg) return;
-          const recs = byDun[id] || {};
-          const diffs = DIFF_ORDER.filter(dk => recs[dk] && DIFFS_BY[dk]);
-          if (di > 0) y += GRP;   // 城與城之間留白(第一城不加)
-          mkT(PAD + 6, y, dg.emoji + '  ' + tr(dg.name), FS.body, T.ink, 0, true);   // 城標頭
-          y += HEADGAP + ROWH / 2;   // 標頭下方留白 + 到第一列中心
-          if (diffs.length === 0) {   // 該城全難度都尚無記錄
-            sc.add(roundRectG(this, CX, y, W - PAD * 2, ROWH, 10, T.surf2, 1, T.divider, 1.5));
-            mkT(CX, y, tr('尚無記錄'), FS.sub, T.ink3, 0.5);
-            y += ROWH / 2;
-          } else diffs.forEach((dk, ri) => {
-            const dq = DIFFS_BY[dk], b = recs[dk];
-            if (ri > 0) y += ROWH + GAP;   // 進到下一列中心
-            sc.add(roundRectG(this, CX, y, W - PAD * 2, ROWH, 10, T.surf, 1, T.gold, 1.5));
-            mkT(PAD + 16, y, (dq.emoji || '') + ' ' + tr(dq.name), FS.sub, T.ink, 0, true);   // 難度圖示+名
-            { const _ready = this.textures.exists('ui_flag'), _txt = fmt(b.sec);   // 🆕2026-09-25 🏁 前綴→icon_flag(最速時間;UI_ICONS 已 eager 預載,恆已就緒)
-              if (_ready) { const _tmp = this.add.text(0, 0, _txt, { fontFamily: EMOJIFONT, fontSize: FS.sub, fontStyle: 'bold' }); const _tw = Math.ceil(_tmp.width); _tmp.destroy(); const _ics = 14, _gap = 4, _right = W - PAD - 12, _left = _right - _tw - _gap - _ics; sc.add(this.add.image(_left + _ics / 2, y - 8, 'ui_flag').setDisplaySize(_ics, _ics)); sc.add(this.add.text(_left + _ics + _gap, y - 8, _txt, { fontFamily: EMOJIFONT, fontSize: FS.sub, color: T.goldTx, fontStyle: 'bold' }).setOrigin(0, 0.5)); }
-              else mkT(W - PAD - 12, y - 8, '🏁 ' + _txt, FS.sub, T.goldTx, 1, true); }   // 最速時間
-            if (!emoRow(this, o => sc.add(o), W - PAD - 12, y + 10, '👑 ' + (b.name || tr('無名英雄')), { fs: '15px', col: T.ink2, bold: false, ox: 1 })) mkT(W - PAD - 12, y + 10, '👑 ' + (b.name || tr('無名英雄')), FS.micro, T.ink2, 1);   // 🆕2026-10-28b 👑→ui_crown   // 記錄保持者
-            if (ri === diffs.length - 1) y += ROWH / 2;   // 最後一列:補到列底
+          const useR = ROUNDS && ROUND_CITIES.includes(id), rUn = useR ? [1, 2, 3].filter(r => roundUnlockedLocal(m, id, r)) : [], rTabs = rUn.length >= 2;   // 與 showDiffPicker 完全相同:只列已解鎖的輪;只有第一輪→不畫切換列
+          let cur = ROUND_CITIES.includes(id) ? 1 : 0;   // 塔(及非五屬城)沒有輪=0;五屬城預設第一輪
+          if (useR) { cur = this._cbRound[id] || lastRoundOf(id); if (!rUn.includes(cur)) cur = 1; }   // 同選關:預設上次選的輪,未解鎖就退回第一輪
+          if (di > 0) y += GRP;   // 城與城之間留白
+          let pillsW = 0;
+          if (rTabs) {   // 輪切換:標頭右側 2~3 顆藥丸鈕,選中=金底深字
+            const labs = rUn.map(r => this.add.text(0, 0, tr(RSUB[r - 1]), { fontFamily: EMOJIFONT, fontSize: '18px', fontStyle: 'bold', color: T.ink2 }).setOrigin(0.5).setResolution(2));
+            const pw = labs.map(t => Math.max(64, Math.ceil(t.width) + 26)); pillsW = pw.reduce((s, v) => s + v, 0) + 6 * (pw.length - 1);
+            let x = W - PAD - pillsW;
+            rUn.forEach((r, k) => {
+              const on = r === cur, cx = x + pw[k] / 2, x0 = x;
+              sc.add(roundRectG(this, cx, y, pw[k], PILLH, 12, on ? T.gold : T.surf, 1, on ? T.gold : T.divider, on ? 2 : 1.5));
+              labs[k].setPosition(cx, y).setColor(on ? '#2b333a' : T.ink2); sc.add(labs[k]);
+              hits.push({ x0: x0, x1: x0 + pw[k], y0: y - PILLH / 2 - 4, y1: y + PILLH / 2 + 4, fn: () => { if (r === cur) return; this._cbRound[id] = r; this.rebuild(); } });
+              x += pw[k] + 6;
+            });
+          }
+          const nmW = W - PAD * 2 - 6 - (pillsW ? pillsW + 12 : 0);
+          if (!emoRow(this, o => sc.add(o), PAD + 6, y, dg.emoji + '  ' + tr(dg.name), { fs: '22px', col: T.ink, bold: true, ox: 0, maxW: nmW, res: 2 })) fitText(mkT(PAD + 6, y, tr(dg.name), '22px', T.ink, 0, true), nmW);   // 城標頭:emoji 有對應 icon 就換 icon,否則只寫城名(不放 emoji)
+          y += HEADH / 2 + HEADGAP + ROWH / 2;   // 到第一列中心
+          const list = (id === 'tower') ? DIFFS.filter(df => df.key !== 'baby') : DIFFS;   // 同選關:塔不開嬰兒級
+          list.forEach((df, ri) => {
+            if (ri > 0) y += ROWH + GAP;
+            const b = tops[id + '|' + df.key + '|' + cur], ry = y;
+            sc.add(roundRectG(this, CX, ry, W - PAD * 2, ROWH, 12, b ? T.surf : T.surf2, 1, b ? T.gold : T.divider, 1.5));
+            const dl = mkT(PAD + 16, ry, tr(df.name), '20px', T.ink, 0, true); fitText(dl, 120);   // 左:難度名
+            const rx = W - PAD - (b ? 32 : 16), avail = Math.max(60, rx - (PAD + 16 + dl.displayWidth + 14));
+            if (!b) { fitText(mkT(rx, ry, tr('尚無記錄'), '18px', T.ink3, 1), avail); return; }
+            fitText(mkT(rx, ry - 13, b.holderName || tr('無名英雄'), '18px', T.ink, 1), avail);   // 右上:第一名名字
+            fitText(mkT(rx, ry + 13, fmtN(b.bestCombo) + ' COMBO · ' + fmtN(b.bestDmg) + ' DMG', '20px', T.goldTx, 1, true), avail);   // 右下:COMBO · DMG
+            mkT(W - PAD - 15, ry, '›', '30px', T.ink3, 0.5, true);   // 可點提示
+            hits.push({ x0: PAD, x1: W - PAD, y0: ry - ROWH / 2, y1: ry + ROWH / 2, fn: () => this._cbOpen(id, df.key, cur, rTabs) });
           });
+          y += ROWH / 2;   // 補到最後一列底
         });
-        this._achContentH = (y - viewTop) + 12;   // 內容總高(給捲動下限算)
+        this._achContentH = (y - viewTop) + 16;   // 內容總高(給捲動下限算)
         const mask = this.make.graphics({ x: 0, y: 0, add: false }); mask.fillStyle(0xffffff).fillRect(0, viewTop, W, viewBot - viewTop);
         sc.setMask(mask.createGeometryMask()); this._achMask = mask;
+      }
+      _cbOpen(id, dk, r, showR) {   // 🆕2026-11-20 連擊輸出排行榜:單一榜(城×難度×輪)視窗=DOM 白卡,前 20 名(名次/名字/COMBO/DMG,自己那列金框),自己不在前 20 另列一行;關閉照 domCardDismiss(先藏、250ms 後 destroy),不在 pointerup 當場 destroy(觸控卡死教訓)
+        if (this._cbPop && this._cbPop.scene) return;   // 已開著(場景重開後舊 DOM 已銷毀→scene=undefined,可再開)
+        const T = UI(), dg = DUNGEONS[id], dq = DIFFS_BY[dk]; if (!dg || !dq) return;
+        const hx = n => '#' + ((n >>> 0) & 0xffffff).toString(16).padStart(6, '0'), FF = 'font-family:' + EMOJIFONT + ';';
+        const fmtN = n => Math.max(0, Math.round(Number(n) || 0)).toLocaleString('en-US');
+        const el = (css, txt) => { const d = document.createElement('div'); d.style.cssText = css; if (txt != null) d.textContent = txt; return d; };   // textContent:玩家名字不經 HTML 解析
+        const root = el('position:relative;box-sizing:border-box;width:' + W + 'px;height:' + H + 'px;background:rgba(0,0,0,.55);user-select:none;-webkit-user-select:none;touch-action:manipulation;pointer-events:auto;opacity:0;transition:opacity .2s;');
+        const wrap = el('position:absolute;left:0;top:0;right:0;bottom:0;box-sizing:border-box;display:flex;align-items:center;justify-content:center;padding:0 12px;'); root.appendChild(wrap);
+        const box = el('box-sizing:border-box;width:100%;max-width:' + (W - 24) + 'px;max-height:' + (H - 90) + 'px;display:flex;flex-direction:column;padding:20px 14px 14px;background:' + hx(T.surf) + ';border:1.5px solid ' + hx(T.divider) + ';border-radius:20px;box-shadow:0 12px 40px rgba(43,51,58,.38);transform:scale(.92);transition:transform .22s cubic-bezier(.2,1.4,.4,1);'); wrap.appendChild(box);
+        box.appendChild(el(FF + 'flex:0 0 auto;font-size:26px;font-weight:900;line-height:1.25;text-align:center;color:' + T.ink + ';overflow-wrap:anywhere;', tr(dg.name) + ' · ' + tr(dq.name)));   // 標題:城 · 難度
+        if (showR && r >= 1) box.appendChild(el(FF + 'flex:0 0 auto;font-size:20px;font-weight:700;line-height:1.3;margin-top:4px;text-align:center;color:' + T.ink2 + ';', tr(RSUB_CB[r - 1])));   // 有輪切換時才標輪(字同切換鈕)
+        const list = el('position:relative;flex:1 1 auto;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;touch-action:pan-y;overscroll-behavior:contain;margin-top:14px;'); box.appendChild(list);
+        const foot = el('flex:0 0 auto;'); box.appendChild(foot);
+        const btn = el(FF + 'flex:0 0 auto;margin-top:12px;height:56px;line-height:56px;border-radius:14px;text-align:center;font-size:22px;font-weight:900;cursor:pointer;background:' + hx(T.gold) + ';color:#2b333a;', tr('關閉')); box.appendChild(btn);
+        const msg = s => { list.textContent = ''; list.appendChild(el(FF + 'font-size:20px;font-weight:700;text-align:center;padding:36px 0;color:' + T.ink3 + ';', s)); };
+        const row = (rank, name, combo, dmg, me) => {   // 一列:名次 | 名字 | COMBO/DMG(右對齊兩行)
+          const rw = el('display:flex;align-items:center;gap:8px;box-sizing:border-box;padding:8px 10px;margin-bottom:6px;border-radius:12px;background:' + (me ? 'rgba(244,183,60,.22)' : hx(T.surf2)) + ';border:2px solid ' + (me ? hx(T.gold) : 'transparent') + ';');
+          rw.appendChild(el(FF + 'flex:0 0 46px;text-align:center;font-size:24px;font-weight:900;color:' + (rank <= 3 ? T.goldTx : T.ink) + ';', String(rank)));
+          rw.appendChild(el(FF + 'flex:1 1 auto;min-width:0;font-size:20px;font-weight:' + (me ? 900 : 700) + ';color:' + T.ink + ';white-space:nowrap;overflow:hidden;text-overflow:ellipsis;', name || tr('無名英雄')));
+          const rt = el('flex:0 0 auto;text-align:right;line-height:1.2;'); rw.appendChild(rt);
+          rt.appendChild(el(FF + 'font-size:17px;font-weight:700;color:' + T.ink2 + ';', fmtN(combo) + ' COMBO'));
+          rt.appendChild(el(FF + 'font-size:21px;font-weight:900;color:' + T.goldTx + ';', fmtN(dmg) + ' DMG'));
+          return rw;
+        };
+        msg(tr('載入中…'));
+        const dom = this.add.dom(CX, Math.round(H / 2), root).setDepth(5000); this._cbPop = dom;
+        requestAnimationFrame(() => { root.style.opacity = '1'; box.style.transform = 'scale(1)'; });
+        const born = Date.now(); let done = false;
+        const close = () => { if (done || Date.now() - born < 300) return; done = true; domCardDismiss(dom); if (this._cbPop === dom) this._cbPop = null; };   // 剛開 0.3 秒內忽略(擋開窗那一點穿透)
+        domCardShield(root);
+        root.addEventListener('pointerup', ev => { if (ev.target === root || ev.target === wrap) close(); });   // 點白卡外的暗處=關;卡內(含捲動清單)不關
+        btn.addEventListener('pointerup', close);
+        const fill = d => {
+          if (done) return;
+          const top = (d && Array.isArray(d.top)) ? d.top.slice(0, 20) : [], me = d && d.me;
+          if (!top.length) { msg(tr('尚無記錄')); return; }
+          list.textContent = ''; let meEl = null;
+          top.forEach((t, i) => { const e = row(t.rank || (i + 1), t.holderName, t.bestCombo, t.bestDmg, !!t.me); if (t.me) meEl = e; list.appendChild(e); });
+          if (!meEl && me && me.rank) {   // 自己不在前 20:底下另列一行(沒成績 me=null 就不列)
+            foot.appendChild(el(FF + 'font-size:18px;font-weight:700;text-align:center;margin:10px 0 6px;color:' + T.ink2 + ';', tr('我的名次')));
+            const e = row(me.rank, getMeta().name, me.bestCombo, me.bestDmg, true); e.style.marginBottom = '0'; foot.appendChild(e);
+          }
+          if (meEl) requestAnimationFrame(() => { try { list.scrollTop = Math.max(0, meEl.offsetTop - list.clientHeight / 2 + meEl.offsetHeight / 2); } catch (e) { } });   // 自己在前 20 但在下面→捲到看得到
+        };
+        this._cbDet = this._cbDet || {}; const key = id + '|' + dk + '|' + r;
+        (this._cbDet[key] = this._cbDet[key] || comboBoardFetch({ dungeonId: id, diff: dk, round: r })).then(fill);   // 快取 promise(含失敗=null):同一榜不重抓、失敗也不一直重試;進殿堂分頁(switchTab)才清
       }
       bRankRecords() {
         const T = UI(), cTop = 84;

@@ -1131,9 +1131,9 @@ const I18N_DICT = {
     '暴怒!': 'Fury!',
     '同伴倒下牠就暴怒,': 'When an ally falls, it rages —',
     '下一擊超痛,快打倒!': 'its next hit hurts. Take it down!',
-    // 2026-11-20 連擊輸出排行榜:戰鬥中這段 combo 的累計傷害 / 過關結算本場最佳一段
-    '{n} 傷害': '{n} DMG',
-    '最佳連擊　{c} COMBO · {d} 傷害': 'Best Streak  {c} COMBO · {d} DMG',
+    // 2026-11-20 連擊輸出排行榜:過關結算「最佳連擊」標題(數字與 COMBO/DMG 單位不翻譯)/ 排行單一榜視窗「我的名次」
+    '最佳連擊': 'Best Streak',
+    '我的名次': 'My Rank',
     '補血!': 'Heal!',
     '急救!': 'Rescue!',
     '憤怒! +{p}%': 'Enraged! +{p}%',
