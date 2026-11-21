@@ -463,7 +463,7 @@ var EnemyCore = (function () {
       d.food.forEach((sl, k) => {
         if (sl.kind === 'cell' && !sl.pos) return;   // 待標:沒有格子可「變空」,不顯示生氣、不反擊
         const em = sl.kind === 'store' ? !!sl.used : !state.board[sl.pos[0]][sl.pos[1]];
-        if (em && !sl.empty) { sl.empty = true; sl.ever = true; d.emptied++; trig = true; if (stun) sl.quiet = true; evs.push(stun ? { t: 'duck_empty', e: i, slot: k, store: sl.kind === 'store', quiet: true } : { t: 'duck_empty', e: i, slot: k, store: sl.kind === 'store' }); }
+        if (em && !sl.empty) { const ev0 = !!sl.ever; sl.empty = true; sl.ever = true; d.emptied++; trig = true; if (stun) { sl.quiet = true; sl.everPre = ev0; } evs.push(stun ? { t: 'duck_empty', e: i, slot: k, store: sl.kind === 'store', quiet: true } : { t: 'duck_empty', e: i, slot: k, store: sl.kind === 'store' }); }
         else if (!em && sl.empty) { sl.empty = false; const q = !!sl.quiet; sl.quiet = false; evs.push(q ? { t: 'duck_refed', e: i, slot: k, quiet: true } : { t: 'duck_refed', e: i, slot: k }); }
       });
       if (trig && !stun && d.rule >= 3 && !d.counterHand && !state.ec.dead) {
@@ -987,7 +987,12 @@ var EnemyCore = (function () {
   //   期間全體敵人什麼都不做:enemyAct 不跑(倒數不往下數=時間停住,之後照原數字繼續;不加倒數)、afterBlock 不反咬/不補標/不補放核心/不電擊/餘火暫停、applyClear 不反震、_settle 不急救、punishLethal 不預警;
   //   盾照常:石頭盾/寶玉核心盾/石頭王守護照常擋傷,破盾照常(麻痺不破盾、不讓盾失效);玩家側(打中計數/拆除/詠唱中止/黑熊鮭魚冷卻)照常。endEnemyPhase 收尾時自動解除(事件 stun_off)。
   function stunHand(state) { const ec = state && state.ec; if (!ec || ec.stun) return []; ec.stun = true; return [{ t: 'stun_on' }]; }
-  function stunEnd(state) { const ec = state && state.ec; if (!ec || !ec.stun) return []; ec.stun = false; return [{ t: 'stun_off' }]; }
+  function stunEnd(state) { const ec = state && state.ec; if (!ec || !ec.stun) return []; ec.stun = false; const evs = [{ t: 'stun_off' }]; _duckStunRemark(state, evs); return evs; }
+  function _duckStunRemark(state, evs) {   // 2026-11-21 大毛:時間靜止期間被清掉的賊鴨標記「不算」——解除時撤掉那份(duck_unmark),照牠平常的規則重標(2★↑挑嘴;4★ 的屬塊份改標盤面格);沒格子可標=待標。不餓、不反擊、不生氣(emptied/ever 還原)
+    (state.enemies || []).forEach((e, i) => { const d = e._d; if (!d || e.dead || e.hp <= 0) return; let any = false;
+      d.food.forEach((sl, k) => { if (!sl.quiet || !sl.empty) return; sl.quiet = false; sl.empty = false; d.emptied = Math.max(0, d.emptied - 1); sl.ever = !!sl.everPre; sl.everPre = false; if (sl.kind === 'store') { sl.kind = 'cell'; sl.used = false; } sl.pos = null; any = true; evs.push({ t: 'duck_unmark', e: i, slot: k }); });
+      if (any && state.board) _duckFill(state, e, i, evs); });
+  }
   function isStunned(state) { return !!(state && state.ec && state.ec.stun); }
 
   // 呼叫端輔助:最急且可中止的哥布林(給 sim 的 INTR policy 與遊戲提示用)。need=還要打幾下才中止;回傳 enemy 或 null。

@@ -1132,7 +1132,10 @@ const I18N_DICT = {
     '同伴倒下牠就暴怒,': 'When an ally falls, it rages —',
     '下一擊超痛,快打倒!': 'its next hit hurts. Take it down!',
     // 2026-11-20 稀有怪字卡:rare_shrink(金怪縮小)/ jewel_core(寶玉怪核心)
-    '越跑越小!': 'Shrinking Away!',
+    '會逃跑!': 'It Runs Away!',   // 2026-11-20 晚 rare_flee(銀怪)
+    '牠準備開溜了,': 'It is about to slip away,',   // 2026-11-21 大毛改 rare_flee 文案
+    '快打倒牠!': 'take it down fast!',
+    '越來越小!': 'Getting Smaller!',
     '一路掉金幣還會縮小,': 'It drops coins and shrinks,',
     '越早打倒拿越多!': 'so beat it early for more!',
     '先敲碎核心!': 'Break the Core!',

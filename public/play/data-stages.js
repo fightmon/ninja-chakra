@@ -1209,7 +1209,7 @@ const ENC_TEMPLATE = (function(){
     hell: [
       { cap:4, sg:true, sea:{p:0.10,n:5,star:2,el:'off',mix:[1,3],pool:'elw'}, slots:[sig([2,3],[0,2]), guest('guest','self',[2,2],[1,1]), cube('cube','all',[2,3],[0,4])] },
       { cap:4, sg:true, slots:[sig([2,3],[1,2]), guest('guest','self',[2,2],[1,2]), cube('cube','all',[2,3],[0,2])] },
-      { cap:4, sg:true, slots:[boss(4,[1,1]), guest('guest','self',[2,2],[1,1]), guest('guestOff','off',[2,2],[1,1]), sig([2,2],[0,2])] },
+      { cap:3, sg:true, slots:[boss(4,[1,1]), guest('guest','self',[2,2],[1,1]), guest('guestOff','off',[2,2],[1,1])] },   // 2026-11-21 大毛:魔王關不要 4 隻→地獄魔王關固定 3 隻=4★魔王+串場+異屬串場(都 2★,兩種別城怪不重複);拿掉招牌小怪槽
     ],
   };
 })();
