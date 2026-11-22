@@ -81,14 +81,14 @@
 
 <body>
   <div id="game"></div>
-  <!-- 2026-11-19 快取版本號(大毛拍板):自家 js 一律帶 ?v=;js 線上 max-age=4 小時且 Cloudflare 邊緣快取,換查詢字串才會拿新檔。【上線時:只要任何程式檔有變,把本檔所有「v=20261122e」與下一行 NB_ASSET_V 一起換新】格式 YYYYMMDD+英文小寫序號(同日第二次上線 b、c…);phaser.min.js 等第三方檔不加 -->
-  <script>window.NB_ASSET_V = '20261122e';</script>
-  <script src="i18n.js?v=20261122e"></script><!-- 多語(tr()/getLang/setLang):中文原文=key,查無回原文;要在所有遊戲腳本之前載 -->
-<script src="battle-core.js?v=20261122e"></script>
-<script src="battle-vfx.js?v=20261122e"></script>
-  <script src="round-core.js?v=20261122e"></script><!-- 🆕2026-11-06 三輪(階段(a)前端):塊池/怪倍率共用核心;只定義全域 RoundCore、無副作用;接線全在 ROUNDS 開關(?rounds=1 / localStorage nb_rounds=1)後,預設關 -->
-  <script src="enemy-core.js?v=20261122e"></script><!-- 🆕2026-11-06 P2:敵人機制核心(遊戲與 sim 共用);只定義全域 EnemyCore、無副作用;接線全在 NEWMECH 開關(?newmech=1 / localStorage nb_newmech=1)後,預設關 -->
-  <script src="data-stages.js?v=20261122e"></script>
+  <!-- 2026-11-19 快取版本號(大毛拍板):自家 js 一律帶 ?v=;js 線上 max-age=4 小時且 Cloudflare 邊緣快取,換查詢字串才會拿新檔。【上線時:只要任何程式檔有變,把本檔所有「v=20261122f」與下一行 NB_ASSET_V 一起換新】格式 YYYYMMDD+英文小寫序號(同日第二次上線 b、c…);phaser.min.js 等第三方檔不加 -->
+  <script>window.NB_ASSET_V = '20261122f';</script>
+  <script src="i18n.js?v=20261122f"></script><!-- 多語(tr()/getLang/setLang):中文原文=key,查無回原文;要在所有遊戲腳本之前載 -->
+<script src="battle-core.js?v=20261122f"></script>
+<script src="battle-vfx.js?v=20261122f"></script>
+  <script src="round-core.js?v=20261122f"></script><!-- 🆕2026-11-06 三輪(階段(a)前端):塊池/怪倍率共用核心;只定義全域 RoundCore、無副作用;接線全在 ROUNDS 開關(?rounds=1 / localStorage nb_rounds=1)後,預設關 -->
+  <script src="enemy-core.js?v=20261122f"></script><!-- 🆕2026-11-06 P2:敵人機制核心(遊戲與 sim 共用);只定義全域 EnemyCore、無副作用;接線全在 NEWMECH 開關(?newmech=1 / localStorage nb_newmech=1)後,預設關 -->
+  <script src="data-stages.js?v=20261122f"></script>
   <script>
     /* ===== 純邏輯(N/EL/SHAPES/CONFIG/computeClears/種子亂數 等戰鬥核心已抽到 battle-core.js,瀏覽器當共用全域)===== */
     const KEYS = ['fire', 'wind', 'thunder', 'earth', 'water'];
@@ -1087,7 +1087,7 @@
     // 單一網址開關 ?feel2=1(預設關);各步用子旗標 FX2.sN。步 1(演出時間表):戰鬥演出寫死的毫秒集中到 FX_T,resolve 改讀 planFx 算出的本手時間表;
     //   數值、算式與亂數呼叫順序都與舊寫法相同(開關關閉時畫面與結算不變)。FX2.s1 只管兩處時序修正:敵方回合等最後一發命中+300、機制字卡等本手演出結束(_fxEndAt)。
     const FEEL2 = (() => { try { const m = /[?&]feel2=([^&#]*)/.exec(location.search); return !(m && m[1] === '0'); } catch (e) { return true; } })();   // 2026-11-22 大毛:手感改版 ①~⑤ 預設開;網址 ?feel2=0 全關(=舊演出)。⑥⑦⑧ 的子旗標另外預設關
-    const FX2 = { s1: FEEL2, s2: FEEL2, s3: FEEL2, s4: FEEL2, s5: FEEL2 };   // s2=步 2 子彈出手+五屬子彈手感+A 落地;s3=步 3 中級手繪(要 s2 開才有子彈卡可疊);s4=步 4 敵人狀態管理(覆蓋圖染色+偏移層獨佔+共用鉤子 _fxStateCut);s5=步 5 全體大招(含雙宮)
+    const FX2 = { s1: FEEL2, s2: FEEL2, s3: FEEL2, s4: FEEL2, s5: FEEL2, s6: FEEL2 && (() => { try { return /[?&]feel6=1(&|#|$)/.test(location.search); } catch (e) { return false; } })() };   // s2=步 2 子彈出手+五屬子彈手感+A 落地;s3=步 3 中級手繪(要 s2 開才有子彈卡可疊);s4=步 4 敵人狀態管理(覆蓋圖染色+偏移層獨佔+共用鉤子 _fxStateCut);s5=步 5 全體大招(含雙宮);s6=步 6 屬性死亡(預設關,網址要明確寫 ?feel6=1 才開)
     const FX_T = { LEAD: 220, LEAD_TUT: 460, STEP: 100, JIT: 120, CHG: 150, FLY: 240, LAND: 390, KILL: 260, BFX_GAP: 250, DISSOLVE: 80, SALMON: 220, FISH: 240, HEAL: 330, TUT_CRIT: 780, END_PAD: 300, WAVE: 700 };   // LEAD=首宮出手(教學/課程 LEAD_TUT);STEP+JIT=宮間隔+隨機;CHG/FLY=zoneStrike 集氣/飛行(LAND=兩者和=彈著);KILL=彈著後收尾(killEnemy);其餘見 resolve/endHand/stageClear 各用處
     /*PLANFX-BEGIN*/
     function planFx(n, opt, rnd) {   // 本手演出時間表(相對 resolve 當下,ms)。n=有清到的宮數;opt.slow=教學/課程;rnd=亂數(遊戲傳 Math.random;每宮呼叫一次,順序同舊寫法)。步 2 起換算法,欄位不變
@@ -1131,6 +1131,7 @@
     /*PLANFX2-END*/
     const F2_HD16 = { fire: 'fx_fire_burst16', thunder: 'fx_thunder_strike16', water: 'fx_water_cannon16', earth: 'fx_earth_smash16', wind: 'fx_wind_slash16' };   // 步 3 中級手繪:16 格 4×4、整張 768×768、格 192(水取 _v2 來源)
     const F2_STRIKE_COL = [20, 28, 45, 60, 60, 50, 40, 30, 24, 20, 16, 12, 0, 0, 0, 0];   // 雷柱:程式補的直光柱逐幀寬度(原圖 256 格的單位;第 13~16 幀沒有柱)
+    const F6_CAP = 18, F6_CAP_ALL = 90;   // 步 6:每隻怪的額外物件上限/全場上限(雷碎 1 餘電+1 煙+15 碎片=17 是最多的一種;5 隻全中 ≈90)
     const FX_T5 = { CHARGE: 320, SLOW: 1.7, SW_X0: -60, SW_V: 2, TH: 100, HIT_TAIL: 330, ULT_MS: 533, ULT_GAP: 30, GUST: [100, 170], STEP: [50, 60], RISE: [100, 130], HOLD: [300, 460], CAP2: 2000, CAP3: 2300, LOOP_FPS: 12 };   // 步 5 全體大招(規格 2.4、3.2~3.4、5.1~5.3;數值=樣品第 39 版)
     /*PLANFX5-BEGIN*/
     function planUlt(el, xs, slow) {   // 一張(一組)大招:每隻受害者被打到的時刻(ms,從開演起算)。xs=受害者 x(索引=結算給的 victims 順序);火水土=掃描前緣到達、雷=全部同時、風=由左到右升龍捲
@@ -8627,7 +8628,7 @@
         this.game.events.on('prerender', pre); this.game.events.on('postrender', post); this.events.on('update', upd);
         this.events.once('shutdown', () => { this.game.events.off('prerender', pre); this.game.events.off('postrender', post); this.events.off('update', upd); this._f2On = false; this._f2Pool = null; this._f2Live = null; this._f2Trails = []; this._f2Bolts = []; this._f2Streams = []; this._f2Hide = {}; this._f2H = null; this._f2Pend = {}; });
       }
-      _f2Kick(e, f) { if (!e) return; const o = e._f2o || (e._f2o = { jx: 0, jsq: 0, pbx: 0, pby: 0 }); f(o, this.time.now || 0); }
+      _f2Kick(e, f) { if (!e || (e._fxSt && e._fxSt.kind === 'death')) return; const o = e._f2o || (e._f2o = { jx: 0, jsq: 0, pbx: 0, pby: 0 }); f(o, this.time.now || 0); }
       _f2Update(dt) {
         const k = Math.max(0, dt || 16.67) / 16.67, now = this.time.now || 0;
         if (this._f2Live && this._f2Live.size) this._f2Live.forEach(o => { if (!o.scene) { this._f2Live.delete(o); return; } if (now - (o._f2born || 0) > 3500) this._f2Free(o); });   // 保險:子彈方塊正常最長約 2 秒,超過 3.5 秒還在就強制回收(防殘留在畫面上)
@@ -8818,34 +8819,37 @@
         const now = this.time.now || 0;
         return (e._fxSt = { kind: o.kind === 'death' ? 'death' : 'hit', pr, t0: now, end: now + Math.max(0, o.dur || 0), upd: o.upd || null, off: { dx: 0, dy: 0, ang: 0, sx: 1, sy: 1 }, ov: o.ov ? Object.assign({ col: 0xffffff, a: 0, fill: false }, o.ov) : null, img: null, ap: null });
       }
-      _fxStDrop(e) { const st = e && e._fxSt; if (!st) return; e._fxSt = null; if (st.img) { try { st.img.destroy(); } catch (er) { } st.img = null; } }
-      _fxStateCut(e) {   // 共用鉤子:任何要對敵圖 killTweensOf 或接管 y/scale 的地方,起手先呼叫 → 收掉狀態與覆蓋圖、回當下的 restY(浮動交給呼叫端自己重啟)
-        if (!e || !e._fxSt) return; this._fxStDrop(e); const sp = e.sprite; if (sp && sp.active && !e.dead && e.restY != null) sp.setY(e.restY);
+      _fxStDrop(e) { const st = e && e._fxSt; if (!st) return; e._fxSt = null; if (st.onDrop) { try { st.onDrop(st); } catch (er) { } } if (st.img) { try { st.img.destroy(); } catch (er) { } st.img = null; } }
+      _fxStateCut(e, force) {   // 步 6:死亡狀態不被鉤子收掉(時間靜止解除、擊退、換圖…),只有 force(復活/被救回/換波/戰鬥結束)能收。共用鉤子:任何要對敵圖 killTweensOf 或接管 y/scale 的地方,起手先呼叫 → 收掉狀態與覆蓋圖、回當下的 restY(浮動交給呼叫端自己重啟)
+        if (!e || !e._fxSt || (e._fxSt.kind === 'death' && !force)) return; const dk = e._fxSt.kind === 'death'; this._fxStDrop(e); const sp = e.sprite; if (dk && sp && sp.active && e.hp <= 0) sp.setVisible(false); if (sp && sp.active && !e.dead && e.restY != null) sp.setY(e.restY);
         this.time.delayedCall(0, () => { const s2 = e.sprite; if (!this.sys || !this.sys.isActive() || e._fxSt || e.bob || e.knockTw || e.dead || !s2 || !s2.active || e.sealed > 0 || e._stunned) return; if (this.tweens.getTweensOf(s2).some(tw => tw !== e._breathTw && !tw.isPendingRemove() && !tw.isRemoved())) return; this.refreshBob(e); });   // 保險:呼叫端提早 return 沒重啟浮動 → 補回(有別的演出在動就不插手)
       }
       _fxStEnd(e) {   // 狀態自然演完:收掉、回當下的 restY、重啟浮動與呼吸(refreshBob 會自己看死亡/封印/時間靜止)
-        if (!e || !e._fxSt) return; this._fxStDrop(e); const sp = e.sprite; if (sp && sp.active && !e.dead) { if (e.restY != null) sp.setY(e.restY); this.refreshBob(e); }
+        if (!e || !e._fxSt) return; if (e._fxSt.kind === 'death') { this._fxStDrop(e); if (e.sprite && e.sprite.active) e.sprite.setVisible(false); return; }   // 步 6:死亡演完=本體隱藏(同 playDeath)
+        this._fxStDrop(e); const sp = e.sprite; if (sp && sp.active && !e.dead) { if (e.restY != null) sp.setY(e.restY); this.refreshBob(e); }
       }
-      _fxStClearAll(rest) { (this.enemies || []).forEach(e => { if (!e || !e._fxSt) return; this._fxStateCut(e); if (rest && !e.dead) this.refreshBob(e); }); }   // 換波(rest=false,舊怪即將銷毀)/戰鬥結束(rest=true,還原待機)
-      _fxStWait() { const now = this.time.now || 0; let w = 0; (this.enemies || []).forEach(e => { const st = e && e._fxSt; if (st && st.kind === 'hit') w = Math.max(w, st.end - now); }); return w; }
+      _fxStClearAll(rest) { (this.enemies || []).forEach(e => { if (!e || !e._fxSt) return; this._fxStateCut(e, true); if (rest && !e.dead) this.refreshBob(e); }); }   // 換波(rest=false,舊怪即將銷毀)/戰鬥結束(rest=true,還原待機)
+      _fxStWait() { const now = this.time.now || 0; let w = 0; (this.enemies || []).forEach(e => { const st = e && e._fxSt; if (st && (st.kind === 'hit' || (FX2.s6 && st.kind === 'death'))) w = Math.max(w, st.end - now); }); return w; }
       _fxStCap(w) { return FX2.s4 ? Math.max(w, Math.min(this._fxStWait(), w + 500)) : w; }   // 敵方回合起點:受擊狀態還在演就多等它演完,最多多等 0.5 秒(不延後輸入解鎖)
       _fxStEnsure() {
         if (this._fxStL) return; this._fxStL = true; if (FX2.s2) this._f2Ensure();   // 先掛步 2 的偏移層 → 本層排在它之後(覆蓋圖同步到加完所有偏移的位置)
         const pre = () => this._fxStPre(), post = () => this._fxStPost();
         this.game.events.on('prerender', pre); this.game.events.on('postrender', post);
-        this.events.once('shutdown', () => { this.game.events.off('prerender', pre); this.game.events.off('postrender', post); this._fxStL = false; (this.enemies || []).forEach(e => { if (e) e._fxSt = null; }); });
+        this.events.once('shutdown', () => { this.game.events.off('prerender', pre); this.game.events.off('postrender', post); this._fxStL = false; this._f6All = 0; this._f6EndAt = 0; (this.enemies || []).forEach(e => { if (e) e._fxSt = null; }); });
       }
       _fxStPre() {
         const now = this.time.now || 0, L = this.enemies || [];
-        L.forEach(e => { const st = e && e._fxSt; if (!st) return; const sp = e.sprite;
+        L.forEach(e => { if (e && e._f6Off) { if (!e.dead && e.hp > 0) { this._f6Reset(e); return; } this._f6MarksTick(e, now); }   // 步 6:被救回(hp>0)→強制還原;否則血條/沙漏/箭頭在死的那一刻起保持淡掉
+          const st = e && e._fxSt; if (!st) return; const sp = e.sprite;
           if (!sp || !sp.active) { this._fxStDrop(e); return; }   // 目標消失就切斷
+          if (st.kind === 'death' && !e.dead && e.hp > 0) { this._f6Reset(e); return; }
           if (now >= st.end) { this._fxStEnd(e); return; }
           if (st.upd) { try { st.upd(st, now - st.t0); } catch (er) { this._fxStEnd(e); return; } }
           const f = st.off, sx = Math.max(0.05, f.sx || 1), sy = Math.max(0.05, f.sy || 1), dx = f.dx || 0, dy = f.dy || 0, ang = f.ang || 0;
-          sp.x += dx; sp.y += dy; sp.angle += ang; sp.scaleX *= sx; sp.scaleY *= sy; st.ap = [dx, dy, ang, sx, sy, sp];
-          this._fxOvSync(e, st); });
+          sp.x += dx; sp.y += dy; sp.angle += ang; sp.scaleX *= sx; sp.scaleY *= sy; st.ap = [dx, dy, ang, sx, sy, sp]; if (st.alpha != null && st.alpha !== 1) { st.apA = sp.alpha; sp.alpha = sp.alpha * Math.max(0, Math.min(1, st.alpha)); } else st.apA = null;   // 步 6:死亡狀態的淡出也走繪製前後(本體 alpha 不被改寫)
+          this._fxOvSync(e, st); if (st.kind === 'death' && st.apA != null && st.img && st.img.visible && st.ov.a >= 1) sp.alpha = 0; });   // 淡出時只留覆蓋圖(否則焦黑變半透明會透出本體原色);繪製後還原
       }
-      _fxStPost() { (this.enemies || []).forEach(e => { const st = e && e._fxSt; if (!st || !st.ap) return; const [dx, dy, ang, sx, sy, sp] = st.ap; st.ap = null; if (!sp.active) return; sp.x -= dx; sp.y -= dy; sp.angle -= ang; sp.scaleX /= sx; sp.scaleY /= sy; }); }
+      _fxStPost() { (this.enemies || []).forEach(e => { const st = e && e._fxSt; if (!st || !st.ap) return; const [dx, dy, ang, sx, sy, sp] = st.ap; st.ap = null; if (!sp.active) return; if (st.apA != null) { sp.alpha = st.apA; st.apA = null; } sp.x -= dx; sp.y -= dy; sp.angle -= ang; sp.scaleX /= sx; sp.scaleY /= sy; }); }
       _fxOvSync(e, st) {   // 覆蓋圖:只有立繪(Image)才有;emoji 臉(Text)只吃偏移不染色
         const sp = e.sprite, ov = st.ov, G = this.enemyG;
         if (!ov || !(ov.a > 0) || sp.type !== 'Image' || !G || !G.exists(sp)) { if (st.img) st.img.setVisible(false); return; }
@@ -8895,7 +8899,7 @@
           g.pl.hits.forEach((h, r) => this.time.delayedCall(g.u0 + h.t, () => { if (!alive()) return; const v = vic[h.i]; if (!v) return;
             if (v.sprite) this._f2From(v, ox, CARDS_Y, g.el, 'big');
             g.slots.forEach((s, q) => this._f2Part(hitIdx(ELEMENT_BOXES[s]), 0, 1, [v], q === g.slots.length - 1, g.el, false, dmgOf, st, lane, crowd, multi, C._snap, r > 0));   // 命中音效每組只響第一隻(雷 5 隻同時命中不疊 5 層)   // 雙宮:兩宮傷害累加成一個大數字
-            if (v.sprite && v.sprite.active && g._c) { this._f2Fin(v.sprite.x, v.cy, v, col, tier, r === 0, multi); this._f5Hit(g, v); } }));
+            if (v.sprite && v.sprite.active && g._c) { this._f2Fin(v.sprite.x, v.cy, v, col, tier, r === 0, multi); this._f5Hit(g, v); } if (FX2.s6 && v._fatal && v._fatal.g === g) { try { this._f6Start(v); } catch (er) { console.error('feel2 _f6Start', er); v._fatal = null; this._f6Reset(v); } } }));   // 步 6:被這組大招打死=當下開演反應姿勢+停住
         });
         this.time.delayedCall(fx.lastLand + 200, () => Object.keys(chg).forEach(s => { if (chg[s]) { this._f5ChargeRelease(chg[s]); chg[s] = null; } }));   // 保險:集氣一定收掉(卡片回位)
       }
@@ -8994,7 +8998,8 @@
       _f5Flood(c) {   // 水:浪後留下淹到前排腰部的水面(瓦片+同色填到腳下,depth 11 蓋在所有怪前、卡片後);浪離開畫面後整片下沉到卡片後,濕透的怪滴水
         const key = 'fx_water_surface8', ok = this.textures.exists(key), tw0 = 72, sy = c.gy - c.fd * (c.merged ? 0.65 : 0.45), low = c.gy + 14, oy = ok ? 0.4 : 0.14, step = tw0 - 3;
         const fillTop = sy + tw0 * (1 - oy) - 2, fillH = Math.max(0, low - fillTop), fill = this.add.rectangle(0, fillTop, 1, 1, ok ? this._f5SurfCol(key) : 0x3f9be6, ok ? 1 : 0.85).setOrigin(0, 0).setDepth(11).setVisible(false);
-        const sink = CARDS_Y + 40 - sy, t0 = this.time.now || 0, tiles = []; let nextX = -tw0 / 2;
+        const sink = CARDS_Y + 40 - sy, t0 = this.time.now || 0, tiles = []; c.surfY = sy; c.sinkD = sink;   // 步 6:水大招死法要用(水面 y、下沉距離)
+        let nextX = -tw0 / 2;
         const tk = this.tweens.addCounter({ from: 0, to: 1, duration: 1000, repeat: -1, onUpdate: () => {
           if (!fill.scene) { tk.stop(); tiles.forEach(t => t.destroy()); return; } const el = (this.time.now || 0) - t0, front = FX_T5.SW_X0 + c.V * el - 24;
           if (ok) while (nextX < Math.min(front, W + tw0)) { const im = this.add.image(nextX + tw0 / 2, sy, key, 0).setOrigin(0.5, oy).setDepth(11); im.setScale(tw0 / im.width, tw0 / im.height); if (tiles.length % 2) im.setFlipX(true); tiles.push(im); nextX += step; }
@@ -9022,6 +9027,7 @@
       }
       _f5Tornado(p, c, rise, hold, spare) {   // p={x,ground,D,v};spare=雙宮陪襯(不升降怪)
         const key = 'fx_wind_tornado8', ok = this.textures.exists(key), out = 160, al = spare ? 0.85 : 1, R = (a, b) => a + Math.random() * (b - a);
+        if (FX2.s6 && !spare && p.v && p.v._fatal && p.v._fatal.lvl === 'big' && p.v._fatal.el === 'wind') hold = Math.max(hold, p.v._fatal.killAt - (this.time.now || 0) + FX_T5.HOLD[c.slow ? 1 : 0] * c.f + 220 - rise);   // 步 6:龍捲風陪牠演完才收
         if (!spare && p.v) this.time.delayedCall(rise * 0.6, () => this._f5Lift(p.v, c, rise, hold));
         if (!ok) return;
         const b = this.add.image(p.x, p.ground, key, 0).setDepth(spare ? 69.4 + (p.ground - c.gy) * 0.001 : 70).setOrigin(0.515, 0.88);
@@ -9043,6 +9049,7 @@
       _f5Spikes(v, c) {   // 土:腳下 2 根岩刺(大體型 D≥140 3 根),直刺/斜刺/矮刺群混搭,不高過頭,停在最高點一下再碎
         const D = c.D(v), n = D >= 140 ? 3 : 2, top = Math.min(c.hc, D * 0.95), k = c.k, hold = (c.slow ? 260 : 180) * c.f, x0 = v.sprite.x, ground = c.gnd(v);
         const kinds = n === 3 ? ['s', 'l', 'c'] : (Math.random() < 0.5 ? ['s', 'l'] : ['s', 'c']), pos = n === 3 ? [0, -1, 1] : [0, Math.random() < 0.5 ? -1 : 1];
+        if (FX2.s6) { const jl = kinds.indexOf('l'); v._f6Lean = (jl < 0 ? 0 : pos[jl] < 0 ? -1 : 1) + (Math.random() * 0.5 - 0.25); }   // 步 6:土大招死法=朝頂到牠的那根岩刺的傾斜方向
         kinds.forEach((q, j) => this.time.delayedCall(j ? j * (30 + Math.random() * 20) : 0, () => { if (!this.sys || !this.sys.isActive()) return; const dx = pos[j] * D * 0.3, x = x0 + dx;
           if (q === 's') { const h = top / 0.67; this._f5Hold('fx_earth_spike16', x, ground - (0.82 - 0.5) * h, h, 40 / k, 5, hold, 3); return; }
           const key = q === 'l' ? 'fx_earth_spike_slant8' : 'fx_earth_spike_cluster8', h = top * (q === 'c' ? 0.6 : 1) / (q === 'l' ? 0.54 : 0.59), gl = q === 'l' ? 0.86 : 0.85;
@@ -9064,7 +9071,127 @@
         this._f5Spots(c, 44, 5).forEach(p => this.time.delayedCall(Math.round((FX_T5.GUST[w] + Math.random() * 4 * FX_T5.STEP[w]) * c.f), () => { if (this.sys && this.sys.isActive()) this._f5Tornado({ x: p.x, ground: c.gy + p.dy, D: D0 * (0.55 + Math.random() * 0.2), v: null }, c, FX_T5.RISE[w] * c.f, FX_T5.HOLD[w] * c.f, true); })); }
       _f5LabEnemies() {   // #feellab 測試場:1~5 隻打不死的哥布林(不連伺服器、不送成績)
         const n = Math.max(1, Math.min(5, (window.__f5lab && window.__f5lab.n) || 5)), lu = [1, 2, 1, 2, 1].slice(0, n).map(st => ({ slot: 'sig', mon: 'gob', el: 'fire', star: st, role: null, guest: false, cd: 0 }));
-        const es = buildEncounterEnemies('fire', 'normal', 0, lu); es.forEach(encLegacyFlags); es.forEach(e => { e.hp = e.max = 900000000; e.timer = 99; }); return es;
+        const es = buildEncounterEnemies('fire', 'normal', 0, lu); es.forEach(encLegacyFlags); es.forEach(e => { e.hp = e.max = (window.__f5lab && window.__f5lab.kill) ? 150 : 900000000; e.timer = 99; }); return es;
+      }
+      // ── 步 6 屬性死亡(規格 5.4.1~5.4.4;FX2.s6,預設關,網址 ?feel6=1 才開)──
+      // 只換「中級(解一宮)與全體大招」打死的怪的死亡畫面;小級/一般子彈/無屬/主動技/猴偷襲/灼燒/逃跑/魔王變身/實驗室 一律現行 playDeath。killEnemy 的邏輯一行不動(只在原本呼叫 playDeath 的地方分流)。
+      // 畫面全部走步 4 的死亡狀態(覆蓋圖+繪製前後的偏移層):本體真正的 x/y/scale/angle/tint 不被改寫;演完本體隱藏(同 playDeath)。
+      _f6Plan(fx, C) {   // resolve 尾端(hp、盾、核心急救都定案後)算「致命宮」:照時間表的命中順序累加實際生效傷害,第一個讓累計 ≥ 打前 hp 的宮;都沒剛好達到=最後一宮。非 resolve 的擊殺不寫 _fatal
+        (this.enemies || []).forEach(e => { if (!e.dead && e.hp > 0) e._fatal = null; });
+        if (!FX2.s6 || this.hitLab || this.enemyLab) return;
+        const now = this.time.now || 0, kills = C.victims.filter(v => v && !v.dead && v.sprite && (C.before.get(v) || 0) > 0 && v.hp <= 0); if (!kills.length) return;
+        const alive = this.enemies.filter(e => !e.dead), all = alive.length > 0 && alive.every(e => e.hp <= 0), finalV = (all && this.stage >= this.stagesEff.length) ? kills[kills.length - 1] : null;   // 最終關清場的最後一隻=killEnemy 依 victims 順序的最後一隻:走 finalBlow,不碰(步 8)
+        const dmgOf = (i, v) => { if (C.aoe) { const o = C.pvh.get(v); return o ? o.hits[i] : C.plan.hits[i].dmg; } return C.plan.hits[i].dmg; };
+        kills.forEach(v => { if (v === finalV) return; const vi = C.victims.indexOf(v), items = [];
+          C.hits.forEach((h, i) => { const raw = dmgOf(i, v) || 0, r = v._ecR, eff = r ? Math.round(raw * r.ratio) : v._blocked ? Math.round(raw * (v.shieldLeak || 0)) : raw; if (!(eff > 0)) return;
+            const g = (fx.ult || []).find(u => u.slots.some(s => ELEMENT_BOXES[s] === h.b)), c = g ? null : fx.cards.find(q => q.b === h.b), nh = (!g && !c) ? Math.max(0, ...(fx.neu || []).filter(q => fx.blockInfo && fx.blockInfo[q.i] && fx.blockInfo[q.i].b === h.b).map(q => q.hit)) : 0;
+            const gh = g && g.pl.hits.find(q => q.i === vi), t = g ? g.u0 + (gh ? gh.t : g.pl.last) : c ? c.hit[c.m - 1] : (nh || fx.lastLand);
+            items.push({ h, g, c, eff, t }); });
+          if (!items.length) return; items.sort((a, b) => a.t - b.t); let acc = 0, k = items.length - 1; for (let q = 0; q < items.length; q++) { acc += items[q].eff; if (acc >= C.before.get(v)) { k = q; break; } }
+          const it = items[k], lvl = it.g ? 'big' : (it.c && it.c.hd) ? 'mid' : 'small', el = it.h.el; if (lvl === 'small' || !F2_HD16[el]) return;
+          const slot = it.g ? it.g.slots[0] : it.c.slot, card = this.teamCards && this.teamCards[slot];
+          v._fatal = { b: it.h.b, el, lvl, at: now + it.t, killAt: now + fx.killAt, g: it.g || null, src: { x: card ? card.rect.x : CX, y: CARDS_Y - 26 }, started: false }; });
+      }
+      _f6Bit(e) { const n = e._f6N || 0, all = this._f6All || 0; if (n >= F6_CAP || all >= F6_CAP_ALL) return false; e._f6N = n + 1; this._f6All = all + 1; this.time.delayedCall(1500, () => { e._f6N = Math.max(0, (e._f6N || 1) - 1); this._f6All = Math.max(0, (this._f6All || 1) - 1); }); return true; }   // 每隻怪的額外物件上限 F6_CAP、全場 F6_CAP_ALL:超過就不生(碎片/煙等,不影響死亡本身)
+      _f6Img(e, key, x, y, w, depth, tint, a) { if (!this.textures.exists(key) || !this._f6Bit(e)) return null; const im = this.add.image(x, y, key).setDepth(depth); im.setScale(w / im.width); if (tint != null) im.setTint(tint); if (a != null) im.setAlpha(a); return im; }
+      _f6Sound(e) { if (!this.sys || !this.sys.isActive() || e._f6Snd) return; e._f6Snd = true; this.labSnd('s_fall', 0.8); }   // 打飛/死亡音:跟著畫面「收尾開始」那一刻,每隻一次(不綁 killEnemy)
+      _f6Marks(e) {   // 血條/沙漏/目標箭頭/相剋徽章/下方行為文字:死的那一刻 200ms 淡掉(影子照各死法自己的時刻)
+        if (e._f6Off) return; e._f6Off = { t0: this.time.now || 0 }; if (e.card) e.card.disableInteractive(); if (e.hitZone && e.hitZone.disableInteractive) try { e.hitZone.disableInteractive(); } catch (er) { }
+        [e.turnG, e.hpGfx, e.mark, e.weakBadge, e.gateTx].forEach(o => { if (o && o.scene) this.tweens.add({ targets: o, alpha: 0, duration: 200, onComplete: () => { if (o.scene) { o.setVisible(false); o.setAlpha(1); } } }); });
+        (e._stunGhosts || []).forEach(gh => { if (gh.active) { this.tweens.killTweensOf(gh); this.tweens.add({ targets: gh, alpha: 0, duration: 120 }); } });   // 時間靜止的定格殘影一起淡掉
+      }
+      _f6MarksTick(e, now) { const t = e._f6Off; if (!t || now < t.t0 + 220) return;[e.turnG, e.hpGfx, e.mark, e.weakBadge, e.gateTx].forEach(o => { if (o && o.scene && o.visible) o.setVisible(false); }); }   // dead 之前 updateEnemies 會重畫/重顯示:每幀壓回去
+      _f6Shadow(e, sx, sy, a, ms) { const s = e.shadow; if (!s || !s.scene) return; this.tweens.killTweensOf(s); this.tweens.add({ targets: s, scaleX: sx, scaleY: sy, alpha: a, duration: ms, ease: 'Quad.out' }); }
+      _f6ShadowOff(e, ms) { const s = e.shadow; if (!s || !s.scene) return; this.tweens.killTweensOf(s); this.tweens.add({ targets: s, alpha: 0, duration: ms || 200, onComplete: () => { if (s.scene) s.setVisible(false); } }); }
+      _f6Reset(e) {   // 通用入口:強制收掉死亡狀態並還原外觀(復活、被救回、重生都走這;不依賴任何詠唱流程)
+        if (!e) return; this._fxStateCut(e, true); e._fatal = null; e._f6Off = null; e._f6Snd = false; const sp = e.sprite;
+        if (sp && sp.active) sp.setVisible(true).setAlpha(1);
+        [e.turnG, e.hpGfx, e.mark, e.weakBadge, e.gateTx].forEach(o => { if (o && o.scene) { this.tweens.killTweensOf(o); o.setAlpha(1); } });
+        if (e.shadow && e.shadow.scene) { this.tweens.killTweensOf(e.shadow); e.shadow.setAlpha(1).setScale(1).setVisible(true); }
+        (e._stunGhosts || []).forEach((gh, i) => { if (gh.active) { this.tweens.killTweensOf(gh); gh.setAlpha(i ? 0.14 : 0.3); } });
+        if (e.card && !e.dead) e.card.setInteractive();
+      }
+      _f6Kill(e) {   // 例外保護:屬性死亡出錯=退回現行 playDeath(killEnemy 後段照跑,不卡波次)
+        try { return this._f6KillRun(e); } catch (er) { console.error('feel2 _f6Kill', er); try { this._f6Reset(e); } catch (er2) { } return false; }
+      }
+      _f6KillRun(e) {   // killEnemy 分流點(原本呼叫 playDeath 的位置):中級在這一刻開演;大招若還沒開演(沒掃到)補開;回 false=照現行 playDeath
+        const f = e._fatal; if (!f || !e.sprite || !e.sprite.active) return false;
+        if (!f.started && (this.time.now || 0) > f.killAt + 1000) { e._fatal = null; return false; }
+        if (this._lp && this._lp.e === e) this._lpAbort(false);
+        this._ecIronOrbClear(e); this._clearEnemyOrb(e);
+        if (!f.started && !this._f6Start(e)) return false;
+        this._f6Marks(e); e._hitFromX = null; return true;
+      }
+      _f6Start(e) {   // 開演一隻怪的屬性死亡。大招=被打到那一刻(反應姿勢+停住);中級=killEnemy 那一刻。成立回 true
+        const f = e._fatal; if (!f || f.started || !e.sprite || !e.sprite.active) return false;
+        if (f.lvl === 'big' && e.hp > 0 && !e.dead) { e._fatal = null; return false; }   // 中途被救回 → 不死
+        const kind = f.el + (f.lvl === 'big' ? 'B' : 'M'), c = f.g ? f.g._c : null; if (f.lvl === 'big' && !c) return false;
+        if (kind === 'waterB' && c.surfY == null) return false;
+        const b = this._f6Build(e, kind, f, c); if (!b) return false;
+        const st = this._fxStOn(e, { kind: 'death', dur: b.dur, ov: b.ov || null, upd: b.upd }); if (!st) return false;
+        f.started = true; st.alpha = 1; st.onDrop = b.drop || null; this._f6EndAt = Math.max(this._f6EndAt || 0, st.end);
+        this._f6Marks(e); if (b.start) b.start(st); return true;
+      }
+      _f6Build(e, kind, f, c) {
+        const sp = e.sprite, now = this.time.now || 0, D = e.cardW || 96, x0 = sp.x, y0 = (e.restY != null ? e.restY : sp.y), cy = e.cy != null ? e.cy : y0, gy = e.shadow ? e.shadow.y : cy + D * 0.42, R = (a, b) => a + Math.random() * (b - a), eq = t => 1 - (1 - t) * (1 - t), ei = t => t * t, cl = v => Math.max(0, Math.min(1, v));
+        let vx = x0 - f.src.x, vy = cy - f.src.y; const vl = Math.hypot(vx, vy) || 1; vx /= vl; vy /= vl; const side = vx < 0 ? -1 : 1, killRel = Math.max(0, f.killAt - now), big = f.lvl === 'big', k = c ? c.k : 1;
+        const smoke = (tint, a) => { const s = this._f6Img(e, fxGlowTex(this), sp.x + R(-0.2, 0.2) * D, cy - D * 0.2, D * 0.5, 13, tint, a); if (s) this.tweens.add({ targets: s, y: s.y - 40, x: s.x + R(-8, 8), alpha: 0, scale: s.scaleX * 2.2, duration: 620, onComplete: () => s.destroy() }); };
+        const puffs = (n, tint) => { for (let i = 0; i < n; i++) { const d = this._f6Img(e, fxGlowTex(this), x0 + R(-0.25, 0.25) * D, gy - 4, D * 0.45, 13, tint, 0.8); if (d) this.tweens.add({ targets: d, x: d.x + R(-26, 26), y: d.y - R(6, 20), scale: d.scaleX * R(1.6, 2.2), alpha: 0, duration: R(320, 420), onComplete: () => d.destroy() }); } };
+        const T = (ms, fn) => this.time.delayedCall(ms, () => { if (this.sys && this.sys.isActive() && e._fxSt && e._fxSt.kind === 'death') { try { fn(); } catch (er) { console.error('feel2 f6', er); } } });
+        const fly = (P, ms, spin, dist, pose) => (st, t) => {   // 沿出招線(卡→怪)飛走:邊飛邊縮小旋轉,後 30% 淡出
+          const o = st.off; if (t < P) { pose(o, t); return; } const u = eq(cl((t - P) / ms)), p = pose ? pose(o, P, true) : null, bx = p ? p.dx : 0, by = p ? p.dy : 0, ba = p ? p.ang : 0;
+          o.dx = bx + vx * dist * u; o.dy = by + vy * dist * u; o.ang = ba + spin * u; o.sx = o.sy = 1 - 0.65 * u; st.alpha = u > 0.7 ? 1 - (u - 0.7) / 0.3 : 1; };
+        if (kind === 'fireM') {
+          let last = 0; const pose = (o, t) => { const a = eq(cl(t / 110)); if (o) { o.dx = side * 8 * a; o.dy = -3 * a; o.ang = side * 14 * a; } return { dx: side * 8, dy: -3, ang: side * 14 }; }, f2 = fly(110, 480, side * 240, 240, pose);
+          return { dur: 590, ov: { col: 0x3a2c26, a: 0 }, upd: (st, t) => { f2(st, t); st.ov.a = cl(t / 110); if (t >= 110) { const u = eq(cl((t - 110) / 480)); if (u - last > 0.18) { last = u; const s = this._f6Img(e, fxGlowTex(this), sp.x + st.off.dx, cy + st.off.dy, D * 0.4, 13, 0x4a4440, 0.5); if (s) this.tweens.add({ targets: s, y: s.y - 16, alpha: 0, scale: s.scaleX * 2, duration: 360, onComplete: () => s.destroy() }); } } },
+            start: () => { T(110, () => { this._f6ShadowOff(e, 200); this._f6Sound(e); }); } };
+        }
+        if (kind === 'waterM') return { dur: 480, upd: fly(0, 480, side * 200, 240, () => null), start: () => { this._f6ShadowOff(e, 200); this._f6Sound(e); for (let i = 0; i < 3; i++) { const d = this._f6Img(e, 'fx_water_drop_' + (i + 1), x0 + R(-0.3, 0.3) * D, cy + R(-0.1, 0.2) * D, 14, 13); if (d) { d.setAngle(90); this.tweens.add({ targets: d, y: d.y + R(16, 26), alpha: 0, delay: i * 50, duration: 300, ease: 'Quad.in', onComplete: () => d.destroy() }); } } } };
+        if (kind === 'windM') return { dur: 520, upd: fly(0, 520, side * 900, 270, () => null), start: () => { this._f6ShadowOff(e, 200); this._f6Sound(e); [[0, 0], [side * 20, -10]].forEach(([dx, dy], i) => { const l = this._f6Img(e, 'fx_wind_leaf_' + (1 + i), x0 + dx, cy + dy, 22, 13); if (l) this.tweens.add({ targets: l, x: l.x + side * R(20, 50), y: l.y + R(20, 40), angle: R(180, 420), alpha: 0, duration: R(420, 620), onComplete: () => l.destroy() }); }); } };
+        if (kind === 'earthM') {
+          const foot = Math.max(4, gy - y0);   // 腳底位置:壓扁時以腳底為準(圖有透明留白,不能照圖高 0.41 倍往下推)
+          return { dur: 460, upd: (st, t) => { const q = ei(cl(t / 110)), o = st.off; o.sy = 1 - 0.82 * q; o.sx = 1 + 0.6 * q; o.dy = foot * 0.82 * q; st.alpha = t > 260 ? 1 - cl((t - 260) / 200) : 1; },
+            start: () => { this._f6Shadow(e, 1.5, 1.1, 1, 110); this._fxShake(140, 0.007); T(110, () => puffs(4, 0xcdb48a)); T(260, () => { this._f6ShadowOff(e, 200); this._f6Sound(e); }); } };
+        }
+        if (kind === 'thunderM' || kind === 'thunderB') {
+          const table = kind === 'thunderB' ? Math.max(440, Math.min(520, 260 * k + 220)) : 440, hold = big ? Math.max(table, killRel) : table; let jit = -1, jx = 0, jy = 0;
+          return { dur: hold + 460, ov: { col: 0x221c20, a: 0 }, upd: (st, t) => { const o = st.off; st.ov.a = cl(t / 150); o.sx = o.sy = 1; st.alpha = 1;
+              if (t < 110) { const q = eq(t / 110); o.dx = 0; o.dy = -0.15 * D * q; o.ang = side * 15 * q; } else if (t < 230) { const q = ei((t - 110) / 120); o.dy = -0.15 * D * (1 - q); o.ang = side * (15 - 10 * q); } else { o.dx = 0; o.dy = 0; o.ang = side * 5; }
+              if (t >= 230 && t < hold) { const n = Math.floor((t - 230) / 40); if (n !== jit) { jit = n; jx = R(-2, 2); jy = R(-1.5, 1.5); } o.dx = jx; o.dy = jy; }
+              if (t >= hold) { const q = cl((t - hold) / 90); o.sx = o.sy = 1 - 0.1 * q; st.alpha = 1 - q; } },
+            start: () => { this._f6Shadow(e, 0.85, 0.85, 0.8, 110); T(110, () => this._f6Shadow(e, 1, 1, 1, 120)); smoke(0x4a4448, 0.5); if (this.textures.exists('fx_thunder_residue8') && this._f6Bit(e)) this._f5Loop('fx_thunder_residue8', x0, cy, D * 1.45, 40, Math.max(2, Math.ceil(hold / 200)));
+              T(hold, () => { this._f6ShadowOff(e, 200); this._f6Sound(e); const bx = sp.x, by = cy;
+                for (let i = 0; i < 9; i++) { if (!this._f6Bit(e)) break; const a = i / 9 * Math.PI * 2 + R(-0.3, 0.3), r = this.add.rectangle(bx + Math.cos(a) * D * 0.15, by + Math.sin(a) * D * 0.15, R(5, 8), R(4, 7), i % 3 ? 0x1e1a1e : 0x3a3236).setAngle(R(0, 90)).setDepth(13), d = R(36, 64); this.tweens.add({ targets: r, x: r.x + Math.cos(a) * d, y: r.y + Math.sin(a) * d, angle: r.angle + R(-200, 200), alpha: 0, duration: R(380, 460), ease: 'Quad.out', onComplete: () => r.destroy() }); }
+                for (let i = 0; i < 6; i++) { if (!this._f6Bit(e)) break; const a = R(0, 6.28), d = R(30, 56), s = this._f2Dot(bx + R(-0.2, 0.2) * D, by + R(-0.2, 0.2) * D, i % 2 ? 0xffe14a : 0xffc83a, 2, 13, true); this.tweens.add({ targets: s, x: s.x + Math.cos(a) * d, y: s.y + Math.sin(a) * d, alpha: 0, duration: R(300, 400), ease: 'Quad.out', onComplete: () => s.destroy() }); } }); } };
+        }
+        if (kind === 'fireB') {
+          const wait = Math.max(Math.min(520, 400 * k * (c && c.merged ? 1.7 : 1) * 0.8), killRel);
+          return { dur: wait + 440, ov: { col: 0x2a201c, a: 0 }, upd: (st, t) => { const o = st.off; st.alpha = 1; o.sx = o.sy = 1;
+              if (t < 110) { const q = eq(t / 110); o.dx = side * 8 * q; o.dy = -3 * q; o.ang = side * 14 * q; st.ov.a = q; } else { const q = cl((t - 110) / 120), s = (a, b) => a + (b - a) * (0.5 - 0.5 * Math.cos(Math.PI * q)); o.dx = s(side * 8, 0); o.dy = s(-3, 0); o.ang = s(side * 14, side * 3); st.ov.a = 1; }
+              if (t >= wait) { const u = cl((t - wait) / 380); st.ov.fill = true; st.ov.col = 0x1a1412; st.alpha = 1 - ei(u); o.sy = 1 - 0.15 * u; o.dy = 0.06 * D * u; } },
+            start: () => { for (let i = 0; i < 2; i++) T(i * 160, () => smoke(0x4a4440, 0.5)); T(wait, () => { this._f6ShadowOff(e, 200); this._f6Sound(e); for (let i = 0; i < 6; i++) { const a = this._f6Img(e, fxGlowTex(this), x0 + R(-0.3, 0.3) * D, cy + R(-0.3, 0.3) * D, D * 0.12, 13, i % 2 ? 0xff8a3a : 0x5a4a40, 0.9); if (a) this.tweens.add({ targets: a, y: a.y - R(40, 70), x: a.x + R(-14, 14), alpha: 0, scale: a.scaleX * 0.4, delay: i * 30, duration: R(360, 440), ease: 'Quad.out', onComplete: () => a.destroy() }); } }); } };
+        }
+        if (kind === 'waterB') {   // 翻倒浮在水面、變深藍、跟著退水沉(照水自己的時間,不等 killEnemy;規格 7.4 的明訂例外)
+          const tgt = c.surfY + D * 0.08 - y0, rec = Math.max(0, c.t0 + c.recede - now);
+          return { dur: rec + c.R + 60, ov: { col: 0x2a4a90, a: 0 }, upd: (st, t) => { const o = st.off, q = eq(cl(t / 220)); o.dy = tgt * q; o.ang = side * 105 * q; st.ov.a = q;
+              if (t >= 220 && t < rec) o.dy = tgt + 4 * (0.5 - 0.5 * Math.cos(Math.PI * (t - 220) / 260)); if (t >= rec) { const u = cl((t - rec) / c.R); o.dy = tgt + c.sinkD * ei(u); st.alpha = u > 0.75 ? 1 - (u - 0.75) / 0.25 : 1; } },   // 沉到最後 1/4 淡掉(不從卡片縫露到盤面)
+            start: () => { this._f6ShadowOff(e, 200); T(rec, () => this._f6Sound(e)); } };
+        }
+        if (kind === 'windB') {   // 被龍捲捲起:停在捲起姿勢到 lastLand+260,才繞 1¾ 圈上升縮小,再甩出;繞圈時用分身圖(前後景換深度),本體先藏
+          const dur1 = FX_T5.HOLD[c.slow ? 1 : 0] * c.f, dur2 = 220, r = D * 0.38, L = Math.round(D * 0.12); let px = null;
+          return { dur: killRel + dur1 + dur2, upd: (st, t) => { const o = st.off; o.dx = 0; o.sx = o.sy = 1; if (t < killRel) { o.dy = -L * (1 - Math.pow(1 - cl((t + 50) / 120), 2)); o.ang = t < 660 ? 6 * Math.sin(Math.PI * (t + 60) / 220) : 2 * Math.sin(t / 180); return; }
+              st.alpha = 0; if (!px) { px = st.px = this.add.image(x0, y0, sp.texture.key, sp.frame.name).setOrigin(sp.originX, sp.originY).setFlip(sp.flipX, sp.flipY); if (sp.isTinted) px.setTint(sp.tintTopLeft); this._f6Sound(e); }
+              const q = t - killRel; if (q < dur1) { const u = 1 - Math.cos(cl(q / dur1) * Math.PI / 2), a = Math.PI / 2 + u * 1.75 * Math.PI * 2, front = Math.sin(a) > 0, k2 = (1 - 0.55 * u) * (front ? 1 : 0.8);
+                px.setPosition(x0 + Math.cos(a) * r * (1 - 0.3 * u), y0 - L * (1 - u) - u * D * 0.8 + Math.sin(a) * r * 0.22).setScale(sp.scaleX * k2, sp.scaleY * k2).setAngle(u * 540).setDepth(front ? 70.5 : 69.5); if (e.shadow && e.shadow.scene) e.shadow.setScale(1 - 0.7 * u).setAlpha(Math.max(0, 1 - u * 1.15)); }
+              else { const u = eq(cl((q - dur1) / dur2)); px.setPosition(x0 + r * 0.7 + side * 90 * u, y0 - D * 0.8 - 110 * u).setScale(sp.scaleX * 0.45, sp.scaleY * 0.45).setAngle(540 + 180 * u).setDepth(70.5).setAlpha(1 - u); } },
+            drop: st => { if (st.px && st.px.scene) st.px.destroy(); } };
+        }
+        if (kind === 'earthB') {   // 等岩刺升起(不早於 lastLand+260)→ 被岩刺頂飛:拋物線、往刺傾斜的方向
+          const wait = Math.max(110 * k, killRel), lean = e._f6Lean || 0;
+          return { dur: wait + 560, upd: (st, t) => { const o = st.off, u = cl((t - wait) / 560); if (t < wait) { o.dx = 0; o.dy = 0; o.ang = 0; return; } o.dx = lean * 230 * u; o.dy = -(480 * u - 140 * u * u); o.ang = (lean >= 0 ? 1 : -1) * 600 * u; },
+            start: () => { puffs(2, 0xcdb48a); T(wait, () => { this._f6ShadowOff(e, 200); this._f6Sound(e); }); } };
+        }
+        return null;
       }
       _f2Sheet(key, x, y, h, rot, fps) {   // 步 3:播一次 16 格手繪(depth 71:敵人之上、傷害數字 72 之下);沒載到圖=什麼都不做
         if (!this.textures.exists(key)) return null; const n = this.textures.get(key).frameTotal - 1; if (n < 2) return null;
@@ -9096,7 +9223,7 @@
         const byX = tg.slice().sort((a, b) => a.sprite.x - b.sprite.x), mid = byX[(byX.length - 1) >> 1], span = multi ? byX[byX.length - 1].sprite.x - byX[0].sprite.x + szc : 0;
         const cx = multi ? tg.reduce((s, v) => s + v.sprite.x, 0) / tg.length : e.sprite.x, cy = multi ? tg.reduce((s, v) => s + v.cy, 0) / tg.length : e.cy;
         if (el === 'fire') { const h = multi ? span * 0.85 : szc * 1.3; this._f2Sheet(key, cx, cy + h * 14 / 256, h, 0, 30); return; }   // 火圖中心在影格中心上方約 14/256 → 往下補
-        if (el === 'wind') { if (multi) this._f2Sheet(key, cx, cy, span * 0.85, Math.PI / 4 - 0.17, 30); else this._f2Sheet(key, e.sprite.x, e.cy, szc * 1.4, ang + Math.PI / 4, 30); return; }   // 風圖本身左下→右上(−45°)
+        if (el === 'wind') { if (multi) this._f2Sheet(key, cx, cy, span * 0.85, Math.PI / 4 - 0.17, 30); else this._f2Sheet(key, e.sprite.x, e.cy, szc * 1.4, (FX2.s6 && e._fatal && e._fatal.lvl === 'mid' && e._fatal.b === X.c.b ? Math.atan2(e.cy - e._fatal.src.y, e.sprite.x - e._fatal.src.x) : ang) + Math.PI / 4, 30); return; }   // 風圖本身左下→右上(−45°)
         const at = multi ? mid : e, h = (at.cardW || 96) * (multi ? 1.6 : 1.4); this._f2Sheet(key, at.sprite.x, at.cy + (el === 'water' ? h * 6 / 256 : 0), h, 0, 30);   // 水(_v2 圖)中心偏上約 6/256 → 往下補
       }
       _f2From(v, x, y, el, lvl) { v._hitFromX = x; v._hitFrom = { x, y, el, lvl }; }   // 死亡打飛方向(playDeath 讀 _hitFromX)+ 步 6 屬性死亡要用的出招來源
@@ -9321,6 +9448,7 @@
           this.time.delayedCall(300 + Math.min(cc.length, 18) * 16, () => this.refreshBoard());
         });
         const _anyKill = this.enemies.some(e => !e.dead && _hpBefore.get(e) > 0 && e.hp <= 0);   // 🔒2026-10-11 條件式鎖:上面 victims 扣血與猴群偷襲 t2 扣血皆同步入帳(t0)→此刻 hp 已定案;至少打死一隻才鎖,沒打死→不鎖(判定同步正確,無 bug 窗,玩家照常連放)
+        if (FX2.s6) { try { this._f6Plan(fx, { hits, victims, aoe, plan, pvh: _pvh, before: _hpBefore }); } catch (er) { console.error('feel2 _f6Plan', er); victims.forEach(v => { if (v) v._fatal = null; }); } }   // 步 6:致命宮(只標旗標,不改任何結算)
         const _relAtk = (_anyKill && !this.tut && !this.lesson && !this.hitLab && !this.enemyLab) ? this._atkLockOn(fx.killAt) : null;   // 🔒攻擊演出鎖:本手有清除(上面 computeClears 有料才走到這)→鎖到收尾 killEnemy 後;放在收尾排定之前一行(其前任何一處 throw 都不會鎖到);教學/課程(自有腳本鎖)與兩個實驗室(連發測試沙盒)不套
         // ⏱2026-10-11 提前解鎖:解鎖點從「收尾 killEnemy 後(lastFire+830)」提前到「最後一發彈著命中(lastFire+240 集氣+330 飛行=+570)」→鎖長砍 260ms。rel 是一次性+epoch 防護,與收尾 finally 的 _relAtk() 先到先解、重複呼叫無害(finally 那個保留當雙保險;看門狗 ms 維持原收尾時間 lastFire+830 再 +1500,不動)。
         //   安全依據:命中後~260ms 的瀕死窗(真 hp 已扣光、killEnemy 尚未設 e.dead)已有兩道點修擋住——(1) targetEnemy() 排除 hp<=0 的瀕死敵(轉向活敵;全員瀕死才 fallback)(2) 本函式尾端致命鎖:場上活敵 hp 全 ≤0 → camCine=true 擋輸入。_atkLock 全程鎖只是第三層,提前不開縫。
@@ -11276,7 +11404,7 @@
         if (e.cardId && MONEY_CARDS.has(e.cardId) && this.dungeon && this.dungeon.daily) { this._dailyKilled.push(e.cardId); }   // 🆕2026-08-17 每日修煉:金屬怪(c71/c72/c73,el:'neutral')被玩家真正打死→記進 _dailyKilled,回報 run/complete 的 bonusKilled(伺服器取「這個∩該層掉落池」發卡,見 spec-daily-island.md §4/§6)
         const last = this.aliveCount() === 0, isFinal = last && this.stage >= this.stagesEff.length;
         if (isFinal) { this._finalEnemy = e; this.stageClear(); return; }   // 最後一關最後一擊:由 finalBlow 演特寫鏡頭+飛出(不在此 playDeath)
-        this.playDeath(e);   // 敗陣演出:被打飛(後上)+縮小+旋轉+淡出 → 化成光芒
+        if (!(FX2.s6 && e._fatal && this._f6Kill(e))) this.playDeath(e);   // 敗陣演出:被打飛(後上)+縮小+旋轉+淡出 → 化成光芒(步 6:中級/大招打死改演屬性死亡,其餘照舊)
         if (last) this.stageClear(); else {
           this.targetEnemy(); this.updateEnemies();
           if (!this.tut && !this.lesson && !this.hitLab && !this.enemyLab && !this.camCine && this.stage < this.stagesEff.length) { const _al = this.enemies.filter(x => !x.dead); if (_al.length && _al.every(x => x.hp <= 0)) this.camCine = true; }   // 🔒2026-10-10 審計:同 resolve 尾端致命鎖。主動技(非 resolve 路徑)擊殺一隻後,若場上剩下的全是「已被放塊打到 hp<=0、死亡演出還沒收」的瀕死敵→resolve 的致命鎖早在技能彈著前就判過(當時還有活敵)=沒鎖到,此刻補鎖(窗內放塊會打屍體、塊白耗)。解鎖鏈同:瀕死敵的收尾 killEnemy→last→stageClear→startStage 重置
@@ -11349,7 +11477,7 @@
       }
       // 敵入場:從「遠處(小、偏高、淡)」浮現到定位 —— 像往深處推進後,新敵自遠方逼近
       enemyEnter(e, delay) {
-        if (e && e._fxSt) this._fxStateCut(e);   // 步 4 共用鉤子
+        if (e && (e._f6Off || e._fatal)) this._f6Reset(e); else if (e && e._fxSt) this._fxStateCut(e);   // 步 4 共用鉤子;步 6:復活/重生先強制收掉死亡狀態
         if (!e || !e.sprite) return; const sp = e.sprite, bs = e.baseScale || 1, ry = (e.restY != null ? e.restY : sp.y), rx = (e.card ? e.card.x : sp.x); delay = delay || 0;
         if (e.bob) { e.bob.stop(); e.bob = null; } this._breathStop(e); this.tweens.killTweensOf(sp);
         sp.setScale(bs * 0.22).setAlpha(0).setAngle(0).setPosition(rx, ry - 48);   // ★ 用敵卡原始 x(非被打飛後的位移 x)→ 重生不再往左飄
@@ -11371,15 +11499,16 @@
         }
       }
       stageClear() {
-        if (this.lesson) { if (this.lessonG) this.lessonG.destroy(); this.tutClearHint(); this.time.delayedCall(500, () => this.showResult(true)); return; }   // 練習課程:打完單敵即完成,不給獎勵、不進下一關(必須早 return,不落入下面全清結算)
-        if (this.tut) { if (this.tutG) { this.tutG.destroy(); this.tutG = null; } this.time.delayedCall(500, () => { if (this.tut && !this.resultOpen) this.showResult(true); }); return; }   // 🆕防雙重結算:tutFinish(保底)與這條自然勝利二選一,先到的 showResult 會 tutDone 把 this.tut 清掉,後到的看到 tut=null 就不再結算。教學:打完敵人即勝利,不給獎勵、不進下一關
+        if (this.f2lab) { this.camCine = true; this.time.delayedCall(Math.max(1100, (this._f6EndAt || 0) - (this.time.now || 0) + 300), () => { if (!this.sys || !this.sys.isActive()) return; this.spawnEnemies(); this.camCine = false; }); return; }   // #feellab:打得死模式全滅後重生,不進關、不送成績
+        if (this.lesson) { if (this.lessonG) this.lessonG.destroy(); this.tutClearHint(); this.time.delayedCall(FX2.s6 ? Math.max(500, (this._f6EndAt || 0) - (this.time.now || 0)) : 500, () => this.showResult(true)); return; }   // 練習課程:打完單敵即完成,不給獎勵、不進下一關(必須早 return,不落入下面全清結算)
+        if (this.tut) { if (this.tutG) { this.tutG.destroy(); this.tutG = null; } this.time.delayedCall(FX2.s6 ? Math.max(500, (this._f6EndAt || 0) - (this.time.now || 0)) : 500, () => { if (this.tut && !this.resultOpen) this.showResult(true); }); return; }   // 🆕防雙重結算:tutFinish(保底)與這條自然勝利二選一,先到的 showResult 會 tutDone 把 this.tut 清掉,後到的看到 tut=null 就不再結算。教學:打完敵人即勝利,不給獎勵、不進下一關
         recordStage(this.stage, false);   // 記最佳關
         const rm = (this.diff && this.diff.rwd) || 1;   // 難度獎勵倍率
         this.runExp += Math.round(40 * rm); this.runCoins += Math.round(300 * rm);   // 🏆全清制:EXP/金錢只累積,通關才一次入帳(中途放棄/戰敗全沒收);🔐 卡片掉落/寶玉不再前端擲骰預覽,全清時交伺服器 run/complete 決定真相(見 _grantRun),避免假發/重複發
         if (this.stage >= this.stagesEff.length) { recordStage(this.stage, true); markDungeonCleared(this.dungeonId); recordClear(this.dungeonId, (this.diff && this.diff.key) || 'normal', this.round); this._roundUnlockCheck(); if (!this.tut && !this.lesson && this.dungeonId !== 'prologue') recordBestSec(this.dungeonId, Math.round((Date.now() - (this._runStartMs || Date.now())) / 1000)); this._grantRun(); this.creditRun(); this.chests++; this.finalBlow(this._finalEnemy); return; }   // 🔐[10]全清才算「通關」→補傳 won=true(原本 L4600 只在每小關傳 false,pr.clears 永遠不會增加);_grantRun 一次入帳 + 記完成率/成就 → 最後一擊特寫
         this.stage++; this.chests++; this.playerHP = Math.min(this.maxHP, this.playerHP + 150);
         this.camCine = true;   // 🔒2026-10-07 波次交接空窗(全敵已死、下一波未登場,~1.1s)鎖輸入:沿用 camCine 鎖(startDrag/startStoredDrag/主動技/endDrag 都會查)。否則此刻放塊→resolve() 因 targetEnemy()==null 早退=整手不結算(盤面留滿行)。解鎖=startStage 開頭(下一波 spawn 前同步重置)+ 下方 catch 保險
-        this.time.delayedCall(Math.max(FX_T.WAVE, FX2.s1 ? (this._fxEndAt || 0) - (this.time.now || 0) : 0), () => { try { this.stageAdvanceFX(); } catch (e) { } this.time.delayedCall(380, () => { try { this.startStage(true); } catch (e) { this.camCine = false; console.error('startStage error', e); } }); });   // 過關:前進演出 → 下一關敵人自遠方逼近入場(不清盤,盤面累積)
+        this.time.delayedCall(Math.max(FX_T.WAVE, FX2.s1 ? (this._fxEndAt || 0) - (this.time.now || 0) : 0, FX2.s6 ? (this._f6EndAt || 0) - (this.time.now || 0) : 0), () => { try { this.stageAdvanceFX(); } catch (e) { } this.time.delayedCall(380, () => { try { this.startStage(true); } catch (e) { this.camCine = false; console.error('startStage error', e); } }); });   // 過關:前進演出 → 下一關敵人自遠方逼近入場(不清盤,盤面累積)
       }
       gameOver(reason) {
         if (this.resultOpen) return;
@@ -15347,6 +15476,7 @@
         btn('連打20手', () => { if (S.run) return; if (window.__fpsReset) window.__fpsReset(); S.run = 1; const seq = [P.one, P.two, P.pair, P.three]; let i = 0;
           const tick = () => { if (!S.run) return; if (hand(seq[i % seq.length])) { i++; S.run = i; paint(); if (i >= 20) { S.run = 0; paint(); return; } } setTimeout(tick, 400); }; tick(); });
         btn('停', () => { S.run = 0; });
+        btn('打得死:關', b => { S.kill = !S.kill; b.textContent = '打得死:' + (S.kill ? '開' : '關'); S.run = 0; go(); });
         const mount = () => { if (document.body) { document.body.appendChild(box); paint(); } else setTimeout(mount, 100); }; mount();
         window.GAME.events.once('ready', () => setTimeout(go, 300));
       } catch (e) { } })();
