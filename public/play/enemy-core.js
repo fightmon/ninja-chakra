@@ -106,6 +106,10 @@ var EnemyCore = (function () {
     RESCUE_ON: 1,               // 【sim 旋鈕】1=急救開;0=關(量「急救讓戰鬥拉長多少」的對照用)
     CAST_CD: 0,                 // 【sim 旋鈕】0=詠唱各步驟間 CD 照一般重擲(補血詠唱視窗=CD 手);>0=詠唱進行中每步固定此 CD(1=字面「補血 1 手/復活 2 手」)
     REVIVE_ROUNDS: 1,           // 【製作人 2026-11-06 拍板】詠唱復活 = 幾個魔王出手輪(預設 1,與詠唱補血同;一輪 CD 約 2~4 手);2 = 舊版(sim 對照用)
+    HEAL_LONELY: 1,             // 【大毛 2026-11-22,spec-water-lonely-rage】1=補師「孤身暴怒」:同伴(非稀有)全倒、只剩牠一隻才發狂(倒數固定 LONELY_CD,每次都是暴怒重擊),取代「任一隊友死亡就暴怒」;魔王位(有額度)發狂那擊之後當場復活小兵(REVIVE_HP),取代詠唱復活。0=2026-11-18 舊行為(逐值相同,五城模擬對照用)。要兩段憤怒系統開著才生效(_newRageOn)
+    LONELY_SOLO: 0,             // 開場場上就沒有任何非稀有同伴的補師:0=不發狂(企劃預設);1=開場就孤身(倒數設 LONELY_CD、不套「當次不扣」)。大毛未定
+    LONELY_CD: 2,               // 孤身出手倒數(固定,不加隨機);進入孤身那一次的敵方結算不扣
+    REVIVE_HP: 0.5,             // 當場復活的小兵血量 = 最大 HP × 此值(HEAL_LONELY=1 才用;舊詠唱復活=滿血)
     // ── 稀有怪(spec-stage-encounters v1.5.12 §5.2/§5.3/§5.3b/§5.3c,製作人 2026-11-06 拍板)──
     METAL_FLEE: [6, 8],         // 銀怪=金屬怪:逃跑倒數(含兩端),存 e._m.flee,每手 −1、歸 0 必逃(同手攻擊倒數也歸 0 → 先逃不攻擊);無屬(剋屬不加);與攻擊倒數一起被延遲技推後(delayEnemy,2026-11-09 製作人更正)
     METAL_ATK_CD: [2, 3],       // 【2026-11-09 metalatk】金屬怪攻擊倒數(含兩端,存 e.timer = 畫面顯示的倒數):每手 −1、歸 0 出手後重抽;延遲技(雷主動技 timer+N)作用在它
@@ -256,6 +260,7 @@ var EnemyCore = (function () {
       salmonReady: opts.lead === 'salmon', salmonCD: 0, burn: null, burnCand: 0, dead: false };
     const evs = [];
     state.enemies.forEach((e, i) => { initMech(e, { idx: i, dk: opts.dk, state }).forEach(x => evs.push(x)); });
+    if (_lonelyOn()) _lonelyScan(state, evs, true);   // 開場就單獨的補師(LONELY_SOLO=1);要等全部怪初始化完才分得出稀有怪
     return evs;
   }
 
@@ -290,7 +295,7 @@ var EnemyCore = (function () {
   //   同手內被救者之後的傷害不再追殺(hp 夾 1,e._rescHand,endEnemyPhase 清);3★ 補師發動急救 → 憤怒(2★ 無憤怒)。
   //   一手多隻同時受傷(AoE)→ applyClear 先全部扣完血再一起 _settle,才能判斷「補師該手結算後仍存活」(D4)。
   function _hpHit(e, dmg) { if (e.dead) return false; e.hp = Math.max(0, e.hp - Math.max(0, dmg)); return true; }
-  function _canRescue(h) { return TUNING.RESCUE_ON > 0 && !h.guest && (h.rule === 2 || h.rule === 3) && !h.rescued && !_noHeal(h); }
+  function _canRescue(h) { return TUNING.RESCUE_ON > 0 && !h.guest && !h.lonely && (h.rule === 2 || h.rule === 3) && !h.rescued && !_noHeal(h); }
   function _noHeal(h) { return TUNING.HEAL_RAGE_NOHEAL > 0 && !h.boss && (h.rageStage | 0) > 0; }   // press2:憤怒/暴怒態的非魔王位補師不補血不急救
   function _healedRage(h, hi, evs) { if (TUNING.HEAL_RAGE_TRIG !== 'healed' || !_newRageOn() || (h.rageStage | 0) > 0) return; h.rageStage = 1; evs.push({ t: 'heal_rage', e: hi, stage: 1, mult: _healRageMult(h), rule: h.rule }); }   // press2:TRIG='healed' → 這隻補師補血/急救成功後鎖存第一段
   function _newRageOn() { return TUNING.HEAL_RAGE_LOW.some(v => v > 1) || TUNING.HEAL_RAGE_DEAD.some(v => v > 1) || TUNING.HEAL_RAGE_NOHEAL > 0; }   // press:新兩段憤怒開啟 → 舊「急救/復活後憤怒」停用
@@ -323,12 +328,50 @@ var EnemyCore = (function () {
   // press 補師兩段憤怒(鎖存):1 段=有隊友血量 < HEAL_LOW(曾經);2 段=有隊友死亡(非稀有怪);只有活著的補師會鎖存;兩段取代不相乘(攻擊時依 rageStage 查表)。
   function _healRageScan(state, evs) {
     if (!_newRageOn()) return;
-    const E = state.enemies;
+    const E = state.enemies, ln = _lonelyOn();   // ln:新規則「孤身」取代舊第二段「任一隊友死亡」;第一段憤怒不動
     E.forEach((h, i) => {
       const d = h._h; if (!d || !_alive(h) || (d.rageStage | 0) >= 2) return;
-      if (E.some(x => x !== h && x.dead && !_isRare(x))) { d.rageStage = 2; evs.push(Object.assign({ t: 'heal_rage', e: i, stage: 2, mult: _healRageMult(d), rule: d.rule }, _furyK(state, h, d) > 0 ? { fury: true } : {})); }   // 2026-11-18 fury=這隻會套暴怒重擊表(入門/查不到表 → 無此欄)→ 前端字卡 water_fury
+      if (!ln && E.some(x => x !== h && x.dead && !_isRare(x))) { d.rageStage = 2; evs.push(Object.assign({ t: 'heal_rage', e: i, stage: 2, mult: _healRageMult(d), rule: d.rule }, _furyK(state, h, d) > 0 ? { fury: true } : {})); }   // 2026-11-18 fury=這隻會套暴怒重擊表(入門/查不到表 → 無此欄)→ 前端字卡 water_fury
       else if (!(d.rageStage | 0) && TUNING.HEAL_RAGE_TRIG !== 'healed' && E.some(x => x !== h && _alive(x) && !_isRare(x) && x.hp < x.max * TUNING.HEAL_LOW)) { d.rageStage = 1; evs.push({ t: 'heal_rage', e: i, stage: 1, mult: _healRageMult(d), rule: d.rule }); }
     });
+    if (ln) _lonelyScan(state, evs, false);
+  }
+  // ── 孤身暴怒(spec-water-lonely-rage §2,大毛 2026-11-22)──
+  // 孤身 = 自己活著 + 其他非稀有怪全倒(另一隻魔王算同伴) + 這一關有過非稀有同伴(死掉的怪留在 enemies 陣列裡,所以「陣列裡有」=開場就有;LONELY_SOLO=1 不要求)。
+  // 倒下看 hp<=0 而不是 dead:遊戲的 dead 要等彈著後 killEnemy 才設,倒數重設要以傷害入帳那一刻為準(同一手先殺後延 → 加得上去;先延後殺 → 被蓋掉)。
+  // 孤身期間 rageStage 借用 2(暴怒表/預覽/骷髏圖示全走既有路徑),解除時還原 rageBase(補過血的回到第一段憤怒)。
+  function _lonelyOn() { return TUNING.HEAL_LONELY > 0 && _newRageOn(); }
+  function _isLonely(state, h) { const mates = state.enemies.filter(x => x !== h && !_isRare(x)); return mates.length ? !mates.some(_alive) : TUNING.LONELY_SOLO > 0; }
+  function _lonelyScan(state, evs, open) {   // open=true:開場掃一次,只處理 LONELY_SOLO(陣列裡根本沒有同伴);其他時候 = 進入/解除
+    state.enemies.forEach((h, i) => {
+      const d = h._h; if (!d || !_alive(h)) return;
+      if (open && state.enemies.some(x => x !== h && !_isRare(x))) return;
+      const on = _isLonely(state, h); if (on === !!d.lonely) return;
+      if (on) _lonelyEnter(state, h, i, evs, open); else _lonelyExit(state, h, i, evs);
+    });
+  }
+  function lonelyScan(state, opts) {   // 遊戲端用:傷害入帳/killEnemy/敵方結算開始各呼叫一次(不是每條扣血路徑都經過核心 _settle);可重複呼叫,狀態沒變就回 []。opts.open=開場
+    const evs = []; if (_lonelyOn()) _lonelyScan(state, evs, !!(opts && opts.open)); return evs;
+  }
+  function _lonelyCD(e, i, evs) { const cd = TUNING.LONELY_CD; e.timer = cd; e.interval = cd; evs.push({ t: 'cd_roll', e: i, mon: 'healer', cd, skull: false, rule: e._h.rule, lonely: true }); }
+  function _lonelyEnter(state, e, i, evs, open) {
+    const d = e._h, cut = !!d.cast; d.cast = null;   // 正在詠唱補血 → 安靜取消(castCut,不是被打斷)
+    d.rageBase = d.rageStage | 0; d.rageStage = 2; d.lonely = true; d.lonelySkip = !open;   // lonelySkip:這一手的敵方結算不扣倒數(endEnemyPhase 一律清 → 那一手剛好時間靜止/封印也算用掉)
+    const fk = _furyK(state, e, d), ev = { t: 'heal_rage', e: i, stage: 2, mult: _healRageMult(d), rule: d.rule, lonely: true, cd: TUNING.LONELY_CD, charges: d.charges };
+    if (fk > 0) ev.fury = true; if (cut) ev.castCut = true; if (open) ev.open = true;
+    evs.push(ev); _lonelyCD(e, i, evs);
+  }
+  function _lonelyExit(state, e, i, evs) {
+    const d = e._h; d.lonely = false; d.lonelySkip = false; d.rageStage = d.rageBase | 0;
+    evs.push({ t: 'lonely_off', e: i, stage: d.rageStage }); _healRoll(state, e, i, evs);
+  }
+  function _lonelyAct(state, e, i, evs) {   // 孤身出手:一定大攻擊(不補/不急救/不詠唱);魔王位還有額度且有倒下的一般小兵 → 當場全部拉回來(不看大攻擊有沒有被擋/打死人),解除孤身;否則倒數再設 LONELY_CD
+    const d = e._h; _healerAttack(state, e, i, evs);
+    const dead = d.boss && d.charges > 0 ? state.enemies.filter(m => m !== e && m.dead && !_isRare(m) && !m.boss) : [];   // 魔王、稀有怪不復活
+    if (!dead.length) { _lonelyCD(e, i, evs); return; }
+    d.charges--; dead.forEach(m => { m.dead = false; m.hp = Math.max(1, Math.round(m.max * TUNING.REVIVE_HP)); m._revHand = true; });   // _revHand:復活當次敵方結算不動(倒數沿用倒下時的值),endEnemyPhase 清
+    evs.push({ t: 'revive_done', e: i, n: dead.length, lonely: true, charges: d.charges, hp: TUNING.REVIVE_HP, list: dead.map(m => state.enemies.indexOf(m)) });
+    _lonelyExit(state, e, i, evs);
   }
   function _healRageMult(d) { const st = d.rageStage | 0, t = st === 2 ? TUNING.HEAL_RAGE_DEAD : st === 1 ? TUNING.HEAL_RAGE_LOW : null, m = t && t[d.rule - 1]; return m > 0 ? m : 1; }
   function damageEnemy(state, e, dmg) {
@@ -662,9 +705,10 @@ var EnemyCore = (function () {
   }
 
   // ───────── 水城補師(spec-water v0.4.8 §2.3,D1~D13)─────────
-  // 狀態 e._h = { rule, star, guest, boss, rescued, rage, revivedOnce, charges, cast:{type:'heal'|'revive', readyIn, left}|null, hitClear }
+  // 狀態 e._h = { rule, star, guest, boss, rescued, rage, revivedOnce, charges, cast:{type:'heal'|'revive', readyIn, left}|null, hitClear, rageStage, lonely, lonelySkip, rageBase(後三個=孤身暴怒,HEAL_LONELY) }
   // 規則表:1★ 補 25%;2★ 補 33%+急救;3★ 補 50%+急救+憤怒(急救後);4★ 博士(魔王專用)詠唱補 40%+全滅復活 2 次+憤怒(復活成功後),無急救;串場鎖 1★(補 25%,無急救/憤怒)。
   // 一般補師(非魔王):輪到牠時隊友(不含自己)有人 <50% → 補全體活著友軍(含自己),否則普攻;補血立即、不能打斷。
+  // ⚠ HEAL_LONELY=1(出廠)時沒有詠唱復活:改「孤身暴怒+當場復活」(_lonelyScan/_lonelyAct,spec-water-lonely-rage);下一行的復活段只剩 HEAL_LONELY=0 會走。
   // 魔王位:一手只做一件事——小兵全滅(≥3★,有額度)→詠唱復活(額度起手扣、2 輪後成);隊友有人 <50% →詠唱補血(下一輪補);否則攻擊。詠唱成功前被打中 CAST_HITS(2)下 → 中止(額度不返還)。
   function _healerInit(state, e, i, c, evs) {
     e._h = { rule: c.rule, star: c.star, guest: c.guest, boss: !!e.boss, rescued: false, rage: false, revivedOnce: false, charges: (!!e.boss && c.rule >= 3 && !c.guest) ? TUNING.REVIVE_MAX : 0, cast: null, hitClear: false };
@@ -695,12 +739,12 @@ var EnemyCore = (function () {
   // 2026-11-18 暴怒補師下一擊預覽(只供顯示:骷髏圖示/光暈;同 nextHitDamage 語意)。非魔王:NOHEAL 態必出手;魔王位:詠唱中=下一動是補血/復活 → 0(未詠唱時可能改起手詠唱,預覽偏保守=照出手算)
   function _healNext(state, e) {
     const d = e && e._h; if (!d || e.dead || e.hp <= 0 || (d.rageStage | 0) !== 2) return 0;
-    if (d.boss ? !!d.cast : !_noHeal(d)) return 0;
+    if (!d.lonely) if (d.boss ? !!d.cast : !_noHeal(d)) return 0;   // 孤身=一定出手
     const fk = _furyK(state, e, d); return e.atk * (fk > 0 ? fk : _healRageMult(d));
   }
   function _healerAttack(state, e, i, evs) {
     const d = e._h, nw = _newRageOn(), fk = nw ? _furyK(state, e, d) : 0, nm = fk > 0 ? fk : (nw ? _healRageMult(d) : 1), raged = nw ? nm > 1 : d.rage, raw = e.atk * (nw ? nm : (raged ? TUNING.RAGE_MULT : 1));   // 2026-11-18 fk>0=暴怒重擊(K 表)取代 HEAL_RAGE_DEAD
-    evs.push(nw ? Object.assign({ t: 'healer_attack', e: i, rule: d.rule, rage: raged, raw: Math.round(raw), stage: d.rageStage | 0, mult: nm }, fk > 0 ? { fury: true } : {}) : { t: 'healer_attack', e: i, rule: d.rule, rage: raged, raw: Math.round(raw) });
+    evs.push(nw ? Object.assign({ t: 'healer_attack', e: i, rule: d.rule, rage: raged, raw: Math.round(raw), stage: d.rageStage | 0, mult: nm }, fk > 0 ? { fury: true } : {}, d.lonely ? { lonely: true } : {}) : { t: 'healer_attack', e: i, rule: d.rule, rage: raged, raw: Math.round(raw) });
     damagePlayer(state, raw, { kind: raged ? 'rage' : 'attack', e: i }).ev.forEach(x => evs.push(x));
   }
   function _fireRevive(state, e, i, evs) {
@@ -711,14 +755,16 @@ var EnemyCore = (function () {
   }
   function _healerAct(state, e, i) {
     const d = e._h, evs = [];
+    if (d.lonelySkip) return evs;   // 進入孤身那一次的敵方結算不扣倒數(旗標由 endEnemyPhase 清)
     e.timer--;
     if (e.timer > 0) { evs.push({ t: 'cd_tick', e: i, timer: e.timer, mon: 'healer' }); return evs; }
+    if (d.lonely) { _lonelyAct(state, e, i, evs); return evs; }
     if (!d.boss) { if (_anyLow(state, e) && !_noHeal(d)) _healAll(state, e, i, evs); else _healerAttack(state, e, i, evs); }
     else if (d.cast) {
       if (--d.cast.readyIn <= 0) { if (d.cast.type === 'revive') _fireRevive(state, e, i, evs); else { d.cast = null; _healAll(state, e, i, evs); } }
     } else {
       const others = state.enemies.filter(x => x !== e && !_isRare(x) && !x.boss);   // 「小兵全滅」只看一般小兵:稀有怪(銀/金/寶玉)與魔王不算,也不被復活(spec-daily-island 決議 4)
-      if (d.charges > 0 && others.length > 0 && others.every(x => !_alive(x))) { d.charges--; d.cast = { type: 'revive', readyIn: Math.max(1, TUNING.REVIVE_ROUNDS | 0), left: TUNING.CAST_HITS }; evs.push({ t: 'cast_start', e: i, type: 'revive', charges: d.charges }); }
+      if (!_lonelyOn() && d.charges > 0 && others.length > 0 && others.every(x => !_alive(x))) { d.charges--; d.cast = { type: 'revive', readyIn: Math.max(1, TUNING.REVIVE_ROUNDS | 0), left: TUNING.CAST_HITS }; evs.push({ t: 'cast_start', e: i, type: 'revive', charges: d.charges }); }
       else if (_anyLow(state, e)) { d.cast = { type: 'heal', readyIn: 1, left: TUNING.CAST_HITS }; evs.push({ t: 'cast_start', e: i, type: 'heal' }); }
       else _healerAttack(state, e, i, evs);
     }
@@ -922,6 +968,7 @@ var EnemyCore = (function () {
   function enemyAct(state, i) {   // 單隻;sim 為了維持與舊碼相同的出手順序,逐隻呼叫(順序請用 actOrder)
     if (state.ec && state.ec.stun) return [];   // 2026-11-20 藍鵲麻痺:這一手的敵方行動整個跳過(倒數不往下數=時間停住;稀有怪逃跑倒數、寶玉補放核心也停);endEnemyPhase 收尾解除
     const e = state.enemies[i], evs = [], g = e && e._g;
+    if (e && e._revHand) return evs;   // 剛被魔王當場復活:這次敵方結算不動(不經核心出手的怪由呼叫端看同一個旗標)
     if (e && !e.dead && e.hp > 0) { if (e._m) return _metalAct(state, e, i); if (e._y) return _moneyAct(state, e, i); if (e._j) return _jewelAct(state, e, i); if (e._d) return _duckAct(state, e, i); if (e._i) return _ironAct(state, e, i); if (e._r) return _rockAct(state, e, i); if (e._h) return _healerAct(state, e, i); }
     if (!g || e.dead || e.hp <= 0) return evs;
     if (g.skipTick) { g.skipTick = false; return evs; }   // 本手被中止:CD 不另外倒數
@@ -947,7 +994,7 @@ var EnemyCore = (function () {
     ec.bearHand = false;
     if (ec.bearCD > 0) { ec.bearCD--; if (ec.bearCD <= 0) ec.bearReady = (ec.lead === 'bear'); }
     if (ec.salmonCD > 0) { ec.salmonCD--; if (ec.salmonCD <= 0) ec.salmonReady = (ec.lead === 'salmon'); }
-    state.enemies.forEach(e => { if (e._g) { e._g.hitClear = false; e._g.skipTick = false; } if (e._d) e._d.counterHand = false; if (e._h) e._h.hitClear = false; e._rescHand = false; });
+    state.enemies.forEach(e => { if (e._g) { e._g.hitClear = false; e._g.skipTick = false; } if (e._d) e._d.counterHand = false; if (e._h) e._h.hitClear = false; if (e._h && e._h.lonelySkip) e._h.lonelySkip = false; if (e._revHand) e._revHand = false; e._rescHand = false; });
     stunEnd(state).forEach(x => evs.push(x));   // 2026-11-20 藍鵲麻痺只持續這一手:敵方回合(被跳過的那次)收尾即解除
     return evs;
   }
@@ -1005,7 +1052,7 @@ var EnemyCore = (function () {
   }
 
   return { TUNING, inWindow, applyEnv, bind, classify, classifyDuck, classifyIron, classifyRock, classifyHealer, classifyMetal, classifyMoney, classifyJewel, syncCores, coreCells, coreShield: _jewelShield, applyClear, urgentCast, rollCD, initMech, initState, damagePlayer, damageEnemy, resolveVictims, delayEnemy,
-    enemyAct, endEnemyPhase, enemyPhase, afterBlock, urgentGob, hooks, actOrder, useStored, markedCells, kFor, nextHitDamage, isLethal, ironPunishNext, punishLethal, stunHand, stunEnd, isStunned, rockGuarding };
+    enemyAct, endEnemyPhase, enemyPhase, afterBlock, urgentGob, hooks, actOrder, useStored, markedCells, kFor, nextHitDamage, isLethal, ironPunishNext, punishLethal, lonelyScan, stunHand, stunEnd, isStunned, rockGuarding };
 })();
 
 if (typeof module !== 'undefined' && module.exports) { module.exports = EnemyCore; }
