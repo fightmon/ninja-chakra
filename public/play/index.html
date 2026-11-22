@@ -81,14 +81,14 @@
 
 <body>
   <div id="game"></div>
-  <!-- 2026-11-19 快取版本號(大毛拍板):自家 js 一律帶 ?v=;js 線上 max-age=4 小時且 Cloudflare 邊緣快取,換查詢字串才會拿新檔。【上線時:只要任何程式檔有變,把本檔所有「v=20261122d」與下一行 NB_ASSET_V 一起換新】格式 YYYYMMDD+英文小寫序號(同日第二次上線 b、c…);phaser.min.js 等第三方檔不加 -->
-  <script>window.NB_ASSET_V = '20261122d';</script>
-  <script src="i18n.js?v=20261122d"></script><!-- 多語(tr()/getLang/setLang):中文原文=key,查無回原文;要在所有遊戲腳本之前載 -->
-<script src="battle-core.js?v=20261122d"></script>
-<script src="battle-vfx.js?v=20261122d"></script>
-  <script src="round-core.js?v=20261122d"></script><!-- 🆕2026-11-06 三輪(階段(a)前端):塊池/怪倍率共用核心;只定義全域 RoundCore、無副作用;接線全在 ROUNDS 開關(?rounds=1 / localStorage nb_rounds=1)後,預設關 -->
-  <script src="enemy-core.js?v=20261122d"></script><!-- 🆕2026-11-06 P2:敵人機制核心(遊戲與 sim 共用);只定義全域 EnemyCore、無副作用;接線全在 NEWMECH 開關(?newmech=1 / localStorage nb_newmech=1)後,預設關 -->
-  <script src="data-stages.js?v=20261122d"></script>
+  <!-- 2026-11-19 快取版本號(大毛拍板):自家 js 一律帶 ?v=;js 線上 max-age=4 小時且 Cloudflare 邊緣快取,換查詢字串才會拿新檔。【上線時:只要任何程式檔有變,把本檔所有「v=20261122e」與下一行 NB_ASSET_V 一起換新】格式 YYYYMMDD+英文小寫序號(同日第二次上線 b、c…);phaser.min.js 等第三方檔不加 -->
+  <script>window.NB_ASSET_V = '20261122e';</script>
+  <script src="i18n.js?v=20261122e"></script><!-- 多語(tr()/getLang/setLang):中文原文=key,查無回原文;要在所有遊戲腳本之前載 -->
+<script src="battle-core.js?v=20261122e"></script>
+<script src="battle-vfx.js?v=20261122e"></script>
+  <script src="round-core.js?v=20261122e"></script><!-- 🆕2026-11-06 三輪(階段(a)前端):塊池/怪倍率共用核心;只定義全域 RoundCore、無副作用;接線全在 ROUNDS 開關(?rounds=1 / localStorage nb_rounds=1)後,預設關 -->
+  <script src="enemy-core.js?v=20261122e"></script><!-- 🆕2026-11-06 P2:敵人機制核心(遊戲與 sim 共用);只定義全域 EnemyCore、無副作用;接線全在 NEWMECH 開關(?newmech=1 / localStorage nb_newmech=1)後,預設關 -->
+  <script src="data-stages.js?v=20261122e"></script>
   <script>
     /* ===== 純邏輯(N/EL/SHAPES/CONFIG/computeClears/種子亂數 等戰鬥核心已抽到 battle-core.js,瀏覽器當共用全域)===== */
     const KEYS = ['fire', 'wind', 'thunder', 'earth', 'water'];
@@ -1086,7 +1086,7 @@
     // ===== 戰鬥手感 v2(docs/spec-battle-feel-v2.md)=====
     // 單一網址開關 ?feel2=1(預設關);各步用子旗標 FX2.sN。步 1(演出時間表):戰鬥演出寫死的毫秒集中到 FX_T,resolve 改讀 planFx 算出的本手時間表;
     //   數值、算式與亂數呼叫順序都與舊寫法相同(開關關閉時畫面與結算不變)。FX2.s1 只管兩處時序修正:敵方回合等最後一發命中+300、機制字卡等本手演出結束(_fxEndAt)。
-    const FEEL2 = (() => { try { const m = /[?&]feel2=([^&#]*)/.exec(location.search); return !!m && m[1] !== '0'; } catch (e) { return false; } })();
+    const FEEL2 = (() => { try { const m = /[?&]feel2=([^&#]*)/.exec(location.search); return !(m && m[1] === '0'); } catch (e) { return true; } })();   // 2026-11-22 大毛:手感改版 ①~⑤ 預設開;網址 ?feel2=0 全關(=舊演出)。⑥⑦⑧ 的子旗標另外預設關
     const FX2 = { s1: FEEL2, s2: FEEL2, s3: FEEL2, s4: FEEL2, s5: FEEL2 };   // s2=步 2 子彈出手+五屬子彈手感+A 落地;s3=步 3 中級手繪(要 s2 開才有子彈卡可疊);s4=步 4 敵人狀態管理(覆蓋圖染色+偏移層獨佔+共用鉤子 _fxStateCut);s5=步 5 全體大招(含雙宮)
     const FX_T = { LEAD: 220, LEAD_TUT: 460, STEP: 100, JIT: 120, CHG: 150, FLY: 240, LAND: 390, KILL: 260, BFX_GAP: 250, DISSOLVE: 80, SALMON: 220, FISH: 240, HEAL: 330, TUT_CRIT: 780, END_PAD: 300, WAVE: 700 };   // LEAD=首宮出手(教學/課程 LEAD_TUT);STEP+JIT=宮間隔+隨機;CHG/FLY=zoneStrike 集氣/飛行(LAND=兩者和=彈著);KILL=彈著後收尾(killEnemy);其餘見 resolve/endHand/stageClear 各用處
     /*PLANFX-BEGIN*/
@@ -8722,6 +8722,14 @@
         return fx;
       }
       _f2StoreFlush() { const q = this._f2StoreQ || []; this._f2StoreQ = null; this._f2Pend = {}; if (q.length) { this.renderStored(); q.forEach(([t, el]) => this._storeGenFX(t, el, 58)); } }
+      _f2RunSafe(fx, C) {   // 2026-11-22:新演出任何例外都不能卡住遊戲——resolve 後段(輸入解鎖、倒下排程)照跑;本手存好的屬塊在演出結束後一定解除「不能拖」
+        const pend0 = Object.keys(this._f2Pend || {}).concat((this._f2StoreQ || []).map(q => String(q[0])));
+        const clear = () => { let any = false; pend0.forEach(t => { if (this._f2Pend && this._f2Pend[t]) { delete this._f2Pend[t]; any = true; } }); if (this._f2StoreQ && this._f2StoreQ.length) { this._f2StoreQ = null; any = true; } if (any && this.sys && this.sys.isActive()) { try { this.renderStored(); } catch (er) { } }
+          if (fx._chg) Object.keys(fx._chg).forEach(k => { if (fx._chg[k]) { try { this._f5ChargeRelease(fx._chg[k]); } catch (er) { } fx._chg[k] = null; } }); };   // 大招卡集氣(卡片微抖)一定收掉
+        const late = Math.max(fx.lastLand || 0, (fx.gatherEnd || 0) + FX_T2.CARD_GAP) + 600;
+        try { this._f2Run(fx, C); } catch (er) { console.error('feel2 _f2Run', er); fx._broken = true; clear(); this.time.delayedCall(late, () => { clear(); if (this.sys && this.sys.isActive()) this._f2HitTick(true, C._H); }); return; }   // 例外:立刻清一次,演出時間過後再清一次(期間排好的吸入不再起集氣)並把 HIT 數滿
+        this.time.delayedCall(late, clear);   // 保險:正常流程早已清掉(卡開始射擊/gatherEnd 保險/大招開演);這裡只收殘留
+      }
       _f2Run(fx, C) {   // 取代 resolve 的 hits.forEach(zoneStrike 路徑):依時間表排演出
         this._f2Ensure(); const vic = C.victims.slice(), multi = vic.length > 1, crowd = (this.enemies || []).filter(e => !e.dead && e.hp > 0).length > 1, gen = this._handGen, S0 = RECT / 96, B = fx.blockInfo;
         const tier = fx.n >= 27 ? 3 : fx.n >= 18 ? 2 : 1, alive = () => this.sys && this.sys.isActive() && gen === this._handGen;
@@ -8730,7 +8738,7 @@
         B.forEach(x => { const sp = this.blockSprites && this.blockSprites[x.r * N + x.c]; if (sp) sp.setVisible(false); });   // 被清的塊「變成」飛出去的方塊
         const h0 = this._f2H; if (h0) h0.c = Math.max(0, fx.n - B.length - 0);   // 鐵塊等不飛的格先算進 HIT(顯示從第一發命中開始)
         const sq = this._f2StoreQ || []; this._f2StoreQ = null;   // 屬塊:子彈卡開始射擊時才出現在卡上(規格 12.1 第 10 項)
-        const chg = {}, cubes = new Array(B.length), byX = vic.filter(v => v.sprite).sort((a, b) => a.sprite.x - b.sprite.x), mid = byX[(byX.length - 1) >> 1];
+        const chg = fx._chg = {}, cubes = new Array(B.length), byX = vic.filter(v => v.sprite).sort((a, b) => a.sprite.x - b.sprite.x), mid = byX[(byX.length - 1) >> 1];
         // ── 起跳+飛到卡頭排隊/無屬飛血條 ──
         B.forEach((x, j) => { const tb = fx.blocks[j]; this.time.delayedCall(tb.t0, () => {
           if (!alive()) return; const cen = this.cellCenter(x.r, x.c), o = cubes[j] = this._f2Cube(x.col, cen.x, cen.y, S0);
@@ -8848,7 +8856,7 @@
         if (ov.fill) { const r = (ov.col >> 16) & 255, gg = (ov.col >> 8) & 255, bb = ov.col & 255; im.setTintFill(Math.min(r, gg, bb) > 200 ? shadeColor(ov.col, -0.3) : ov.col); } else im.setTint(ov.col);   // 填色不得白/近白(三色都高就壓暗 30%)
       }
       // ── 步 5 全體大招(規格 5.1~5.3;FX2.s5)──
-      _fxShake(ms, amp) { this.shakeCam(ms, amp); }   // 新演出的震屏統一出口(shakeCam 本身強蓋弱;敵人機制自己的震屏不走這裡)
+      _fxShake(ms, amp) { if (typeof BattleVFX !== 'undefined' && BattleVFX.reduced && BattleVFX.reduced()) return; this.shakeCam(ms, amp); }   // 系統「減少動態效果」:新演出不震屏(規格 9)   // 新演出的震屏統一出口(shakeCam 本身強蓋弱;敵人機制自己的震屏不走這裡)
       _f5Load() {   // 第 2 批素材:進戰鬥後背景載(只載我方隊伍屬性);還沒到就略過該件(傷害/狀態照演),不等
         const L = { fire: [['fire_front8', 1]], water: [['water_front8', 1], ['water_surface8', 1]], thunder: [['thunder_residue8', 1], ['thunder_cloud', 0]], wind: [['wind_tornado8', 1], ['wind_multislash16', 1]], earth: [['earth_spike16', 1], ['earth_spike_slant8', 1], ['earth_spike_cluster8', 1]] };
         if (!this.sys || !this.sys.isActive()) return; const els = new Set((this.presetTeam || []).map(c => c && c.el).filter(Boolean)); let any = false;
@@ -8857,7 +8865,7 @@
       }
       _f5Absorb(fx, C, x, j, o, tb, chg) {   // 大招卡:方塊吸進卡片(到位=1 HIT、卡片集氣),不射子彈
         const card = this.teamCards && this.teamCards[x.slot], cx = card ? card.rect.x : CX, cy = card ? card.rect.y : CARDS_Y, R = (a, b) => a + Math.random() * (b - a), S0 = RECT / 96;
-        if (!chg[x.slot]) chg[x.slot] = this._f5ChargeStart(x.slot, this.boxElement[ELEMENT_BOXES[x.slot]], fx.blockInfo.filter(q => q.slot === x.slot).length);
+        if (!chg[x.slot] && !fx._broken) chg[x.slot] = this._f5ChargeStart(x.slot, this.boxElement[ELEMENT_BOXES[x.slot]], fx.blockInfo.filter(q => q.slot === x.slot).length);
         const tx = cx + R(-9, 9), ty = cy + R(-4, 10);
         this._f2Trail(o, x.col, 14); this.tweens.add({ targets: o, scale: S0 * 0.3, angle: j % 2 ? 270 : -270, duration: tb.fl });
         this._f2Bez(o, o.x, o.y, this._f2Ctrl(o.x, o.y, tx, ty, j % 2 ? 30 : -30), tx, ty, tb.fl, 'Sine.easeIn', null, () => { if (o._f2tr) { o._f2tr.dead = true; o._f2tr = null; } this._f2Free(o); this._f2HitTick(false, C._H); this._f5ChargeStep(chg[x.slot]); this._f2Spark(tx, ty, x.col, 3, 12, 140); });
@@ -9271,7 +9279,7 @@
         const healPlan = {};   // 各無屬宮回血:同步入帳(彈著時只演出)
         if (this.teamRcv > 0) hits.forEach((h, i) => { if (h.el !== 'neutral') return; const base = Math.max(1, Math.round(heal * h.cells / 3)); const hv = this.tut ? Math.max(base, Math.round(this.maxHP * 0.5)) : base; healPlan[i] = hv; this.playerHP = Math.min(this.maxHP, this.playerHP + hv); this._pHpHealPending = true; });   // 血量同步入帳,但標記「回血待演」(不分教學/一般)→ updateBars 這段空窗先別把血條瞬間同步,留給 5392 的 animPlayerHP 演。⚠️原本只在 this.tut 設→一般戰鬥回血在動畫跑前就被 updateBars 同步到滿=瞬間補完沒動畫(旗標由 animPlayerHP 開跑時清)
         const _bfxN = BFX.cellsByEl(hits), _bfxDone = {}; let _bfxLast = -1e9;   // 🆕2026-10-27 屬性爆發特效:各屬被清格數(data.hits 按宮×屬加總,neutral 不計);每屬每手只排一次
-        if (FX2.s2) this._f2Run(fx, { hits, victims, aoe, healPlan, plan, pvh: _pvh }); else hits.forEach((h, i) => {   // 步 2:子彈出手取代 zoneStrike 路徑(zoneStrike 本體不動)
+        if (FX2.s2) this._f2RunSafe(fx, { hits, victims, aoe, healPlan, plan, pvh: _pvh }); else hits.forEach((h, i) => {   // 步 2:子彈出手取代 zoneStrike 路徑(zoneStrike 本體不動)
           const br = Math.floor(h.b / 3) * 3, bc = (h.b % 3) * 3, cen = this.cellCenter(br + 1, bc + 1);
           const cellsB = data.cells.filter(rc => boxOf(rc[0], rc[1]) === h.b);
           const col = h.el !== 'neutral' ? EL[h.el].color : 0xbfe6ff, dmg = plan.hits[i].dmg;   // 每段傷害取自 battle-core 計畫
@@ -9562,7 +9570,7 @@
       _ecPlay(evs, ctx) {
         ctx = ctx || {}; const E = this.enemies, dl = ctx.delay || 0;
         // 🆕風城賊鴨:同一批事件在這條時間軸上依序排隊(dT=相對 dl+dB 累計 ms;dB=afterBlock 內先讓清除展演走一下);有演出就鎖輸入(攻擊鎖)到時間軸結束
-        let dT = 0, dUsed = false; const dB = ctx.ab ? 380 : 0, dAbs = () => dl + dB + dT;
+        let dT = 0, dUsed = false; const dB = ctx.ab ? (FX2.s1 ? Math.max(380, Math.round((this._atkLandAt || 0) - (this.time.now || 0)) + 60) : 380) : 0, dAbs = () => dl + dB + dT;   // 2026-11-22 新演出:放塊後的敵人反應(賊鴨當下反擊/鐵機人電擊/餘火…)等本手我方最後一發落地 +60 再演(舊演出照舊 380)
         const dLock = evs.some(x => x.t === 'duck_eat' || x.t === 'duck_counter' || x.t === 'duck_fat' || (x.t === 'player_damage' && x.kind === 'hungry')) ? this._atkLockOn(dl + dB + 2600 + evs.length * 220) : null;
         const at = fn => { const run = () => { try { fn(); } catch (err) { console.error('ecPlay', err); } }; if (dl > 0) this.time.delayedCall(dl, run); else run(); };
         let jwT = 0; const jwX = ctx.ab ? Math.max(0, (this._jwLandAt || 0) - (this.time.now || 0) + 140) : 0;   // 🆕寶玉:afterBlock 來的敲碎/盾破/補放要等本手「擋下」彈著之後再演;jwT=同批核心登場的逐顆錯開
@@ -11378,7 +11386,7 @@
         if (!this.hitLab && (getMeta().stones || 0) > 0) { this.showRevive(reason); return; }   // 有魔法石→先問要不要花 1 顆復活;沒石/實驗室→直接認輸
         this._recordFail(); this.creditRun(); this.showResult(false);
       }
-      _recordFail() { if (this._runStatsKey && !this._runGranted) recordRunFail(this._runStatsKey, this.stage); }   // 📊 出擊漏斗:真結束該場才算 fail(復活續戰不算);已全清就不再算敗
+      _recordFail() { if (this.f2lab) return; if (this._runStatsKey && !this._runGranted) recordRunFail(this._runStatsKey, this.stage); }   // 📊 出擊漏斗:真結束該場才算 fail(復活續戰不算);已全清就不再算敗
       showRevive(reason) {
         this.resultOpen = true; const g = this.overlay(); const cy = H / 2, cost = 1, T = UI();   // HP 歸零→復活問詢 model
         g.add(roundRectG(this, CX, cy - 2, 340, 250, 16, T.surf, 1, T.divider, 1.5));   // 白色圓角面板(暗背幕之上)
@@ -11420,7 +11428,7 @@
         const send = _sendRunComplete(item).then(res => { if (res && res.ok) this._failSrv = res; if (res && res.ok && res.leveledUp) mutSave(s => { s.meta._lvUp = { rank: res.rank }; }); return res; }).catch(() => null);   // 🆕2026-11-16 _failSrv=伺服器回的戰敗入帳(敗北面板若再畫就用實際數字)
         return Promise.race([send, new Promise(r => setTimeout(() => r(null), 2500))]);
       }
-      creditRun() { bumpRecords(this.runMaxHit || 0, this.runMaxCombo || 0); const nw = checkAchievements(); nw.forEach((t, i) => this.time.delayedCall(i * 320, () => { try { this.tonFloat(tr('🏅 解鎖稱號:{n}', { n: t }), '#ffe04a'); } catch (e) { } })); }   // 提交本局紀錄 + 檢查成就解鎖(過關與戰敗都跑)
+      creditRun() { if (this.f2lab) return; bumpRecords(this.runMaxHit || 0, this.runMaxCombo || 0); const nw = checkAchievements(); nw.forEach((t, i) => this.time.delayedCall(i * 320, () => { try { this.tonFloat(tr('🏅 解鎖稱號:{n}', { n: t }), '#ffe04a'); } catch (e) { } })); }   // 提交本局紀錄 + 檢查成就解鎖(過關與戰敗都跑)
       _applyRunRes(res) {   // 🆕2026-11-16 套用 run/complete 結果(由 _grantRun 立即送、或被限流後由補送佇列的 _runWatchers 回呼);原本內嵌在 _grantRun 的 then 裡,邏輯未改,只在最前面多了 429/獎勵列狀態分流
         if (!res || !res.ok) {
           if (res && res.rejected) { this._runRes = res; this._runDropsPending = false; this._runDropsMsg = tr('⚠️ 本場結算未通過,請重連後再打'); this._refreshResult(); }   // 永久無效(已丟出佇列、不會補發):面板別再卡「連線後發放」,不顯示獎勵列
@@ -15316,7 +15324,7 @@
       // 2026-11-22 戰鬥手感步 5 真機效能測試(預設全關,不影響一般遊戲):
       //   網址帶 ?fps=1 → 左上角大字 FPS(含最低值);網址 #feellab(要同時帶 ?feel2=1)→ 大招測試場:打不死的怪、不連伺服器開局、不送成績,下方大按鈕直接打出各種大招
       (function () { try {
-        if (!FEEL2) return;   // 沒開 ?feel2=1:FPS 與測試場一律不出現(不掛任何顯示/按鈕、不開關卡)
+        if (!FEEL2 || !/[?&]feel2=1(&|#|$)/.test(location.search)) return;   // 除錯工具只在網址「明確」寫 ?feel2=1 時出現(手感改版預設開之後,一般玩家網址不帶參數→什麼都不掛、不開關卡)
         const lab = location.hash === '#feellab'; if (!lab && !/[?&]fps=1(&|#|$)/.test(location.search)) return;
         const d = document.createElement('div'); d.style.cssText = 'position:fixed;left:8px;top:8px;z-index:99999;font:bold 28px/1.25 sans-serif;color:#7dff9a;background:rgba(0,0,0,.7);padding:4px 12px;border-radius:10px;pointer-events:none'; document.body.appendChild(d);
         let mn = 999; window.__fpsReset = () => { mn = 999; };
