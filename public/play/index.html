@@ -81,14 +81,14 @@
 
 <body>
   <div id="game"></div>
-  <!-- 2026-11-19 快取版本號(大毛拍板):自家 js 一律帶 ?v=;js 線上 max-age=4 小時且 Cloudflare 邊緣快取,換查詢字串才會拿新檔。【上線時:只要任何程式檔有變,把本檔所有「v=20261123a」與下一行 NB_ASSET_V 一起換新】格式 YYYYMMDD+英文小寫序號(同日第二次上線 b、c…);phaser.min.js 等第三方檔不加 -->
-  <script>window.NB_ASSET_V = '20261123a';</script>
-  <script src="i18n.js?v=20261123a"></script><!-- 多語(tr()/getLang/setLang):中文原文=key,查無回原文;要在所有遊戲腳本之前載 -->
-<script src="battle-core.js?v=20261123a"></script>
-<script src="battle-vfx.js?v=20261123a"></script>
-  <script src="round-core.js?v=20261123a"></script><!-- 🆕2026-11-06 三輪(階段(a)前端):塊池/怪倍率共用核心;只定義全域 RoundCore、無副作用;接線全在 ROUNDS 開關(?rounds=1 / localStorage nb_rounds=1)後,預設關 -->
-  <script src="enemy-core.js?v=20261123a"></script><!-- 🆕2026-11-06 P2:敵人機制核心(遊戲與 sim 共用);只定義全域 EnemyCore、無副作用;接線全在 NEWMECH 開關(?newmech=1 / localStorage nb_newmech=1)後,預設關 -->
-  <script src="data-stages.js?v=20261123a"></script>
+  <!-- 2026-11-19 快取版本號(大毛拍板):自家 js 一律帶 ?v=;js 線上 max-age=4 小時且 Cloudflare 邊緣快取,換查詢字串才會拿新檔。【上線時:只要任何程式檔有變,把本檔所有「v=20261124a」與下一行 NB_ASSET_V 一起換新】格式 YYYYMMDD+英文小寫序號(同日第二次上線 b、c…);phaser.min.js 等第三方檔不加 -->
+  <script>window.NB_ASSET_V = '20261124a';</script>
+  <script src="i18n.js?v=20261124a"></script><!-- 多語(tr()/getLang/setLang):中文原文=key,查無回原文;要在所有遊戲腳本之前載 -->
+<script src="battle-core.js?v=20261124a"></script>
+<script src="battle-vfx.js?v=20261124a"></script>
+  <script src="round-core.js?v=20261124a"></script><!-- 🆕2026-11-06 三輪(階段(a)前端):塊池/怪倍率共用核心;只定義全域 RoundCore、無副作用;接線全在 ROUNDS 開關(?rounds=1 / localStorage nb_rounds=1)後,預設關 -->
+  <script src="enemy-core.js?v=20261124a"></script><!-- 🆕2026-11-06 P2:敵人機制核心(遊戲與 sim 共用);只定義全域 EnemyCore、無副作用;接線全在 NEWMECH 開關(?newmech=1 / localStorage nb_newmech=1)後,預設關 -->
+  <script src="data-stages.js?v=20261124a"></script>
   <script>
     /* ===== 純邏輯(N/EL/SHAPES/CONFIG/computeClears/種子亂數 等戰鬥核心已抽到 battle-core.js,瀏覽器當共用全域)===== */
     const KEYS = ['fire', 'wind', 'thunder', 'earth', 'water'];
@@ -1175,7 +1175,7 @@
       const T = FX_T5, S = fx.lead, slow = groups.length === 1;
       let bulletEnd = -Infinity; fx.cards.forEach(c => { bulletEnd = Math.max(bulletEnd, c.last); });
       let u = Math.max(fx.gatherEnd + T.CHARGE, bulletEnd + 60), lastLand = fx.lastLand;   // 開演 = max(最後一顆方塊到位 + 320, 最後一發子彈落點 + 60)
-      const ult = groups.map(g => { const pl = planUlt(g.el, xs, slow), u0 = u; u = u0 + pl.occ + T.ULT_GAP; if (pl.hits.length) lastLand = Math.max(lastLand, u0 + pl.last); return { el: g.el, slots: g.slots.slice(), merged: g.slots.length > 1, u0, pl }; });
+      const ult = groups.map(g => { const pl = planUlt(g.el, xs, slow), u0 = u; u = u0 + pl.occ + T.ULT_GAP; if (pl.hits.length) lastLand = Math.max(lastLand, u0 + pl.last); return { el: g.el, slots: g.slots.slice(), merged: g.merged != null ? !!g.merged : g.slots.length > 1, u0, pl }; });   // merged=加強版(雙宮加強版畫面):由 f2Levels 依同屬格數給;沒給時=舊判定(同屬兩張以上)
       const cap = groups.length >= 3 ? T.CAP3 : T.CAP2;   // 上限:最後一次命中 2 秒(三組以上 2.3 秒);超過就以 settle 為原點等比例壓縮(大招掃描同步加速)
       if (lastLand > cap && lastLand > S) {
         const f = (cap - S) / (lastLand - S), sc = t => S + (t - S) * f;
@@ -1189,6 +1189,25 @@
       return fx;
     }
     /*PLANFX5-END*/
+    const ULT_M = { BIG: 9, PLUS: 12 };   // 2026-11-23/24 大毛:大招判定按「同屬格數」(一手內該屬各宮 hits[].cells 加總,鐵塊不計);≥BIG=大招(全體放全體版、非全體演單體版),≥PLUS=加強版(雙宮加強版畫面,只在全體時)
+    const BIG9 = (() => { try { return !/[?&]big9=0(&|#|$)/.test(location.search); } catch (e) { return true; } })();   // 預設=新判定;網址 ?big9=0 退回舊判定(逐張卡看自己的宮清滿 9 格);?feel2=0 時整套新演出都不跑
+    /*F2LVL-BEGIN*/
+    function f2Levels(hits, cards, aoe, opt) {   // 級別判定(規格 2.1、2.2、2.4)。hits=結算 data.hits;cards=[{slot,el,b}](有飛出方塊的卡,由左到右);aoe=全體;opt={s5,rm,old,BIG,PLUS}
+      const M = {}, hc = {}, big = new Set(), groups = [];   // M=各屬同屬格數;hc=各宮格數;big=大招卡 slot;groups=大招組[{el,slots,m,merged}](依組內最小卡片索引)
+      (hits || []).forEach(h => { hc[h.b] = h.cells || 0; if (h.el && h.el !== 'neutral') M[h.el] = (M[h.el] || 0) + (h.cells || 0); });
+      const L = { M, hc, big, groups, rm: !!opt.rm, old: !!opt.old, BIG: opt.BIG, PLUS: opt.PLUS };
+      if (L.rm || !aoe || !opt.s5) return L;   // 減少動態/非全體/大招沒開:沒有大招卡(非全體 m≥BIG=單體版,交給 f2PickHd)
+      cards.forEach(c => { if ((L.old ? (hc[c.b] || 0) : (M[c.el] || 0)) < L.BIG) return; big.add(c.slot); let g = groups.find(q => q.el === c.el); if (!g) groups.push(g = { el: c.el, slots: [], m: M[c.el] || 0 }); g.slots.push(c.slot); });   // 新:該屬有清到格的卡全部同組;舊:只有自己的宮滿 9 格的卡
+      groups.forEach(g => { g.merged = L.old ? g.slots.length > 1 : g.m >= L.PLUS; });
+      return L;
+    }
+    function f2PickHd(fcs, L) {   // 手繪(大招單體版/過渡):fcs=planFx2 排好的子彈卡。新:該屬 m≥BIG 每屬一次,播在該屬最後落地的那一發(同時刻取右邊那張);舊:每張自己宮滿 9 格的卡各一次。回傳 {el:播手繪的卡}
+      const by = {};
+      fcs.forEach(c => { c.hd = false; if (L.rm) return; if (L.old) { c.hd = (L.hc[c.b] || 0) >= L.BIG; return; } if ((L.M[c.el] || 0) < L.BIG) return; const p = by[c.el]; if (!p || c.last > p.last || (c.last === p.last && c.slot > p.slot)) by[c.el] = c; });
+      Object.keys(by).forEach(el => { by[el].hd = true; });
+      return by;
+    }
+    /*F2LVL-END*/
     const DEPTH = { bg: 0, enemy: 10, card: 20, hp: 30, morale: 32, store: 25, abtn: 38, board: 40, tray: 50, drag: 56, proj: 60, flash: 62, fx: 66, nav: 90 };
     // 色彩工具:shadeColor(往白/往黑)、lerpColor(兩色內插)→ 給屬塊「明暗漸層流動」用
     function shadeColor(col, f) { let r = (col >> 16) & 255, g = (col >> 8) & 255, b = col & 255; if (f >= 0) { r += (255 - r) * f; g += (255 - g) * f; b += (255 - b) * f; } else { const k = 1 + f; r *= k; g *= k; b *= k; } return (Math.round(r) << 16) | (Math.round(g) << 8) | Math.round(b); }
@@ -8758,11 +8777,11 @@
         const gx = pc.reduce((s, p) => s + p[1], 0) / Math.max(1, pc.length), gy = pc.reduce((s, p) => s + p[0], 0) / Math.max(1, pc.length);
         const blocks = (cinfo || []).filter(x => x[2] && x[2] !== 'iron' && x[2] !== 'junk' && x[2] !== 'core').map(([r, c, el]) => { const b = boxOf(r, c), slot = this.boxElement[b] ? ELEMENT_BOXES.indexOf(b) : -1; return { r, c, b, slot, col: (EL[el] && EL[el].color != null) ? EL[el].color : NEUTRAL_FILL, d: Math.hypot(r - gy, c - gx) }; }).sort((a, b) => a.d - b.d || a.r - b.r || a.c - b.c);
         const cards = []; for (let s = 0; s < 5; s++) { const idx = []; blocks.forEach((x, i) => { if (x.slot === s) idx.push(i); }); if (idx.length) cards.push({ slot: s, el: this.boxElement[ELEMENT_BOXES[s]], b: ELEMENT_BOXES[s], idx }); }
-        const n = (data.cells || []).length, hc = {}; (data.hits || []).forEach(h => { hc[h.b] = h.cells; });   // 每宮結算格數(battle-core hits[].cells:鐵塊不計,規格 2.1)
-        const _rm = !!(typeof BattleVFX !== 'undefined' && BattleVFX.reduced && BattleVFX.reduced()), big = (FX2.s5 && U && U.aoe && !_rm) ? new Set(cards.filter(c => (hc[c.b] || 0) >= 9).map(c => c.slot)) : null;   // 步 5 大招卡:全體且該宮清滿 9 格
+        const n = (data.cells || []).length;
+        const _rm = !!(typeof BattleVFX !== 'undefined' && BattleVFX.reduced && BattleVFX.reduced()), L = f2Levels(data.hits, cards, !!(U && U.aoe), { s5: !!(FX2.s5 && U), rm: _rm, old: !BIG9, BIG: ULT_M.BIG, PLUS: ULT_M.PLUS }), big = L.big.size ? L.big : null;   // 步 5 大招卡:全體且該屬同屬格數 ≥9(按屬性成組;?big9=0=舊判定)。系統「減少動態效果」:不演手繪與大招(規格 9;等同現況子彈)
         const fx = planFx2(blocks, big ? cards.filter(c => !big.has(c.slot)) : cards, { settle, n }, Math.random); fx.blockInfo = blocks; fx.n = n;
-        if (big && big.size) { const gs = []; cards.forEach(c => { if (!big.has(c.slot)) return; let g = gs.find(q => q.el === c.el); if (!g) gs.push(g = { el: c.el, slots: [] }); g.slots.push(c.slot); }); fx.bigSlots = big; planFx5(fx, gs, (U.victims || []).map(v => (v && v.sprite) ? v.sprite.x : CX)); }   // 同屬大招卡合併成一組(雙宮)
-        if (FX2.s3) fx.cards.forEach(c => { c.hd = !_rm && (hc[c.b] || 0) >= 9; });   // 系統「減少動態效果」:不演手繪與大招(規格 9;等同現況子彈)   // 步 3 三級判定(規格 2.2):清滿 9 格=中級手繪;全體且滿 9 格=大招卡(步 5 前先用手繪的全體欄過渡);未滿 9 格一律不播
+        if (big) { fx.bigSlots = big; planFx5(fx, L.groups, (U.victims || []).map(v => (v && v.sprite) ? v.sprite.x : CX)); }   // 同屬的卡一組只演一次;m≥PLUS=加強版
+        if (FX2.s3) fx.hdOf = f2PickHd(fx.cards, L);   // 步 3 大招單體版手繪(規格 2.2、4.3):非全體且該屬同屬格數 ≥9 → 每屬一次、該屬最後一發;未滿 9 一律不播
         if (this.tut || this.lesson) { const nh = (data.hits || []).length, legacy = FX_T.LEAD_TUT + Math.max(0, nh - 1) * FX_T.STEP + FX_T.JIT / 2 + FX_T.LAND; fx.tutExt = Math.max(0, Math.round(fx.lastLand - legacy)); }   // 教學/課程的推進等待:多出來的演出時間補進去(腳本步驟不變)
         return fx;
       }
@@ -9140,7 +9159,8 @@
             const gh = g && g.pl.hits.find(q => q.i === vi), t = g ? g.u0 + (gh ? gh.t : g.pl.last) : c ? c.hit[c.m - 1] : (nh || fx.lastLand);
             items.push({ h, g, c, eff, t }); });
           if (!items.length) return; items.sort((a, b) => a.t - b.t); let acc = 0, k = items.length - 1; for (let q = 0; q < items.length; q++) { acc += items[q].eff; if (acc >= C.before.get(v)) { k = q; break; } }
-          const it = items[k], lvl = it.g ? 'big' : (it.c && it.c.hd) ? 'mid' : 'small', el = it.h.el; if (lvl === 'small' || !F2_HD16[el]) return;
+          let it = items[k]; const hq = it.c && !it.c.hd && fx.hdOf && fx.hdOf[it.c.el]; if (hq) it = { h: C.hits.find(q => q.b === hq.b) || it.h, g: null, c: hq, eff: it.eff, t: hq.hit[hq.m - 1] };   // 單體版被同屬「不是播手繪那張」的卡打死:記成該屬 M 死法、時刻對到手繪那一發
+          const lvl = it.g ? 'big' : (it.c && it.c.hd) ? 'mid' : 'small', el = it.h.el; if (lvl === 'small' || !F2_HD16[el]) return;
           const slot = it.g ? it.g.slots[0] : it.c.slot, card = this.teamCards && this.teamCards[slot];
           v._fatal = { b: it.h.b, el, lvl, at: now + it.t, killAt: now + fx.killAt, g: it.g || null, src: { x: card ? card.rect.x : CX, y: CARDS_Y - 26 }, started: false }; });
       }
@@ -9339,7 +9359,8 @@
             if (!best || t > best.t || (t === best.t && g && !best.g)) best = { h, g, c, t }; });
           return best && { v, n, it: best }; }).filter(Boolean);
         if (!cand.length) return null;
-        const boss = cand.filter(q => q.v.boss), pool = boss.length ? boss : cand, pk = pool.reduce((a, b) => (b.it.t > a.it.t || (b.it.t === a.it.t && b.n > a.n)) ? b : a), e = pk.v, it = pk.it;
+        const boss = cand.filter(q => q.v.boss), pool = boss.length ? boss : cand, pk = pool.reduce((a, b) => (b.it.t > a.it.t || (b.it.t === a.it.t && b.n > a.n)) ? b : a), e = pk.v; let it = pk.it;
+        const hq = it.c && !it.c.hd && fx.hdOf && fx.hdOf[it.c.el]; if (hq) it = { h: C.hits.find(q => q.b === hq.b) || it.h, g: null, c: hq, t: hq.hit[hq.m - 1] };   // 單體版:換成該屬播手繪那張卡(同 _f6Plan)
         let lvl = it.g ? 'big' : (it.c && it.c.hd) ? 'mid' : 'small', el = it.h.el; if (lvl !== 'small' && !F2_HD16[el]) lvl = 'small';
         const kind = lvl === 'small' ? 'knock' : el + (lvl === 'big' ? 'B' : 'M'), k = it.g ? it.g.pl.k : 1, D = e.cardW || 96, slot = it.g ? it.g.slots[0] : it.c ? it.c.slot : -1, card = slot >= 0 && this.teamCards && this.teamCards[slot];
         let lag = 0; if (kind === 'earthB') lag = Math.round(87.5 * k); else if (kind === 'earthM') lag = 80;
@@ -15942,6 +15963,10 @@
         [1, 3, 4, 5].forEach(n => btn('怪' + n, () => { S.n = n; S.run = 0; go(); }));
         btn('換隊伍', () => { const seq = [null].concat(ELS), i = seq.indexOf(S.pair); S.pair = seq[(i + 1) % seq.length]; S.run = 0; go(); });
         btn('1張大招', () => hand(P.one)); btn('2張大招', () => hand(P.two)); btn('3張大招', () => hand(P.three)); btn('雙宮', () => hand(P.pair)); btn('單體滿宮', () => hand(P.mid));
+        const handC = (cells, pre) => { const g = scn(); if (!g || (g.time.now || 0) < (g._fxEndAt || 0)) return false; if (pre) pre(g); cells.forEach(([r, c]) => { g.board[r][c] = { el: g.boxElement[boxOf(r, c)] || 'neutral' }; }); g.locked = false; g.fromBlock = false; try { g.resolve(); } catch (e) { console.error(e); } return true; };   // 2026-11-24 同屬格數判定:清整列/整行
+        const RC = (rows, cols) => { const o = []; rows.forEach(r => { for (let c = 0; c < 9; c++) o.push([r, c]); }); cols.forEach(c => { for (let r = 0; r < 9; r++) o.push([r, c]); }); return o; }, pairOnly = fn => () => { if (!S.pair) { S.pair = 'fire'; S.run = 0; go(); return; } fn(); };   // 雙屬隊(卡 0、1 同屬=宮 0、2):沒換過就先換成雙火、再按一次
+        btn('同屬7+3', pairOnly(() => handC(RC([0], [0, 2])))); btn('同屬6+6', pairOnly(() => handC(RC([0, 1], []))));   // 第 0 列+第 0、2 行:宮0 7+宮2 3=10 一般版兩卡一組;第 0、1 列:6+6=12 加強版
+        btn('化境三卡', () => handC(RC([0], [0]), g => { g._huajing = { turns: 1, saved: (g._huajing && g._huajing.saved) ? g._huajing.saved : { ...g.boxElement } }; const el = g.boxElement[0]; ELEMENT_BOXES.forEach(b => { if (g.boxElement[b] != null) g.boxElement[b] = el; }); g.renderTeam(); g.refreshBoard(); }) && setTimeout(() => { const g = scn(); if (g && g._huajing) { Object.assign(g.boxElement, g._huajing.saved); g._huajing = null; g.renderTeam(); g.refreshBoard(); } }, 3000));   // 化境(同兔家族技;測試場不走 endHand,3 秒後自己還原):第 0 列+第 0 行 → 宮0 5+宮2 3+宮6 3=11 三卡一組一般版
         btn('連打20手', () => { if (S.run) return; if (window.__fpsReset) window.__fpsReset(); S.run = 1; const seq = [P.one, P.two, P.pair, P.three]; let i = 0;
           const tick = () => { if (!S.run) return; if (hand(seq[i % seq.length])) { i++; S.run = i; paint(); if (i >= 20) { S.run = 0; paint(); return; } } setTimeout(tick, 400); }; tick(); });
         btn('停', () => { S.run = 0; });
