@@ -81,14 +81,16 @@
 
 <body>
   <div id="game"></div>
-  <!-- 2026-11-19 快取版本號(大毛拍板):自家 js 一律帶 ?v=;js 線上 max-age=4 小時且 Cloudflare 邊緣快取,換查詢字串才會拿新檔。【上線時:只要任何程式檔有變,把本檔所有「v=20261124a」與下一行 NB_ASSET_V 一起換新】格式 YYYYMMDD+英文小寫序號(同日第二次上線 b、c…);phaser.min.js 等第三方檔不加 -->
-  <script>window.NB_ASSET_V = '20261124a';</script>
-  <script src="i18n.js?v=20261124a"></script><!-- 多語(tr()/getLang/setLang):中文原文=key,查無回原文;要在所有遊戲腳本之前載 -->
-<script src="battle-core.js?v=20261124a"></script>
-<script src="battle-vfx.js?v=20261124a"></script>
-  <script src="round-core.js?v=20261124a"></script><!-- 🆕2026-11-06 三輪(階段(a)前端):塊池/怪倍率共用核心;只定義全域 RoundCore、無副作用;接線全在 ROUNDS 開關(?rounds=1 / localStorage nb_rounds=1)後,預設關 -->
-  <script src="enemy-core.js?v=20261124a"></script><!-- 🆕2026-11-06 P2:敵人機制核心(遊戲與 sim 共用);只定義全域 EnemyCore、無副作用;接線全在 NEWMECH 開關(?newmech=1 / localStorage nb_newmech=1)後,預設關 -->
-  <script src="data-stages.js?v=20261124a"></script>
+  <!-- 2026-11-19 快取版本號(大毛拍板):自家 js 一律帶 ?v=;js 線上 max-age=4 小時且 Cloudflare 邊緣快取,換查詢字串才會拿新檔。【上線時:只要任何程式檔有變,把本檔所有「v=20261124f」與下一行 NB_ASSET_V 一起換新】格式 YYYYMMDD+英文小寫序號(同日第二次上線 b、c…);phaser.min.js 等第三方檔不加 -->
+  <script>window.NB_ASSET_V = '20261124f';</script>
+  <script src="i18n.js?v=20261124f"></script><!-- 多語(tr()/getLang/setLang):中文原文=key,查無回原文;要在所有遊戲腳本之前載 -->
+<script src="battle-core.js?v=20261124f"></script>
+<script src="battle-vfx.js?v=20261124f"></script>
+  <script src="round-core.js?v=20261124f"></script><!-- 🆕2026-11-06 三輪(階段(a)前端):塊池/怪倍率共用核心;只定義全域 RoundCore、無副作用;接線全在 ROUNDS 開關(?rounds=1 / localStorage nb_rounds=1)後,預設關 -->
+  <script src="enemy-core.js?v=20261124f"></script><!-- 🆕2026-11-06 P2:敵人機制核心(遊戲與 sim 共用);只定義全域 EnemyCore、無副作用;接線全在 NEWMECH 開關(?newmech=1 / localStorage nb_newmech=1)後,預設關 -->
+  <script src="enemy-fx.js?v=20261124f"></script><!-- 🆕2026-11-24 敵技演出 EFX:開關解析＋定位純計算(只定義全域 EnemyFX、無副作用);預設全關,?efx=1 才開(規格 spec-enemy-skill-fx.md) -->
+  <script src="fx-art.js?v=20261124f"></script><!-- 🆕2026-11-24 我方招式能量圖換無邊框版:貼圖 key→檔名對照表(全域 FxArt);?fxart=old 整批退回舊檔,刪表上一列=單張退回 -->
+  <script src="data-stages.js?v=20261124f"></script>
   <script>
     /* ===== 純邏輯(N/EL/SHAPES/CONFIG/computeClears/種子亂數 等戰鬥核心已抽到 battle-core.js,瀏覽器當共用全域)===== */
     const KEYS = ['fire', 'wind', 'thunder', 'earth', 'water'];
@@ -1090,6 +1092,7 @@
     //   數值、算式與亂數呼叫順序都與舊寫法相同(開關關閉時畫面與結算不變)。FX2.s1 只管兩處時序修正:敵方回合等最後一發命中+300、機制字卡等本手演出結束(_fxEndAt)。
     const FEEL2 = (() => { try { const m = /[?&]feel2=([^&#]*)/.exec(location.search); return !(m && m[1] === '0'); } catch (e) { return true; } })();   // 2026-11-22 大毛:手感改版 ①~⑧ 預設開;網址 ?feel2=0 全關(=舊演出)、?feel6=0 只關⑥、?feel7=0 只關⑦、?feel8=0 只關⑧
     const FX2 = { s1: FEEL2, s2: FEEL2, s3: FEEL2, s4: FEEL2, s5: FEEL2, s6: FEEL2 && (() => { try { return !/[?&]feel6=0(&|#|$)/.test(location.search); } catch (e) { return true; } })(), s7: FEEL2 && (() => { try { return !/[?&]feel7=0(&|#|$)/.test(location.search); } catch (e) { return true; } })(), s8: FEEL2 && (() => { try { return !/[?&]feel8=0(&|#|$)/.test(location.search); } catch (e) { return true; } })() };   // s2=步 2 子彈出手+五屬子彈手感+A 落地;s3=步 3 中級手繪(要 s2 開才有子彈卡可疊);s4=步 4 敵人狀態管理(覆蓋圖染色+偏移層獨佔+共用鉤子 _fxStateCut);s5=步 5 全體大招(含雙宮);s6=步 6 屬性死亡(預設開,?feel6=0 單獨關);s7=步 7 無屬補血(預設開,?feel7=0 單獨關);s8=步 8 終局特寫(預設開,?feel8=0 單獨關)
+    const EFX = (typeof EnemyFX !== 'undefined') ? EnemyFX.parseFlags(location.search, { enc: ENC, newmech: NEWMECH, feel2: FEEL2 }) : { s1: false, s2: false, s3: false, s4: false, s5: false, s6: false, s7: false, s8: false, s9: false };   // 🆕2026-11-24 敵技演出開關(enemy-fx.js):預設全關;?efx=1 全開、?efx=2,7 只開列出的步(自動帶 s1)、?efx_off=7 單步關;enc=0/新機制沒載/feel2=0 → 全關;不讀寫 ?lonely
     const LN_T = { IN: 220, POP: 520, ATK: 800, SPLASH: 440, GAP: 130, RISE: 460, HP: 320, PAD: 140 };   // 2026-11-23 水城孤身暴怒演出(ms):IN=擊倒後多久進入演出;POP=放大縮小;ATK=水球出手到砸中(=enemyAttack 的集氣 360+飛行 440);SPLASH=水花飛到小兵;GAP=逐隻錯開;RISE=站起來;HP=血條長出來;PAD=收尾。復活鎖輸入=ATK+SPLASH+GAP×(隻數−1)+RISE+HP+PAD(2 隻=2290)
     const FX_T = { LEAD: 220, LEAD_TUT: 460, STEP: 100, JIT: 120, CHG: 150, FLY: 240, LAND: 390, KILL: 260, BFX_GAP: 250, DISSOLVE: 80, SALMON: 220, FISH: 240, HEAL: 330, TUT_CRIT: 780, END_PAD: 300, WAVE: 700 };   // LEAD=首宮出手(教學/課程 LEAD_TUT);STEP+JIT=宮間隔+隨機;CHG/FLY=zoneStrike 集氣/飛行(LAND=兩者和=彈著);KILL=彈著後收尾(killEnemy);其餘見 resolve/endHand/stageClear 各用處
     /*PLANFX-BEGIN*/
@@ -1133,6 +1136,7 @@
     }
     /*PLANFX2-END*/
     const F2_HD16 = { fire: 'fx_fire_burst16', thunder: 'fx_thunder_strike16', water: 'fx_water_cannon16', earth: 'fx_earth_smash16', wind: 'fx_wind_slash16' };   // 步 3 中級手繪:16 格 4×4、整張 768×768、格 192(水取 _v2 來源)
+    const FXA = k => (typeof FxArt !== 'undefined' && FxArt.path) ? FxArt.path(k) : 'art/fx/' + k + '.webp';   // 🆕2026-11-24 能量圖載入路徑走對照表 fx-art.js(預設無邊框新檔;沒載到對照表=照舊檔)
     const F2_STRIKE_COL = [20, 28, 45, 60, 60, 50, 40, 30, 24, 20, 16, 12, 0, 0, 0, 0];   // 雷柱:程式補的直光柱逐幀寬度(原圖 256 格的單位;第 13~16 幀沒有柱)
     const FXFB = (() => {   // 特效圖的程式畫替代版 [寬, 高, 格數, 畫法](見 GameScene._fxK);形狀只求看得懂、顏色用屬性色(不用白)
       const P = (x, pts, fill, line, lw) => { x.beginPath(); pts.forEach(([a, b], i) => i ? x.lineTo(a, b) : x.moveTo(a, b)); x.closePath(); x.fillStyle = fill; x.fill(); if (line) { x.strokeStyle = line; x.lineWidth = lw || 4; x.stroke(); } };
@@ -4102,6 +4106,7 @@
         if (this._nm && this._encOn && (this._encPlan || []).some(l => (l || []).some(m => m && m.mon === 'jewel'))) { if (!this.textures.exists('ui_jewel_core')) this.load.image('ui_jewel_core', 'art/ui/jewel_core.webp'); if (JEWEL_CORE_EL_ART_READY) ['fire', 'water', 'thunder', 'earth', 'wind'].forEach(el => { const k = 'jewel_core_' + el; if (!this.textures.exists(k)) this.load.image(k, 'art/ui/' + k + '.webp'); }); }   // 🆕2026-11-09 寶玉怪:陣容(_encPlan)裡有寶玉怪才載核心格圖(灰階 jewel_core 依屬 tint;五屬各一張美術到貨後把 JEWEL_CORE_EL_ART_READY 改 true,drawCoreCell 有檔就用)。c61~65 各階卡圖由上面 _cids 掃描 _loadCardArt 載(EVO3_CARDS 含 _e/_e2/_e3)
         if (this._nmR) { if (this.moneyDay || (this._bonus || []).some(id => id === 'c74' || id === 'c75' || id === 'c76')) _loadCardArt(this, ['c74', 'c75', 'c76']); [['ui_coin', 'res_coin'], ['icon_lvdown', 'icon_lvdown'], ['icon_hourglass', 'icon_hourglass']].forEach(([k, f]) => { if (!this.textures.exists(k)) this.load.image(k, 'art/ui/' + f + '.webp'); }); }   // 🆕2026-11-09 稀有怪(NEWMECH):金錢怪縮小鏈 c76→c75→c74 預載 + 金幣/降級符號/沙漏圖示
         if (FX2.s2) this._f2Preload();   // 步 2:依我方隊伍屬性載子彈圖
+        if (EFX.s1) { try { EnemyFX.preload(this, EFX); } catch (er) { console.error('[EFX] preload', er); } }   // 🆕敵技演出:開著的步才載圖(全關時一個 load 都不呼叫;步 1a 清單為空)
         if (this.tut) _loadCardArt(this, ['c67']);   // 🆕2026-08-26b 教學 b 敵改水方塊怪(tutEnemies 給 cardId:'c67'):tutorial 不走上面 spawnStage 的 _cids 掃描(固定敵組非真關卡),要在此補載,否則 enemyTexKey 找不到圖退回 emoji
         if (this.tut && !this.textures.exists('tut17')) this.load.image('tut17', tutImgSrc('17_graduate'));   // 🆕2026-11-04 教學完成面板插圖(~50KB;檔缺→載入失敗靜默,showTutComplete 查 textures.exists 退純文字版)
         if (this.counterTeach) _loadElSvgs(this);   // 🩹序章弱點徽章要用元素 SVG icon(el_<el>)
@@ -5539,6 +5544,10 @@
         if (this._lp) this._lpAbort(false);   // 換關/重生:殘留長按狀態清掉
         if (this.enemies) this.enemies.forEach(o => { if (!o) return; try { if (o._finGather || o._finSpark || o._finOrb || o._finPulse) this._clearEnemyOrb(o); if (o._ki) this._enemyKi(o, 0); if (o._ioOrb || o._ioBusy) this._ecIronOrbClear(o); if (o._breathTimer) { o._breathTimer.remove(false); o._breathTimer = null; } if (o._dAbs) this._ecDuckAbsRemove(o, false); const A = o._skAura; if (A) { if (A.wisp) A.wisp.remove(); if (A.pulse) A.pulse.stop(); if (A.upd) this.events.off('postupdate', A.upd); (A.objs || []).forEach(x => { try { x.destroy(); } catch (er) { } }); try { if (A.cont && A.cont.scene) A.cont.destroy(); } catch (er) { } o._skAura = null; } } catch (er) { } });   // 🩹2026-11-08 洩漏修補:換關/restartStage 前先停集氣球/鬥氣/骷髏光圈的 loop 計時器與 tween(原本只銷毀物件,計時器逐次 +1)
         if (this.enemies) this.enemies.forEach(o => { try { this._enTwDrop(o); } catch (er) { } });   // 2026-11-22 補間洩漏修補
+        if (this.enemies) this.enemies.forEach(o => { if (o && o.labShield) { try { this._atfDrop(o.labShield); o.labShield.destroy(); } catch (er) { } o.labShield = null; } });   // 🩹2026-11-24:盾罩掛場景根層、enemyG.destroy 帶不走→換關/再挑戰前銷毀(原本舊盾罩留在畫面上繼續轉,每次 +1 個盾罩、+8 補間、+1 計時器)
+        if (this.enemies) this.enemies.forEach(o => { if (!o) return; try { if (o._ecCast) this._castDrop(o._ecCast); if (o._paraRings) this._paraRingsDrop(o._paraRings); this._ecCoreShieldKill(o); } catch (er) { } o._ecCast = null; o._paraRings = null; });   // 🩹2026-11-24:詠唱十字/麻痺鎖圈(掛場景根層)、寶玉盾圈補間→換關/再挑戰/重進前清掉(原本舊十字或鎖圈留在畫面上繼續轉、盾圈補間變孤兒)
+        try { this._castDrop(this._reviveCast); this._castDrop(this._healCast); if (this._eatCast) this._clearEatCast(); } catch (er) { } this._reviveCast = null; this._healCast = null; this._eatCast = null;   // 🩹2026-11-24:舊路徑詠唱(復活/補血/吸屬塊)存在 scene 欄位,重開與離開再進都不會自己清
+        if (EFX.s1 && this.enemies) this.enemies.forEach(o => { if (o && o._efx) EnemyFX.drop(this, o); });   // 🆕敵技演出:換波/再挑戰/離開再進前收掉舊怪的新火球、靶環與排程
         if (this.enemies) this.enemies.forEach(o => { if (o && o._turnGTop && o.turnG) { try { o.turnG.destroy(); } catch (e) {} o.turnG = null; o._turnGTop = false; } });   // 🩹2026-11-08:酋長 turnG 已抽到頂層、enemyG.destroy 帶不走→換關/restartStage 前先銷毀(verifier 抓到每次 +1 殘留)
         if (this.enemyG) this.enemyG.destroy();
         this.enemyG = this.add.container(0, 0).setDepth(DEPTH.enemy); if (this.enemyTopG) this.enemyTopG.destroy(); this.enemyTopG = this.add.container(0, 0).setDepth(DEPTH.fx + 2);   // 2026-11-18:敵人頭上標記層(沙漏/目標箭頭/弱點徽章)→高於盾罩大字(DEPTH.fx),同酋長舊「倒數置頂」的 fx+2   // 敵方整層在「我方卡」之下、背景之上
@@ -7158,7 +7167,10 @@
           const g = this.add.graphics().setDepth(DEPTH.fx).setBlendMode(ADD); g.fillStyle(col, 0.55); g.fillPoints(tri, true); g.lineStyle(2, col, 0.95); g.strokePoints(tri, true); g.x = x; g.y = y;
           this.tweens.add({ targets: g, x: x + Math.cos(dir) * 72, y: y + Math.sin(dir) * 72, angle: Phaser.Math.Between(-130, 130), alpha: 0, duration: 480, ease: 'Quad.out', onComplete: () => g.destroy() });
         }
-        this.shakeCam(130, 0.005); this.labSnd && this.labSnd('s_block', 0.6); if (!quiet) this.floatText(x, y - 18, tr('🛡 破盾!'), '#ffffff'); sh.destroy();
+        this.shakeCam(130, 0.005); this.labSnd && this.labSnd('s_block', 0.6); if (!quiet) this.floatText(x, y - 18, tr('🛡 破盾!'), '#ffffff'); this._atfDrop(sh); sh.destroy();
+      }
+      _atfDrop(sh) {   // 🩹2026-11-24 盾罩補間洩漏修補:銷毀盾罩前停掉它的無限補間(慢轉/呼吸/6 顆頂點火花)與波紋計時器;原本只 destroy 物件,補間留在管理器裡空轉,每次建盾 +8
+        if (!sh) return; try { if (sh._rip) { sh._rip.remove(); sh._rip = null; } if (sh._tick) { sh._tick.remove(); sh._tick = null; } const rot = sh.list && sh.list[0]; this.tweens.killTweensOf([sh].concat(rot ? [rot].concat(rot.list || []) : [])); } catch (er) { }
       }
       _shieldAct(e) {   // 🛡盾兵/盾王出手:有盾→攻擊(魔王每2cd);無盾→重開盾(之後照攻擊cadence)
         if (e.shieldUp) { this.enemyAttack(e); e.timer = (e.boss ? 2 : e.interval); }
@@ -7213,6 +7225,11 @@
           return { cross: cc, tw, bub, x: cx, y: cy, e: s.e };
         });   // 帶上小兵 ref(s.e)→復活時才復原得到牠
         if (num != null) boss._ecCast = { boss, cross, pulse, gather, circles, tx: numTx, type: 'revive' }; else this._reviveCast = { boss, cross, pulse, gather, circles };
+      }
+      _castDrop(c) {   // 🩹2026-11-24 詠唱殘留清理(換關/再挑戰/重進用,不播演出):停脈動與粒子計時器、銷毀十字與召喚小十字
+        if (!c) return; c._breaking = true; if (c.pulse) c.pulse.stop(); if (c.gather) c.gather.remove();
+        const kill = o => { if (!o) return; try { this.tweens.killTweensOf([o].concat(o.list || [])); o.destroy(); } catch (er) { } };
+        (c.circles || []).forEach(x => { if (x.tw) x.tw.stop(); if (x.bub) x.bub.remove(); kill(x.cross); }); kill(c.cross);
       }
       _fireRevive() {
         const rc = this._reviveCast; if (!rc) return; this._reviveCast = null; const ADD = Phaser.BlendModes.ADD;   // 復活成:十字收束→各法陣「水波+大量氣泡上浮」(像我方補血)→敵復活;不閃綠光
@@ -8371,11 +8388,12 @@
         cont.setScale(0.4).setAlpha(0.9); this.tweens.add({ targets: cont, scaleX: 1, scaleY: 1, duration: 280, ease: 'Back.out' }); e._paraRings = cont;
       }
       _scatterParaRings(e) {
-        const cont = e._paraRings; if (!cont) return; e._paraRings = null; const x = cont.x, y = cont.y, ADD = Phaser.BlendModes.ADD, col = EL.thunder.color; cont.destroy();   // #3/#6 中斷:敵前閃電環像火花盤散開消失
+        const cont = e._paraRings; if (!cont) return; e._paraRings = null; const x = cont.x, y = cont.y, ADD = Phaser.BlendModes.ADD, col = EL.thunder.color; this._paraRingsDrop(cont);   // #3/#6 中斷:敵前閃電環像火花盤散開消失
         for (let k = 0; k < 16; k++) { const a = Math.random() * Math.PI * 2, r = 28 + Math.random() * 44, p = this.add.rectangle(x, y, 4 + Math.random() * 3, 4 + Math.random() * 3, k % 2 ? col : 0xfff6b0, 1).setAngle(Math.random() * 90).setBlendMode(ADD).setDepth(DEPTH.fx); this.tweens.add({ targets: p, x: x + Math.cos(a) * r, y: y + Math.sin(a) * r, angle: Phaser.Math.Between(-220, 220), alpha: 0, scale: 0.3, duration: 460, ease: 'Quad.out', onComplete: () => p.destroy() }); }
         const fl = this.add.circle(x, y, 26, 0xffffff, 0.85).setBlendMode(ADD).setDepth(DEPTH.fx); this.tweens.add({ targets: fl, scale: 2, alpha: 0, duration: 300, onComplete: () => fl.destroy() });
       }
-      _clearParaLock(animate) { const pl = this.paraLock; if (!pl) return null; this.paraLock = null; const e = pl.e; if (e && e._paraRings) { if (animate) { const c = e._paraRings; this.tweens.add({ targets: c, alpha: 0, scaleX: 0.5, scaleY: 0.5, duration: 220, onComplete: () => c.destroy() }); } else e._paraRings.destroy(); e._paraRings = null; } if (this.tray[pl.slot]) { this.tray[pl.slot].locked = false; this.tray[pl.slot].paraN = null; } return pl; }
+      _paraRingsDrop(cont) { if (!cont) return; try { this.tweens.killTweensOf([cont].concat(cont.list || [])); cont.destroy(); } catch (er) { } }   // 🩹2026-11-24:鎖圈三層旋轉是各自的無限補間,只 destroy 容器會留下 3 條孤兒補間→連補間一起停
+      _clearParaLock(animate) { const pl = this.paraLock; if (!pl) return null; this.paraLock = null; const e = pl.e; if (e && e._paraRings) { if (animate) { const c = e._paraRings; this.tweens.add({ targets: c, alpha: 0, scaleX: 0.5, scaleY: 0.5, duration: 220, onComplete: () => { this.tweens.killTweensOf(c.list || []); c.destroy(); } }); } else this._paraRingsDrop(e._paraRings); e._paraRings = null; } if (this.tray[pl.slot]) { this.tray[pl.slot].locked = false; this.tray[pl.slot].paraN = null; } return pl; }
       _expireParaLock() { const pl = this.paraLock; if (!pl) return; const sx = this.traySlots[pl.slot], sy = TRAY_Y; this._clearParaLock(true); const fl = this.add.circle(sx, sy, 22, 0xe8e8f2, 0.8).setBlendMode(Phaser.BlendModes.ADD).setDepth(DEPTH.tray + 2); this.tweens.add({ targets: fl, scale: 1.8, alpha: 0, duration: 300, onComplete: () => fl.destroy() }); this.floatText(sx, sy - 28, tr('🕸️ 蛛網解除'), '#d8d8e0'); }
       _interruptPara(e) {
         const pl = this.paraLock; if (!pl || pl.e !== e) return; const sx = this.traySlots[pl.slot], sy = TRAY_Y; this._scatterParaRings(e); this._clearParaLock(false);   // #6 中斷=敵前閃電環火花散開(不再有莫名飛來的攻擊彈)
@@ -8673,8 +8691,8 @@
       _f2Preload() {   // 依「我方隊伍屬性」只載用得到的子彈圖(規格 8.3;缺圖→程式畫的替代版)
         const L = { fire: ['fire_tail_1', 'fire_tail_2', 'fire_tail_3', 'fire_pop'], water: ['water_drop_1', 'water_drop_2', 'water_drop_3', 'water_splash', 'water_ball'], thunder: ['thunder_spark_1', 'thunder_spark_2', 'thunder_spark_3', 'thunder_hit'], wind: ['wind_blade', 'wind_slash', 'wind_leaf_1', 'wind_leaf_2'], earth: ['earth_rock_1', 'earth_rock_2', 'earth_rock_3', 'earth_crack'] };
         const els = new Set((this.presetTeam || []).map(c => c && c.el).filter(Boolean));
-        els.forEach(el => (L[el] || []).forEach(k => { const key = 'fx_' + k; if (!this.textures.exists(key)) this.load.image(key, 'art/fx/' + key + '.webp'); }));
-        if (FX2.s7) { if (!this.textures.exists('fx_heal_heart')) this.load.image('fx_heal_heart', 'art/fx/fx_heal_heart.webp'); if (!this.textures.exists('fx_heal_bloom16')) this.load.spritesheet('fx_heal_bloom16', 'art/fx/fx_heal_bloom16.webp', { frameWidth: 256, frameHeight: 256 }); }   // 步 7:補血圖(缺圖=綠環替代/程式畫的愛心)
+        els.forEach(el => (L[el] || []).forEach(k => { const key = 'fx_' + k; if (!this.textures.exists(key)) this.load.image(key, FXA(key)); }));
+        if (FX2.s7) { if (!this.textures.exists('fx_heal_heart')) this.load.image('fx_heal_heart', FXA('fx_heal_heart')); if (!this.textures.exists('fx_heal_bloom16')) this.load.spritesheet('fx_heal_bloom16', FXA('fx_heal_bloom16'), { frameWidth: 256, frameHeight: 256 }); }   // 步 7:補血圖(缺圖=綠環替代/程式畫的愛心)
         if (FX2.s3 || FX2.s5) this.events.once('create', () => this._f5Load());   // 步 3 中級手繪+步 5 大招素材:進戰鬥後背景載(第 2 批;貼圖載完當下就上傳 GPU,不必另外預熱)。2026-11-22 大毛:中級手繪 5 張由第 1 批改到這裡(混屬隊進戰鬥前少載約 660KB;還沒到=不播手繪,子彈與共用收尾照常,到了下一次就用真圖)
       }
       _f2Ensure() {
@@ -8932,8 +8950,8 @@
       _f5Load() {   // 第 2 批素材:進戰鬥後背景載(只載我方隊伍屬性);還沒到/載失敗就用程式畫的替代版(_fxK),傷害/狀態照演,不等
         const L = { fire: [['fire_front8', 1]], water: [['water_front8', 1], ['water_surface8', 1]], thunder: [['thunder_residue8', 1], ['thunder_cloud', 0]], wind: [['wind_tornado8', 1], ['wind_multislash16', 1]], earth: [['earth_spike16', 1], ['earth_spike_slant8', 1], ['earth_spike_cluster8', 1]] };
         if (!this.sys || !this.sys.isActive()) return; const els = new Set((this.presetTeam || []).map(c => c && c.el).filter(Boolean)); let any = false;
-        if (FX2.s3) els.forEach(el => { const key = F2_HD16[el]; if (!key || this.textures.exists(key)) return; any = true; this.load.spritesheet(key, 'art/fx/' + key + '.webp', { frameWidth: 192, frameHeight: 192 }); });   // 中級手繪先排(比大招常用;雷柱同時是雷大招的主體)
-        if (FX2.s5) els.forEach(el => (L[el] || []).forEach(([k, sheet]) => { const key = 'fx_' + k; if (this.textures.exists(key)) return; any = true; if (sheet) this.load.spritesheet(key, 'art/fx/' + key + '.webp', { frameWidth: 192, frameHeight: 192 }); else this.load.image(key, 'art/fx/' + key + '.webp'); }));
+        if (FX2.s3) els.forEach(el => { const key = F2_HD16[el]; if (!key || this.textures.exists(key)) return; any = true; this.load.spritesheet(key, FXA(key), { frameWidth: 192, frameHeight: 192 }); });   // 中級手繪先排(比大招常用;雷柱同時是雷大招的主體)
+        if (FX2.s5) els.forEach(el => (L[el] || []).forEach(([k, sheet]) => { const key = 'fx_' + k; if (this.textures.exists(key)) return; any = true; if (sheet) this.load.spritesheet(key, FXA(key), { frameWidth: 192, frameHeight: 192 }); else this.load.image(key, FXA(key)); }));
         if (any && !this.load.isLoading()) this.load.start();
       }
       _f5Absorb(fx, C, x, j, o, tb, chg) {   // 大招卡:方塊吸進卡片(到位=1 HIT、卡片集氣),不射子彈
@@ -10345,7 +10363,8 @@
         if (orbObj) { e._finOrb = null; this._clearEnemyOrb(e); e._ecOrbStage = 0; }   // 先脫離:隨後同批 cd_roll 的 _ecOrbSync 不會把飛行中的球清掉
         // 🆕2026-11-09 製作人:哥布林出手不再浮「💀 骷髏重擊!」(不論有沒有亮骷髏)
         this._ecImpactAt = Math.max(this._ecImpactAt || 0, (this.time.now || 0) + (dl || 0) + 360 + 440 + 120);   // enemyAttack 彈著時間(集氣360+飛行440)+餘量:餘火 tick/徽章要等所有待彈著敵攻結算完才演(避免玩家在飛行中放塊 → 餘火先於攻擊扣血)
-        const r = this.enemyAttack(e, { dmg: ev.raw, big: !!ev.skull || !!orbObj, fromOrb, orbObj, delay: dl || 0 });   // 內含 _calcPlayerDmg(護甲/迴避/黑熊)與 _playerImpact(鮭魚/gameOver)
+        const _efxB = (EFX.s2 && e._efx) ? EnemyFX.guard(EFX, 's2', () => EnemyFX.fireLaunch(this, e, orbObj, dl), null, () => EnemyFX.dropAll(this)) : null;   // 🆕敵技演出步 2:常駐火球當彈體(批 1 沿用舊彈道;關閉時 null → 下一行參數與原本相同)
+        const r = this.enemyAttack(e, { dmg: ev.raw, big: !!ev.skull || !!orbObj, fromOrb: _efxB ? _efxB.from : fromOrb, orbObj: _efxB ? _efxB.obj : orbObj, delay: dl || 0 });   // 內含 _calcPlayerDmg(護甲/迴避/黑熊)與 _playerImpact(鮭魚/gameOver)
         const D = (r && r.dmg > 0) ? r.dmg : 0, ec = this._ec.ec;
         if (ev.rule >= 3 && D > 0 && D > ec.burnCand) ec.burnCand = D;   // 餘火基準=實際傷害 D(黑熊擋掉=0=無餘火);同輪多隻取最大(核心 endEnemyPhase 提交)
       }
@@ -11486,6 +11505,7 @@
       }
       _ecSk(e) { const g = e && (e._g || e._h || e._i); return !!(g && !e.dead && this._ecLethal(e)); }   // 現在該不該顯示骷髏(圖示/光暈共用):🆕2026-11-09 統一=這隻哥布林下一擊(不含餘火)>= 隊伍最大血量就亮,不分骷髏大招/普攻/拆除後
       _ecCoolFx(e, stage) {   // 🆕2026-11-08 酋長降溫各階動畫(stage=打完剩幾下 2/1/0):整隻青白閃+x 微震+青白冷卻環+白蒸氣團+骷髏圖示彈跳(最大時換圖)+頭頂大字;青白語彙(火城底是橘色岩漿,橘 ADD 看不見)
+        if (EFX.s2 && e && e._g && e._efx && EnemyFX.guard(EFX, 's2', () => { EnemyFX.fireHit(this, e, stage, EFX); return true; }, false, () => EnemyFX.dropAll(this))) return;   // 🆕敵技演出步 2:酋長降溫改「靶環掉段＋火球縮一級」,不演舊的青白連閃(規格 3.12 B11、4.1 S-F3(a))
         if (!e || e.dead || !e.sprite || !e.sprite.scene) return;
         const sp = e.sprite, x = sp.x, y = sp.y, cw = e.cardW || 64, ch = e.cardH || 80, last = stage <= 0;
         const fcol = last ? 0xa8e4ff : 0xcfefff, fms = last ? 70 : 90;   // 🩹驗收:拆除三閃用偏青、更短,避免整隻變純白剪影
@@ -11551,6 +11571,7 @@
       }
       _ecOrbSync(e) {   // 酋長集氣球:沿用 _showEnemyOrb 動畫,階段=CD 接近出手(剩 ≥3 手=1 小白球/2=橘/1=3 白熱大球抖動);降溫強度改由骷髏頭光圈(_ecSkullAura)+鬥氣粒子(綁 g.left)表達;拆除後不顯示球(普攻只看沙漏)
         const g = e && e._g; if (!g || e.dead || e.hp <= 0 || !e.sprite || this.dive || e._ecBreaking) return;   // 🆕2026-11-08 製作人:1★~4★ 哥布林每次出手都是蓄力(猛擊)→球全開(球=時間;光圈=骷髏;鬥氣=酋長剩餘次數)
+        if (EFX.s2) EnemyFX.guard(EFX, 's2', () => EnemyFX.fireSync(this, e, EFX), false, () => EnemyFX.dropAll(this));   // 🆕敵技演出步 2(火城):新火球常駐＋蓄力外觀＋窗口靶環(規格 3.1、3.2、4.1);舊球改由 _showEnemyOrb 放看不見的佔位物
         if (g.defused) { if (e._finOrb) this._clearEnemyOrb(e); e._ecOrbStage = 0; return; }   // 已拆除:不畫球/鬥氣(出手後 cd_roll 重抽才重新點滿)
         if (g.rule === 4 && (g.left | 0) > 0) this._enemyKi(e, Math.max(1, Math.min(3, g.left | 0)), 0xff5a2a);   // 鬥氣只有酋長(綁剩餘次數,同級別會自己略過)
         if (e.turnG && !e._turnGTop) { e._turnGTop = true; if (this.enemyG && this.enemyG.exists(e.turnG)) this.enemyG.remove(e.turnG); this.add.existing(e.turnG); e.turnG.setDepth(DEPTH.fx + 2); }   // 🩹倒數置頂(搬到球判定前:1~3★ 剛抽 CD 不畫球時也要置頂)
@@ -11562,6 +11583,7 @@
         e._ecOrbStage = stage; this._showEnemyOrb(e, stage);
       }
       _ecSkullAura(e, g, hit) {   // 🆕2026-11-08 骷髏頭光圈=熱度:酋長 left 3/2/1=大/中/小(骷髏隨階變灰);2★/3★ 骷髏固定滿階;非骷髏(沙漏/拆除/中止)熄滅。hit=降溫打中:噴白煙火星+浮字
+        if (EFX.s2 && e && e._g) return;   // 🆕敵技演出步 2:火城骷髏光暈與身後火焰不顯示(規格 3.12 B3;致死改由倒數圖示骷髏＋骷髏火球表示)
         g = g || (e && e._g); if (!e || !g || !e.turnG || !e.glass || e.dead) return;
         const chief = g.rule === 4, lvl = this._ecLethal(e) ? ((chief && g.skull && !g.defused) ? Math.max(0, Math.min(3, g.left | 0)) : 3) : 0, A = e._skAura;   // 🆕2026-11-09 打不死 → lvl 0 → 三層光暈熄滅
         const ADD = Phaser.BlendModes.ADD, tg = e.turnG;
@@ -11593,6 +11615,7 @@
         e._skAura = { lvl, objs: [base, out, core], pulse, wisp, cont: kc, upd };
       }
       _ecOrbFade(e) {   // 🆕v1.5.0 拆除=洩氣:集氣球從角色身上脫離後透明淡出+略縮(不碎、不浮字)
+        if (EFX.s2 && e._efx) EnemyFX.guard(EFX, 's2', () => EnemyFX.fireDefuse(this, e, EFX), null, () => EnemyFX.dropAll(this));   // 🆕敵技演出步 2:拆除→新火球淡出縮小,623.75ms 後長出小火球(批 2 換碎裂)
         const o = e._finOrb; e._finOrb = null; this._clearEnemyOrb(e); e._ecOrbStage = 0;
         if (!o || !o.scene) return;
         this.tweens.add({ targets: o, alpha: 0, scaleX: 0.55, scaleY: 0.55, duration: 480, ease: 'Quad.in', onComplete: () => { if (o.scene) o.destroy(); } });
@@ -11723,6 +11746,7 @@
       _showEnemyOrb(e, stage) {
         if (!e.sprite) return;
         if (e._finPulse) { e._finPulse.stop(); e._finPulse = null; } if (e._finGather) { e._finGather.remove(); e._finGather = null; } e._finShake = false; if (e._finSpark) { e._finSpark.remove(); e._finSpark = null; } if (e._finOrb) { e._finOrb.destroy(); e._finOrb = null; }   // 換 stage:先清舊視覺
+        if (EFX.s2 && e._g && e._efx && EnemyFX.guard(EFX, 's2', () => EnemyFX.fireMarker(this, e), false, () => EnemyFX.dropAll(this))) return;   // 🆕敵技演出步 2:火城舊球不畫,只留看不見的佔位 e._finOrb(字卡①④、出手判斷、清理沿用舊邏輯)
         const ADD = Phaser.BlendModes.ADD, base = (e.cardW || 60) * ((e._g && e._g.rule !== 4) ? 0.10 : (e.boss ? 0.32 : 0.2));   // 雜兵較小;🆕2026-11-09 製作人:新機制 1~3★ 哥布林再小(0.2→0.15→0.10,含初級/入門魔王位的 1~3★),只有酋長 rule4 維持 0.32;舊路徑不變
         const conf = stage >= 3 ? { r: base * 1.5, col: 0xff2a1a, glow: 0xff2a1a, pulse: 210 }
           : stage === 2 ? { r: base * 1.15, col: 0xffb24a, glow: 0xff8a2a, pulse: 360 }
@@ -11858,12 +11882,14 @@
       }
       killEnemy(e) {
         if (e.dead) return; e._revPend = false;
+        if (EFX.s1 && e._efx) EnemyFX.drop(this, e, 180, true);   // 🆕敵技演出:新火球淡出、靶環收掉;佔位 _finOrb 照舊碎球的狀態部分收(倒數重設),但不演碎球與「打斷!」字
         if (e._finOrb) this._breakEnemyOrb(e);   // 🔥終結蓄力中被打死→搶殺打斷(元氣玉碎散、不放招)
         if (this._reviveCast && this._reviveCast.boss === e) this._breakReviveCast();   // 🌊魔王詠唱復活中被打死→打斷(搶殺)
         if (this._healCast && this._healCast.boss === e) this._breakHealCast();   // 💚魔王詠唱補血中被打死→打斷
         if (this._eatCast && this._eatCast.boss === e) this._clearEatCast();   // 🌀魔王預告吸屬塊中被打死→清黑洞(搶殺)
         if (this.paraLock && this.paraLock.e === e) { this._clearParaLock(false); this.renderTray(); this.tonFloat(tr('🕸️ 蛛網解除!'), '#d8d8e0'); }   // 🕸️蜘蛛網施法者被打死(精準判斷該鎖來源就是這隻)→清蛛網+解鎖托盤格+提示(reskin 原⚡麻痺術士)
-        if (e.labShield) { if (e.labShield._rip) e.labShield._rip.remove(); e.labShield.destroy(); e.labShield = null; }   // 🛡盾兵/盾王死掉→盾罩一併清掉
+        if (e._paraRings) { this._paraRingsDrop(e._paraRings); e._paraRings = null; }   // 🩹2026-11-24:施法者的鎖已被另一隻覆蓋(兩隻蛛網怪同場)→牠死時舊鎖圈原本留在原地繼續轉
+        if (e.labShield) { if (e.labShield._rip) e.labShield._rip.remove(); this._atfDrop(e.labShield); e.labShield.destroy(); e.labShield = null; }   // 🛡盾兵/盾王死掉→盾罩一併清掉(2026-11-24:連補間一起停)
         if (this.hitLab) {   // 實驗室:也演敗陣化光,演完原地重生(順便看入場動畫)→ 可一直測
           if (e._labDying) return; e._labDying = true;
           e.dead = true; if (e.bob) { e.bob.stop(); e.bob = null; } if (e.knockTw) { e.knockTw.stop(); e.knockTw = null; } this._breathStop(e);   // 🫁 死亡永久停呼吸(下方 delayedCall 重生會走 enemyEnter→refreshBob 重新啟動)
