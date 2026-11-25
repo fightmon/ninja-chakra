@@ -81,16 +81,16 @@
 
 <body>
   <div id="game"></div>
-  <!-- 2026-11-19 快取版本號(大毛拍板):自家 js 一律帶 ?v=;js 線上 max-age=4 小時且 Cloudflare 邊緣快取,換查詢字串才會拿新檔。【上線時:只要任何程式檔有變,把本檔所有「v=20261124k」與下一行 NB_ASSET_V 一起換新】格式 YYYYMMDD+英文小寫序號(同日第二次上線 b、c…);phaser.min.js 等第三方檔不加 -->
-  <script>window.NB_ASSET_V = '20261124k';</script>
-  <script src="i18n.js?v=20261124k"></script><!-- 多語(tr()/getLang/setLang):中文原文=key,查無回原文;要在所有遊戲腳本之前載 -->
-<script src="battle-core.js?v=20261124k"></script>
-<script src="battle-vfx.js?v=20261124k"></script>
-  <script src="round-core.js?v=20261124k"></script><!-- 🆕2026-11-06 三輪(階段(a)前端):塊池/怪倍率共用核心;只定義全域 RoundCore、無副作用;接線全在 ROUNDS 開關(?rounds=1 / localStorage nb_rounds=1)後,預設關 -->
-  <script src="enemy-core.js?v=20261124k"></script><!-- 🆕2026-11-06 P2:敵人機制核心(遊戲與 sim 共用);只定義全域 EnemyCore、無副作用;接線全在 NEWMECH 開關(?newmech=1 / localStorage nb_newmech=1)後,預設關 -->
-  <script src="enemy-fx.js?v=20261124k"></script><!-- 🆕2026-11-24 敵技演出 EFX:開關解析＋定位純計算(只定義全域 EnemyFX、無副作用);預設全關,?efx=1 才開(規格 spec-enemy-skill-fx.md) -->
-  <script src="fx-art.js?v=20261124k"></script><!-- 🆕2026-11-24 我方招式能量圖換無邊框版:貼圖 key→檔名對照表(全域 FxArt);?fxart=old 整批退回舊檔,刪表上一列=單張退回 -->
-  <script src="data-stages.js?v=20261124k"></script>
+  <!-- 2026-11-19 快取版本號(大毛拍板):自家 js 一律帶 ?v=;js 線上 max-age=4 小時且 Cloudflare 邊緣快取,換查詢字串才會拿新檔。【上線時:只要任何程式檔有變,把本檔所有「v=20261124m」與下一行 NB_ASSET_V 一起換新】格式 YYYYMMDD+英文小寫序號(同日第二次上線 b、c…);phaser.min.js 等第三方檔不加 -->
+  <script>window.NB_ASSET_V = '20261124m';</script>
+  <script src="i18n.js?v=20261124m"></script><!-- 多語(tr()/getLang/setLang):中文原文=key,查無回原文;要在所有遊戲腳本之前載 -->
+<script src="battle-core.js?v=20261124m"></script>
+<script src="battle-vfx.js?v=20261124m"></script>
+  <script src="round-core.js?v=20261124m"></script><!-- 🆕2026-11-06 三輪(階段(a)前端):塊池/怪倍率共用核心;只定義全域 RoundCore、無副作用;接線全在 ROUNDS 開關(?rounds=1 / localStorage nb_rounds=1)後,預設關 -->
+  <script src="enemy-core.js?v=20261124m"></script><!-- 🆕2026-11-06 P2:敵人機制核心(遊戲與 sim 共用);只定義全域 EnemyCore、無副作用;接線全在 NEWMECH 開關(?newmech=1 / localStorage nb_newmech=1)後,預設關 -->
+  <script src="enemy-fx.js?v=20261124m"></script><!-- 🆕2026-11-24 敵技演出 EFX:開關解析＋定位純計算(只定義全域 EnemyFX、無副作用);預設全關,?efx=1 才開(規格 spec-enemy-skill-fx.md) -->
+  <script src="fx-art.js?v=20261124m"></script><!-- 🆕2026-11-24 我方招式能量圖換無邊框版:貼圖 key→檔名對照表(全域 FxArt);?fxart=old 整批退回舊檔,刪表上一列=單張退回 -->
+  <script src="data-stages.js?v=20261124m"></script>
   <script>
     /* ===== 純邏輯(N/EL/SHAPES/CONFIG/computeClears/種子亂數 等戰鬥核心已抽到 battle-core.js,瀏覽器當共用全域)===== */
     const KEYS = ['fire', 'wind', 'thunder', 'earth', 'water'];
@@ -1732,7 +1732,8 @@
     function cloudSet(patch) { const c = cloudState(); Object.assign(c, patch); try { localStorage.setItem(CLOUD_KEY, JSON.stringify(c)); } catch (e) { } return c; }
     function cloudFetch(path, opt) {   // 所有雲端呼叫走這:8 秒 AbortController 逾時(開場那條另被 2.5 秒 race 蓋住沒關係)
       opt = opt || {}; const ac = new AbortController(), tid = setTimeout(() => ac.abort(), 8000);
-      return fetch(CLOUD_URL + path, Object.assign({ signal: ac.signal }, opt)).finally(() => clearTimeout(tid));
+      const sg = opt.signal; if (sg) { if (sg.aborted) ac.abort(); else sg.addEventListener('abort', () => ac.abort(), { once: true }); }   // 🩹2026-11-25 舊問題修正三 N5:呼叫端帶 signal(花石)→ 中止時連同 8 秒逾時一起收;中止後同一條鏈(含 401 重登後的重送)不會再送出
+      return fetch(CLOUD_URL + path, Object.assign({}, opt, { signal: ac.signal })).finally(() => clearTimeout(tid));
     }
     function ensureGuest() {   // 確保有訪客帳號;已有 guestCode 絕不重新 guest(避免孤立雲端進度),沒 token 就用碼換
       const c = cloudState();
@@ -1776,7 +1777,7 @@
       const c = await ensureGuest();
       const go = tok => cloudFetch(path, Object.assign({}, opt, { headers: Object.assign({ Authorization: 'Bearer ' + tok }, (opt || {}).headers) }));
       let r = await go(c.token);
-      if (r.status === 401) {
+      if (r.status === 401 && !(opt && opt._once)) {   // 🩹2026-11-25 舊問題修正四 P8:花石(_once)遇 401 不在這裡重登重送(後端不支援冪等時「只送一次」);token 由花石後的 walletResync 走這條一般 401 流程換新
         // 🩹2026-11-17 P1-2:只有 login 明確回 404+{error:'not_found'}(後端 auth/login.ts:找不到訪客碼或 users 列)才重建新帳號;逾時/斷線/429/5xx/403 停權/非 JSON/其他 → 保留舊身分,這次照 401 失敗回給呼叫端(下次再試)
         let gone = false;
         if (c.guestCode) { try { const c2 = await cloudLogin(c.guestCode); r = await go(c2.token); } catch (e) { gone = !!(e && e.status === 404 && e.code === 'not_found'); } }   // token 過期但帳號還在:換 token 成功→r 變 200
@@ -2077,14 +2078,45 @@
     }
     async function walletFetch() { try { const r = await authedFetch('/api/wallet'); if (r.ok) syncWallet(await r.json()); } catch (e) { } }   // fire-and-forget 拉錢包(離線/失敗靜默,沿用本地快取)
     function _toP(p, ms) { let t; return Promise.race([p, new Promise((_, rj) => { t = setTimeout(() => rj(new Error('timeout')), ms); })]).finally(() => clearTimeout(t)); }   // 🩹2026-11-25 舊問題修正二 R5:等待加上限(標頭到了、內容一直讀不完,也不會永久卡住)
-    const SPEND_GUESS = false;   // 🩹2026-11-25 舊問題修正二(企劃 11-25 裁決,等大毛決定):花石請求在標頭前斷線/逾時時,若「送出前剛跟伺服器同步的餘額」減 1 ＝ 事後重查的餘額 → 當作已扣、照給。預設關＝只重查餘額、不自動補發
-    async function walletResync() { try { const r = await _toP(authedFetch('/api/wallet'), 8000); if (!r.ok) return null; const d = await _toP(r.json(), 8000); syncWallet(d); return (d && typeof d.stones === 'number') ? d.stones : null; } catch (e) { return null; } }   // 🩹2026-11-25 舊問題修正二 R5:花石結果不確定 → 重查餘額(GET /api/wallet)再放開按鈕;回傳伺服器餘額(查不到＝null)
-    async function spendStone(action) {   // SPEND_GUESS 開:送出前先同步一次餘額當基準(同步失敗就不猜);🩹2026-11-25 舊問題修正二 R5:花 1 石(revive/reshuffle)統一走這,回傳 {st:'ok'|'402'|'err'|'net', d}。2xx＝伺服器已扣(後端扣款與帳本同批寫完才回應)→ 呼叫端一律給東西;內容讀不出來 d=null(改重查餘額)。後端沒有冪等鍵(每次自產 uuid),'net'(標頭前斷線/逾時)可能已扣:呼叫端重查餘額、不自動補發
-      const pre = SPEND_GUESS ? await walletResync() : null;
-      let r; try { r = await _toP(authedFetch('/api/wallet/spend', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action }) }), 20000); } catch (e) { if (!SPEND_GUESS) return { st: 'net', d: null }; const now = await walletResync(); return (pre != null && now != null && now === pre - 1) ? { st: 'ok', d: { stones: now }, guess: true } : { st: 'net', d: now != null ? { stones: now } : null }; }
-      if (r.status === 402) return { st: '402', d: null };
-      if (!r.ok) return { st: 'err', d: null };
-      let d = null; try { d = await _toP(r.json(), 8000); } catch (e) { } return { st: 'ok', d };
+    async function walletResync(ms) { const t0 = Date.now(), T = ms == null ? 10000 : ms; if (!(T > 0)) return null; try { const r = await _toP(authedFetch('/api/wallet'), Math.min(6000, T)); if (!r.ok) return null; const d = await _toP(r.json(), Math.max(0, Math.min(4000, T - (Date.now() - t0)))); syncWallet(d); return (d && typeof d.stones === 'number') ? d.stones : null; } catch (e) { return null; } }   // 🩹2026-11-25 舊問題修正二 R5:花石結果不確定 → 重查餘額(GET /api/wallet)再放開按鈕;回傳伺服器餘額(查不到＝null)(🩹2026-11-25 舊問題修正三:上限 8＋8 秒 → 6＋4 秒)   (🩹2026-11-25 舊問題修正四 P8:ms＝這次最多等多久,標頭 ≤6 秒、內容 ≤4 秒、合計 ≤ms;不帶＝10 秒同 l)
+    // 🩹2026-11-25 舊問題修正三 N5:花石帶冪等鍵 idem_key。每次「玩家按下付費」產生一把新鍵,這次購買的每一次送出都用同一把;後端 /api/config 回 spendIdem:true 才自動同鍵重送(標頭前斷線/逾時、5xx、2xx 內容壞),後端不支援只送一次(舊後端忽略多的欄位)。
+    //   每次送出都有自己的 AbortController:逾時/斷線 → 先中止、等它收掉(最多 3 秒)才往下;中止後這條請求鏈不會再送出 → 不會有新舊兩個請求並存各扣一次。
+    const SPEND = { TRY: 3, GAP: 1000, HDR: 10000, HDR0: 20000, BODY: 6000, ALL: 30000, RS: 6000, MIN: 3000 };   // 🩹2026-11-25 舊問題修正四 P8:ALL＝按下到放開按鈕的總上限 30 秒(含讀內容、中止收尾、餘額重查);送出階段在 ALL−RS(24 秒)內結束,剩下的給重查餘額。最多送 3 次(首送＋重送 2 次)、第 n 次重送前等 n 秒、每次等標頭最多 10 秒(只送一次時照 k 等 20 秒)、讀內容最多 6 秒、中止後等舊請求鏈收掉最多 3 秒
+    let _spendN = 0;
+    function _spendKey() { try { const a = new Uint8Array(16); crypto.getRandomValues(a); return 'sp' + Array.from(a, x => (x < 16 ? '0' : '') + x.toString(16)).join(''); } catch (e) { return 'sp' + Date.now().toString(36) + '_' + (++_spendN).toString(36) + '_' + Math.floor(performance.now() * 1000).toString(36); } }   // 合約:英數/連字號/底線 16~64 字(34 字);不用 Math.random
+    const _spendMem = {};   // 🩹2026-11-25 舊問題修正三(企劃裁決 3):還沒確定的花石鍵,依帳號＋動作保存;localStorage 讀寫失敗就只存在這裡
+    function _spendSlot(action) { return 'nb_spend_pend_' + (cloudState().uid || 'anon') + '_' + action; }   // 鍵名帶帳號(換帳號不沿用別人的鍵)
+    function _spendPendGet(action, slot) { const k = slot || _spendSlot(action); let v = null; try { v = localStorage.getItem(k); } catch (e) { } if (v == null) v = _spendMem[k] || null; return (typeof v === 'string' && /^[A-Za-z0-9_-]{16,64}$/.test(v)) ? v : null; }
+    function _spendPendSet(action, key, slot) { const k = slot || _spendSlot(action); if (key) _spendMem[k] = key; else delete _spendMem[k]; try { if (key) localStorage.setItem(k, key); else localStorage.removeItem(k); } catch (e) { } }   // 🩹2026-11-25 舊問題修正四 P6:slot＝購買開始時算好的帳號槽(整條鏈用同一個,中途帳號改變也不會清到別的槽)
+    function _spendIdemOn() { return !!(window._nbConfig && window._nbConfig.spendIdem === true); }   // 後端支援冪等(GET /api/config 的 spendIdem);沒抓到/舊後端 → 不自動重送
+    function _spendHasPend(action) { return !!_spendPendGet(action); }   // 🩹2026-11-25 舊問題修正四 P4:同帳號同動作有待確認的鍵 → 復活/重洗鈕不看餘額、照樣可按(按下＝拿舊鍵去問)
+    async function _spendOnce(action, key, ms, dl) {   // 送一次 → {st, d}:ok＝2xx 有餘額;bad＝2xx 但內容讀不出來(已扣);402;fin＝409/400(這把鍵明確沒扣);5xx;unk＝其他狀態碼(401/403/429/其他 4xx,不確定);net＝標頭前斷線/逾時(🩹2026-11-25 舊問題修正四 P2/P3/P8)
+      const ac = new AbortController(); let p = null, q = null;
+      const stop = async st => { ac.abort(); try { await _toP(q || p, Math.max(0, Math.min(SPEND.MIN, dl - Date.now()))); } catch (e) { } return { st, d: null }; };   // 中止後等這條請求鏈收掉(標頭前＝authedFetch、標頭後＝讀內容)才往下;_once:鏈裡沒有 401 重登重送,之後任何送出都被已中止的 signal 擋下
+      try {
+        p = authedFetch('/api/wallet/spend', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action, idem_key: key }), signal: ac.signal, _once: true });
+        const r = await _toP(p, ms);
+        if (r.status === 402) return { st: '402', d: null };
+        if (r.status === 409 || r.status === 400) return { st: 'fin', d: null };
+        if (r.status >= 500) return { st: '5xx', d: null };
+        if (!r.ok) return { st: 'unk', d: null };
+        let d = null; q = r.json(); try { d = await _toP(q, Math.max(0, Math.min(SPEND.BODY, dl - Date.now() - SPEND.MIN))); } catch (e) { }
+        return (d && typeof d.stones === 'number') ? { st: 'ok', d } : await stop('bad');
+      } catch (e) { return await stop('net'); }
+    }
+    async function spendStone(action) {   // 花 1 石(revive/reshuffle)統一走這,回傳 {st:'ok'|'402'|'err'|'net', d};回傳前已同步或重查餘額。ok＝已扣 → 呼叫端照給;其餘＝沒給(🩹2026-11-25 舊問題修正四:整段 ≤ SPEND.ALL)
+      const t0 = Date.now(), dl = t0 + SPEND.ALL - SPEND.RS, slot = _spendSlot(action), old = _spendPendGet(action, slot), idem = !!old || _spendIdemOn(), key = old || _spendKey();   // P6:帳號槽在購買開始時決定一次;P5:有待確認的鍵就用(鍵存在＝當時後端支援),不看 config
+      if (idem && !old) _spendPendSet(action, key, slot);   // 送出前就記下(送到一半重新整理也找得回)
+      let res = null, paid = false, d = null;
+      for (let i = 0; i < (idem ? SPEND.TRY : 1); i++) {
+        if (i) { const gap = SPEND.GAP * i; if (dl - Date.now() - gap - SPEND.MIN < SPEND.MIN) break; await new Promise(r => setTimeout(r, gap)); }
+        res = await _spendOnce(action, key, Math.min(idem ? SPEND.HDR : SPEND.HDR0, dl - Date.now() - SPEND.MIN), dl);
+        if (res.st === 'ok' || res.st === 'bad') paid = true; if (res.d) d = res.d;   // P2:拿過 2xx＝伺服器已扣;之後同鍵重送不論遇到什麼都照給
+        if (!idem || !(res.st === 'bad' || res.st === '5xx' || res.st === 'net')) break;   // 只有 2xx 內容壞、5xx、標頭前斷線/逾時才同鍵重送;其餘(成功/402/409/400/401/403/429…)就停
+      }
+      if (idem && (paid || res.st === '402' || res.st === 'fin')) _spendPendSet(action, null, slot);   // P3:只有明確結果(成功含重放、402、409/400)才清鍵;401/403/429/其他 4xx/5xx/斷線/逾時 → 鍵留著,同帳號同動作下次按沿用
+      if (d) syncWallet(d); else await walletResync(t0 + SPEND.ALL - Date.now());   // 沒拿到餘額 → 用剩下的時間重查(P8)
+      return { st: paid ? 'ok' : res.st === '402' ? '402' : res.st === 'net' ? 'net' : 'err', d };
     }
     function syncCards(d) {   // 🔐 伺服器收藏回應→落地本地快取(真相在 user_cards 表,每張個體各自 lv/exp/evo;見 per-instance-level-spec.md)。
       // cards 整包覆蓋(帶各自 lv/exp/evo);cardLv/cardEvo 不再是真相,改為「每卡種目前擁有個體中最強(evo 最高→lv 最高)」的 derived 快取,
@@ -4781,9 +4813,10 @@
       }
       // 🆕2026-11-02 步驟全跑完的畢業出口(取代舊「打死 b → on:'win' → stageClear → showResult」):沿用 stageClear 教學分支同一條路(500ms 後 showResult(true) → wasTut 分支 tutDone(true)+showTutComplete),不經戰鬥勝利,敵人活著就離場;tut.pending 上鎖+locked 鎖盤面,防這 500ms 內再動作/重複觸發
       tutFinish() {
+        if (this.tut && !this.tut.fin && this._clrHold('tut')) return;   // 🩹2026-11-25 舊問題修正三 N6:畢業保底比照過關:陣亡中 → 延到復活成功(_clrResume)
         if (!this.tut || this.tut.fin) return; this.tut.fin = true; this.tut.pending = true; this.locked = true;
         this.tutClearHint(); this._tutCardKill(); if (this.tutBg) this.tutBg.setVisible(false); if (this.tutG) { this.tutG.destroy(); this.tutG = null; }
-        this._winLock(); this.time.delayedCall(500, () => { if (this.tut && !this.resultOpen) this.showResult(true); });   // 🩹2026-11-25 舊問題修正二 R3:畢業=過關成立,還沒落下的敵攻作廢
+        this._winLock(); this._tutGrad(); this.time.delayedCall(500, () => { if (this.tut && !(this.resultOpen && this._resultTerminal)) this.showResult(true); });   // 🩹2026-11-25 舊問題修正三(裁決 6):畢業在這刻記   // 🩹2026-11-25 舊問題修正二 R3:畢業=過關成立,還沒落下的敵攻作廢
       }
       // ===== 🆕2026-11-02 教學預告字卡:全螢幕 DOM overlay(add.dom,文字包在 div 內自動折行)=====
       // DOM 結構:div.root(W×H 滿版、半透明深色遮罩、flex 置中、點擊=提前關) > div.main(主行特大) [> div.sub(副行次大)];單行字卡只有 main。
@@ -5306,6 +5339,7 @@
         mutSave(s => { if (!s.settings) s.settings = {}; s.settings.tut = true; if (giveFreePull && !freePullDone()) s.settings.freePull = true; });   // 已領過(重玩後跳過)→不重設旗標,伺服器也會擋
         SFX.stopBgm(); this.scene.manager.start('home'); this.scene.manager.stop('game');
       }
+      _tutGrad() { mutSave(s => { if (!s.settings) s.settings = {}; s.settings.tut = true; if (!freePullDone()) s.settings.freePull = true; }); }   // 🩹2026-11-25 舊問題修正三(企劃裁決 6):畢業記錄＝tutDone(true) 的存檔那一段,提前到過關成立(勝利面板若因視窗延後、玩家改按回大廳,也已畢業)
       tutDone(graduate = true) { this.tutClearHint(); this._tutCardKill(); this._tutAny = false; if (this.tutG) { this.tutG.destroy(); this.tutG = null; } if (this.tutBg) { this.tutBg.destroy(); this.tutBg = null; } this.tut = null; if (graduate) mutSave(s => { if (!s.settings) s.settings = {}; s.settings.tut = true; if (!freePullDone()) s.settings.freePull = true; }); }   // ⚠️2026-11-02 新手動線精簡:畢業當下就直接設 freePull(不再登記 newbieStep 強制三課)——否則「tut=true 已寫入、但 freePull 要按完成面板按鈕才寫」,玩家在完成畫面重整/離開就會變成 已畢業+無 freePull+0 卡;已領過十連(freePullDone)不重設(同 _doTutSkip)   // graduate=false(教學打輸)只清 UI 不設 tutSeen→下次重進教學重試,避免「輸掉教學=畢業但沒卡沒freePull=0卡死鎖」;步驟跑完(贏)預設 graduate=true 畢業,勝利收尾交給正常 showResult
       tutClearHint() {
         if (this._tutGlassSeq) { try { this._tutGlassSeq.remove(false); } catch (e) { } this._tutGlassSeq = null; }   // step4 兩段式手指的接續計時器:清提示時一併取消,避免 Phase2 在已離開此步時才觸發
@@ -5531,7 +5565,7 @@
         this.time.delayedCall(ms + 1500, rel);   // 看門狗:正常解鎖點沒跑到(例外/被中斷)也必放
         return rel;
       }
-      _atkLockReset() { this._atkLockEp = (this._atkLockEp || 0) + 1; this._atkLockN = 0; this._atkLock = false; this._pDead = false; this._goPend = null; this._clrLock = false; this._clrWait = false; }   // 🩹2026-11-25 舊問題修正二:過關鎖/延後的過關一併清   // 🩹2026-11-24 舊問題修正 1/5:換場/重來(newGame、startStage)一併清掉「已陣亡」與待判敗
+      _atkLockReset() { this._atkLockEp = (this._atkLockEp || 0) + 1; this._atkLockN = 0; this._atkLock = false; this._pDead = false; this._goPend = null; this._clrLock = false; this._clrWait = false; this._winPend = false; }   // 🩹2026-11-25 舊問題修正三:延後的勝利面板一併清   // 🩹2026-11-25 舊問題修正二:過關鎖/延後的過關一併清   // 🩹2026-11-24 舊問題修正 1/5:換場/重來(newGame、startStage)一併清掉「已陣亡」與待判敗
       _sweepBoardClears(n) {   // 🧹防禦性補掃:新波敵人登場後,盤面若已有可清的滿行/滿宮(波次交接漏結算、舊卡住盤面)→走一次正常 resolve(傷害打新敵)。用一般 resolve 路徑(fromBlock=false,同玩家放塊)
         if (this.resultOpen || this.locked || this.camCine || this._atkLock || this.drag || this.earthSel || this.earthDrag || this.windPick) { if (n < 6) this.time.delayedCall(500, () => this._sweepBoardClears(n + 1)); return; }   // 忙(彈窗/敵回合展演/拖曳/土風技選取中)→稍後重試,最多 6 次;放棄也無妨(下次任何放塊的 resolve 本就全盤掃描);🩹補 earthSel/earthDrag/windPick(verifier 2026-10-07,與 startDrag 的擋法對齊)
         const tgt = this.targetEnemy(); if (!tgt || !this.boxCard) return;
@@ -5875,6 +5909,7 @@
         const next = i => {
           if (i >= list.length || !this.sys || !this.sys.isActive()) {
             this._mechOpen = false; if (!this._mechHold) this.locked = false;
+            if (this._goNow()) { this._mechHold = false; this.locked = false; return; }   // 🩹2026-11-25 舊問題修正三 N7:字卡開著時陣亡/過關 → 關卡這一刻出面板
             if (this._mechHold) this._mechPump(true); else if (this._mechQ && this._mechQ.length) this._mechRetry();   // 長按期間排隊的自動字卡,關閉後照常處理;2026-11-18 有「發生當下」鎖(_mechHold,鎖盤待跳)→ force 跳,否則 _mechRetry 的 _mechSafe 要 !locked 永遠過不了(驗證員抓到的潛在卡死,餘火/賊鴨同受益)
             return;
           }
@@ -8160,9 +8195,11 @@
         this.updateAll();   // 立即反映combo字/燒傷後血量(別等延遲回呼)
         this.locked = true;   // 鎖輸入:等我方這手展演完,敵方才出手(玩家才看得到上面的表現),再補新手解鎖
         const _skW = ((this._skillLandAt || 0) - (this.time.now || 0) + 150) || 0;   // ⏱️2026-10-10 審計:本手內剛發動、還沒落地的主動技(見 fireActive 記的 _skillLandAt)→敵方出手等它落地+150ms,否則延遲技/回血/擊殺全晚於敵攻;沒有進行中的技能→_skW<=0,不影響原本 1200/200 節奏
+        const _hdg = this._deadG || 0;   // 🩹2026-11-25 舊問題修正三 N2:本手收尾時的生命世代;中途陣亡又復活 → 這手還沒開始的敵方回合整段不補(比照時間靜止:不出手、倒數不動、灼燒/回血不跑),我方收尾照做
+        const _fep = this._atkLockEp || 0; let _fWait = false;   // 🩹2026-11-25 舊問題修正四 疑點 _handGen:收尾被視窗拖住期間換了波(startStage(true) 不等選單)→ 新一波的敵人不補這手的敵方回合;沒有視窗時不會等 → 與 k 相同
         const _gen = this._handGen; this._finPending = true;   // _finPending=本手收尾尚未完成(startStage 整場重開時據此解鎖);🩹2026-11-17 P1-1:收尾遇「會回到戰鬥的視窗」(暫停選單/復活問詢/簡報/卡死視窗)不再丟掉,改輪詢等它關掉再補跑;_gen 防換關/重開後的舊輪詢誤跑
         const _fin = () => {   // 等我方華麗展演(HIT 數到底)演完,敵方才出手
-          if (this.resultOpen) {
+          if (this.resultOpen) { _fWait = true;
             if (this._resultTerminal || !this.sys || !this.sys.isActive()) { this._finPending = false; this.locked = false; return; }   // 真結算(勝/敗/離開)或場景已停→不再推進(維持原行為)
             this.time.delayedCall(300, () => { if (_gen === this._handGen && this.sys && this.sys.isActive()) _fin(); });   // 視窗還開著(locked 維持 true、拖盤不可動)→300ms 後再看;關掉後才跑敵方回合+補手
             return;
@@ -8172,13 +8209,14 @@
             const _eT = new Map(this.enemies.map(e => [e, e.timer]));   // 🆕2026-11-11 敵方回合前的 CD 快照(−1/出手重設):若我方攻擊還沒彈著,數字維持舊值到彈著
             if (this._ec) this._lnScan(0);   // 2026-11-23 水城孤身判定:敵方結算開始(保底;時間靜止那一手也算進入,「當次不扣」由核心 endEnemyPhase 用掉)
             this._ecVT = 0;   // 🩹2026-11-07 fixpass:本敵人階段的「演出時鐘」(ms):前面怪(賊鴨)的時間軸長度;後面怪的攻擊演出等它結束(模型順序不變)
+            const _skipE = this._stunHand || _hdg !== (this._deadG || 0) || (_fWait && _fep !== (this._atkLockEp || 0));   // 🩹2026-11-25 舊問題修正三 N2
             // 2026-11-20 藍鵲麻痺(_stunHand):整個敵方回合跳過——倒數不往下數、不出手(時間停住,下一手照原數字繼續);本手舊式蓄力被打斷旗標一併消化
-            (this._stunHand ? (this.enemies.forEach(e => { e._finInterrupted = false; }), []) : this._ecActOrder()).forEach(e => { if (e.dead || e.hp <= 0) return; if (e._revHand) return; /* 2026-11-23 剛被魔王當場復活:這次敵方結算不動(不經核心出手的怪也要看;核心 endEnemyPhase 清) */ if ((e.sealed || 0) > 0) { e.sealed--; return; } if (e._finInterrupted) { e._finInterrupted = false; return; } if (e._g) { this._ecAct(e); if (!e.dead) this._ecGlass(e, true); return; } if ((e._y || e._m || e._j) && this._ec) { this._ecAct(e); if (!e.dead) this._ecRareTick(e); return; } if (e._i || e._d || e._r || e._h) { this._ecAct(e); if (!e.dead) this.animTurnGlass(e); return; } if (e.finCD > 0) { e.timer--; const FS = e.finStages || 2; if (e.timer <= 0) { e._charging = false; this._launchFinisher(e); } else if (e.timer <= FS) { e._charging = true; this._showEnemyOrb(e, e.timer === 1 ? 3 : Math.min(2, FS - e.timer + 1)); } else { e._charging = false; } this.animTurnGlass(e); return; } if (e._charging) { this.enemyFinisher(e); this.animTurnGlass(e); return; } e.timer--; if (e.timer <= 0) { if (e.flee) { this._fleeAct(e); } else if (e.finisher > 0) this.enemyFinisher(e); else if (e.healAlly > 0) { this._medicAct(e); } else if (e.eatStored > 0) { this._eatAct(e); } else if (e.shield) { this._shieldAct(e); } else if (e.paralyze > 0) { this._paralyzeAct(e); } else if (e.peck > 0) { this._peckAct(e); } else if (e.iron > 0) { this._ironAct(e); } else { this.enemyAttack(e, (this._ec && this._ecVT > 0) ? { delay: this._ecVT } : undefined); e.timer = e.interval; } } if (!e.dead) this.animTurnGlass(e); });   // ⚡麻痺:e.timer 歸0→_paralyzeAct(頭上CD與發動一致);魔王有鎖改攻擊   // 敵出手;補師=雙模式/魔王補師=攻擊+補+復活(_medicAct);★被打斷終結技的敵→跳過;蓄力中每手推進一階;封印=凍結
+            (_skipE ? (this.enemies.forEach(e => { e._finInterrupted = false; }), []) : this._ecActOrder()).forEach(e => { if (e.dead || e.hp <= 0) return; if (e._revHand) return; /* 2026-11-23 剛被魔王當場復活:這次敵方結算不動(不經核心出手的怪也要看;核心 endEnemyPhase 清) */ if ((e.sealed || 0) > 0) { e.sealed--; return; } if (e._finInterrupted) { e._finInterrupted = false; return; } if (e._g) { this._ecAct(e); if (!e.dead) this._ecGlass(e, true); return; } if ((e._y || e._m || e._j) && this._ec) { this._ecAct(e); if (!e.dead) this._ecRareTick(e); return; } if (e._i || e._d || e._r || e._h) { this._ecAct(e); if (!e.dead) this.animTurnGlass(e); return; } if (e.finCD > 0) { e.timer--; const FS = e.finStages || 2; if (e.timer <= 0) { e._charging = false; this._launchFinisher(e); } else if (e.timer <= FS) { e._charging = true; this._showEnemyOrb(e, e.timer === 1 ? 3 : Math.min(2, FS - e.timer + 1)); } else { e._charging = false; } this.animTurnGlass(e); return; } if (e._charging) { this.enemyFinisher(e); this.animTurnGlass(e); return; } e.timer--; if (e.timer <= 0) { if (e.flee) { this._fleeAct(e); } else if (e.finisher > 0) this.enemyFinisher(e); else if (e.healAlly > 0) { this._medicAct(e); } else if (e.eatStored > 0) { this._eatAct(e); } else if (e.shield) { this._shieldAct(e); } else if (e.paralyze > 0) { this._paralyzeAct(e); } else if (e.peck > 0) { this._peckAct(e); } else if (e.iron > 0) { this._ironAct(e); } else { this.enemyAttack(e, (this._ec && this._ecVT > 0) ? { delay: this._ecVT } : undefined); e.timer = e.interval; } } if (!e.dead) this.animTurnGlass(e); });   // ⚡麻痺:e.timer 歸0→_paralyzeAct(頭上CD與發動一致);魔王有鎖改攻擊   // 敵出手;補師=雙模式/魔王補師=攻擊+補+復活(_medicAct);★被打斷終結技的敵→跳過;蓄力中每手推進一階;封印=凍結
             { const _rem = (this._atkLandAt || 0) - (this.time.now || 0); if (_rem > 0) this.enemies.forEach(e => { if (_eT.has(e) && !e.dead && e.timer !== _eT.get(e)) this._tmHoldSet(e, _eT.get(e), _rem); }); }
             if (this._ec) { this._ecEndPhase(); this._mechCheck(500); }   // 🆕P2:核心敵人階段收尾(提交餘火/清本手打中旗標)+機制字卡檢查
-            const dotRate = this._stunHand ? 0 : Math.max(0, ...this.enemies.filter(e => !e.dead && e.hp > 0 && !(e.sealed > 0)).map(e => e.dot || 0));   // 🔥火關灼燒光環:有灼燒敵活著→每手扣玩家血(取最大率、不疊加);★封印中不灼燒
-            if (dotRate > 0) { const dd = Math.max(1, Math.round(this.maxHP * dotRate)); this.playerHP = Math.max(0, this.playerHP - dd); this.floatText(CX, PHP_Y - 16, tr('🔥灼燒 -{n}', { n: dd }), '#ff7a4a'); this.animPlayerHP(false); if (this.playerHP <= 0) this.gameOver(tr('灼燒焚身')); }
-            this.enemies.forEach(e => { if (!this._stunHand && !e.dead && e.hp > 0 && !(e.sealed > 0) && e.regen > 0) { const hh = Math.max(1, Math.round(e.max * e.regen)); e.hp = Math.min(e.max, e.hp + hh); if (e.sprite) this.floatText(e.sprite.x, e.sprite.y - 24, '💚+' + hh, '#74e09a'); } });   // 💚水關自我回血:每隻回血敵每手回自身血(致死 hp≤0 不回→不會復活);★封印中不自療
+            const dotRate = _skipE ? 0 : Math.max(0, ...this.enemies.filter(e => !e.dead && e.hp > 0 && !(e.sealed > 0)).map(e => e.dot || 0));   // 🔥火關灼燒光環:有灼燒敵活著→每手扣玩家血(取最大率、不疊加);★封印中不灼燒
+            if (dotRate > 0 && !this._hpFrozen()) { const dd = Math.max(1, Math.round(this.maxHP * dotRate)); this.playerHP = Math.max(0, this.playerHP - dd); this.floatText(CX, PHP_Y - 16, tr('🔥灼燒 -{n}', { n: dd }), '#ff7a4a'); this.animPlayerHP(false); if (this.playerHP <= 0) this.gameOver(tr('灼燒焚身')); }
+            this.enemies.forEach(e => { if (!_skipE && !e.dead && e.hp > 0 && !(e.sealed > 0) && e.regen > 0) { const hh = Math.max(1, Math.round(e.max * e.regen)); e.hp = Math.min(e.max, e.hp + hh); if (e.sprite) this.floatText(e.sprite.x, e.sprite.y - 24, '💚+' + hh, '#74e09a'); } });   // 💚水關自我回血:每隻回血敵每手回自身血(致死 hp≤0 不回→不會復活);★封印中不自療
             // 💚補師改為「主動出手」(見上方 forEach → _medicAct):雙模式雜兵 / 攻擊+補+復活魔王,不再被動光環每手補
             if (showed) this.charge = this.charge.map((c, i) => { const a = activeSkill(this.teamCards[i].el, this.presetTeam && this.presetTeam[i] && this.presetTeam[i].id); return a ? Math.min(a.cd, (c || 0) + 1) : c; });   // 主動技蓄力:本手有消塊才+1(綁消塊→不能擺爛farm蓄力跳過拼圖)
             this.renderCharges();
@@ -8195,7 +8233,8 @@
       // 全螢幕大字演出讓玩家看懂發生了什麼(舊版只有 17px/1秒的 tonFloat,40+ 客群根本沒看到=「卡死沒反應」回饋的主因);
       // 重洗後保證有解(_ensureSolvable)。舊「燃燒生命重排」問詢廢止(kind earth/wind 工具塊分支=已無生成處的死碼,一併移除)。
       handleStuck() {
-        if (this.resultOpen) { if (!this._stuckRetry) { this._stuckRetry = true; this.time.delayedCall(700, () => { this._stuckRetry = false; this.handleStuck(); }); } return; }   // 彈窗開著(選單/復活/簡報)→稍後重試,不吞掉(舊版直接 return=玩家關窗後永不再檢=沉默軟鎖)
+        if (this._clrLock || this._clrWait || !(this.enemies || []).some(e => e && !e.dead && e.hp > 0)) return;   // 🩹2026-11-25 舊問題修正四 P1:過關成立後(最後一隻倒下到勝利面板/下一波開始)不開救援窗、不能付費重洗;下一波開始後看門狗會再檢查
+        if (this.resultOpen || this._pDead) { if (!this._stuckRetry) { this._stuckRetry = true; this.time.delayedCall(700, () => { this._stuckRetry = false; this.handleStuck(); }); } return; }   // 彈窗開著(選單/復活/簡報)→稍後重試,不吞掉(舊版直接 return=玩家關窗後永不再檢=沉默軟鎖)
         if (this.anyPlaceable()) return;
         if (this._rescueBusy) return; this._rescueBusy = true;   // 防重入
         this.stopStuckFX(); this._rescueBusy = false;
@@ -8234,7 +8273,7 @@
       //   short=true:剛被伺服器回餘額不足(本地快取過期)→當作沒石頭重畫視窗(免費場合不會走到這:免費鈕不打 API)
       showStuckModal(short, inst) {   // 🩹2026-11-25 舊問題修正二:inst=原地重畫(暗幕不重新淡入)
         this.resultOpen = true; const g = this.overlay(inst); this._stuckG = g; const cy = H / 2, T = UI();   // 🩹2026-11-24 舊問題修正 1:記住救援窗(救援型),玩家歸零時 gameOver 直接關掉它判敗(正在等付費回應則延到回應那一刻)
-        const free = this._stuckRescueFree(), gems = getMeta().stones || 0, can = free || (!short && gems >= 1);
+        const free = this._stuckRescueFree(), gems = getMeta().stones || 0, can = free || gems >= 1 || _spendHasPend('reshuffle');   // 🩹2026-11-25 舊問題修正四 P4/P7:照當下(重查後)餘額,不再因上次 402 固定只剩放棄(short 不再使用);有待確認的鍵照樣可按
         g.add(roundRectG(this, CX, cy, 340, 250, 16, T.surf, 1, T.divider, 1.5));
         g.add(this.add.text(CX, cy - 92, tr('盤面無解!'), { fontFamily: EMOJIFONT, fontSize: FS.sub, color: T.goldTx, fontStyle: 'bold' }).setOrigin(0.5));
         g.add(this.add.text(CX, cy - 58, tr('所有能量塊都放不下了'), { fontFamily: EMOJIFONT, fontSize: FS.cap, color: T.ink2 }).setOrigin(0.5));
@@ -8246,14 +8285,13 @@
           this.mkBtn(g, cy + 18, tr('🔄 免費重洗'), () => { g.destroy(); this.resultOpen = false; this._doStuckReshuffle(); }, T.ok, 'rotate-ccw');
         } else if (can) {
           this.mkBtn(g, cy + 18, tr('💎 花 1 重洗'), async () => {
-            if (this._busyReshuffle) return; this._busyReshuffle = true;   // 🩹2026-11-25 舊問題修正二 R5:等回應期間(含這時陣亡)兩顆鈕都鎖;spendStone 有逾時上限,不會卡死
-            const res = await spendStone('reshuffle'); if (res.d) syncWallet(res.d); if (!(res.d && typeof res.d.stones === 'number')) await walletResync(); this._busyReshuffle = false;   // 2xx＝已扣 → 照給;其餘或內容讀不出來 → 先重查餘額再放開
+            if (this._busyReshuffle) return; this._busyReshuffle = true; const ep0 = this._atkLockEp || 0;   // 🩹2026-11-25 舊問題修正三 N4:記下關卡世代;🩹2026-11-25 舊問題修正二 R5:等回應期間(含這時陣亡)兩顆鈕都鎖;spendStone 有逾時上限,不會卡死
+            const res = await spendStone('reshuffle'); this._busyReshuffle = false;   // 🩹2026-11-25 舊問題修正四 P8:spendStone 內含同步/重查餘額,整段 ≤ SPEND.ALL(30 秒)
             if (!g.scene) return;   // 場景已關
             if (this._resultTerminal && this._termG && this._termG.scene) { g.destroy(); return; }   // 終局面板已疊在上面:只收救援窗,不動 resultOpen
-            if (res.st === 'ok') { g.destroy(); this.resultOpen = false; this._doStuckReshuffle(); this._goNow(); return; }   // 套用重洗;等回應期間陣亡 → 重洗後才進復活詢問(用最新餘額)
-            if (this._goPend != null) { g.destroy(); this.resultOpen = false; this._goNow(); return; }   // 等回應期間陣亡、重洗沒成 → 直接進復活詢問或敗北
-            if (res.st === '402') { g.destroy(); this.resultOpen = false; this.showStuckModal(true, true); return; }   // 伺服器說石頭不夠→視窗改成「石頭不足+只剩放棄」
-            g.destroy(); this.resultOpen = false; this.showStuckModal(false, true); this.tonFloat(tr('需要連線,請稍後再試'), '#ff9a7a');   // 斷線/逾時/伺服器錯:原地重畫(石數照重查後的餘額)再提示
+            if (res.st === 'ok' && (this._atkLockEp || 0) === ep0) { g.destroy(); this.resultOpen = false; this._doStuckReshuffle(); if (!this._goNow()) this._clrResume(); return; }   // 套用重洗;等回應期間陣亡/過關成立 → 重洗後才進復活詢問/勝利/換波(用最新餘額)
+            if (this._goPend != null || this._clrWait || this._winPend || (this._atkLockEp || 0) !== ep0) { g.destroy(); this.resultOpen = false; if (!this._goNow()) this._clrResume(); return; }   // 🩹2026-11-25 舊問題修正四 P1:等回應期間陣亡/過關成立(或關卡世代已換)→ 不論成敗都往下走(復活詢問/敗北/勝利/換波),不停在只剩放棄的救援窗
+            g.destroy(); this.resultOpen = false; this.showStuckModal(false, true); if (res.st !== '402') this.tonFloat(tr('需要連線,請稍後再試'), '#ff9a7a');   // 🩹2026-11-25 舊問題修正四 P7:402/斷線/逾時/伺服器錯 → 原地重畫(按鈕照重查後的餘額與待確認鍵決定)
           }, T.ok, 'ui_gem');
         }
         this.mkBtn(g, cy + (can ? 78 : 30), tr('放棄(認輸)'), () => { if (this._busyReshuffle) return; g.destroy(); this.resultOpen = false; this.gameOver(tr('放棄提煉')); }, T.bad);   // 🩹2026-11-25 舊問題修正二 R5:付費重洗等回應期間放棄也無效(比照復活)
@@ -10068,7 +10106,7 @@
         let dT = 0, dUsed = false; const dB = ctx.ab ? (FX2.s1 ? Math.max(380, Math.round((this._atkLandAt || 0) - (this.time.now || 0)) + 60) : 380) : 0, dAbs = () => dl + dB + dT;   // 2026-11-22 新演出:放塊後的敵人反應(賊鴨當下反擊/鐵機人電擊/餘火…)等本手我方最後一發落地 +60 再演(舊演出照舊 380)
         const dLock = evs.some(x => x.t === 'duck_eat' || x.t === 'duck_counter' || x.t === 'duck_fat' || (x.t === 'player_damage' && x.kind === 'hungry')) ? this._atkLockOn(dl + dB + 2600 + evs.length * 220) : null;
         const lnBig = evs.some(x => x.t === 'healer_attack' && x.lonely), lnIn = evs.some(x => x.t === 'heal_rage' && x.lonely), lnRev = evs.some(x => x.t === 'revive_done' && x.lonely);   // 水城孤身:同批有大攻擊/進入/復活 → 後續水球與解除演出要等
-        const at = fn => { const _dg = this._deadG || 0; const run = () => { if (this.resultOpen && this._resultTerminal) return; this._lifeRun(_dg, () => { try { fn(); } catch (err) { console.error('ecPlay', err); } }); }; if (dl > 0) this.time.delayedCall(dl, run); else run(); };   // 🩹2026-11-25 舊問題修正二 R6:終局後排定的事件不再演(不重建光圈等常駐物件);R2:陣亡前排的、復活後才到 → 這一段出手作廢
+        const at = fn => { const _dg = this._atkStale ? -1 : (this._deadG || 0); const run = () => { if (this.resultOpen && this._resultTerminal) return; this._lifeRun(_dg, () => { try { fn(); } catch (err) { console.error('ecPlay', err); } }); }; if (dl > 0) this.time.delayedCall(dl, run); else run(); };   // 🩹2026-11-25 舊問題修正二 R6:終局後排定的事件不再演(不重建光圈等常駐物件);R2:陣亡前排的、復活後才到 → 這一段出手作廢
         let jwT = 0; const jwX = ctx.ab ? Math.max(0, (this._jwLandAt || 0) - (this.time.now || 0) + 140) : 0;   // 🆕寶玉:afterBlock 來的敲碎/盾破/補放要等本手「擋下」彈著之後再演;jwT=同批核心登場的逐顆錯開
         const atJ = (fn, extra) => at(() => { if (extra > 0) this.time.delayedCall(extra, () => { try { fn(); } catch (err) { console.error('ecPlay', err); } }); else fn(); });
         evs.forEach(ev => {
@@ -10370,15 +10408,15 @@
         } });
         this.updateEnemies();
       }
-      _ecAttack(e, ev, dl) {   // dl:排在賊鴨之後演時的演出延遲(只延後演出,結算+餘火基準 D 仍同步)
-        const orbObj = (!ev.defused && e._finOrb && e._finOrb.scene) ? e._finOrb : null;   // 🆕v1.5.0 沒被拆除(1~4★):整顆集氣球飛去撞血條;拆除後=一般普攻演出
+      _ecAttack(e, ev, dl) {   // 🩹2026-11-25 舊問題修正三 N2:出手當下已凍結(陣亡/過關/死前排定)＝這擊作廢 → 不寫餘火候選。dl:排在賊鴨之後演時的演出延遲(只延後演出,結算+餘火基準 D 仍同步)
+        const _fz = this._hpFrozen(), orbObj = (!ev.defused && e._finOrb && e._finOrb.scene) ? e._finOrb : null;   // 🆕v1.5.0 沒被拆除(1~4★):整顆集氣球飛去撞血條;拆除後=一般普攻演出
         const fromOrb = orbObj ? { x: orbObj.x, y: orbObj.y } : null;
         if (orbObj) { e._finOrb = null; this._clearEnemyOrb(e); e._ecOrbStage = 0; }   // 先脫離:隨後同批 cd_roll 的 _ecOrbSync 不會把飛行中的球清掉
         // 🆕2026-11-09 製作人:哥布林出手不再浮「💀 骷髏重擊!」(不論有沒有亮骷髏)
         this._ecImpactAt = Math.max(this._ecImpactAt || 0, (this.time.now || 0) + (dl || 0) + 360 + 440 + 120);   // enemyAttack 彈著時間(集氣360+飛行440)+餘量:餘火 tick/徽章要等所有待彈著敵攻結算完才演(避免玩家在飛行中放塊 → 餘火先於攻擊扣血)
         const _efxB = (EFX.s2 && e._efx) ? EnemyFX.guard(EFX, 's2', () => EnemyFX.fireLaunch(this, e, orbObj, dl, ev), null, () => EnemyFX.dropAll(this)) : null;   // 🆕敵技演出步 2:常駐火球當彈體＋各 tier 出手時間表、依序出手與輸入鎖(規格 4.1 S-F5、3.10);回傳整組 enemyAttack 參數(傷害照舊當下結算),關閉時 null → 下一行用原本參數
         const r = this.enemyAttack(e, _efxB || { dmg: ev.raw, big: !!ev.skull || !!orbObj, fromOrb, orbObj, delay: dl || 0 });   // 內含 _calcPlayerDmg(護甲/迴避/黑熊)與 _playerImpact(鮭魚/gameOver)
-        const D = (r && r.dmg > 0) ? r.dmg : 0, ec = this._ec.ec;
+        const D = (r && r.dmg > 0 && !_fz) ? r.dmg : 0, ec = this._ec.ec;
         if (ev.rule >= 3 && D > 0 && D > ec.burnCand) ec.burnCand = D;   // 餘火基準=實際傷害 D(黑熊擋掉=0=無餘火);同輪多隻取最大(核心 endEnemyPhase 提交)
       }
       // ── 🆕2026-11-06 P2 第二步:雷城鐵機人(NEWMECH 開啟時由核心 _ironAct/_shockAfterBlock 驅動;事件→演出集中在 _ecPlay 的 iron_place/iron_harden/player_damage(iron|punish)/shock)──
@@ -10556,7 +10594,7 @@
         try { return fn(); } finally { T.STORED_P = old; }
       }
       _ecDq(t, fn) {   // 時間軸排程:t<=0 立刻跑;場景已停就略過;例外不外拋
-        const run = () => { if (!this.sys || !this.sys.isActive()) return; try { fn(); } catch (err) { console.error('ecDq', err); } };
+        const _dg = this._atkStale ? -1 : (this._deadG || 0), run = () => { if (!this.sys || !this.sys.isActive()) return; this._lifeRun(_dg, () => { try { fn(); } catch (err) { console.error('ecDq', err); } }); };   // 🩹2026-11-25 舊問題修正三 N2:死前排定(風城餓了出手、小啄等)、復活後才到 → 出手作廢
         if (t > 0) this.time.delayedCall(t, run); else run();
       }
       _ecDuckInit(e, i, dk, st) {   // 賊鴨交核心初始化(上場即標記);初始事件不播,畫面由 _ecDuckReveal 依狀態一次畫出
@@ -10849,7 +10887,7 @@
       }
       _ecDuckCounter(e, ev, t) {   // 當下反擊:立刻小啄一下(無浮字;靠 enemyAttack 動畫)(enemyAttack,非 big)
         this._ecDq(t, () => {
-          if (e.dead || !e.sprite || this.resultOpen) return; const sp = e.sprite;
+          if (e.dead || !e.sprite || (this.resultOpen && this._resultTerminal)) return; const sp = e.sprite;   // 🩹2026-11-25 舊問題修正四 P10:非終局視窗(選單/簡報/說明)開著照扣(比照餘火/反震/電擊);陣亡/過關/死前排定由 enemyAttack 開頭作廢
           this.labSnd && this.labSnd('s_clear15', 0.45); sp.setAngle(0);
           this._ecImpactAt = Math.max(this._ecImpactAt || 0, (this.time.now || 0) + 360 + 440 + 120);
           this.enemyAttack(e, { dmg: ev.raw, big: false });
@@ -11197,7 +11235,7 @@
       }
       _ecHealRageOn(e, ev) {   // 2026-11-11 新憤怒(核心 heal_rage):不浮字;補師圖放大縮小彈一下(暴怒彈兩下更大)+ 紅色閃光環 + 常駐生氣符號(暴怒:符號更大、氣場更濃)
         if (e && e._fxSt) this._fxStateCut(e);   // 步 4 共用鉤子
-        if (!e || e.dead || !e.sprite || !this.sys || !this.sys.isActive()) return;
+        if (!e || e.dead || !e.sprite || !this.sys || !this.sys.isActive() || (this.resultOpen && this._resultTerminal)) return;   // 🩹2026-11-25 舊問題修正三 N6:終局後不重建
         const ADD = Phaser.BlendModes.ADD, st = ev.stage === 2 ? 2 : 1, x = e.sprite.x, y = e.sprite.y, R = Math.max(40, (e.cardW || 70) * 0.7);
         e._ecRage = st; this._ecRageSync(e);
         const fl = this.add.circle(x, y, R, 0xff3a2a, st === 2 ? 0.8 : 0.6).setBlendMode(ADD).setDepth(DEPTH.fx); this.tweens.add({ targets: fl, scale: st === 2 ? 2.8 : 2.2, alpha: 0, duration: 440, ease: 'Quad.out', onComplete: () => fl.destroy() });
@@ -11210,7 +11248,7 @@
         this._mechAdd('water_rage'); this._mechCheck(900);   // ⑳ 第一次進入憤怒(任一段)
       }
       _ecRageSync(e) {   // 常駐憤怒標示:頭上右側 icon_anger(抖動)+ 身後紅色呼吸氣場 + 往上飄的紅色火星;死亡/換關時收掉
-        this._ecRageClear(e); if (!e._ecRage || e.dead || !e.sprite || !e.card) return;
+        this._ecRageClear(e); if (!e._ecRage || e.dead || !e.sprite || !e.card || (this.resultOpen && this._resultTerminal)) return;   // 🩹2026-11-25 舊問題修正三 N6:終局後不重建
         const ADD = Phaser.BlendModes.ADD, sx = e.card.x, sy = (e.restY != null ? e.restY : e.sprite.y), cw = e.cardW || 80, ch = e.cardH || 80, R = Math.max(40, cw * 0.68), st3 = e._ecRage === 3, st2 = st3 || e._ecRage === 2;   // st2=暴怒(新規則第二段):符號放大、氣場更濃
         const aura = this.add.circle(sx, sy, R * (st3 ? 1.46 : st2 ? 1.28 : 1.12), 0xff2a1a, st3 ? 0.62 : st2 ? 0.5 : 0.34).setBlendMode(ADD).setDepth(DEPTH.enemy - 0.5);
         const tw = this.tweens.add({ targets: aura, alpha: { from: st3 ? 0.5 : st2 ? 0.36 : 0.24, to: st3 ? 0.9 : st2 ? 0.75 : 0.55 }, scaleX: { from: 1, to: 1.16 }, scaleY: { from: 1, to: 1.16 }, duration: 640, yoyo: true, repeat: -1, ease: 'Sine.inOut' });
@@ -11346,7 +11384,7 @@
       _lnBallSync(e) {   // 水球:級數=LONELY_CD(不寫死),倒數每走一格大一級;被延遲到比 LONELY_CD 還多=維持最小級
         const d = e && e._h; if (!e) return;
         if (!d || !d.lonely || this._lnDead(e)) { this._lnBallClear(e); return; }
-        if (!e._lnShown || this.dive) return;
+        if (!e._lnShown || this.dive || (this.resultOpen && this._resultTerminal)) return;   // 🩹2026-11-25 舊問題修正三 N6:孤身水球終局後不重建
         const N = Math.max(1, EnemyCore.TUNING.LONELY_CD | 0), lv = Math.max(1, Math.min(N, N - (e.timer | 0) + 1)), f = N > 1 ? (lv - 1) / (N - 1) : 1, cw = Math.min(150, e.cardW || 80), R = Math.max(10, cw * (0.13 + 0.11 * f));
         let b = e._lnBall; if (b && b.cont.active && b.lv === lv) return;
         const p = this._lnBallPos(e, R), grow = !(b && b.cont.active);
@@ -11583,6 +11621,7 @@
         this.time.delayedCall(this.dive ? 250 : 800, poll);
       }
       _ecOrbSync(e) {   // 酋長集氣球:沿用 _showEnemyOrb 動畫,階段=CD 接近出手(剩 ≥3 手=1 小白球/2=橘/1=3 白熱大球抖動);降溫強度改由骷髏頭光圈(_ecSkullAura)+鬥氣粒子(綁 g.left)表達;拆除後不顯示球(普攻只看沙漏)
+        if (this.resultOpen && this._resultTerminal) return;   // 🩹2026-11-25 舊問題修正三 N6:終局後不重建集氣球
         const g = e && e._g; if (!g || e.dead || e.hp <= 0 || !e.sprite || this.dive || e._ecBreaking) return;   // 🆕2026-11-08 製作人:1★~4★ 哥布林每次出手都是蓄力(猛擊)→球全開(球=時間;光圈=骷髏;鬥氣=酋長剩餘次數)
         if (EFX.s2) EnemyFX.guard(EFX, 's2', () => EnemyFX.fireSync(this, e, EFX), false, () => EnemyFX.dropAll(this));   // 🆕敵技演出步 2(火城):新火球常駐＋蓄力外觀＋窗口靶環(規格 3.1、3.2、4.1);舊球改由 _showEnemyOrb 放看不見的佔位物
         if (g.defused) { if (e._finOrb) this._clearEnemyOrb(e); e._ecOrbStage = 0; return; }   // 已拆除:不畫球/鬥氣(出手後 cd_roll 重抽才重新點滿)
@@ -11735,6 +11774,7 @@
           if (i >= keys.length && this._mechLpHintDue()) { this._mechLpHintShow(() => next(keys.length + 1)); return; }   // 🆕2026-11-11 第一次自動字卡關閉後,補跳「長按敵人」教學字卡(整帳號一次)
           if (i >= keys.length) {
             this._mechOpen = false;
+            if (this._goNow()) { this._mechHold = false; this.locked = false; return; }   // 🩹2026-11-25 舊問題修正三 N7:字卡開著時陣亡/過關 → 關卡這一刻出面板(其餘字卡留在佇列)
             if (q.length) {   // 🩹2026-11-07 fixpass:佇列還有字卡 → 組間 300ms 維持鎖(原本先解鎖再 300ms 後重跳 = 空窗可搶放塊);出口:結算已開/場景停 → 解鎖
               this.time.delayedCall(300, () => { if (this.resultOpen || !this.sys || !this.sys.isActive()) { this._mechHold = false; this.locked = false; return; } this._mechPump(true); });
               return;
@@ -11757,8 +11797,9 @@
       _launchFinisher(e) {   // 放招=把當下蓄好的那顆元氣玉直接甩出去(貝茲弧線),命中才扣血→走真實傷害流程(護甲/迴避/黑熊護盾擋下/迴生/gameOver)
         const ADD = Phaser.BlendModes.ADD, ox = e._finPos ? e._finPos.x : e.sprite.x, oy = e._finPos ? e._finPos.y : e.sprite.y, col = e._finCol || 0xff6a3a, R = e._finR || 30, raw = Math.max(1, Math.round(this.maxHP * (e.finisher || 0.3)));
         this._clearEnemyOrb(e); e._finStage = 0; e.timer = e.interval; this.labSnd && this.labSnd('s_boom', 0.85);   // 清充能特效、進冷卻、放招音
-        const { dmg, dodged, blocked } = this._calcPlayerDmg(raw);   // 先算傷害(含黑熊護盾擋下判定)
-        const _fJ = this._efxJob({ dmg, dodged, blocked, col, big: true });   // 🩹2026-11-25 舊問題修正二 R2/R3:舊式終結技也進命中帳(陣亡當場結清、過關作廢、換場作廢);命中時照原參數扣
+        if (this._atkVoid()) return;   // 🩹2026-11-25 舊問題修正四 P9:作廢的終結技(陣亡/過關成立/死前排定)→ 這顆球照樣收掉、進冷卻,但不判盾/迴避/減傷、不 resetWave、不飛球
+        const { dmg, dodged, blocked, took } = this._calcPlayerDmg(raw);   // 先算傷害(含黑熊護盾擋下判定)
+        const _fJ = this._efxJob({ dmg, dodged, blocked, took, col, big: true });   // 🩹2026-11-25 舊問題修正二 R2/R3:舊式終結技也進命中帳(陣亡當場結清、過關作廢、換場作廢);命中時照原參數扣
         const tx = BX0 + (W - 2 * BX0) * Math.max(0.05, this.playerHP / this.maxHP), ty = PHP_Y, ctrl = { x: (ox + tx) / 2, y: Math.min(oy, ty) - 150 };
         const bg = this.add.circle(ox, oy, R * 1.4, 0xff2a1a, 0.3).setBlendMode(ADD).setDepth(DEPTH.fx), ball = this.add.circle(ox, oy, R, 0xffe6cf, 0.95).setBlendMode(ADD).setDepth(DEPTH.fx), ob = { t: 0 };
         this.tweens.add({
@@ -11767,7 +11808,7 @@
         });   // 命中→套用傷害演出
       }
       _showEnemyOrb(e, stage) {
-        if (!e.sprite) return;
+        if (!e.sprite || (this.resultOpen && this._resultTerminal)) return;   // 🩹2026-11-25 舊問題修正三 N6:終局後不重建
         if (e._finPulse) { e._finPulse.stop(); e._finPulse = null; } if (e._finGather) { e._finGather.remove(); e._finGather = null; } e._finShake = false; if (e._finSpark) { e._finSpark.remove(); e._finSpark = null; } if (e._finOrb) { e._finOrb.destroy(); e._finOrb = null; }   // 換 stage:先清舊視覺
         if (EFX.s2 && e._g && e._efx && EnemyFX.guard(EFX, 's2', () => EnemyFX.fireMarker(this, e), false, () => EnemyFX.dropAll(this))) return;   // 🆕敵技演出步 2:火城舊球不畫,只留看不見的佔位 e._finOrb(字卡①④、出手判斷、清理沿用舊邏輯)
         const ADD = Phaser.BlendModes.ADD, base = (e.cardW || 60) * ((e._g && e._g.rule !== 4) ? 0.10 : (e.boss ? 0.32 : 0.2));   // 雜兵較小;🆕2026-11-09 製作人:新機制 1~3★ 哥布林再小(0.2→0.15→0.10,含初級/入門魔王位的 1~3★),只有酋長 rule4 維持 0.32;舊路徑不變
@@ -11800,6 +11841,7 @@
       enemyAttack(e, opts) {
         if (e && e._fxSt) this._fxStateCut(e);   // 步 4 共用鉤子
         opts = opts || {};
+        if (this._atkVoid()) { this._efxVoidJ({ efx: opts.efx || null, orb: opts.orbObj || null }); return { dmg: 0, dodged: false, blocked: false }; }   // 🩹2026-11-25 舊問題修正四 P9:會被作廢的敵攻(已陣亡/過關成立/死前排定)一開始就返回:不判盾/迴避/減傷、不 resetWave、不演(彈體收掉)
         const _efxT = EFX.s2 && EnemyFX.guard(EFX, 's2', () => EnemyFX.fireTurn(this), false, () => EnemyFX.dropAll(this)); if (_efxT && !opts.efx) opts = Object.assign({}, opts, { delay: EnemyFX.guard(EFX, 's2', () => EnemyFX.oldSlot(this, opts.delay), opts.delay, () => EnemyFX.dropAll(this)) });   // 🆕敵技演出步 2(補修 A1):火城新演出在跑時,這一擊記進命中帳(下面 _efxJ);舊普攻也排進同一條出手時間軸(前面的新出手演完才出手)→ 命中順序＝呼叫順序,與 f 版同時落下的順序相同。關閉時 _efxT=false,opts 不動
         const _dly = opts.delay > 0 ? opts.delay : 0;   // 🩹2026-11-07 fixpass:opts.delay=只延後「演出」(蓄力/俯衝/彈道/彈著扣血顯示),傷害/擋下/迴避的結算(_calcPlayerDmg)仍在呼叫當下 → 模型順序不變;不傳=原行為
         if (!_dly) SFX.enemyHit();   // 敵攻音
@@ -11807,9 +11849,9 @@
         if (tutBite) { opts.dmg = Math.max(1, Math.round(this.maxHP / 3)); this._tutBigBite = true; }   // 🆕2026-11-02 使用者實測:咬一口只扣 1/3 滿血(剩約 67%,不嚇人);原本扣到剩 30%。固定扣 maxHP/3(不依當下血量,教學此時必為滿血)。舊註:這一咬真的把血扣到剩 30%(繞過下方 1/3 上限)→掉血在進⑤前完成,⑤ 只單純演慢慢回血,不再擠在同一瞬間
         if (this.tut) this.tutEvent('enemyhit');
         if (this.lesson) this.lessonEvent('enemyhit');
-        const { dmg, dodged, blocked } = this._calcPlayerDmg(opts.dmg != null ? opts.dmg : e.atk); e.burn = 0;   // 傷害/擋下結算(發動當下決定)
+        const { dmg, dodged, blocked, took } = this._calcPlayerDmg(opts.dmg != null ? opts.dmg : e.atk); e.burn = 0;   // 傷害/擋下結算(發動當下決定)
         const ox = opts.fromOrb ? opts.fromOrb.x : (e.sprite ? e.sprite.x : CX), oy = opts.fromOrb ? opts.fromOrb.y : (e.sprite ? e.sprite.y : 60), col = (opts.col != null ? opts.col : EL[e.el].color);   // 🆕opts.col:水城憤怒補師的彈道改紅(其餘呼叫端不傳=原屬色)
-        const _efxJ = this._efxJob({ dmg, dodged, blocked, col, big: opts.big, efx: opts.efx || null, orb: opts.orbObj || null });   // 🩹2026-11-24 舊問題修正 5:命中帳擴到所有敵攻(開關關也登記;登記不改時機、順序,命中時 _efxLand 照原參數扣)→ 開/關同一套:玩家歸零時同回合沒落下的在 gameOver 當場結清,面板出來後血量不再變   // 🆕敵技演出步 2(補修 A1):命中帳一筆(傷害/迴避/黑熊已在上面當下算好;命中時 _efxLand 才扣,玩家歸零時 _efxFlush 當場結清)
+        const _efxJ = this._efxJob({ dmg, dodged, blocked, took, col, big: opts.big, efx: opts.efx || null, orb: opts.orbObj || null });   // 🩹2026-11-24 舊問題修正 5:命中帳擴到所有敵攻(開關關也登記;登記不改時機、順序,命中時 _efxLand 照原參數扣)→ 開/關同一套:玩家歸零時同回合沒落下的在 gameOver 當場結清,面板出來後血量不再變   // 🆕敵技演出步 2(補修 A1):命中帳一筆(傷害/迴避/黑熊已在上面當下算好;命中時 _efxLand 才扣,玩家歸零時 _efxFlush 當場結清)
         const _vis = () => {
         if (opts.efx) { const P = opts.efx; if (P.ep !== (this._atkLockEp || 0)) return; this.time.delayedCall(P.impact, () => { if (P.ep === (this._atkLockEp || 0)) { if (_efxJ) this._efxLand(_efxJ, P.tx, P.ty); else this._playerImpact(dmg, dodged, P.tx, P.ty, col, opts.big, blocked, P); } }); EnemyFX.guard(EFX, 's2', () => EnemyFX.fireAttackVis(this, e, P), null, () => EnemyFX.dropAll(this)); return; }   // 🆕敵技演出步 2:火城新出手——命中(扣血/gameOver)由這裡的計時器在 P.impact 觸發,不依賴特效模組;後仰前撲、暗幕、鏡頭、彈道交給 enemy-fx.js。依序出手會排到好幾秒後:中途重來/離開(startStage 換 epoch)就作廢,不打到新的一局
         if (e.sprite && (!opts.fromOrb || opts.lunge) && (!_dly || e.sprite.active)) {
@@ -11839,21 +11881,22 @@
         return { dmg, dodged, blocked };   // 🆕P2:回傳實扣(護甲/迴避/黑熊後),給核心算餘火基準 D;既有呼叫端都忽略回傳值
       }
       _calcPlayerDmg(raw) {   // 算這次攻擊「實扣多少/是否被擋」:護甲/迴避/🐻黑熊護盾都在發動當下結算(敵攻與終結技共用)
-        let dmg = raw, dodged = false, blocked = false;
+        let dmg = raw, dodged = false, blocked = false, took = false;   // 🩹2026-11-25 舊問題修正四 P9:took＝這一擊耗掉了盾(還沒落下就被作廢 → _shieldUndo 還原)
         if (this.tut && !this._tutBigBite) dmg = Math.min(dmg, Math.round(this.maxHP / 3));   // 教學:敵攻至多扣 1/3 滿血(不嚇人);例外:④ 劇本咬一口(_tutBigBite)要扣到剩 30% 才教得出回血
         this._tutBigBite = false;   // 旗標用完即清(只此一咬繞過上限)
         if (this.immune > 0) { dodged = true; dmg = 0; }
         else if (this.armor > 0) dmg = Math.round(dmg * (1 - this.armor));
-        if (!dodged && dmg > 0 && this.lead && this.lead.type === 'shield' && ((this._shield && !this._hpFrozen()) || this._shieldHandActive)) { if (this._shield && !this._hpFrozen()) { this._shield = false; this._shieldCD = (this.lead.v || 5); this._shieldHandActive = true; } blocked = true; dmg = 0; dodged = true; }   /* 註:血條藍(_shieldReady)保持到彈著才由 _shatterShieldFx 轉綠+碎裂→消失與演出同步 */   // 🩹2026-11-25 舊問題修正二 R2:陣亡/過關/終局後才發動的出手不消耗盾(冷卻不動)   // 🐻熊之守護:這一手所有敵攻都無效(不管幾隻);破盾/輕擋改由彈著當下判斷(見 _playerImpact)
+        if (!dodged && dmg > 0 && this.lead && this.lead.type === 'shield' && ((this._shield && !this._hpFrozen()) || this._shieldHandActive)) { if (this._shield && !this._hpFrozen()) { this._shield = false; this._shieldCD = (this.lead.v || 5); this._shieldHandActive = true; took = true; } blocked = true; dmg = 0; dodged = true; }   /* 註:血條藍(_shieldReady)保持到彈著才由 _shatterShieldFx 轉綠+碎裂→消失與演出同步 */   // 🩹2026-11-25 舊問題修正二 R2:陣亡/過關/終局後才發動的出手不消耗盾(冷卻不動)   // 🐻熊之守護:這一手所有敵攻都無效(不管幾隻);破盾/輕擋改由彈著當下判斷(見 _playerImpact)
         this.resetWave();
-        return { dmg, dodged, blocked };
+        return { dmg, dodged, blocked, took };
       }
-      _efxJob(j) { const ep = this._atkLockEp || 0; if (this._efxQEp !== ep) { this._efxQ = []; this._efxQEp = ep; } j.ep = ep; j.done = false; if (this._clrLock || this._atkStale) { this._efxVoidJ(j); return j; } this._efxQ.push(j); if (this._pDead && !this._efxFlushing) this._efxFlush(); return j; }   // 🩹2026-11-25 舊問題修正二 R3/R2:過關成立後、或死前排定而復活後才到的出手 → 作廢(不扣、不演命中)   // 🩹舊問題修正 5:已陣亡後才登記的(晚到的出手)當場結清,不留到復活之後   // 🆕敵技演出步 2(補修 A1)命中帳:只在 EFX.s2 且火城新演出在跑時登記(enemyAttack 的 _efxJ);重來/換關(epoch)自動作廢
-      _efxLand(j, tx, ty) { if (j.done || j.ep !== (this._atkLockEp || 0)) return; j.done = true; const q = this._efxQ || [], i = q.indexOf(j); if (i >= 0) q.splice(i, 1); this._playerImpact(j.dmg, j.dodged, tx, ty, j.col, j.big, j.blocked, j.efx || undefined); }   // 🆕敵技演出步 2(補修 A1):命中當下扣這一筆(已結清/已作廢就不扣)
-      _efxFlush() { this._efxFlushing = true; try { const q = this._efxQ || []; while (q.length) { const j = q.shift(); if (j.done || j.ep !== (this._atkLockEp || 0)) continue; j.done = true; if (j.efx) { try { EnemyFX.mutePlan(this, j.efx); } catch (er) { j.efx.mute = true; } } if (j.orb && j.orb.scene) { try { j.orb.destroy(); } catch (er) { } } this._playerImpact(j.dmg, j.dodged, BX0 + (W - 2 * BX0) * Math.max(0.05, this.playerHP / this.maxHP), PHP_Y, j.col, j.big, j.blocked, j.efx || { mute: true }); } } finally { this._efxFlushing = false; } try { EnemyFX.settle(this); } catch (er) { } if (this.updateEnemies) this.updateEnemies(); }   // 🆕敵技演出步 2(補修 A1):玩家歸零當下,同回合還沒落下的命中照原順序當場結清(盾/迴避/擋傷/數字照算,命中演出省略;排隊中/飛行中的彈體當場收掉,補修二 1),再放出手時間軸的鎖;之後才進結算或復活詢問
-      _efxVoidJ(j) { j.done = true; if (j.efx) { try { EnemyFX.mutePlan(this, j.efx); } catch (er) { j.efx.mute = true; } } if (j.orb && j.orb.scene) { try { j.orb.destroy(); } catch (er) { } } }   // 🩹2026-11-25 舊問題修正二 R3:作廢一筆(比照結清收掉彈體與命中演出,但不扣血)
+      _efxJob(j) { if (j.took) this._shJob = j; const ep = this._atkLockEp || 0; if (this._efxQEp !== ep) { this._efxQ = []; this._efxQEp = ep; } j.ep = ep; j.done = false; if (this._clrLock || this._atkStale || this._pDead) { this._efxVoidJ(j); return j; } this._efxQ.push(j); return j; }   // 🩹2026-11-25 舊問題修正三 N1:陣亡後才登記的也當場作廢(不再結清)   // 🩹2026-11-25 舊問題修正二 R3/R2:過關成立後、或死前排定而復活後才到的出手 → 作廢(不扣、不演命中)   // 🩹舊問題修正 5:已陣亡後才登記的(晚到的出手)當場結清,不留到復活之後   // 🆕敵技演出步 2(補修 A1)命中帳:只在 EFX.s2 且火城新演出在跑時登記(enemyAttack 的 _efxJ);重來/換關(epoch)自動作廢
+      _efxLand(j, tx, ty) { if (j.done || j.ep !== (this._atkLockEp || 0)) return; j.done = true; if (j.blocked) this._shJob = null; const q = this._efxQ || [], i = q.indexOf(j); if (i >= 0) q.splice(i, 1); this._playerImpact(j.dmg, j.dodged, tx, ty, j.col, j.big, j.blocked, j.efx || undefined); }   // 🆕敵技演出步 2(補修 A1):命中當下扣這一筆(已結清/已作廢就不扣)
+      _efxVoidJ(j) { if (j === this._shJob) this._shieldUndo(); j.done = true; if (j.efx) { try { EnemyFX.mutePlan(this, j.efx); } catch (er) { j.efx.mute = true; } } if (j.orb && j.orb.scene) { try { j.orb.destroy(); } catch (er) { } } }   // 🩹2026-11-25 舊問題修正二 R3:作廢一筆(比照結清收掉彈體與命中演出,但不扣血)
+      _shieldUndo() { this._shJob = null; this._shield = true; this._shieldCD = 0; this._shieldHandActive = false; if (!this._shieldReady) { this._shieldReady = true; this._syncShieldFx(); } this.updLeadBadge && this.updLeadBadge(); }   // 🩹2026-11-25 舊問題修正四 P9:耗掉盾的那一擊還沒落下就被作廢(先被別的傷害擊殺/過關成立)、本手也還沒有擋下的命中落地 → 盾還原成就緒(冷卻歸零、本手全擋解除;血條維持藍色就緒)
       _efxVoid() { const q = this._efxQ || []; let n = 0; while (q.length) { const j = q.shift(); if (j.done || j.ep !== (this._atkLockEp || 0)) continue; this._efxVoidJ(j); n++; } if (n) { try { EnemyFX.settle(this); } catch (er) { } } }   // 🩹2026-11-25 舊問題修正二 R3:過關成立 → 帳上還沒落下的全部作廢;有作廢才放出手時間軸的鎖(沒有待命中時什麼都不做)
-      _winLock() { if (this._clrLock) return; this._clrLock = true; this._efxVoid(); }   // 🩹2026-11-25 舊問題修正二 R3:過關成立(_clrLock 到換波 startStage/重來/換場才清)
+      _winLock() { if (this._clrLock) return; this._clrLock = true; this._efxVoid(); this._stuckShut(); }   // 🩹2026-11-25 舊問題修正二 R3:過關成立(_clrLock 到換波 startStage/重來/換場才清)   // 🩹2026-11-25 舊問題修正四 P1:過關成立時救援窗開著且沒在等付費 → 關掉(勝利/換波照常)
+      _stuckShut() { const sg = this._stuckG; if (sg && sg.scene && !this._busyReshuffle) { sg.destroy(); this._stuckG = null; this.resultOpen = false; return true; } return false; }   // 🩹2026-11-25 舊問題修正四 P1:卡盤救援窗開著且沒在等付費 → 關掉
       _playerImpact(dmg, dodged, tx, ty, col, big, blocked, efx) {   // 彈著命中玩家→套用傷害演出(閃光/震屏/火花/扣血/迴生/護盾碎裂/gameOver),敵攻與終結技共用
         const ADD = Phaser.BlendModes.ADD, B = big ? 1.6 : 1;
         if (!(efx && (efx.mute || (EFX.s2 && EnemyFX.guard(EFX, 's2', () => EnemyFX.impactFx(this, tx, ty, dmg, dodged, efx), false, () => EnemyFX.dropAll(this)))))) {   // 🆕敵技演出步 2(補修 A1/A2:當場結清的 mute 不演;命中圖出錯 → 回傳 false 改演舊的):火城命中改命中圖＋柔光＋碎片＋依 tier 震屏(規格 3.9 impactFx;餘火每塊=小火花＋餘火圖縮回),不演舊白光圈/衝擊環/屬色火花;扣血以下照舊
@@ -12053,7 +12096,7 @@
         if (this._clrHold()) return;   // 🩹2026-11-25 舊問題修正二:陣亡在先 → 過關延後(規則集中在 _clrHold/_clrResume)
         this._winLock();   // 🩹2026-11-25 舊問題修正二 R3:過關成立(最後一隻倒下;換波同理)→ 還沒落下的敵攻(含延遲出手、舊式終結技、餘火/反震/電擊)一律作廢,到換波/重來/換場才解除
         if (this.lesson) { if (this.lessonG) this.lessonG.destroy(); this.tutClearHint(); this.time.delayedCall(FX2.s6 ? Math.max(500, (this._f6EndAt || 0) - (this.time.now || 0)) : 500, () => this.showResult(true)); return; }   // 練習課程:打完單敵即完成,不給獎勵、不進下一關(必須早 return,不落入下面全清結算)
-        if (this.tut) { if (this.tutG) { this.tutG.destroy(); this.tutG = null; } this.time.delayedCall(FX2.s6 ? Math.max(500, (this._f6EndAt || 0) - (this.time.now || 0)) : 500, () => { if (this.tut && !this.resultOpen) this.showResult(true); }); return; }   // 🆕防雙重結算:tutFinish(保底)與這條自然勝利二選一,先到的 showResult 會 tutDone 把 this.tut 清掉,後到的看到 tut=null 就不再結算。教學:打完敵人即勝利,不給獎勵、不進下一關
+        if (this.tut) { this._tutGrad(); if (this.tutG) { this.tutG.destroy(); this.tutG = null; } this.time.delayedCall(FX2.s6 ? Math.max(500, (this._f6EndAt || 0) - (this.time.now || 0)) : 500, () => { if (this.tut && !(this.resultOpen && this._resultTerminal)) this.showResult(true); }); return; }   // 🆕防雙重結算:tutFinish(保底)與這條自然勝利二選一,先到的 showResult 會 tutDone 把 this.tut 清掉,後到的看到 tut=null 就不再結算。教學:打完敵人即勝利,不給獎勵、不進下一關
         recordStage(this.stage, false);   // 記最佳關
         const rm = (this.diff && this.diff.rwd) || 1;   // 難度獎勵倍率
         this.runExp += Math.round(40 * rm); this.runCoins += Math.round(300 * rm);   // 🏆全清制:EXP/金錢只累積,通關才一次入帳(中途放棄/戰敗全沒收);🔐 卡片掉落/寶玉不再前端擲骰預覽,全清時交伺服器 run/complete 決定真相(見 _grantRun),避免假發/重複發
@@ -12063,40 +12106,49 @@
         this.time.delayedCall(Math.max(FX_T.WAVE, FX2.s1 ? (this._fxEndAt || 0) - (this.time.now || 0) : 0, FX2.s6 ? (this._f6EndAt || 0) - (this.time.now || 0) : 0), () => { try { this.stageAdvanceFX(); } catch (e) { } this.time.delayedCall(380, () => { try { this.startStage(true); } catch (e) { this.camCine = false; console.error('startStage error', e); } }); });   // 過關:前進演出 → 下一關敵人自遠方逼近入場(不清盤,盤面累積)
       }
       gameOver(reason) {
-        if (this._efxFlushing || this._pDead || this._clrLock || (this.resultOpen && this._resultTerminal)) return;   // 🩹2026-11-25 舊問題修正二 R1/R3:結清中/已陣亡(面板延後、復活詢問、等付費回應、敗北)/過關已成立/終局 → 不重複進
-        this._pDead = true; this._deadG = (this._deadG || 0) + 1; if (this._efxQ && this._efxQ.length) this._efxFlush();   // R1:歸零當下就是陣亡(不管有沒有視窗開著):設陣亡(到復活成功/重來/換場)、這條命之前排的回呼作廢(_deadG)、同回合沒落下的命中當場結清(血量維持 0)
+        if (this._pDead || this._clrLock || (this.resultOpen && this._resultTerminal)) return;   // 🩹2026-11-25 舊問題修正二 R1/R3:結清中/已陣亡(面板延後、復活詢問、等付費回應、敗北)/過關已成立/終局 → 不重複進
+        this._pDead = true; this._deadG = (this._deadG || 0) + 1; if (this._efxQ && this._efxQ.length) this._efxVoid();   // 🩹2026-11-25 舊問題修正三 N1:同回合沒落下的敵攻一律作廢(不扣血、不耗盾、不走擋傷/迴避、不演命中;取代原本的結清)。R1:歸零當下就是陣亡(不管有沒有視窗開著):設陣亡(到復活成功/重來/換場)、這條命之前排的回呼作廢(_deadG)、同回合沒落下的命中當場結清(血量維持 0)
         if (this.resultOpen) { const sg = this._stuckG; if (sg && sg.scene && !this._busyReshuffle) { sg.destroy(); this._stuckG = null; this.resultOpen = false; } else { this._goPend = reason; this._goPendEp = this._atkLockEp || 0; return; } }   // 卡盤救援窗(沒在等付費)→ 關掉往下;選單型視窗,或救援窗正在等付費回應 → 只把面板延到關窗/回應那一刻(_goNow)
+        if (this._mechOpen) { this._goPend = reason; this._goPendEp = this._atkLockEp || 0; return; }   // 🩹2026-11-25 舊問題修正三 N7:敵技機制字卡(DOM)開著 → 面板延到關字卡(_goNow)
         this._goShow(reason);
       }
       _goShow(reason) {   // 🩹2026-11-25 舊問題修正二:陣亡面板(復活詢問/敗北結算);資格與「剩幾顆」照當下(最新)餘額
-        if (!this.hitLab && (getMeta().stones || 0) > 0) { this.showRevive(reason); return; }   // 有魔法石→先問要不要花 1 顆復活;沒石/實驗室→直接認輸
+        if (!this.hitLab && ((getMeta().stones || 0) > 0 || _spendHasPend('revive'))) { this.showRevive(reason); return; }   // 有魔法石→先問要不要花 1 顆復活;沒石/實驗室→直接認輸   // 🩹2026-11-25 舊問題修正四 P4:有待確認的復活鍵 → 餘額 0 也先問(按下＝拿舊鍵去問;伺服器其實扣過就重放照給)
         this._recordFail(); this.creditRun(); this.showResult(false);
       }
-      _goNow() { if (this._resultTerminal && this._termG && this._termG.scene) { this.resultOpen = true; return true; } const r = this._goPend; if (r == null || this.resultOpen) return false; this._goPend = null; if (!this._pDead || this._goPendEp !== (this._atkLockEp || 0)) return false; this._goShow(r); return true; }   // 🩹2026-11-25 舊問題修正二:選單型視窗關閉鈕/付費重洗回應呼叫。終局面板已疊在上面 → 舊關閉回呼不清 resultOpen、也不再開下一個視窗;不同關卡世代或已不是陣亡 → 丟掉;否則同一個點擊內開陣亡面板(回傳 true 讓呼叫端不再開下一個視窗)
+      _goNow() { if (this._resultTerminal && this._termG && this._termG.scene) { this.resultOpen = true; return true; } if (this.resultOpen || this._mechOpen) return false; const ep = this._atkLockEp || 0; if (this._winPend) { this._winPend = false; if (this._winPendEp === ep && !this._pDead) { this.showResult(true); return true; } } const r = this._goPend; if (r == null) return false; this._goPend = null; if (!this._pDead || this._goPendEp !== ep) return false; this._goShow(r); return true; }   // 🩹2026-11-25 舊問題修正二:選單型視窗關閉鈕/付費重洗回應呼叫。終局面板已疊在上面 → 舊關閉回呼不清 resultOpen、也不再開下一個視窗;不同關卡世代或已不是陣亡 → 丟掉;否則同一個點擊內開陣亡面板(回傳 true 讓呼叫端不再開下一個視窗)(🩹2026-11-25 舊問題修正三 N3/N7:延後的勝利面板也在這裡出;字卡開著也算視窗)
+      _winHold() {   // 🩹2026-11-25 舊問題修正三 N3:勝利面板要出來時,非終局視窗(選單/簡報/教學說明/敵技字卡)開著 → 延到關窗那一刻(_goNow);救援窗沒在等付費 → 比照判敗直接關掉
+        if (this.resultOpen && !this._resultTerminal) { const sg = this._stuckG; if (sg && sg.scene && !this._busyReshuffle) { sg.destroy(); this._stuckG = null; this.resultOpen = false; } }
+        if ((this.resultOpen && !this._resultTerminal) || this._mechOpen) { this._winPend = true; this._winPendEp = this._atkLockEp || 0; return true; }
+        return false;
+      }
       _hpFrozen() { return !!(this._pDead || this._clrLock || this._atkStale || (this.resultOpen && this._resultTerminal)); }   // 🩹2026-11-25 舊問題修正二:血量凍結＝已陣亡(到復活/重來/換場)、過關成立、死前排定的舊出手、終局
+      _atkVoid() { return !!(this._clrLock || this._atkStale || this._pDead); }   // 🩹2026-11-25 舊問題修正四 P9:這時發動的敵攻＝作廢(與 _efxJob 的作廢條件相同)
       _hpTok() { return this._atkStale ? '' : (this._atkLockEp || 0) + ':' + (this._deadG || 0); }   // 排定當下的「這一場、這條命」
       _hpLive(t) { return t === this._hpTok() && !this._hpFrozen(); }   // 延遲傷害(餘火/反震/電擊)落下時:同一場、同一條命、沒凍結才扣
       _lifeRun(dg, fn) { const st = dg !== (this._deadG || 0), o = this._atkStale; if (st) this._atkStale = true; try { return fn(); } finally { this._atkStale = o; } }   // 死前排定、陣亡後(復活後)才跑的敵方出手:跑的期間標「過期」→ 命中帳作廢、盾不消耗
       // 🩹2026-11-25 舊問題修正二(企劃 11-25 裁決,遊戲規則集中在這兩個函式):先陣亡、之後我方還在飛的攻擊才打倒最後一隻 → 敵人照樣倒下、演出照演,但「過關」不成立(不換波、不補血、不出勝利面板、不清陣亡),延到付費復活成功那一刻才成立;放棄或沒石 → 敗北。
       //   若改成「已出手的攻擊打倒最後一隻就算過關」:改這兩個函式(_clrHold 回 false,並決定陣亡面板如何收)。
-      _clrHold() { if (!this._pDead) return false; this._clrWait = true; return true; }   // stageClear 開頭呼叫:陣亡中 → 記下「過關待成立」,這次不成立
-      _clrResume() { if (!this._clrWait) return; this._clrWait = false; if (this.aliveCount() === 0) this.stageClear(); }   // 付費復活成功時呼叫:敵人已全倒 → 這時才過關(換波或勝利)
+      _clrHold(kind) { if (this._pDead) { this._clrWait = kind || true; return true; } if (this._busyReshuffle || this._busyRevive) { this._winLock(); this._clrWait = kind || true; return true; } return false; }   // 🩹2026-11-25 舊問題修正三 N4:等付費回應中 → 過關成立(敵攻作廢)但勝利面板/換波延到回應處理完;N6:教學畢業保底也走這(kind='tut')   // stageClear 開頭呼叫:陣亡中 → 記下「過關待成立」,這次不成立
+      _clrResume() { const w = this._clrWait; if (!w || this._pDead) return; this._clrWait = false; if (w === 'tut') this.tutFinish(); else if (this.aliveCount() === 0) this.stageClear(); }   // 🩹2026-11-25 舊問題修正三:付費重洗回應後也呼叫(陣亡中不動,等復活)   // 付費復活成功時呼叫:敵人已全倒 → 這時才過關(換波或勝利)
       _recordFail() { if (this.f2lab) return; if (this._runStatsKey && !this._runGranted) recordRunFail(this._runStatsKey, this.stage); }   // 📊 出擊漏斗:真結束該場才算 fail(復活續戰不算);已全清就不再算敗
-      showRevive(reason, inst) {   // 🩹2026-11-25 舊問題修正二:inst=原地重畫(暗幕不重新淡入)
+      showRevive(reason, inst, short) {   // 🩹2026-11-25 舊問題修正三 N5:short=伺服器剛回石頭不夠(402)→ 復活鈕呈現不可用   // 🩹2026-11-25 舊問題修正二:inst=原地重畫(暗幕不重新淡入)
         this.resultOpen = true; const g = this.overlay(inst); const cy = H / 2, cost = 1, T = UI();   // HP 歸零→復活問詢 model
         g.add(roundRectG(this, CX, cy - 2, 340, 250, 16, T.surf, 1, T.divider, 1.5));   // 白色圓角面板(暗背幕之上)
         if (!emoRow(this, o => g.add(o), CX, cy - 98, tr('💔 HP 歸零!'), { fs: FS.sub, col: T.badTx })) g.add(this.add.text(CX, cy - 98, tr('💔 HP 歸零!'), { fontFamily: EMOJIFONT, fontSize: FS.sub, color: T.badTx, fontStyle: 'bold' }).setOrigin(0.5));   // 🆕2026-10-28c 💔→icon_heartbreak(emoRow,圖未載→原文字)
         g.add(fitText(this.add.text(CX, cy - 62, reason || '', { fontFamily: EMOJIFONT, fontSize: FS.cap, color: T.ink2 }).setOrigin(0.5), 310));   // 🈳 死因(如「Burned to Death」)縮進 340 面板
         { const _s = tr('花 💎{cost} 復活、回滿 HP 繼續?  (剩 💎{left})', { cost, left: (getMeta().stones || 0) }); if (!emoRow(this, o => g.add(o), CX, cy - 30, _s, { fs: FS.cap, col: T.ink, bold: false, maxW: 310 })) g.add(fitText(this.add.text(CX, cy - 30, _s, { fontFamily: EMOJIFONT, fontSize: FS.cap, color: T.ink }).setOrigin(0.5), 310)); }   // 🆕2026-10-28b 句中 💎→ui_gem   // 🈳 en 縮進 340 面板
+        const _no = !_spendHasPend('revive') && (getMeta().stones || 0) < cost, _n0 = g.list.length;   // 🩹2026-11-25 舊問題修正四 P4/P7:照當下(重查後)餘額;有待確認的鍵照樣可按;不再因上次 402 固定灰掉(short 不再使用)
         this.mkBtn(g, cy + 18, tr('💎 復活(回滿 HP)'), async () => {   // 🔐 花石頭改打伺服器(POST /api/wallet/spend {action:'revive'});失敗維持面板不關,玩家仍可改選放棄;_busyRevive 防連點(死亡瞬間手滑雙擊=扣兩顆石只復活一次)
-          if (this._busyRevive) return; this._busyRevive = true;
-          const res = await spendStone('revive'); if (res.d) syncWallet(res.d); if (!(res.d && typeof res.d.stones === 'number')) await walletResync(); this._busyRevive = false;   // 🩹2026-11-25 舊問題修正二 R5:讀回應也有逾時;2xx＝已扣 → 照常復活;內容讀不出來/402/斷線/逾時 → 先重查餘額再放開兩顆鈕
+          if (_no || this._busyRevive) return; this._busyRevive = true;
+          const res = await spendStone('revive'); this._busyRevive = false;   // 🩹2026-11-25 舊問題修正四 P8:spendStone 內含同步/重查餘額,整段 ≤ SPEND.ALL(30 秒);2xx＝已扣 → 照常復活;其餘 → 兩顆鈕恢復
           if (!g.scene) return;   // 場景已關
           if (res.st !== 'ok') { g.destroy(); this.showRevive(reason, true); this.tonFloat(res.st === '402' ? tr('魔法石不足') : tr('需要連線,請稍後再試'), '#ff9a7a'); return; }   // 原地重畫:「剩幾顆」照重查後的餘額
           g.destroy(); this._pDead = false; this._goPend = null; this.resultOpen = false;   // 復活成功 → 解除已陣亡(上一回合沒落下的命中已在陣亡時結清)
           this.playerHP = this.maxHP; this.animPlayerHP(true); try { SFX.heal(); } catch (e) { } this.cameras.main.flash(240, 120, 220, 150, false); this.tonFloat(tr('✨ 復活!HP 回滿'), '#74e09a'); if (this._ec) this._ecBurnClear();
           this._clrResume();   // 🩹2026-11-25 舊問題修正二:陣亡期間敵人全倒 → 過關在復活這一刻才成立
-        }, T.ok, 'ui_gem');   // 🆕2026-10-28b 💎→ui_gem
+        }, _no ? null : T.ok, 'ui_gem');   // 🆕2026-10-28b 💎→ui_gem
+        if (_no) g.list.slice(_n0).forEach(o => { if (o.setAlpha) o.setAlpha(0.45); });
         this.mkBtn(g, cy + 78, tr('✖ 放棄(認輸)'), () => { if (this._busyRevive) return; g.destroy(); this.resultOpen = false; this._recordFail(); this.creditRun(); this.showResult(false); }, T.bad);   // 🩹2026-11-24 舊問題修正 4:復活請求送出後(_busyRevive)放棄也無效,直到回應;失敗時 _busyRevive 已放開 → 兩顆鈕恢復
       }
       // 🆕2026-10-31 戰敗保留獎勵:回傳「可結算的已清小關數」(伺服器口徑 1..2;0=不結算)。只有簽章票券的真戰鬥才有(教學/課程/實驗室/每日修煉/離線 fallback 一律 0)。
@@ -12727,7 +12779,8 @@
         } catch (e) { console.warn('[clear bgm]', e); }
       }
       showResult(win, redraw) {
-        if (!redraw) { if (win) this._winLock(); else if (this._efxQ && this._efxQ.length) this._efxFlush(); }   // 🩹2026-11-25 舊問題修正二 R3:勝利 → 還沒落下的敵攻作廢(不扣、不演命中);敗北 → 照舊結清(陣亡時已結清,這裡多半是空的)
+        if (win && !redraw && this._winHold()) { this._winLock(); return; }   // 🩹2026-11-25 舊問題修正三 N3:非終局視窗開著 → 勝利面板(含教學畢業、課程完成)延到關窗
+        if (!redraw) { if (win) this._winLock(); else if (this._efxQ && this._efxQ.length) this._efxVoid(); }   // 🩹2026-11-25 舊問題修正三 N1:敗北也改作廢   // 🩹2026-11-25 舊問題修正二 R3:勝利 → 還沒落下的敵攻作廢(不扣、不演命中);敗北 → 照舊結清(陣亡時已結清,這裡多半是空的)
         if (EFX.s1 && !redraw) { try { EnemyFX.dropScene(this, false); } catch (er) { } }   // 🆕敵技演出:正式結算(勝/敗/放棄復活)→ 收掉存活敵人身上的新火球、靶環、排程與餘火、暗幕、鏡頭(審查 B1)
         if (!redraw && this._ec && EnemyCore.TUNING.HEAL_LONELY > 0) this._ecHealClear();   // 2026-11-23 戰鬥結束(HEAL_LONELY 關=照舊不收,與 j 版相同):補師的氣場/生氣符號/水球/水珠一併收掉(無限補間與計時器)
         if (!redraw && this.enemies) this.enemies.forEach(o => { if (o && o._skAura) this._skAuraDrop(o); });   // 🩹2026-11-24 舊問題修正 3(不綁開關):正式結算(勝/敗/放棄復活)→ 存活敵人的骷髏警示光圈一併收掉(停脈動補間/火星計時器/跟隨監聽,光圈淡出)
