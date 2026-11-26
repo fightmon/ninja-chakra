@@ -81,16 +81,16 @@
 
 <body>
   <div id="game"></div>
-  <!-- 2026-11-19 快取版本號(大毛拍板):自家 js 一律帶 ?v=;js 線上 max-age=4 小時且 Cloudflare 邊緣快取,換查詢字串才會拿新檔。【上線時:只要任何程式檔有變,把本檔所有「v=20261126d」與下一行 NB_ASSET_V 一起換新】格式 YYYYMMDD+英文小寫序號(同日第二次上線 b、c…);phaser.min.js 等第三方檔不加 -->
-  <script>window.NB_ASSET_V = '20261126d';</script>
-  <script src="i18n.js?v=20261126d"></script><!-- 多語(tr()/getLang/setLang):中文原文=key,查無回原文;要在所有遊戲腳本之前載 -->
-<script src="battle-core.js?v=20261126d"></script>
-<script src="battle-vfx.js?v=20261126d"></script>
-  <script src="round-core.js?v=20261126d"></script><!-- 🆕2026-11-06 三輪(階段(a)前端):塊池/怪倍率共用核心;只定義全域 RoundCore、無副作用;接線全在 ROUNDS 開關(?rounds=1 / localStorage nb_rounds=1)後,預設關 -->
-  <script src="enemy-core.js?v=20261126d"></script><!-- 🆕2026-11-06 P2:敵人機制核心(遊戲與 sim 共用);只定義全域 EnemyCore、無副作用;接線全在 NEWMECH 開關(?newmech=1 / localStorage nb_newmech=1)後,預設關 -->
-  <script src="enemy-fx.js?v=20261126d"></script><!-- 🆕2026-11-24 敵技演出 EFX:開關解析＋定位純計算(只定義全域 EnemyFX、無副作用);預設全關,?efx=1 才開(規格 spec-enemy-skill-fx.md) -->
-  <script src="fx-art.js?v=20261126d"></script><!-- 🆕2026-11-24 我方招式能量圖換無邊框版:貼圖 key→檔名對照表(全域 FxArt);?fxart=old 整批退回舊檔,刪表上一列=單張退回 -->
-  <script src="data-stages.js?v=20261126d"></script>
+  <!-- 2026-11-19 快取版本號(大毛拍板):自家 js 一律帶 ?v=;js 線上 max-age=4 小時且 Cloudflare 邊緣快取,換查詢字串才會拿新檔。【上線時:只要任何程式檔有變,把本檔所有「v=20261126e」與下一行 NB_ASSET_V 一起換新】格式 YYYYMMDD+英文小寫序號(同日第二次上線 b、c…);phaser.min.js 等第三方檔不加 -->
+  <script>window.NB_ASSET_V = '20261126e';</script>
+  <script src="i18n.js?v=20261126e"></script><!-- 多語(tr()/getLang/setLang):中文原文=key,查無回原文;要在所有遊戲腳本之前載 -->
+<script src="battle-core.js?v=20261126e"></script>
+<script src="battle-vfx.js?v=20261126e"></script>
+  <script src="round-core.js?v=20261126e"></script><!-- 🆕2026-11-06 三輪(階段(a)前端):塊池/怪倍率共用核心;只定義全域 RoundCore、無副作用;接線全在 ROUNDS 開關(?rounds=1 / localStorage nb_rounds=1)後,預設關 -->
+  <script src="enemy-core.js?v=20261126e"></script><!-- 🆕2026-11-06 P2:敵人機制核心(遊戲與 sim 共用);只定義全域 EnemyCore、無副作用;接線全在 NEWMECH 開關(?newmech=1 / localStorage nb_newmech=1)後,預設關 -->
+  <script src="enemy-fx.js?v=20261126e"></script><!-- 🆕2026-11-24 敵技演出 EFX:開關解析＋定位純計算(只定義全域 EnemyFX、無副作用);預設全關,?efx=1 才開(規格 spec-enemy-skill-fx.md) -->
+  <script src="fx-art.js?v=20261126e"></script><!-- 🆕2026-11-24 我方招式能量圖換無邊框版:貼圖 key→檔名對照表(全域 FxArt);?fxart=old 整批退回舊檔,刪表上一列=單張退回 -->
+  <script src="data-stages.js?v=20261126e"></script>
   <script>
     /* ===== 純邏輯(N/EL/SHAPES/CONFIG/computeClears/種子亂數 等戰鬥核心已抽到 battle-core.js,瀏覽器當共用全域)===== */
     const KEYS = ['fire', 'wind', 'thunder', 'earth', 'water'];
@@ -14306,6 +14306,12 @@
           return;
         }
         if (failMsg) { this._startBusy = false; fb.abort(); this.toast(failMsg); this.rebuild(); return; }   // 失敗:收掉即時回饋、回首頁、提示
+        if (id === 'prologue' && !serverRunId) {   // 🩹2026-11-26e 序章不再離線放行:沒拿到票券(網路例外/逾時/429/5xx/其他非預期)就不進場——無票券通關伺服器不記序章,會變成「本機已破、伺服器沒有」(老沛事故入口)。五屬城/每日/塔照舊放行;教學與練習課程不經 startBattle
+          this._startBusy = false; fb.abort(); this.rebuild();
+          const again = await uiConfirm({ big: true, title: tr('連上網路就能出發'), okLabel: tr('再試一次'), cancelLabel: tr('等一下') });   // 再試一次=重送 run/start(成功照常進場);等一下/點外面=關掉留在地圖
+          if (again && this.scene && this.scene.isActive()) return this.startBattle(id, df, round);
+          return;
+        }
         await fb.ready();   // 等回饋演到「畫面已被蓋住」才切場景(dive=霧全滿;遮罩=即時)→ 慢網被動畫/遮罩蓋掉不突兀
         this._startBusy = false;
         this.scene.manager.start('game', { team: tm, dungeonId: id, diff: df.key, dive: !!dc, serverRunId: serverRunId, bonus: serverBonus, moneyDay: serverMoneyDay, encounter: serverEnc, ...(ROUNDS && round ? { round: round } : {}) }); this.scene.manager.stop('home');

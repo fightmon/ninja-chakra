@@ -164,6 +164,9 @@ const I18N_DICT = {
     // 2026-11-26d 綁定 Google 字卡模式去表情符號
     '綁定成功!': 'Linked successfully!',
     '已綁定 Google': 'Google Linked',
+    // 2026-11-26e 序章出擊拿不到票券(不再離線放行)
+    '連上網路就能出發': 'Connect to the internet to set out',
+    '等一下': 'Later',
     '🎒 背包滿了!部分掉落沒收到,快到卡片→BOX清背包': '🎒 Bag full! Some drops weren\'t received — go to Cards → Box to clear space',
 
     // --- 編成頁 ---
