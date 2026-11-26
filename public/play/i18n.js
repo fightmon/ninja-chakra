@@ -152,6 +152,18 @@ const I18N_DICT = {
     '☁️ 綁定 Google,換手機不丟進度': '☁️ Link Google — keep your progress across devices',
     '一鍵綁定,之後用同個 Google 就能接著玩。\n不想綁也行,我們已幫你保管「勇者卡」。': 'One tap to link, then keep playing with the same Google account.\nNo need to link now — we\'ve already saved your Hero Card for you.',
     '以後再說': 'Maybe later',
+    // 2026-11-26 綁定 Google 字卡樣式(docs/spec-bind-google-card.md)
+    '換手機也能接著玩': 'Keep playing on any phone',
+    '綁定 Google，進度跟你走': 'Link Google and your progress follows you',
+    '我同意 <a href="https://blockyusha.com/terms/" target="_blank" rel="noopener" style="color:#2b6cb0;text-decoration:underline;">服務條款</a>、<a href="https://blockyusha.com/privacy/" target="_blank" rel="noopener" style="color:#2b6cb0;text-decoration:underline;">隱私權政策</a>': 'I agree to the <a href="https://blockyusha.com/terms/" target="_blank" rel="noopener" style="color:#2b6cb0;text-decoration:underline;">Terms of Service</a> and <a href="https://blockyusha.com/privacy/" target="_blank" rel="noopener" style="color:#2b6cb0;text-decoration:underline;">Privacy Policy</a>',
+    '綁定 Google': 'Link Google',
+    // 2026-11-26 序章紀錄校正(20261126a)欠的三句
+    '完成『序章』就能挑戰這座城': 'Clear the Prologue to take on this city',
+    '通關紀錄同步中，稍後再試一次': 'Syncing your clear record. Please try again shortly.',
+    '好': 'OK',
+    // 2026-11-26d 綁定 Google 字卡模式去表情符號
+    '綁定成功!': 'Linked successfully!',
+    '已綁定 Google': 'Google Linked',
     '🎒 背包滿了!部分掉落沒收到,快到卡片→BOX清背包': '🎒 Bag full! Some drops weren\'t received — go to Cards → Box to clear space',
 
     // --- 編成頁 ---

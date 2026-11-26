@@ -81,16 +81,16 @@
 
 <body>
   <div id="game"></div>
-  <!-- 2026-11-19 快取版本號(大毛拍板):自家 js 一律帶 ?v=;js 線上 max-age=4 小時且 Cloudflare 邊緣快取,換查詢字串才會拿新檔。【上線時:只要任何程式檔有變,把本檔所有「v=20261126a」與下一行 NB_ASSET_V 一起換新】格式 YYYYMMDD+英文小寫序號(同日第二次上線 b、c…);phaser.min.js 等第三方檔不加 -->
-  <script>window.NB_ASSET_V = '20261126a';</script>
-  <script src="i18n.js?v=20261126a"></script><!-- 多語(tr()/getLang/setLang):中文原文=key,查無回原文;要在所有遊戲腳本之前載 -->
-<script src="battle-core.js?v=20261126a"></script>
-<script src="battle-vfx.js?v=20261126a"></script>
-  <script src="round-core.js?v=20261126a"></script><!-- 🆕2026-11-06 三輪(階段(a)前端):塊池/怪倍率共用核心;只定義全域 RoundCore、無副作用;接線全在 ROUNDS 開關(?rounds=1 / localStorage nb_rounds=1)後,預設關 -->
-  <script src="enemy-core.js?v=20261126a"></script><!-- 🆕2026-11-06 P2:敵人機制核心(遊戲與 sim 共用);只定義全域 EnemyCore、無副作用;接線全在 NEWMECH 開關(?newmech=1 / localStorage nb_newmech=1)後,預設關 -->
-  <script src="enemy-fx.js?v=20261126a"></script><!-- 🆕2026-11-24 敵技演出 EFX:開關解析＋定位純計算(只定義全域 EnemyFX、無副作用);預設全關,?efx=1 才開(規格 spec-enemy-skill-fx.md) -->
-  <script src="fx-art.js?v=20261126a"></script><!-- 🆕2026-11-24 我方招式能量圖換無邊框版:貼圖 key→檔名對照表(全域 FxArt);?fxart=old 整批退回舊檔,刪表上一列=單張退回 -->
-  <script src="data-stages.js?v=20261126a"></script>
+  <!-- 2026-11-19 快取版本號(大毛拍板):自家 js 一律帶 ?v=;js 線上 max-age=4 小時且 Cloudflare 邊緣快取,換查詢字串才會拿新檔。【上線時:只要任何程式檔有變,把本檔所有「v=20261126d」與下一行 NB_ASSET_V 一起換新】格式 YYYYMMDD+英文小寫序號(同日第二次上線 b、c…);phaser.min.js 等第三方檔不加 -->
+  <script>window.NB_ASSET_V = '20261126d';</script>
+  <script src="i18n.js?v=20261126d"></script><!-- 多語(tr()/getLang/setLang):中文原文=key,查無回原文;要在所有遊戲腳本之前載 -->
+<script src="battle-core.js?v=20261126d"></script>
+<script src="battle-vfx.js?v=20261126d"></script>
+  <script src="round-core.js?v=20261126d"></script><!-- 🆕2026-11-06 三輪(階段(a)前端):塊池/怪倍率共用核心;只定義全域 RoundCore、無副作用;接線全在 ROUNDS 開關(?rounds=1 / localStorage nb_rounds=1)後,預設關 -->
+  <script src="enemy-core.js?v=20261126d"></script><!-- 🆕2026-11-06 P2:敵人機制核心(遊戲與 sim 共用);只定義全域 EnemyCore、無副作用;接線全在 NEWMECH 開關(?newmech=1 / localStorage nb_newmech=1)後,預設關 -->
+  <script src="enemy-fx.js?v=20261126d"></script><!-- 🆕2026-11-24 敵技演出 EFX:開關解析＋定位純計算(只定義全域 EnemyFX、無副作用);預設全關,?efx=1 才開(規格 spec-enemy-skill-fx.md) -->
+  <script src="fx-art.js?v=20261126d"></script><!-- 🆕2026-11-24 我方招式能量圖換無邊框版:貼圖 key→檔名對照表(全域 FxArt);?fxart=old 整批退回舊檔,刪表上一列=單張退回 -->
+  <script src="data-stages.js?v=20261126d"></script>
   <script>
     /* ===== 純邏輯(N/EL/SHAPES/CONFIG/computeClears/種子亂數 等戰鬥核心已抽到 battle-core.js,瀏覽器當共用全域)===== */
     const KEYS = ['fire', 'wind', 'thunder', 'earth', 'water'];
@@ -1980,14 +1980,32 @@
       cancel.onclick = () => close(true);
       card.appendChild(h); card.appendChild(p); card.appendChild(gbtn); card.appendChild(cancel); ov.appendChild(card);
       document.body.appendChild(ov);
+      // 🆕2026-11-26 字卡樣式(docs/spec-bind-google-card.md;教學後邀綁與設定頁入口都傳 card:true(11/26 d 版起),目前沒有呼叫端走上面舊深色樣式):白色軟面板＋插圖＋大字;字級跟畫布同比例(同教學字卡,遊戲寬 W=420 為基準)
+      const cardMode = !!opt.card;
+      let _gs = 1; const gpx = n => Math.round(n * _gs) + 'px';
+      if (cardMode) {
+        try { const cw = window.GAME && window.GAME.canvas && window.GAME.canvas.getBoundingClientRect().width; if (cw > 0) _gs = Math.max(0.75, Math.min(1.4, cw / W)); } catch (e) { }
+        if (!document.getElementById('gbind-card-css')) { const st = document.createElement('style'); st.id = 'gbind-card-css'; st.textContent = '@keyframes gbNudge{0%,100%{transform:translateX(0)}20%{transform:translateX(-9px)}40%{transform:translateX(9px)}60%{transform:translateX(-6px)}80%{transform:translateX(6px)}}@keyframes gbImgIn{from{opacity:0}to{opacity:1}}'; document.head.appendChild(st); }
+        ov.dataset.card = '1'; ov.style.background = 'rgba(0,0,0,.55)';
+        card.style.cssText = 'box-sizing:border-box;width:100%;max-width:' + gpx(380) + ';background:#ffffff;border:1.5px solid #d9dde2;border-radius:22px;padding:' + gpx(26) + ' ' + gpx(16) + ' ' + gpx(14) + ';text-align:center;box-shadow:0 12px 40px rgba(43,51,58,.38);font-family:' + EMOJIFONT + ';';
+        h.style.cssText = 'font-size:' + gpx(42) + ';font-weight:900;color:#2b333a;line-height:1.25;overflow-wrap:anywhere;';
+        p.style.cssText = 'font-size:' + gpx(28) + ';font-weight:700;color:#2b333a;line-height:1.4;white-space:pre-line;overflow-wrap:anywhere;margin:' + gpx(10) + ' 0 ' + gpx(14) + ';';
+        cancel.style.cssText = 'display:inline-block;min-height:44px;margin-top:' + gpx(4) + ';background:none;border:none;color:#6c7780;font-family:inherit;font-size:' + gpx(25) + ';font-weight:700;padding:8px 18px;cursor:pointer;';
+        gbtn.style.marginBottom = gpx(8);
+        const im = document.createElement('img'); im.alt = ''; im.draggable = false;   // 插圖 tut_card_18_bind:載好才顯示(淡入);檔還沒到/載入失敗 → 移除,不留空框、不報錯
+        im.style.cssText = 'display:none;width:' + gpx(150) + ';height:auto;margin:' + gpx(12) + ' auto 0;pointer-events:none;';
+        im.onload = () => { im.style.display = 'block'; im.style.animation = 'gbImgIn .35s ease-out'; };
+        im.onerror = () => { try { im.remove(); } catch (e) { } };
+        card.insertBefore(im, p); im.src = tutImgSrc('18_bind');
+      }
 
       const showSuccess = (em) => {   // 綁定成功(同帳號):卡片改成成功狀態,完成鈕關閉(不觸發 onSkip)
-        h.textContent = tr('✅ 綁定成功!'); h.style.color = '#7ee0a0';
-        p.textContent = (em ? em + '\n' : '') + tr('之後用同個 Google 就能接著玩。'); p.style.color = '#e8e2f0';
-        gbtn.style.display = 'none'; cancel.textContent = tr('完成'); cancel.style.color = '#7ee0a0'; cancel.onclick = () => close(false);
+        h.textContent = cardMode ? tr('綁定成功!') : tr('✅ 綁定成功!'); h.style.color = '#2f9e5b';   // 🩹2026-11-26d 字卡模式不放表情符號;字色改白卡用深色版(原 #7ee0a0/#e8e2f0/#ff9a8a,只改顏色值)
+        p.textContent = (em ? em + '\n' : '') + tr('之後用同個 Google 就能接著玩。'); p.style.color = '#2b333a';
+        gbtn.style.display = 'none'; cancel.textContent = tr('完成'); cancel.style.color = '#2f9e5b'; cancel.onclick = () => close(false);
         if (opt.onDone) { try { opt.onDone(); } catch (e) { } }
       };
-      const setErr = (msg) => { p.textContent = msg; p.style.color = '#ff9a8a'; };
+      const setErr = (msg) => { p.textContent = msg; p.style.color = '#d0574a'; };
 
       if (opt.bound) { gbtn.style.display = 'none'; cancel.textContent = opt.cancelLabel || tr('關閉'); return; }   // 已綁定:只顯示資訊+關閉
 
@@ -2001,6 +2019,18 @@
       const gate = document.createElement('div'); gate.textContent = tr('請先勾選上方同意,才能綁定 Google');
       gate.style.cssText = 'font-size:15px;color:#a49cb5;margin-bottom:14px;';
       card.insertBefore(consent, gbtn); card.insertBefore(gate, gbtn);
+      if (cardMode) {   // 🆕2026-11-26 字卡樣式:同意列整列可點(≥44px 高)、字少;原本的提示字改成一直顯示的「綁定 Google」主鈕(沒勾=停用外觀,按了只讓同意列晃一下;勾了=換成原本的 Google 鈕,流程不變)
+        consent.style.cssText = 'display:flex;align-items:center;justify-content:center;gap:' + gpx(10) + ';min-height:48px;padding:4px 8px;margin:0 0 ' + gpx(12) + ';border-radius:12px;font-size:' + gpx(21) + ';font-weight:700;color:#2b333a;line-height:1.4;cursor:pointer;';
+        cbx.style.cssText = 'width:' + gpx(28) + ';height:' + gpx(28) + ';flex:0 0 auto;margin:0;cursor:pointer;accent-color:#35a866;';
+        cbtxt.style.textAlign = 'left';
+        cbtxt.innerHTML = tr('我同意 <a href="https://blockyusha.com/terms/" target="_blank" rel="noopener" style="color:#2b6cb0;text-decoration:underline;">服務條款</a>、<a href="https://blockyusha.com/privacy/" target="_blank" rel="noopener" style="color:#2b6cb0;text-decoration:underline;">隱私權政策</a>');
+        gate.textContent = tr('綁定 Google'); gate.setAttribute('role', 'button'); gate.setAttribute('aria-disabled', 'true');
+        gate.style.cssText = 'box-sizing:border-box;width:100%;max-width:' + gpx(300) + ';padding:' + gpx(14) + ' 12px;line-height:1.25;margin:0 auto ' + gpx(8) + ';border-radius:999px;background:#e4e7ea;color:#8a939b;font-size:' + gpx(26) + ';font-weight:800;cursor:default;user-select:none;-webkit-user-select:none;';
+        gate.onclick = () => {   // 沒勾同意按主鈕:不開始綁定,只提醒同意列(減少動態 → 改成短暫加亮外框)
+          if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) { consent.style.boxShadow = '0 0 0 3px #f2b84b'; setTimeout(() => { consent.style.boxShadow = ''; }, 700); return; }
+          consent.style.animation = 'none'; void consent.offsetWidth; consent.style.animation = 'gbNudge .42s ease-in-out';
+        };
+      }
       gbtn.style.display = 'none';   // 未同意前不顯示 Google 鈕
 
       let busy = false;
@@ -2009,7 +2039,7 @@
         try {
           const d = await googleAuthSubmit(credential);
           const res = await applyGoogleAuth(d);
-          if (res.switched) { p.textContent = tr('正在載入你的雲端進度…'); p.style.color = '#e8e2f0'; return; }   // reload 中,不動卡片
+          if (res.switched) { p.textContent = tr('正在載入你的雲端進度…'); p.style.color = '#2b333a'; return; }   // reload 中,不動卡片
           showSuccess(d.email);
         } catch (e) {
           busy = false; gbtn.style.opacity = '1'; gbtn.style.pointerEvents = 'auto';
@@ -2028,7 +2058,7 @@
         }
         _gsiPendingCb = onCred;
         try {
-          window.google.accounts.id.renderButton(gbtn, { theme: 'filled_blue', size: 'large', text: 'continue_with', shape: 'pill', width: 260, locale: 'zh_TW' });
+          window.google.accounts.id.renderButton(gbtn, { theme: 'filled_blue', size: 'large', text: 'continue_with', shape: 'pill', width: 260, locale: (typeof getLang === 'function' && getLang() === 'en') ? 'en' : 'zh_TW' });   // 🩹2026-11-26d 大毛:Google 鈕語言跟遊戲介面(中文 zh_TW、英文 en)
           rendered = true;
         } catch (e) {
           gbtn.style.display = 'none';
@@ -2048,9 +2078,10 @@
       const _rel = () => { if (_held) { _held = false; scene._lobbyQn = Math.max(0, (scene._lobbyQn | 0) - 1); } };
       ensureGuest().then(() => {
         try { showGoogleBindOverlay({
-          title: tr('☁️ 綁定 Google,換手機不丟進度'),
-          sub: tr('一鍵綁定,之後用同個 Google 就能接著玩。\n不想綁也行,我們已幫你保管「勇者卡」。'),
+          title: tr('換手機也能接著玩'),   // 🆕2026-11-26 字卡樣式(card:true;docs/spec-bind-google-card.md 定案文案)
+          sub: tr('綁定 Google，進度跟你走'),
           cancelLabel: tr('以後再說'),
+          card: true,
           onSkip: fallback,
         }); } finally { _rel(); }
       }).catch(() => { _rel(); fallback(); });
@@ -4210,6 +4241,7 @@
           if (this.textures.exists(nk)) return nk;
           if (this.textures.exists('card_' + _nat + '_full')) return 'card_' + _nat + '_full';
         }
+        if (e.boss && this.dungeonId === 'prologue' && el === 'fire' && this.textures.exists('card_c66_e2_full')) return 'card_c66_e2_full';   // 🎨2026-11-26 大毛:序章火魔王改用火方塊怪 c66 三階圖(_e2,preload 的 _BLK 已載);只換圖,不給敵人加 cardId/tier(那兩個欄位會連動星數/機制/稀有怪判斷);沒載到退回下面舊圖
         if (e.boss) { const tier = dk === 'baby' ? 'baby' : (dk === 'beginner' ? 'beg' : 'nrm'); const k = 'boss_' + tier + '_' + el; if (this.textures.exists(k)) return k; }   // 魔王:序章/塔等無明確 tier 的魔王→保留專屬魔王圖 boss_<tier>_<el>(daily 魔王已在上面用招牌卡 _e2 攔掉)
         const _blk = { fire: 'c66', water: 'c67', thunder: 'c68', earth: 'c69', wind: 'c70' }[el];   // 一般雜兵(無技能)→方塊怪卡圖:tier 1/2/3 → 方塊怪/方塊獸/方塊王(需 preload 已補載,見上方 _BLK)
         if (_blk) {
@@ -14830,7 +14862,7 @@
         mkPill(CX, PW, y + ROW / 2, tr('✏️ 改名（目前：{n}）', { n: getMeta().name || tr('塊頭勇者') }), true, '', async () => { const cur = getMeta().name || tr('塊頭勇者'); const n = await uiPrompt({ title: tr('改名'), message: tr('輸入用戶名稱(最多 8 字)'), value: cur, maxLen: 8 }); if (n != null) { const nm = (n.trim().slice(0, 8)) || tr('塊頭勇者'); mutSave(s => { s.meta.name = nm; }); this.toast(tr('已改名:{n}', { n: nm })); this.rebuild(); } }, 'pencil'); y += ROW + GAP;
         { const em = cloudState().googleEmail;
           mkPill(CX - hw / 2 - 4, hw, y + ROW / 2, tr('🎴 勇者卡'), false, '', () => this.showHeroCard(), 'id-card');
-          mkPill(CX + hw / 2 + 4, hw, y + ROW / 2, em ? tr('✅ Google') : tr('🔗 綁定Google'), false, '', () => { const e2 = cloudState().googleEmail; if (e2) showGoogleBindOverlay({ title: tr('✅ 已綁定 Google'), sub: e2 + tr('\n換手機用同個 Google 就能接著玩。'), cancelLabel: tr('關閉'), bound: true }); else showGoogleBindOverlay({ title: tr('☁️ 綁定 Google 帳號'), sub: tr('換手機、換裝置都能接著玩,\n進度不怕丟。'), cancelLabel: tr('關閉'), onDone: () => this.rebuild() }); }, em ? null : 'link'); }   // 已綁定顯示✅(非本批 12 顆 icon 名單內,維持原 emoji);未綁定才用 link icon
+          mkPill(CX + hw / 2 + 4, hw, y + ROW / 2, em ? tr('✅ Google') : tr('🔗 綁定Google'), false, '', () => { const e2 = cloudState().googleEmail; if (e2) showGoogleBindOverlay({ title: tr('已綁定 Google'), sub: e2 + tr('\n換手機用同個 Google 就能接著玩。'), cancelLabel: tr('關閉'), bound: true, card: true }); else showGoogleBindOverlay({ title: tr('換手機也能接著玩'), sub: tr('綁定 Google，進度跟你走'), cancelLabel: tr('關閉'), onDone: () => this.rebuild(), card: true });   /* 🩹2026-11-26d 設定頁入口也改字卡樣式(同教學後邀綁文案;已綁定狀態去掉 ✅) */ }, em ? null : 'link'); }   // 已綁定顯示✅(非本批 12 顆 icon 名單內,維持原 emoji);未綁定才用 link icon
         y += ROW + GAP;
         // ── 遊戲 ──
         section(tr('遊戲'));
