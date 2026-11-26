@@ -470,6 +470,13 @@ var EnemyCore = (function () {
     _duckNewRound(state, e, i, evs);
   }
   function _fatMult(d) { return 1 + TUNING.FAT_PER * d.fat; }
+  function _duckHungryRaw(e, fat) { return e.atk * TUNING.HUNGRY_K * (1 + TUNING.FAT_PER * fat); }
+  function _duckFood(state, d, sl) {
+    if (sl.kind === 'store') return !sl.used && d.storeAlive;
+    if (!sl.pos) return null;
+    const cell = state.board?.[sl.pos[0]]?.[sl.pos[1]];
+    return cell && !cell.core ? cell : null;
+  }
   function _duckAct(state, e, i) {
     const d = e._d, evs = [], b = state.board;
     e.timer--;
@@ -477,12 +484,11 @@ var EnemyCore = (function () {
     // CD 歸 0:只看標記格「當下」有沒有東西(有→吃掉;空/待標→餓)
     let fed = 0, hungry = 0, pend = 0; const fatBefore = d.fat;
     d.food.forEach(sl => {
-      let has = false;
-      if (sl.kind === 'store') { has = !sl.used && d.storeAlive; if (has) { sl.used = true; d.storeAlive = false; } }
+      const has = _duckFood(state, d, sl);
+      if (sl.kind === 'store') { if (has) { sl.used = true; d.storeAlive = false; } }
       else if (sl.pos) {
-        const cell = b[sl.pos[0]][sl.pos[1]];
-        if (cell && !cell.core) {   // 標記格若被放了寶玉核心(不該發生):不吃、算餓
-          has = true;
+        const cell = has;
+        if (cell) {
           if (cell.el === 'iron' && (cell.lock || 1) > 1) { cell.lock--; evs.push({ t: 'duck_eat', e: i, r: sl.pos[0], c: sl.pos[1], iron: true, stripped: true, lock: cell.lock }); }   // 多層鐵塊只剝 1 層
           else { b[sl.pos[0]][sl.pos[1]] = null; evs.push({ t: 'duck_eat', e: i, r: sl.pos[0], c: sl.pos[1], iron: cell.el === 'iron', stripped: false }); }   // 一般格/1 層鐵塊 = 吃光
         }
@@ -492,7 +498,7 @@ var EnemyCore = (function () {
     evs.push({ t: 'duck_resolve', e: i, rule: d.rule, fed, hungry, pend, n: d.food.length, fat: fatBefore, emptied: d.emptied, ever: d.food.filter(f => f.ever).length, store: d.hasStore, mult: _fatMult(d) });
     for (let k = 0; k < hungry; k++) {
       if (state.ec.dead) break;
-      const r = damagePlayer(state, e.atk * TUNING.HUNGRY_K * (1 + TUNING.FAT_PER * fatBefore), { kind: 'hungry', e: i }); r.ev.forEach(x => evs.push(x));
+      const r = damagePlayer(state, _duckHungryRaw(e, fatBefore), { kind: 'hungry', e: i }); r.ev.forEach(x => evs.push(x));
     }
     if (d.rule === 4) { d.fat = (hungry > 0 && TUNING.FAT_HUNGRY === 'reset') ? 0 : Math.min(TUNING.FAT_MAX, d.fat + (TUNING.FAT_MODE === 'each' ? fed : (hungry > 0 ? 0 : 1))); if (d.fat !== fatBefore) evs.push({ t: 'duck_fat', e: i, fat: d.fat, from: fatBefore }); }
     _duckNewRound(state, e, i, evs);
@@ -642,11 +648,16 @@ var EnemyCore = (function () {
     return [i - 1, i + 1].some(j => { const x = E[j]; return !!x && !x.dead && x.hp > 0 && !(x._r && x._r.up); });
   }
   function _rockGuardMul(state, e) { return rockGuarding(state, e) && TUNING.ROCK_GUARD_ATK_MUL > 0 ? TUNING.ROCK_GUARD_ATK_MUL : 1; }
+  function _rockAttack(state, e) {
+    const gm = _rockGuardMul(state, e), base = TUNING.ROCK_SHIELD_ATK[e._r.rule - 1];
+    const sm = (base > 0 ? base : 1) * gm;
+    return { raw: e.atk * sm, sm, gm };
+  }
   function _rockAct(state, e, i) {
     const d = e._r, evs = [];
     e.timer--;
     if (e.timer > 0) { evs.push({ t: 'cd_tick', e: i, timer: e.timer, mon: 'rock' }); return evs; }
-    if (d.up) { const gm = _rockGuardMul(state, e), sm = (TUNING.ROCK_SHIELD_ATK[d.rule - 1] > 0 ? TUNING.ROCK_SHIELD_ATK[d.rule - 1] : 1) * gm; evs.push(sm === 1 ? { t: 'rock_attack', e: i, rule: d.rule } : Object.assign({ t: 'rock_attack', e: i, rule: d.rule, mult: sm }, gm !== 1 ? { guard: gm } : {})); damagePlayer(state, e.atk * sm, { kind: 'attack', e: i }).ev.forEach(x => evs.push(x)); }   // press:盾在時普攻 × ROCK_SHIELD_ATK[星](預設 1)   // 有盾:CD 歸 0 = 普攻
+    if (d.up) { const { raw, sm, gm } = _rockAttack(state, e); evs.push(sm === 1 ? { t: 'rock_attack', e: i, rule: d.rule } : Object.assign({ t: 'rock_attack', e: i, rule: d.rule, mult: sm }, gm !== 1 ? { guard: gm } : {})); damagePlayer(state, raw, { kind: 'attack', e: i }).ev.forEach(x => evs.push(x)); }   // 有盾:CD 歸 0 = 普攻
     else { d.up = true; d.rebuilding = false; d.sk = 0; d.bonusNext = false; d.gate = _rockGate(d.rule); evs.push({ t: 'shield_rebuild', e: i, rule: d.rule, kind: d.gate.kind, n: d.gate.n }); }   // 無盾:重建(不攻擊),隨機盾重抽
     _rockRoll(state, e, i, evs);
     return evs;
@@ -942,6 +953,24 @@ var EnemyCore = (function () {
   function nextHitDamage(state, e) { if (e && e._h && !e._g) return _healNext(state, e); const g = e && e._g; if (!g || e.dead || e.hp <= 0) return 0; return e.atk * _hitMult(state, e, g).mult; }
   // 致死判定(只供顯示:骷髏圖示/光暈;不影響傷害):下一擊(不含餘火,四捨五入同 damagePlayer)>= 隊伍「最大」血量
   function isLethal(state, e) { const d = nextHitDamage(state, e); return d > 0 && Math.round(d) >= state.maxHP; }
+  // 岩怪與賊鴨倒數歸零時的單體預估傷害，依目前盾與食物狀態逐擊取整。
+  function countdownHitDamage(state, e) {
+    if (!e || e.dead || e.hp <= 0) return 0;
+    if (e._d) {
+      const d = e._d, raw = _duckHungryRaw(e, d.fat);
+      const hungry = d.food.reduce((count, sl) => count + (_duckFood(state, d, sl) ? 0 : 1), 0);
+      return raw > 0 ? hungry * Math.max(1, Math.round(raw)) : 0;
+    }
+    if (e._r && e._r.up) {
+      const { raw } = _rockAttack(state, e);
+      return raw > 0 ? Math.max(1, Math.round(raw)) : 0;
+    }
+    return 0;
+  }
+  function countdownLethal(state, e, hp) {
+    const damage = countdownHitDamage(state, e);
+    return damage > 0 && damage >= hp;
+  }
   // 2026-11-19 鐵機人懲罰致死預警(只供顯示:骷髏圖示/光暈;不影響傷害)
   // ironPunishNext:這隻鐵機人下一次出手若打懲罰的原始傷害(判定同 _ironAct:2★↑、鐵塊都在且沒被剝層;傷害同校準重擊/舊公式);不會懲罰 → 0
   function ironPunishNext(state, e) {
@@ -1052,7 +1081,7 @@ var EnemyCore = (function () {
   }
 
   return { TUNING, inWindow, applyEnv, bind, classify, classifyDuck, classifyIron, classifyRock, classifyHealer, classifyMetal, classifyMoney, classifyJewel, syncCores, coreCells, coreShield: _jewelShield, applyClear, urgentCast, rollCD, initMech, initState, damagePlayer, damageEnemy, resolveVictims, delayEnemy,
-    enemyAct, endEnemyPhase, enemyPhase, afterBlock, urgentGob, hooks, actOrder, useStored, markedCells, kFor, nextHitDamage, isLethal, ironPunishNext, punishLethal, lonelyScan, stunHand, stunEnd, isStunned, rockGuarding };
+    enemyAct, endEnemyPhase, enemyPhase, afterBlock, urgentGob, hooks, actOrder, useStored, markedCells, kFor, nextHitDamage, isLethal, countdownHitDamage, countdownLethal, ironPunishNext, punishLethal, lonelyScan, stunHand, stunEnd, isStunned, rockGuarding };
 })();
 
 if (typeof module !== 'undefined' && module.exports) { module.exports = EnemyCore; }
