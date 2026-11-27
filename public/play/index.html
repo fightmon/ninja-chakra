@@ -81,16 +81,16 @@
 
 <body>
   <div id="game"></div>
-  <!-- 2026-11-19 快取版本號(大毛拍板):自家 js 一律帶 ?v=;js 線上 max-age=4 小時且 Cloudflare 邊緣快取,換查詢字串才會拿新檔。【上線時:只要任何程式檔有變,把本檔所有「v=20261126e」與下一行 NB_ASSET_V 一起換新】格式 YYYYMMDD+英文小寫序號(同日第二次上線 b、c…);phaser.min.js 等第三方檔不加 -->
-  <script>window.NB_ASSET_V = '20261126e';</script>
-  <script src="i18n.js?v=20261126e"></script><!-- 多語(tr()/getLang/setLang):中文原文=key,查無回原文;要在所有遊戲腳本之前載 -->
-<script src="battle-core.js?v=20261126e"></script>
-<script src="battle-vfx.js?v=20261126e"></script>
-  <script src="round-core.js?v=20261126e"></script><!-- 🆕2026-11-06 三輪(階段(a)前端):塊池/怪倍率共用核心;只定義全域 RoundCore、無副作用;接線全在 ROUNDS 開關(?rounds=1 / localStorage nb_rounds=1)後,預設關 -->
-  <script src="enemy-core.js?v=20261126e"></script><!-- 🆕2026-11-06 P2:敵人機制核心(遊戲與 sim 共用);只定義全域 EnemyCore、無副作用;接線全在 NEWMECH 開關(?newmech=1 / localStorage nb_newmech=1)後,預設關 -->
-  <script src="enemy-fx.js?v=20261126e"></script><!-- 🆕2026-11-24 敵技演出 EFX:開關解析＋定位純計算(只定義全域 EnemyFX、無副作用);預設全關,?efx=1 才開(規格 spec-enemy-skill-fx.md) -->
-  <script src="fx-art.js?v=20261126e"></script><!-- 🆕2026-11-24 我方招式能量圖換無邊框版:貼圖 key→檔名對照表(全域 FxArt);?fxart=old 整批退回舊檔,刪表上一列=單張退回 -->
-  <script src="data-stages.js?v=20261126e"></script>
+  <!-- 2026-11-19 快取版本號(大毛拍板):自家 js 一律帶 ?v=;js 線上 max-age=4 小時且 Cloudflare 邊緣快取,換查詢字串才會拿新檔。【上線時:只要任何程式檔有變,把本檔所有「v=20261127a」與下一行 NB_ASSET_V 一起換新】格式 YYYYMMDD+英文小寫序號(同日第二次上線 b、c…);phaser.min.js 等第三方檔不加 -->
+  <script>window.NB_ASSET_V = '20261127a';</script>
+  <script src="i18n.js?v=20261127a"></script><!-- 多語(tr()/getLang/setLang):中文原文=key,查無回原文;要在所有遊戲腳本之前載 -->
+<script src="battle-core.js?v=20261127a"></script>
+<script src="battle-vfx.js?v=20261127a"></script>
+  <script src="round-core.js?v=20261127a"></script><!-- 🆕2026-11-06 三輪(階段(a)前端):塊池/怪倍率共用核心;只定義全域 RoundCore、無副作用;接線全在 ROUNDS 開關(?rounds=1 / localStorage nb_rounds=1)後,預設關 -->
+  <script src="enemy-core.js?v=20261127a"></script><!-- 🆕2026-11-06 P2:敵人機制核心(遊戲與 sim 共用);只定義全域 EnemyCore、無副作用;接線全在 NEWMECH 開關(?newmech=1 / localStorage nb_newmech=1)後,預設關 -->
+  <script src="enemy-fx.js?v=20261127a"></script><!-- 🆕2026-11-24 敵技演出 EFX:開關解析＋定位純計算(只定義全域 EnemyFX、無副作用);預設全關,?efx=1 才開(規格 spec-enemy-skill-fx.md) -->
+  <script src="fx-art.js?v=20261127a"></script><!-- 🆕2026-11-24 我方招式能量圖換無邊框版:貼圖 key→檔名對照表(全域 FxArt);?fxart=old 整批退回舊檔,刪表上一列=單張退回 -->
+  <script src="data-stages.js?v=20261127a"></script>
   <script>
     /* ===== 純邏輯(N/EL/SHAPES/CONFIG/computeClears/種子亂數 等戰鬥核心已抽到 battle-core.js,瀏覽器當共用全域)===== */
     const KEYS = ['fire', 'wind', 'thunder', 'earth', 'water'];
@@ -1609,6 +1609,7 @@
         const onKey = (e) => { if (opts.noDismiss) return; if (e.key === 'Escape') { e.preventDefault(); finish(isPrompt ? null : false); } else if (e.key === 'Enter' && isPrompt) { e.preventDefault(); finish(input.value != null ? input.value : ''); } };
         document.addEventListener('keydown', onKey, true);
         document.body.appendChild(wrap);
+        if (opts.ctl) opts.ctl.close = () => finish(null);   // 🆕2026-11-27 ctl＝呼叫端可從外部關掉(resolve null);不帶＝與改動前相同(例:開場「連上網路就能出發」資料一到就自己關)
         if (input) { try { input.focus(); input.select(); } catch (e) { } }
       });
     }
@@ -1798,12 +1799,31 @@
     }
     async function cloudPull() { const r = await authedFetch('/api/save'); if (!r.ok) throw new Error('pull ' + r.status); const d = await r.json(); _cloudUnverified = false; return d; }   // → {rev,data|null};🔐[6] 任何一次成功 GET(不論從 hydrateFromCloud/heroCardRestore/applyGoogleAuth 呼叫)都代表已拿到權威 rev→解除 unverified
     function backupLocalSave(reason) {   // 覆蓋/重置前把 ninja_save 原文備份到 ninja_save_bak_<ts>;含新這份只留最新 2 份(防配額爆)
-      try {
-        const raw = localStorage.getItem(SAVE_KEY); if (!raw) return;
-        const ks = []; for (let i = 0; i < localStorage.length; i++) { const k = localStorage.key(i); if (k && k.indexOf('ninja_save_bak_') === 0) ks.push(k); }
-        ks.sort(); while (ks.length >= 2) localStorage.removeItem(ks.shift());
-        localStorage.setItem('ninja_save_bak_' + Date.now(), raw);
-      } catch (e) { }
+      // 🩹2026-11-27 改成「先寫新備份、寫成功才刪舊的」並回傳成功與否(true＝備份已寫入或本來就沒存檔可備份;false＝寫不進去,例如配額滿)。舊呼叫端不看回傳值,最後留下的備份與改動前相同(最新 2 份)
+      let raw = null; try { raw = localStorage.getItem(SAVE_KEY); } catch (e) { return false; }
+      if (!raw) return true;
+      const bks = () => { const ks = []; for (let i = 0; i < localStorage.length; i++) { const k = localStorage.key(i); if (k && k.indexOf('ninja_save_bak_') === 0) ks.push(k); } return ks.sort(); };
+      const key = 'ninja_save_bak_' + Date.now();
+      let ok = false;
+      try { localStorage.setItem(key, raw); ok = true; } catch (e) { }
+      if (!ok) { try { const ks = bks(); if (ks.length) { localStorage.removeItem(ks[0]); localStorage.setItem(key, raw); ok = true; } } catch (e) { } }   // 配額滿:先騰出最舊一份再試一次(同改動前會先刪舊的)
+      try { const ks = bks().filter(k => k !== key); while (ks.length >= 2) localStorage.removeItem(ks.shift()); } catch (e) { }
+      return ok;
+    }
+    // 🆕2026-11-27 存檔認帳號(docs/spec-server-authoritative-unlock.md 3.2 第 1 點):ninja_save.acct＝這份存檔屬於哪個伺服器帳號(nb_cloud.uid)。
+    //   沒記(這版以前的存檔/剛建的空存檔)→補記目前帳號,不動 updatedAt、不推雲;相同→不動;不同(訪客帳號被重建、Google 開了新帳號)→備份(ninja_save_bak_*)後整份換成空存檔,
+    //   空存檔 updatedAt＝0 → 之後的雲端調和一律採用這個帳號的雲端存檔(有的話)。回 true＝剛重置。沒有帳號(還沒建訪客)/沒存檔/讀不出來→不動。
+    function _nbAcctGuard() {
+      const uid = cloudState().uid; if (!uid) return false;
+      let s = null; try { s = JSON.parse(localStorage.getItem(SAVE_KEY)); } catch (e) { return false; }
+      if (!s || typeof s !== 'object') return false;
+      const u = String(uid);
+      if (s.acct == null || s.acct === '') { s.acct = u; try { localStorage.setItem(SAVE_KEY, JSON.stringify(s)); } catch (e) { } return false; }
+      if (String(s.acct) === u) return false;
+      if (!backupLocalSave('acct-change')) return false;   // 🩹2026-11-27 階段二缺口 3:備份寫不進去(配額滿等)→不重置(存檔保留;推雲仍被 cloudPush 的帳號防護擋住),下次再試
+      const d = defaultSave(); d.acct = u; d.updatedAt = 0;
+      try { localStorage.setItem(SAVE_KEY, JSON.stringify(d)); } catch (e) { try { localStorage.removeItem(SAVE_KEY); } catch (e2) { } }
+      return true;
     }
     async function hydrateFromCloud() {   // 開場調和(最關鍵):比 data.updatedAt,新者贏;雲端較新→備份本地後覆蓋;本地較新/相等/雲端空→保留本地並排推雲
       hydrating = true;
@@ -1838,7 +1858,8 @@
       try {
         let data = null; try { data = JSON.parse(localStorage.getItem(SAVE_KEY)); } catch (e) { }
         if (!data) return;
-        const rev = (retryRev != null) ? retryRev : (cloudState().rev || 0);
+        { const cu = cloudState().uid; if (data.acct != null && data.acct !== '' && cu && String(data.acct) !== String(cu)) return; }   // 🆕2026-11-27 存檔認帳號:存檔屬於別的帳號(遊玩中帳號被重建)→不推,dirty 留著;下次進大廳/開場由 _nbAcctGuard 重置後再推
+        const rev =(retryRev != null) ? retryRev : (cloudState().rev || 0);
         const r = await authedFetch('/api/save', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ rev: rev, data: data }), keepalive: document.visibilityState === 'hidden' });   // 切背景時 keepalive 保送達
         if (r.status === 200) { const d = await r.json(); cloudSet({ rev: d.rev, syncedAt: Date.now(), dirty: false }); }
         else if (r.status === 409 && retryRev == null) { const d = await r.json(); await cloudPush(d.rev); }   // 僅重送一次;再 409 → dirty 留著下次再送
@@ -1947,8 +1968,8 @@
       return r.json();
     }
     async function applyGoogleAuth(d) {   // 落地後端回應:同帳號→只記綁定;切帳(Google 存檔勝)→備份本地→採用該帳號→拉雲覆蓋→reload
-      const prevGuestCode = cloudState().guestCode;
-      if (d.switched) {   // 切帳:採用 Google 帳號自己的 guestCode(不沿用舊帳號的碼,免日後 401 靜默登回舊帳號)
+      const prevGuestCode = cloudState().guestCode, prevUid = cloudState().uid;
+      if (d.switched || (prevUid && d.uid && String(d.uid) !== String(prevUid))) {   // 🩹2026-11-27 階段二缺口 2:後端在沒帶有效 token 時(token 失效/目前帳號已被刪)回 switched:false 但 uid 是別的帳號(google.ts 已綁分支 currentUid=null、或開新帳號分支)→同樣當切帳:拉那個帳號的雲端存檔,不沿用本機舊存檔   // 切帳:採用 Google 帳號自己的 guestCode(不沿用舊帳號的碼,免日後 401 靜默登回舊帳號)
         backupLocalSave('google-switch');
         cloudSet({ uid: d.uid, token: d.token, guestCode: d.guestCode || null, googleEmail: d.email || '', dirty: false });
         try {
@@ -2086,14 +2107,48 @@
         }); } finally { _rel(); }
       }).catch(() => { _rel(); fallback(); });
     }
-    function syncWallet(d) {   // 🔐 伺服器錢包回應→落地本地顯示快取(真相在後端 wallets 表);寶玉欄位 gem_<el> 為絕對值(GET /api/wallet 回應含 gem_fire/gem_water/gem_thunder/gem_earth/gem_wind)
+    // 🆕2026-11-27 解鎖雙向對齊(規格 3.2 第 3 點):只在 GET /api/wallet 帶 clearedAuth:1(後端已補種、清單可當準)時做;沒帶→完全不做(同改動前)。
+    //   範圍:地城通關 progress.dungeonsCleared(序章/五屬城/塔;序章連 progress.cleared)與難度解鎖 meta.diffCleared(「城:難度」)。伺服器有、本機沒有→補上;本機有、伺服器沒有→退回。
+    //   不退回:①補報佇列還有該城待送的通關(那一城這輪整個不動);②這次錢包查詢比最近一次通關回報成功還早送出(清單可能還沒含那場;issuedAt 沒帶＝不知道 → 只補不退)。
+    //   退回的關記進 meta._unsync(城/難度 key),進大廳時用大字對話框說一次(_nbShowUnsync)。排行用的 progress.clearsByDiff、成就不動。
+    function _nbAlign(d, issuedAt) {
+      if (!d || d.clearedAuth !== 1 || !Array.isArray(d.cleared) || !Array.isArray(d.diffCleared)) return null;
+      const canRetract = typeof issuedAt === 'number' && issuedAt > _nbRunOkAt;
+      const sc = {}, sd = {}; d.cleared.forEach(k => { sc[k] = true; }); d.diffCleared.forEach(k => { sd[k] = true; });
+      let changed = false, lost = [];
+      mutSave(s => {
+        const pend = {}; (s.pendingRuns || []).forEach(x => { if (x && x.dungeonId && !x.clearedStages) pend[x.dungeonId] = true; });
+        const pr = s.progress, dc = pr.dungeonsCleared = pr.dungeonsCleared || {}, m = s.meta, mdc = m.diffCleared = m.diffCleared || {};
+        Object.keys(sc).forEach(id => { if (!dc[id]) { dc[id] = true; if (id === 'prologue') pr.cleared = true; changed = true; } });
+        Object.keys(sd).forEach(k => { if (!mdc[k]) { mdc[k] = true; changed = true; } });
+        if (!canRetract) return;
+        const ALN = ['prologue', 'tower'].concat(ELEM_DUNGEONS);   // 只對齊這幾種(伺服器 user_dungeon_clears 記的);其他 key(每日修煉等)不動
+        Object.keys(dc).forEach(id => { if (dc[id] && ALN.indexOf(id) >= 0 && !sc[id] && !pend[id]) { delete dc[id]; if (id === 'prologue') pr.cleared = false; lost.push(id); changed = true; } });
+        const ALD = ['tower'].concat(ELEM_DUNGEONS);   // 🩹2026-11-27 回修:難度鍵只對齊五屬城＋塔——真後端從不記序章的難度列(computeFirstClearAward 對 prologue 回 stmt:null、getOrSeedDiffClears 排除 prologue),本機 recordClear 寫的 prologue:<難度> 一律不動
+        Object.keys(mdc).forEach(k => { const city = k.split(':')[0]; if (mdc[k] && ALD.indexOf(city) >= 0 && !sd[k] && !pend[city]) { delete mdc[k]; lost.push(k); changed = true; } });
+        if (lost.length) { const u = m._unsync || []; lost.forEach(k => { if (u.indexOf(k) < 0) u.push(k); }); m._unsync = u; }
+      });
+      return { changed, lost };
+    }
+    function _nbUnsyncLabel(k) {   // 'fire' → 火之火山;'fire:normal' → 火之火山・中級
+      const p = String(k).split(':'), dn = (typeof DUNGEONS !== 'undefined' && DUNGEONS[p[0]]) ? tr(DUNGEONS[p[0]].name) : p[0];
+      return p[1] ? dn + '・' + ((typeof DIFFS_BY !== 'undefined' && DIFFS_BY[p[1]]) ? tr(DIFFS_BY[p[1]].name) : p[1]) : dn;
+    }
+    function _nbShowUnsync(scene) {   // 退回的關:大字單鍵說明一次(同 20261126a 樣式);說完就清掉,不重複
+      const u = (getMeta()._unsync || []).slice(); if (!u.length) return null;
+      mutSave(s => { delete s.meta._unsync; });
+      const names = Array.from(new Set(u.map(_nbUnsyncLabel)));
+      const shown = names.slice(0, 3).join(getLang() === 'en' ? ', ' : '、') + (names.length > 3 ? tr('…等 {n} 關', { n: names.length }) : '');   // 🩹2026-11-27 回修:最多列前 3 個,其餘「…等 N 關」(N＝總數),免得爆版
+      return uiConfirm({ big: true, okOnly: true, title: tr('這關的紀錄沒有同步到'), message: shown + '\n' + tr('再打一次就好'), okLabel: tr('好') }).then(() => { try { if (scene && scene.scene && scene.scene.isActive() && scene.rebuild) scene.rebuild(); } catch (e) { } });
+    }
+    function syncWallet(d, issuedAt) {   // 🆕2026-11-27 issuedAt＝這個錢包查詢送出的時間(只有 GET /api/wallet 的呼叫端帶,給解鎖對齊判斷能不能退回用)   // 🔐 伺服器錢包回應→落地本地顯示快取(真相在後端 wallets 表);寶玉欄位 gem_<el> 為絕對值(GET /api/wallet 回應含 gem_fire/gem_water/gem_thunder/gem_earth/gem_wind)
       if (!d) return;
       let proFilled = false;   // 🩹2026-11-26 序章紀錄往前補:伺服器 cleared 有 prologue、本機沒有 → 本機補成已破(只補不退;伺服器沒有時一律不動,退回只在五屬城 run/start 回 locked 時做,見 startBattle)
       mutSave(s => {
         if (Array.isArray(d.cleared) && d.cleared.indexOf('prologue') >= 0) { const pr = s.progress; if (pr) { if (!pr.dungeonsCleared) pr.dungeonsCleared = {}; if (!pr.dungeonsCleared.prologue) { pr.dungeonsCleared.prologue = true; pr.cleared = true; proFilled = true; } } }
         const m = s.meta; if (typeof d.stones === 'number') m.stones = d.stones; if (typeof d.coins === 'number') m.coins = d.coins; if (typeof d.pity === 'number') m.pity = d.pity; if (typeof d.boxBuy === 'number') m.boxBuy = d.boxBuy;
         if (typeof d.dailyStreak === 'number') m.dailyStreak = d.dailyStreak;   // 🔥每日登入連續天數(GET /api/wallet;斷簽=0)→神社面板「連續 N 天」+ 下次領取格
-        if (typeof d.freePullUsed === 'number') m.freePullUsed = d.freePullUsed;   // 🎁 免費十連已領旗標(伺服器權威 free_pull_used 落地)→教學重玩靠 freePullDone() 判斷不再提供十連
+        if (typeof d.freePullUsed === 'number') { m.freePullUsed = d.freePullUsed; _nbSrv.fpu = d.freePullUsed; _nbSrv.uFpu = _nbCur(); }   // 🆕2026-11-27 _nbSrv.fpu＝伺服器說的十連已領(開場判斷新手用)   // 🎁 免費十連已領旗標(伺服器權威 free_pull_used 落地)→教學重玩靠 freePullDone() 判斷不再提供十連
         // 🔐 體力真相搬伺服器:staminaMax/stamina 直接覆蓋(絕對值);staTs=regen 顯示基準——有 d.staminaTs(GET /api/wallet,單位秒)就轉 ms 落地,
         // 沒有(run/start、wallet/spend 等變更端點只回目前值,不回 ts)就用 Date.now() 當基準,避免拿舊 ts 疊加多算 regen(前端只做顯示層 regen,不再本地權威遞減)
         if (typeof d.staminaMax === 'number') m.staminaMax = d.staminaMax;
@@ -2106,12 +2161,78 @@
         ['fire', 'water', 'thunder', 'earth', 'wind'].forEach(el => { const k = 'gem_' + el; if (typeof d[k] === 'number') s.gems[el] = d[k]; });
       });
       if (proFilled) { try { const hs = window.GAME && window.GAME.scene.getScene('home'); if (hs && hs.scene && hs.scene.isActive() && hs.tab === 'dungeon' && !hs._startBusy && hs.rebuild) hs.rebuild(); } catch (e) { } }   // 🩹2026-11-26 補了序章→首頁地圖已畫好就重畫(比照每日徽章的重建做法);出擊中不重畫
+      let al = null; try { al = _nbAlign(d, issuedAt); } catch (e) { console.error('align', e); }   // 🆕2026-11-27 解鎖雙向對齊(只在帶 clearedAuth 時)
+      if (al && al.changed) { try {
+        const hs = window.GAME && window.GAME.scene.getScene('home');
+        if (hs && hs.scene && hs.scene.isActive() && !hs._startBusy) {
+          if (hs.tab === 'dungeon' && !proFilled && hs.rebuild) hs.rebuild();   // 地圖已畫好→重畫反映新狀態(同上;出擊中不重畫)
+          if (al.lost.length && !hs._busyPull && !hs._summon && !hs._freeGuide && !document.getElementById('gbind-ov')) _nbShowUnsync(hs);   // 正在大廳→立刻說明;不在大廳/在忙→下次進大廳說明(HomeScene.create)
+        }
+      } catch (e) { } }
     }
     function syncGems(g) {   // 🔐 部分端點(run/complete、evolve)回 gems:{el:n}(該元素目前絕對值,非差額)→比照其餘 sync 函式慣例覆蓋
       if (!g || typeof g !== 'object') return;
       mutSave(s => { if (!s.gems) s.gems = { fire: 0, water: 0, thunder: 0, earth: 0, wind: 0 }; Object.keys(g).forEach(el => { if (typeof g[el] === 'number') s.gems[el] = g[el]; }); });
     }
-    async function walletFetch() { try { const r = await authedFetch('/api/wallet'); if (r.ok) syncWallet(await r.json()); } catch (e) { } }   // fire-and-forget 拉錢包(離線/失敗靜默,沿用本地快取)
+    // 🆕2026-11-27 開場等伺服器再判斷(規格 3.2 第 2 點)。_nbSrv＝這次開頁後伺服器最近一次說的:cards＝卡片張數、fpu＝新手十連已領(0/1)、w/c＝開場那次的原始回應(帳號重置後重新落地用)
+    //   🩹2026-11-27 階段二缺口 1:每個值都記「是哪個帳號回的」(uCards/uFpu/uW/uC＝當下 nb_cloud.uid);帳號換了,舊帳號的值一律不算、不重新落地
+    const _nbSrv = { cards: null, fpu: null, w: null, c: null, uCards: '', uFpu: '', uW: '', uC: '' };
+    let _nbRunOkAt = 0;   // 🆕2026-11-27 最近一次通關回報(run/complete)成功的時間:比它早送出的錢包查詢不拿來「退回」本機通關(那份清單可能還沒含這場)
+    function _nbCur() { return String(cloudState().uid || ''); }
+    function _nbSrvKnown() { const u = _nbCur(); return _nbSrv.cards != null && _nbSrv.fpu != null && _nbSrv.uCards === u && _nbSrv.uFpu === u; }
+    function _nbSrvNewbie() { return _nbSrvKnown() && _nbSrv.cards === 0 && !_nbSrv.fpu; }   // 伺服器 0 卡＋沒領過十連＝新手(教學不給跳過)
+    function _nbWalletP() { const t0 = Date.now(); return authedFetch('/api/wallet').then(r => r.ok ? r.json() : null).then(d => { if (!d || typeof d !== 'object') return false; _nbSrv.w = d; _nbSrv.uW = _nbCur(); syncWallet(d, t0); return true; }).catch(() => false); }   // 同 walletFetch,另回成功與否
+    function _nbCardsP() { return authedFetch('/api/cards').then(r => r.ok ? r.json() : null).then(d => { if (!d || typeof d !== 'object') return false; _nbSrv.c = d; _nbSrv.uC = _nbCur(); syncCards(d); return true; }).catch(() => false); }   // 同 cardsFetch,另回成功與否
+    function _nbSrvReapply() {   // 帳號重置後:這次拿到的伺服器資料若是「目前帳號」回的就落地到新存檔;是舊帳號回的(遊玩中被重建)→不落地,改重拉(🩹2026-11-27 階段二缺口 1)
+      const u = _nbCur(); let stale = false;
+      try { if (_nbSrv.w && _nbSrv.uW === u) syncWallet(_nbSrv.w); else stale = true; if (_nbSrv.c && _nbSrv.uC === u) syncCards(_nbSrv.c); else stale = true; } catch (e) { }
+      if (stale || !_nbSrvKnown()) { _nbWalletP(); _nbCardsP(); }
+    }
+    function _nbRace(p, ms) { let t; return Promise.race([p, new Promise(r => { t = setTimeout(() => r(null), ms); })]).finally(() => clearTimeout(t)); }   // 逾時回 null
+    const NB_BOOT_WAIT_MS = 8000, NB_BOOT_KNOWN_MS = 3000, NB_WAIT_SHOW_MS = 600;   // 🆕2026-11-27 開場等伺服器:一般 8 秒/認得帳號的已畢業老玩家約 3 秒(從開頁算)/「連線中…」等 0.6 秒才出現(快網不閃)
+    async function _nbTestReset() {   // 🆕2026-11-27 規格 3.2 第 7 點(給大毛測試):網址帶 ?newplayer=1 → 大字確認後清掉這台瀏覽器的本機存檔與雲端身分 → 變成全新玩家。只動前端、不刪伺服器資料;清之前存檔備份成 ninja_save_bak_*、身分備份成 nb_cloud_bak_*(只留最新 1 份)。網址參數先拿掉,重新整理不會再問
+      if (!/[?&]newplayer=1(&|#|$)/.test(location.search)) return;
+      try { const u = new URL(location.href); u.searchParams.delete('newplayer'); history.replaceState(null, '', u.pathname + u.search + u.hash); } catch (e) { }
+      const ok = await uiConfirm({ big: true, danger: true, noDismiss: true, title: tr('變成全新玩家？'), message: tr('這台裝置的進度和登入會清掉(測試用)。\n帳號資料留在伺服器,不會刪除。'), okLabel: tr('清掉重來'), cancelLabel: tr('取消') });
+      if (ok !== true) return;
+      backupLocalSave('newplayer');
+      try { const c = localStorage.getItem(CLOUD_KEY); if (c) { for (let i = localStorage.length - 1; i >= 0; i--) { const k = localStorage.key(i); if (k && k.indexOf('nb_cloud_bak_') === 0) localStorage.removeItem(k); } localStorage.setItem('nb_cloud_bak_' + Date.now(), c); } } catch (e) { }
+      [SAVE_KEY, 'ninja_owned', CLOUD_KEY, 'nb_pending_ref'].forEach(k => { try { localStorage.removeItem(k); } catch (e) { } });
+    }
+    function _nbWaitShow(delay) {   // 等超過 delay 毫秒才顯示「連線中…」大字(快網看不到);hide() 收掉
+      let el = null; const t = setTimeout(() => { try { el = document.createElement('div'); el.id = 'nb-boot-wait'; el.textContent = tr('連線中…'); el.style.cssText = 'position:fixed;inset:0;z-index:99990;display:flex;align-items:center;justify-content:center;color:#ffe9b0;font:700 28px GenSen,system-ui,-apple-system,"Noto Sans TC",sans-serif;pointer-events:none;'; document.body.appendChild(el); } catch (e) { } }, delay);
+      return { hide() { clearTimeout(t); if (el) { try { el.remove(); } catch (e) { } el = null; } } };
+    }
+    function _nbRejudge() {   // 開場等太久先照本機進大廳,伺服器資料後來才到 → 重判一次:帳號換了就重置存檔;0 卡沒領過十連就補發。玩家正在大廳(沒在忙)就重開大廳套用,不在大廳則下次進大廳時套用
+      try {
+        const reset = _nbAcctGuard(); if (reset) _nbSrvReapply();
+        const s = loadSave(), st = s.settings || {};
+        if (!(reset || (tutSeen() && (s.cards || []).length === 0 && !st.freePull && !freePullDone()))) return;
+        const G = window.GAME, hs = G && G.scene.getScene('home');
+        if (hs && hs.sys && hs.sys.isActive() && !hs._startBusy && !hs._busyPull && !hs._summon && !document.getElementById('gbind-ov')) hs.scene.restart();
+      } catch (e) { }
+    }
+    async function _nbBootWait(pw, pc, opt) {   // 等錢包＋收藏(最多 8 秒)。都成功→開場;失敗/逾時:本機有畢業存檔→先照本機開場,資料到了重判;沒有→「連上網路就能出發」可重試,資料一到自己關掉,不進教學
+      // 🩹2026-11-27 階段二(企劃暫定,大毛可改):opt.known＝開場時存檔已記著目前帳號(上次就認得)→ 已畢業的老玩家只等到「開頁後約 3 秒」(opt.t0 起算,含雲端調和)就照本機進大廳;其他人照舊 8 秒。opt.ld＝開場一開始就排好的「連線中…」
+      opt = opt || {};
+      let done = false, both = Promise.all([pw, pc]).then(a => { done = true; return !!(a[0] && a[1]); }), first = true;
+      for (;;) {
+        const ld = (first && opt.ld) ? opt.ld : _nbWaitShow(first ? 600 : 0);
+        const ms = (first && opt.known && tutSeen()) ? Math.max(0, (opt.t0 || Date.now()) + NB_BOOT_KNOWN_MS - Date.now()) : NB_BOOT_WAIT_MS;
+        first = false;
+        let r = null; try { r = await _nbRace(both, ms); } finally { ld.hide(); }
+        if (_nbAcctGuard()) _nbSrvReapply();   // 等待中帳號可能被重建(401→重建訪客)
+        if (r === true) return;
+        if (tutSeen()) { both.then(v => { if (v) _nbRejudge(); }); return; }
+        const ctl = {};
+        const mp = _nbModal({ type: 'confirm', big: true, okOnly: true, noDismiss: true, title: tr('連上網路就能出發'), okLabel: tr('再試一次'), ctl: ctl });
+        both.then(v => { if (v && ctl.close) ctl.close(); });
+        const press = await mp;
+        if (press !== true) { if (_nbAcctGuard()) _nbSrvReapply(); return; }   // 資料到了(被 ctl.close 關掉)
+        if (done) { done = false; both = Promise.all([_nbWalletP(), _nbCardsP()]).then(a => { done = true; return !!(a[0] && a[1]); }); }   // 上一輪已失敗→重拉;還在等→接著等同一組
+      }
+    }
+    async function walletFetch() { const t0 = Date.now(); try { const r = await authedFetch('/api/wallet'); if (r.ok) syncWallet(await r.json(), t0); } catch (e) { } }   // 🆕2026-11-27 帶送出時間 t0(解鎖對齊用)   // fire-and-forget 拉錢包(離線/失敗靜默,沿用本地快取)
     function _toP(p, ms) { let t; return Promise.race([p, new Promise((_, rj) => { t = setTimeout(() => rj(new Error('timeout')), ms); })]).finally(() => clearTimeout(t)); }   // 🩹2026-11-25 舊問題修正二 R5:等待加上限(標頭到了、內容一直讀不完,也不會永久卡住)
     async function walletResync(ms) { const t0 = Date.now(), T = ms == null ? 10000 : ms; if (!(T > 0)) return null; try { const r = await _toP(authedFetch('/api/wallet'), Math.min(6000, T)); if (!r.ok) return null; const d = await _toP(r.json(), Math.max(0, Math.min(4000, T - (Date.now() - t0)))); syncWallet(d); return (d && typeof d.stones === 'number') ? d.stones : null; } catch (e) { return null; } }   // 🩹2026-11-25 舊問題修正二 R5:花石結果不確定 → 重查餘額(GET /api/wallet)再放開按鈕;回傳伺服器餘額(查不到＝null)(🩹2026-11-25 舊問題修正三:上限 8＋8 秒 → 6＋4 秒)   (🩹2026-11-25 舊問題修正四 P8:ms＝這次最多等多久,標頭 ≤6 秒、內容 ≤4 秒、合計 ≤ms;不帶＝10 秒同 l)
     // 🩹2026-11-25 舊問題修正三 N5:花石帶冪等鍵 idem_key。每次「玩家按下付費」產生一把新鍵,這次購買的每一次送出都用同一把;後端 /api/config 回 spendIdem:true 才自動同鍵重送(標頭前斷線/逾時、5xx、2xx 內容壞),後端不支援只送一次(舊後端忽略多的欄位)。
@@ -2161,6 +2282,7 @@
       // ⚠️ 不再讀 d.progress(伺服器過渡期相容欄位,新前端別依賴,見 card-server-spec.md);cardLv/cardEvo 完全從 d.cards 現算。
       if (!d) return;
       mutSave(s => {
+        if (Array.isArray(d.cards)) { _nbSrv.cards = d.cards.length; _nbSrv.uCards = _nbCur(); }   //🆕2026-11-27 伺服器上的卡片張數(開場判斷新手/有卡不進教學用)
         if (Array.isArray(d.cards)) s.cards = d.cards.map(c => ({ u: c.u, id: c.id, lv: c.lv || 1, exp: c.exp || 0, evo: c.evo || 0, fav: c.fav ? 1 : 0 }));   // 🆕2026-10-08 fav=最愛鎖(0/1;舊後端缺欄→0)
         const cardLv = {}, cardEvo = {};
         (s.cards || []).forEach(c => {
@@ -2254,6 +2376,7 @@
       catch (e) { return null; }   // 網路失敗:保留該筆,下次再試
       if (r.ok) {
         let d; try { d = await r.json(); } catch (e) { return null; }   // 回應壞掉:保留該筆,重送會回 replayed
+        _nbRunOkAt = Date.now();   // 🆕2026-11-27 解鎖對齊:比這刻早送出的錢包查詢不拿來退回本機通關
         syncWallet(d); if (d.gems) syncGems(d.gems);
         mutSave(s => { s.pendingRuns = (s.pendingRuns || []).filter(x => x.runId !== item.runId); });
         return { ok: true, drops: Array.isArray(d.drops) ? d.drops : [], firstClearStones: d.firstClearStones || 0, bagFull: !!d.bagFull, pending: (d.pending | 0), clearSec: (typeof d.clearSec === 'number' ? d.clearSec : null), bestSec: (typeof d.bestSec === 'number' ? d.bestSec : null), leveledUp: !!d.leveledUp, rank: (typeof d.rank === 'number' ? d.rank : null), fail: !!d.fail, coinsGained: (typeof d.coinsGained === 'number' ? d.coinsGained : undefined), expGained: (typeof d.expGained === 'number' ? d.expGained : undefined), replayed: !!d.replayed, daily: d.daily || null, comboBoard: (d.comboBoard && typeof d.comboBoard === 'object') ? { newBest: d.comboBoard.newBest === true } : null };   /* 🆕2026-11-20 comboBoard.newBest=破了自己在這個連擊榜的紀錄(舊後端沒這欄→null) */   // 🔐[首通石]非首通/序章/重放=0,伺服器已算好直接帶出;bagFull=背包滿→伺服器跳過部分/全部掉落,前端要提示玩家清背包;clearSec=這趟耗時、bestSec=全服最速(皆伺服器算,離線 fallback 為 null);leveledUp/rank=伺服器升級判定(rank/exp/體力已在上面 syncWallet 落地),給結算慶祝用;🆕2026-11-16 coinsGained/expGained=伺服器實際入帳(舊後端沒這兩欄→undefined→結算走舊的本地顯示)、replayed=早已入帳(不帶數字)、daily=每日修煉回應(stonesGained)
@@ -2261,7 +2384,7 @@
       let b = null; try { b = await r.json(); } catch (e) { b = null; }
       const c = rqClassifyRun(r.status, b, item.tries | 0);
       if (c.act === 'retry') { _rqFlush.schedule(Math.round(c.retryAfterSec * 1000) + RQ_RETRY_BUFFER_MS); return { ok: false, retryLater: true, retryAfterSec: c.retryAfterSec }; }   // 429:這筆沒處理也沒扣東西→留在佇列,等指定秒數自動補送(不再當永久失敗丟掉)
-      if (c.act === 'drop') { mutSave(s => { s.pendingRuns = (s.pendingRuns || []).filter(x => x.runId !== item.runId); }); console.warn('run/complete rejected', r.status, c.error, item.runId, c.exhausted ? '(未知 400 重試已達上限,丟棄)' : ''); return { ok: false, rejected: true, error: c.error }; }   // 這筆永久無效(或未知 400 試滿次數):移出佇列
+      if (c.act === 'drop') { mutSave(s => { s.pendingRuns = (s.pendingRuns || []).filter(x => x.runId !== item.runId); }); console.warn('run/complete rejected', r.status, c.error, item.runId, c.exhausted ? '(未知 400 重試已達上限,丟棄)' : ''); walletFetch(); return { ok: false, rejected: true, error: c.error }; }   // 🆕2026-11-27 規格 3.2 第 4 點:被永久拒收 → 重抓錢包(帶 clearedAuth 時對齊:伺服器沒記到的通關退回本機並大字說明)   // 這筆永久無效(或未知 400 試滿次數):移出佇列
       if (c.tries) mutSave(s => { const it = (s.pendingRuns || []).find(x => x.runId === item.runId); if (it) it.tries = c.tries; });   // 未知 400:保留並記次數
       return null;   // 其他失敗狀態:保留該筆,下次再試
     }
@@ -4897,7 +5020,7 @@
         if (!def.msg) {   // 🆕msg 為空/未給→不畫白板面板、不畫收合三角,只留手指提示(hint 已在上面排定)+ 跳過教學鈕(教學①:玩家已看過歡迎頁,盤面全露不擋)
           if (this.tutBg) this.tutBg.setVisible(false);
           this.tutPanel = null; this.tutTab = null;
-          const sk0 = this.add.text(W - 12, 16, tr('跳過教學 ✕'), { fontFamily: EMOJIFONT, fontSize: FS.cap, color: '#6c7780', backgroundColor: '#ffffffe6', padding: { x: 10, y: 6 }, fontStyle: 'bold' }).setOrigin(1, 0.5).setInteractive(); g.add(sk0); sk0.on('pointerup', () => this.tutSkip());
+          if (!_nbSrvNewbie()) { const sk0 = this.add.text(W - 12, 16, tr('跳過教學 ✕'), { fontFamily: EMOJIFONT, fontSize: FS.cap, color: '#6c7780', backgroundColor: '#ffffffe6', padding: { x: 10, y: 6 }, fontStyle: 'bold' }).setOrigin(1, 0.5).setInteractive(); g.add(sk0); sk0.on('pointerup', () => this.tutSkip()); }   // 🆕2026-11-27 伺服器說是新帳號(0 卡、沒領過十連)→沒有跳過鈕(規格 3.2 第 2 點;大毛 11/26 決定)
           g.alpha = 0; this.tweens.add({ targets: g, alpha: 1, duration: 240 });
           return;
         }
@@ -4931,7 +5054,7 @@
           tri.on('pointerup', () => this.tutCollapse());
           hz.on('pointerup', () => this.tutCollapse());
         }   // 點右上三角(或點白板)→收起;拖塊也自動收起(grabFX);收合後點右上「▸ 說明」展開
-        const sk = this.add.text(W - 12, 16, tr('跳過教學 ✕'), { fontFamily: EMOJIFONT, fontSize: FS.cap, color: '#6c7780', backgroundColor: '#ffffffe6', padding: { x: 10, y: 6 }, fontStyle: 'bold' }).setOrigin(1, 0.5).setInteractive(); g.add(sk); sk.on('pointerup', () => this.tutSkip());   // demo 次要色淺底 chip
+        if (!_nbSrvNewbie()) { const sk = this.add.text(W - 12, 16, tr('跳過教學 ✕'), { fontFamily: EMOJIFONT, fontSize: FS.cap, color: '#6c7780', backgroundColor: '#ffffffe6', padding: { x: 10, y: 6 }, fontStyle: 'bold' }).setOrigin(1, 0.5).setInteractive(); g.add(sk); sk.on('pointerup', () => this.tutSkip()); }   // demo 次要色淺底 chip   // 🆕2026-11-27 新帳號沒有跳過鈕(同上)
         g.alpha = 0; if (def.delayShow) { g.setVisible(false); } else { this.tweens.add({ targets: g, alpha: 1, duration: 240 }); }   // delayShow(⑥沙漏):面板先藏,等 setup 的 reveal(敵攻擊+扣血完約1秒)才淡入
       }
       tutCollapse() { if (this.tutPanel && this.tutPanel.active && this.tutPanel.visible) { this.tutPanel.setVisible(false); if (this.tutBg) this.tutBg.setVisible(false); if (this.tutTab && this.tutTab.active) this.tutTab.setVisible(true); } }   // 收起說明+黑底→盤面淨空;拖塊(grabFX)或點訊息時觸發
@@ -12238,7 +12361,7 @@
         const n = this._failClearedStages(); if (!n || this._failSettled) return Promise.resolve(null);
         this._failSettled = true;
         const item = { dungeonId: this.dungeon.id, diff: (this.diff && this.diff.key) || 'normal', runId: this.serverRunId, name: getMeta().name, clearedStages: n, round: this.round || undefined };
-        mutSave(s => { const q = (s.pendingRuns = s.pendingRuns || []); q.push(item); while (q.length > 20) { q.shift(); s.meta._pendingRunsDropped = (s.meta._pendingRunsDropped || 0) + 1; } });
+        mutSave(s => { const q = (s.pendingRuns = s.pendingRuns || []); q.push(item); while (q.length > 20) { q.shift(); s.meta._pendingRunsDropped = (s.meta._pendingRunsDropped || 0) + 1; } }); if ((loadSave().meta || {})._pendingRunsDropped) walletFetch();   // 🆕2026-11-27 規格 3.2 第 4 點:佇列擠掉最舊的 → 重抓錢包對齊(同上)
         const send = _sendRunComplete(item).then(res => { if (res && res.ok) this._failSrv = res; if (res && res.ok && res.leveledUp) mutSave(s => { s.meta._lvUp = { rank: res.rank }; }); return res; }).catch(() => null);   // 🆕2026-11-16 _failSrv=伺服器回的戰敗入帳(敗北面板若再畫就用實際數字)
         return Promise.race([send, new Promise(r => setTimeout(() => r(null), 2500))]);
       }
@@ -12277,6 +12400,7 @@
           q.push(item);
           while (q.length > 20) { q.shift(); s.meta._pendingRunsDropped = (s.meta._pendingRunsDropped || 0) + 1; }   // 🔐[12] 佇列上限 20 筆,超過丟最舊;丟棄時記一筆計數,供下次進大廳 toast 告知玩家(而非靜默漏發獎勵)
         });
+        if ((loadSave().meta || {})._pendingRunsDropped) walletFetch();   // 🆕2026-11-27 規格 3.2 第 4 點:擠掉最舊的 → 重抓錢包對齊(帶 clearedAuth 時:伺服器沒記到的通關退回本機,下次進大廳大字說明)
         this._runRes = null;   // 🆕2026-11-16 本場伺服器回應:null=還沒回/離線/被限流待補送(結算顯示「待結算」);{rejected}=永久拒絕;成功回應(帶 coinsGained/expGained/replayed/daily)
         _runWatchers[item.runId] = (res) => { if (!(this.scene && this.scene.isActive())) return false; this._applyRunRes(res); return true; };   // 被限流留在佇列→稍後補送成功時回呼這裡更新結算(場景已離開→回 false,交補送佇列通用處理)
         _sendRunComplete(item).then(res => { if (res && (res.ok || res.rejected)) delete _runWatchers[item.runId]; this._applyRunRes(res); }).catch(() => { });   // 🔐 立即嘗試送出(在場景還開著時,盡量讓結算畫面就能顯示真實掉落);離線/失敗會保留在 pendingRuns,由 flushPendingRuns 之後補發
@@ -13319,6 +13443,8 @@
         setupHiDPI(this);   // 🆕2026-10-28c 超採樣
         this.add.rectangle(CX, H / 2, W, H, 0x160f18);
         this._diving = false; try { this.cameras.main.resetFX(); } catch (e) { }   // 🎬回大廳:重置出擊轉場鎖(否則第二次進火城被擋)+ 清相機殘留淡出
+        if (_nbAcctGuard()) _nbSrvReapply();   // 🆕2026-11-27 存檔認帳號:遊玩中帳號被重建 → 進大廳時才重置(不在戰鬥中動存檔)
+        if (!tutSeen() && _nbSrvKnown() && _nbSrv.cards > 0) setTutSeen();   // 🆕2026-11-27 伺服器上已經有卡(老帳號換新瀏覽器/清過本機資料)→不進教學,直接大廳(規格 3.2 第 2 點)
         // 2026-11-02 新手動線精簡(隱藏強制三課):必須在下面讀 st/freePull 之前執行,否則補發的 freePull 這次進場不會落到抽卡引導頁
         // (a) 過渡帳號:內測中卡在 newbieStep 0~2 → 不再導去上課;未領過十連就補發 freePull,並把 newbieStep 收斂成 3+newbieDone(=舊流程「三堂全破」終態,showLessonComplete 的新手序列分支因此不再命中)
         { const _s = loadSave(), _st = _s.settings || {}; if (tutSeen() && _st.newbieStep != null && _st.newbieStep < 3) mutSave(s => { s.settings = s.settings || {}; s.settings.newbieStep = 3; s.settings.newbieDone = true; if (!freePullDone()) s.settings.freePull = true; }); }
@@ -13363,7 +13489,8 @@
         cardsFetch();   // 🔐 每次進大廳強制校正收藏(切帳/找回都會 reload 回大廳,不靠時間戳比較)
         { const _pdn = getMeta()._pendingDropsNotice; if (_pdn) { mutSave(s => { delete s.meta._pendingDropsNotice; }); this.time.delayedCall(_lu ? 3000 : 500, () => this.toast(tr('🎁 你有 {n} 張待領戰利品已入袋!', { n: _pdn }))); } }   // 離線期間補發的通關掉落(見 flushPendingRuns)
         { const _prd = getMeta()._pendingRunsDropped; if (_prd) { mutSave(s => { delete s.meta._pendingRunsDropped; }); this.time.delayedCall(_lu ? 3300 : 900, () => this.toast(tr('⚠️ 離線佇列已滿,有 {n} 場通關獎勵漏發,請見諒', { n: _prd }))); } }   // 🔐[12] 離線期間 pendingRuns 佇列爆量被迫丟棄的最舊通關,明確告知玩家(而非靜默消失)
-        if (!st.freePull && tutSeen() && !st.bindPrompted && _elemCleared) _lobbyQ(700, () => promptAccountBindAfterTutorial(this));   // 🔑 綁定 Google 邀請改到「破第一座五屬城後」才跳(一次性)→比破序章更投入、綁定意願更高;也不與序章指路面板撞(那面板在「破序章未破五屬城」時彈,此邀請在「已破五屬城」時彈,互斥)。勇者卡提示已停用(見 maybeHeroCardNotice)
+        if (!this._freeGuide && (getMeta()._unsync || []).length) _lobbyQ(600, () => _nbShowUnsync(this));   // 🆕2026-11-27 解鎖對齊退回了本機通關 → 進大廳大字說明一次(規格 3.2 第 3、4 點)
+        if (!st.freePull && tutSeen() && !st.bindPrompted && _elemCleared && !(_nbSrvKnown() && _nbSrv.cards === 0)) _lobbyQ(700, () => promptAccountBindAfterTutorial(this));   // 🔑 綁定 Google 邀請改到「破第一座五屬城後」才跳(一次性)→比破序章更投入、綁定意願更高;也不與序章指路面板撞(那面板在「破序章未破五屬城」時彈,此邀請在「已破五屬城」時彈,互斥)。勇者卡提示已停用(見 maybeHeroCardNotice)
       }
       showPrologueGuide() {   // 🧭 破序章後一次性「下一步」指路面板(對齊教學說明卡:白 _softPanelTex + 金標題 + 綠 3D CTA);把「五屬城→寶玉卡→進化」循環講白 + 一鍵去打火城
         if ((loadSave().settings || {}).prologueGuideSeen) return;   // 防重(併發/重繪各只彈一次)
@@ -13542,7 +13669,7 @@
       }
       go(key) { this.scene.manager.start(key); this.scene.manager.stop('home'); }
       // 引導式免費十連的鎖是否生效:引導中 且 英雄卡池(premium)開放中。池未開放(時間窗外)→十連鈕與手指都不會建→暫時解鎖,免得玩家永遠卡在沒有按鈕的引導頁(池一開放這裡自動恢復為鎖)
-      _guideOn() { return !!this._freeGuide && !this._poolInactive('premium'); }
+      _guideOn() { return !!this._freeGuide; }   // 🩹2026-11-27 免費十連不看卡池時間窗(後端 free:true 已不看時間窗;原本 && !this._poolInactive('premium') → 池過期時引導與免費鈕一起消失、新手拿不到十連)
       switchTab(t) { if (this._summon) return; if (this._guideOn() && t !== 'other' && t !== 'gacha') { this.toast(tr('先領取免費新手十連!')); return; } if (t === 'other') this._otherScrollY = 0; if (t === 'friend') { this._cbCache = undefined; this._cbDet = {}; } this.tab = t; this.gachaResult = null; this.rebuild(); }   // 進殿堂→重抓全服榜(剛破的記錄即時反映)   // 進 'other' 捲回頂端;同分頁內 rebuild(如調音量)不重置,避免跳位。🎁 引導式新手十連期間鎖住換頁/齒輪(都經此)→只能按脈動的十連鈕
       topBar() {
         const m = getMeta(), T = UI();
@@ -14276,6 +14403,7 @@
         const dc = (this.tab === 'dungeon') ? DIVE_COLOR[id] : null;   // 只從地圖進、且該城有轉場色→播出擊俯衝轉場
         // ✋ 即時回饋(一點就有反應,不等網路):地圖入口=俯衝+「出擊中…」;其餘=載入遮罩+轉圈。run/start 與此動畫並行跑。
         const fb = dc ? this._diveFeedback(id) : this._loadFeedback();
+        let lockKind = null;   // 🆕2026-11-27 規格 3.2 第 5 點:'diff'＝難度被擋、'other'＝其他關卡被擋(五屬城 locked 仍走下面 proLocked)
         let serverRunId = null, serverBonus = null, failMsg = null, serverMoneyDay = false, serverEnc = null, bagFull = false, proLocked = false;
         try {
           const r = await authedFetch('/api/run/start', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ dungeonId: id, diff: df.key, ...(ROUNDS && round ? { round: round } : {}), ...(ENC ? { enc: 1 } : {}) }) });   // 🆕2026-11-09 ENC 開啟才帶 enc:1 → 伺服器擲遭遇表陣容(票券 e + 明文 encounter);沒帶/舊後端=不回 encounter→前端退回本機擲   // 🆕三輪:round 只在 ROUNDS 開啟時帶(後端 run/start 以解構取欄位、忽略未知欄位→不會 400;票券/解鎖驗證=階段(b))
@@ -14287,6 +14415,7 @@
             const body400 = await r.json().catch(() => ({}));
             if (body400 && body400.error === 'locked' && ELEM_DUNGEONS.indexOf(id) >= 0) proLocked = true;   // 🩹2026-11-26 五屬城回 locked＝伺服器(補種後)確定沒有序章通關紀錄→下面走序章校正(塔的 locked 不在此列,維持原行為)
             else failMsg = (body400 && body400.error === 'diff_locked') ? tr('尚未解鎖此難度,先破前一難度') : tr('尚未解鎖此關卡');
+            if (failMsg) { lockKind = (body400 && body400.error === 'diff_locked') ? 'diff' : 'other'; failMsg = null; }   // 🆕2026-11-27 規格 3.2 第 5 點:難度/其他關卡被擋 → 不閃 toast,改由下面先重抓錢包對齊、再用大字對話框說明下一步
           } else if (r && r.status === 409) {   // 🆕2026-08-17 每日修煉專屬(run/start.ts daily 分支):今天這層已通關過 / 換日了但前端還沒重整→屬性不對。每日修煉本版不做離線 fallback,這裡務必攔下,否則會白打一場(run/complete daily 分支拒絕未簽票的請求,見該檔案檔頭)
             const body409 = await r.json().catch(() => ({}));
             if (body409 && body409.error === 'bag_full') bagFull = true;   // 2026-11-10 伺服器背包滿(空位0)不簽票:不進戰鬥、不退回離線 runId,跳同一個背包已滿彈窗;其他 409 維持原行為
@@ -14295,6 +14424,10 @@
           // else:其他非預期狀態→比照離線放行(serverRunId 留 null,走本地 runId fallback)
         } catch (e) { }   // 🔐 網路失敗/離線 → 照舊進戰鬥,不卡死玩家
         if (bagFull) { this._startBusy = false; fb.abort(); this.rebuild(); await this._bagFullBlock(); return; }
+        if (proLocked) {   // 🆕2026-11-27 規格 3.2 第 5 點:城被擋 → 先重抓錢包對齊(帶 clearedAuth 時;出擊動畫照跑、_startBusy 仍為真 → 對齊不另外跳說明/重畫),再走下面原本的序章校正(那段一行都沒改)
+          try { await _nbRace(walletFetch(), 5000); } catch (e) { }
+          mutSave(s => { if (Array.isArray(s.meta._unsync)) s.meta._unsync = s.meta._unsync.filter(k => String(k).split(':')[0] !== 'prologue'); });   // 序章由下面這個專門的說明講,不重複講
+        }
         if (proLocked) {   // 🩹2026-11-26 序章紀錄校正:佇列有待送的序章通關→不退回、先補送;沒有→本機序章退回未破(只動這一個 key),地圖重畫出序章入口
           this._startBusy = false; fb.abort();
           const proPending = (loadSave().pendingRuns || []).some(x => x && x.dungeonId === 'prologue' && !x.clearedStages);   // 待送的序章「通關」(戰敗結算帶 clearedStages,不算)
@@ -14303,6 +14436,16 @@
           this.rebuild();
           await uiConfirm({ big: true, okOnly: true, title: proPending ? tr('通關紀錄同步中，稍後再試一次') : tr('完成『序章』就能挑戰這座城'), okLabel: tr('好') });
           if (this.scene && this.scene.isActive() && this.tab === 'dungeon') this.rebuild();
+          return;
+        }
+        if (lockKind) {   // 🆕2026-11-27 規格 3.2 第 5 點:diff_locked/locked → 先重抓錢包對齊,再大字單鍵說明下一步(同 20261126a 樣式)
+          fb.abort();
+          try { await _nbRace(walletFetch(), 5000); } catch (e) { }   // 先重抓錢包對齊(最多等 5 秒)
+          this._startBusy = false; if (this.scene && this.scene.isActive()) this.rebuild();
+          let title = tr('先完成前面的關卡，就能挑戰這一關');
+          if (lockKind === 'diff') { const lst = DIFFS.filter(x => id !== 'tower' || x.key !== 'baby'), i = lst.findIndex(x => x.key === df.key), pv = i > 0 ? lst[i - 1] : null; title = pv ? tr('先打贏「{d}」，就能挑戰這個難度', { d: tr(pv.name) }) : tr('先打贏前一個難度，就能挑戰這個難度'); }
+          await uiConfirm({ big: true, okOnly: true, title: title, okLabel: tr('好') });
+          if (this.scene && this.scene.isActive()) { await _nbShowUnsync(this); if (this.tab === 'dungeon') this.rebuild(); }
           return;
         }
         if (failMsg) { this._startBusy = false; fb.abort(); this.toast(failMsg); this.rebuild(); return; }   // 失敗:收掉即時回饋、回首頁、提示
@@ -14502,7 +14645,8 @@
         const unit = b.cur === 'stones' ? '💎' : '💰', busy = !!this._busyPull;   // 🔐 抽卡防連點(_busyPull)期間按鈕變灰+停用
         // 抽卡鈕=編成確定鈕精緻款(DOM overlay + stylePillBtn,任意 dpi 銳利;canvas 畫的會被 420 framebuffer 鋸齒)。
         // DOM 永遠浮在 canvas 上→結果彈窗(canvas)蓋不住它:顯示結果時不建鈕(關閉會 rebuild 重建)。DOM 掛 scene 級,存 _tabDom 供 rebuild 清。
-        if (_inactive) {   // 🔐 時間窗外:灰態文字取代抽卡鈕(不建 DOM 鈕),文案區分「未開始/已結束」
+        const _freeOnly = _inactive && bankey === 'premium' && this._guideOn() && !this.gachaResult;   // 🆕2026-11-27 召喚勇者池在時間窗外、但新手還有免費十連 → 只建「免費十連」這一顆(付費鈕照舊不出現)
+        if (_inactive && !_freeOnly) {   // 🔐 時間窗外:灰態文字取代抽卡鈕(不建 DOM 鈕),文案區分「未開始/已結束」
           this.txt(CX, y + 40, tr(_notStarted ? '⏳ 尚未開放' : '⌛ 活動已結束'), FS.sub, '#9aa1ab', 0.5, true);
         } else if (!this.gachaResult) {
           const guide = this._guideOn();   // 🎁 引導式新手十連:只有召喚勇者「十連」可按+脈動,其餘一律禁用
@@ -14530,7 +14674,7 @@
             this._tabDom.push(dom);
             if (isFree) this._pulseDom(dom);   // 脈動提示玩家按這顆
           };
-          mk(CX - 90, tr('單抽 {u}{c}', { u: unit, c: cost1 }), 1);
+          if (!_freeOnly) mk(CX - 90, tr('單抽 {u}{c}', { u: unit, c: cost1 }), 1);
           mk(CX + 90, tr('十連 {u}{c}', { u: unit, c: cost10 }), 10);
         }
       }
@@ -16214,11 +16358,20 @@
     async function gatedBoot() {
       checkConfig();   // 公告/維護(fire-and-forget,不 await)
       captureRefParam();   // 🎁 ?ref=邀請碼→存 nb_pending_ref(同步、不碰網路;須在任何 await 之前,免被 reload/切帳搶先)
-      try { await Promise.race([hydrateFromCloud(), new Promise(function (res) { setTimeout(res, 2500); })]); } catch (e) { }
+      const _t0 = Date.now(), _lab = /^#(hitlab|enemylab|feellab)$/.test(location.hash) || /[?&]feel2=1(&|#|$)/.test(location.search);   // 開發用實驗室入口不等(照原本直接開場)
+      await _nbTestReset();   // 🆕2026-11-27 規格 3.2 第 7 點:網址 ?newplayer=1 → 確認後清掉這台的本機存檔與登入,變全新玩家(只動前端)
+      const _ld = _lab ? null : _nbWaitShow(NB_WAIT_SHOW_MS);   // 🆕2026-11-27「連線中…」從開頁就排(含雲端調和那 2.5 秒),0.6 秒內完成就不出現
+      let _known = false; try { const _s0 = JSON.parse(localStorage.getItem(SAVE_KEY)), _u0 = cloudState().uid; _known = !!(_s0 && _s0.acct && _u0 && String(_s0.acct) === String(_u0)); } catch (e) { }   // 存檔上次就記著這個帳號(這版以前的舊存檔不算)
+      _nbAcctGuard();   // 🆕2026-11-27 存檔認帳號:先用「這台目前登入的帳號」補記/比對(要在任何網路動作前,之後帳號若在開場被重建才比得出來)
+      let _hyDone = false; const _hy = hydrateFromCloud().finally(() => { _hyDone = true; });
+      try { await Promise.race([_hy, new Promise(function (res) { setTimeout(res, 2500); })]); } catch (e) { }
+      if (_nbAcctGuard() && _hyDone) { try { await Promise.race([hydrateFromCloud(), new Promise(function (res) { setTimeout(res, 2500); })]); } catch (e) { } }   // 🆕2026-11-27 調和途中帳號被重建→存檔已重置成空的,再調和一次(新帳號雲端有存檔就採用)
       window._nbBootDone = true;   // 此後 hydrateFromCloud 不得再套雲端資料(本輪放棄,下次開場再調和)
       tryBindPendingRef();   // 🎁 有待綁邀請碼→背景綁定(靜默,失敗留著下次再試;authedFetch 內 ensureGuest 已建好/建帳中有併發鎖)
-      walletFetch(); flushPendingRuns(); cardsFetch();   // 🔐 伺服器錢包/待補通關獎勵/收藏校正(fire-and-forget,不阻塞開場)
+      const _pw = _nbWalletP(); flushPendingRuns(); const _pc = _nbCardsP();   // 🔐 伺服器錢包/待補通關獎勵/收藏校正(請求與落地同原本的 walletFetch/cardsFetch;🆕2026-11-27 改成會等結果,見下)
       cloudFetch('/api/gacha/rates').then(r => r.ok ? r.json() : null).then(d => { if (d && d.pools) window._nbGachaRates = d; }).catch(() => { });   // 轉蛋機率公示改讀伺服器(失敗 fallback 前端常數,見 gachaBanner)
+      if (!_lab) { try { await _nbBootWait(_pw, _pc, { t0: _t0, known: _known, ld: _ld }); } catch (e) { } }
+      if (_ld) _ld.hide();   // 🆕2026-11-27 開場等伺服器(錢包＋收藏)再判斷教學/十連/綁定邀請(規格 3.2 第 2 點)
       bootGame();
     }
     // 主字源泉圓體(外部子集):先確保載入再開場→首屏即設計字型;逾時 1200ms 保險不卡死

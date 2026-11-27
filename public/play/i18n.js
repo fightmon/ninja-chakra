@@ -167,6 +167,16 @@ const I18N_DICT = {
     // 2026-11-26e 序章出擊拿不到票券(不再離線放行)
     '連上網路就能出發': 'Connect to the internet to set out',
     '等一下': 'Later',
+    // 2026-11-27 解鎖以伺服器為準(階段二):對齊退回說明、被擋說明、測試用重置
+    '這關的紀錄沒有同步到': 'This clear didn\'t sync',
+    '再打一次就好': 'Just play it once more',
+    '…等 {n} 關': '… ({n} in total)',
+    '先完成前面的關卡，就能挑戰這一關': 'Clear the earlier stages to unlock this one',
+    '先打贏「{d}」，就能挑戰這個難度': 'Beat "{d}" to unlock this difficulty',
+    '先打贏前一個難度，就能挑戰這個難度': 'Beat the previous difficulty to unlock this one',
+    '變成全新玩家？': 'Start as a brand-new player?',
+    '這台裝置的進度和登入會清掉(測試用)。\n帳號資料留在伺服器,不會刪除。': 'This device\'s progress and sign-in will be cleared (for testing).\nAccount data stays on the server.',
+    '清掉重來': 'Clear & Restart',
     '🎒 背包滿了!部分掉落沒收到,快到卡片→BOX清背包': '🎒 Bag full! Some drops weren\'t received — go to Cards → Box to clear space',
 
     // --- 編成頁 ---
