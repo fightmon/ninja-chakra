@@ -81,16 +81,16 @@
 
 <body>
   <div id="game"></div>
-  <!-- 2026-11-19 快取版本號(大毛拍板):自家 js 一律帶 ?v=;js 線上 max-age=4 小時且 Cloudflare 邊緣快取,換查詢字串才會拿新檔。【上線時:只要任何程式檔有變,把本檔所有「v=20261127a」與下一行 NB_ASSET_V 一起換新】格式 YYYYMMDD+英文小寫序號(同日第二次上線 b、c…);phaser.min.js 等第三方檔不加 -->
-  <script>window.NB_ASSET_V = '20261127a';</script>
-  <script src="i18n.js?v=20261127a"></script><!-- 多語(tr()/getLang/setLang):中文原文=key,查無回原文;要在所有遊戲腳本之前載 -->
-<script src="battle-core.js?v=20261127a"></script>
-<script src="battle-vfx.js?v=20261127a"></script>
-  <script src="round-core.js?v=20261127a"></script><!-- 🆕2026-11-06 三輪(階段(a)前端):塊池/怪倍率共用核心;只定義全域 RoundCore、無副作用;接線全在 ROUNDS 開關(?rounds=1 / localStorage nb_rounds=1)後,預設關 -->
-  <script src="enemy-core.js?v=20261127a"></script><!-- 🆕2026-11-06 P2:敵人機制核心(遊戲與 sim 共用);只定義全域 EnemyCore、無副作用;接線全在 NEWMECH 開關(?newmech=1 / localStorage nb_newmech=1)後,預設關 -->
-  <script src="enemy-fx.js?v=20261127a"></script><!-- 🆕2026-11-24 敵技演出 EFX:開關解析＋定位純計算(只定義全域 EnemyFX、無副作用);預設全關,?efx=1 才開(規格 spec-enemy-skill-fx.md) -->
-  <script src="fx-art.js?v=20261127a"></script><!-- 🆕2026-11-24 我方招式能量圖換無邊框版:貼圖 key→檔名對照表(全域 FxArt);?fxart=old 整批退回舊檔,刪表上一列=單張退回 -->
-  <script src="data-stages.js?v=20261127a"></script>
+  <!-- 2026-11-19 快取版本號(大毛拍板):自家 js 一律帶 ?v=;js 線上 max-age=4 小時且 Cloudflare 邊緣快取,換查詢字串才會拿新檔。【上線時:只要任何程式檔有變,把本檔所有「v=20261127b」與下一行 NB_ASSET_V 一起換新】格式 YYYYMMDD+英文小寫序號(同日第二次上線 b、c…);phaser.min.js 等第三方檔不加 -->
+  <script>window.NB_ASSET_V = '20261127b';</script>
+  <script src="i18n.js?v=20261127b"></script><!-- 多語(tr()/getLang/setLang):中文原文=key,查無回原文;要在所有遊戲腳本之前載 -->
+<script src="battle-core.js?v=20261127b"></script>
+<script src="battle-vfx.js?v=20261127b"></script>
+  <script src="round-core.js?v=20261127b"></script><!-- 🆕2026-11-06 三輪(階段(a)前端):塊池/怪倍率共用核心;只定義全域 RoundCore、無副作用;接線全在 ROUNDS 開關(?rounds=1 / localStorage nb_rounds=1)後,預設關 -->
+  <script src="enemy-core.js?v=20261127b"></script><!-- 🆕2026-11-06 P2:敵人機制核心(遊戲與 sim 共用);只定義全域 EnemyCore、無副作用;接線全在 NEWMECH 開關(?newmech=1 / localStorage nb_newmech=1)後,預設關 -->
+  <script src="enemy-fx.js?v=20261127b"></script><!-- 🆕2026-11-24 敵技演出 EFX:開關解析＋定位純計算(只定義全域 EnemyFX、無副作用);火城(步 2)預設開、其他步預設關,?efx=0 全關＝舊演出(2026-11-27;規格 spec-enemy-skill-fx.md) -->
+  <script src="fx-art.js?v=20261127b"></script><!-- 🆕2026-11-24 我方招式能量圖換無邊框版:貼圖 key→檔名對照表(全域 FxArt);?fxart=old 整批退回舊檔,刪表上一列=單張退回 -->
+  <script src="data-stages.js?v=20261127b"></script>
   <script>
     /* ===== 純邏輯(N/EL/SHAPES/CONFIG/computeClears/種子亂數 等戰鬥核心已抽到 battle-core.js,瀏覽器當共用全域)===== */
     const KEYS = ['fire', 'wind', 'thunder', 'earth', 'water'];
@@ -1093,7 +1093,7 @@
     //   數值、算式與亂數呼叫順序都與舊寫法相同(開關關閉時畫面與結算不變)。FX2.s1 只管兩處時序修正:敵方回合等最後一發命中+300、機制字卡等本手演出結束(_fxEndAt)。
     const FEEL2 = (() => { try { const m = /[?&]feel2=([^&#]*)/.exec(location.search); return !(m && m[1] === '0'); } catch (e) { return true; } })();   // 2026-11-22 大毛:手感改版 ①~⑧ 預設開;網址 ?feel2=0 全關(=舊演出)、?feel6=0 只關⑥、?feel7=0 只關⑦、?feel8=0 只關⑧
     const FX2 = { s1: FEEL2, s2: FEEL2, s3: FEEL2, s4: FEEL2, s5: FEEL2, s6: FEEL2 && (() => { try { return !/[?&]feel6=0(&|#|$)/.test(location.search); } catch (e) { return true; } })(), s7: FEEL2 && (() => { try { return !/[?&]feel7=0(&|#|$)/.test(location.search); } catch (e) { return true; } })(), s8: FEEL2 && (() => { try { return !/[?&]feel8=0(&|#|$)/.test(location.search); } catch (e) { return true; } })() };   // s2=步 2 子彈出手+五屬子彈手感+A 落地;s3=步 3 中級手繪(要 s2 開才有子彈卡可疊);s4=步 4 敵人狀態管理(覆蓋圖染色+偏移層獨佔+共用鉤子 _fxStateCut);s5=步 5 全體大招(含雙宮);s6=步 6 屬性死亡(預設開,?feel6=0 單獨關);s7=步 7 無屬補血(預設開,?feel7=0 單獨關);s8=步 8 終局特寫(預設開,?feel8=0 單獨關)
-    const EFX = (typeof EnemyFX !== 'undefined') ? EnemyFX.parseFlags(location.search, { enc: ENC, newmech: NEWMECH, feel2: FEEL2 }) : { s1: false, s2: false, s3: false, s4: false, s5: false, s6: false, s7: false, s8: false, s9: false };   // 🆕2026-11-24 敵技演出開關(enemy-fx.js):預設全關;?efx=1 全開、?efx=2,7 只開列出的步(自動帶 s1)、?efx_off=7 單步關;enc=0/新機制沒載/feel2=0 → 全關;不讀寫 ?lonely
+    const EFX = (typeof EnemyFX !== 'undefined') ? EnemyFX.parseFlags(location.search, { enc: ENC, newmech: NEWMECH, feel2: FEEL2 }) : { s1: false, s2: false, s3: false, s4: false, s5: false, s6: false, s7: false, s8: false, s9: false };   // 🆕2026-11-24 敵技演出開關(enemy-fx.js):2026-11-27 起沒帶 ?efx= 時＝?efx=2(火城 s2＋地基 s1 開,其他步關);?efx=0 全關＝舊演出;?efx=1 全開、?efx=2,7 只開列出的步(自動帶 s1)、?efx_off=7 單步關;enc=0/新機制沒載/feel2=0 → 全關;不讀寫 ?lonely
     const LN_T = { IN: 220, POP: 520, ATK: 800, SPLASH: 440, GAP: 130, RISE: 460, HP: 320, PAD: 140 };   // 2026-11-23 水城孤身暴怒演出(ms):IN=擊倒後多久進入演出;POP=放大縮小;ATK=水球出手到砸中(=enemyAttack 的集氣 360+飛行 440);SPLASH=水花飛到小兵;GAP=逐隻錯開;RISE=站起來;HP=血條長出來;PAD=收尾。復活鎖輸入=ATK+SPLASH+GAP×(隻數−1)+RISE+HP+PAD(2 隻=2290)
     const FX_T = { LEAD: 220, LEAD_TUT: 460, STEP: 100, JIT: 120, CHG: 150, FLY: 240, LAND: 390, KILL: 260, BFX_GAP: 250, DISSOLVE: 80, SALMON: 220, FISH: 240, HEAL: 330, TUT_CRIT: 780, END_PAD: 300, WAVE: 700 };   // LEAD=首宮出手(教學/課程 LEAD_TUT);STEP+JIT=宮間隔+隨機;CHG/FLY=zoneStrike 集氣/飛行(LAND=兩者和=彈著);KILL=彈著後收尾(killEnemy);其餘見 resolve/endHand/stageClear 各用處
     /*PLANFX-BEGIN*/
@@ -6561,7 +6561,7 @@
         const glow = this.add.circle(ox, oy, 13, color, 0.6).setBlendMode(ADD).setDepth(DEPTH.proj);
         const core = this.add.circle(ox, oy, 7, 0xffffff, 1).setBlendMode(ADD).setDepth(DEPTH.proj);
         const trail = this.add.graphics().setDepth(DEPTH.proj - 1).setBlendMode(ADD), ob = { t: 0 };
-        this.tweens.add({
+        const tw = this.tweens.add({   // 🩹2026-11-27 火城 A1:留住補間,下面回傳收掉用的把手(原呼叫端都不看回傳值,演出不變)
           targets: ob, t: 1, duration: dur, ease: 'Quad.inOut',
           onUpdate: () => {
             const p = this.chakraBez(a, ctrl, b, ob.t); glow.setPosition(p.x, p.y); core.setPosition(p.x, p.y);
@@ -6571,6 +6571,7 @@
           },
           onComplete: () => { glow.destroy(); core.destroy(); this.tweens.add({ targets: trail, alpha: 0, duration: 300, onComplete: () => trail.destroy() }); if (onArrive) onArrive(tx, ty); }
         });
+        return { kill: () => { try { tw.stop(); } catch (er) { } try { this.tweens.killTweensOf(trail); } catch (er) { } [glow, core, trail].forEach(o => { try { if (o.scene) o.destroy(); } catch (er) { } }); } };   // 🩹2026-11-27 火城 A1:飛行中(或尾巴淡出中)整顆收掉,不呼叫 onArrive
       }
       animPlayerHP(heal, slow) {
         if (heal) BattleVFX.heal(this, CX, PHP_Y, DEPTH.fx);
@@ -12034,6 +12035,8 @@
         if (e && e._fxSt) this._fxStateCut(e);   // 步 4 共用鉤子
         opts = opts || {};
         const _efxT = EFX.s2 && EnemyFX.guard(EFX, 's2', () => EnemyFX.fireTurn(this), false, () => EnemyFX.dropAll(this)); if (_efxT && !opts.efx) opts = Object.assign({}, opts, { delay: EnemyFX.guard(EFX, 's2', () => EnemyFX.oldSlot(this, opts.delay), opts.delay, () => EnemyFX.dropAll(this)) });   // 🆕敵技演出步 2(補修 A1):火城新演出在跑時,這一擊記進命中帳(下面 _efxJ);舊普攻也排進同一條出手時間軸(前面的新出手演完才出手)→ 命中順序＝呼叫順序,與 f 版同時落下的順序相同。關閉時 _efxT=false,opts 不動
+        if (EFX.s1 && !EFX.s2 && !opts.efx) { let _efxL = null; try { _efxL = EnemyFX.lateSlot(this, opts.delay); } catch (er) { } if (_efxL != null) opts = Object.assign({}, opts, { delay: _efxL }); }   // 🩹2026-11-27 火城 A2:s2 剛在這一批出錯關掉、已排好的新出手時間軸還沒走完 → 後面的出手(舊普攻、退回舊演出的火城怪)照樣排到它後面,扣血順序＝呼叫順序;時間軸走完(下一次敵方行動)起就跟關閉時一樣。沒開 ?efx 時 EFX.s1=false,整行不做事
+        const _a1 = !!EFX.s1;   // 🩹2026-11-27 火城 A1:有開敵技演出時,舊普攻的發射回呼先看帳、已飛出的彈道登記到帳上(結清/作廢時一起收);沒開時 false,以下逐值照舊
         const _dly = opts.delay > 0 ? opts.delay : 0;   // 🩹2026-11-07 fixpass:opts.delay=只延後「演出」(蓄力/俯衝/彈道/彈著扣血顯示),傷害/擋下/迴避的結算(_calcPlayerDmg)仍在呼叫當下 → 模型順序不變;不傳=原行為
         if (!_dly) SFX.enemyHit();   // 敵攻音
         const tutBite = this.tut && TUT_STEPS[this.tut.i] && TUT_STEPS[this.tut.i].on === 'enemyhit';   // ④ 沙漏歸零的「被咬一口」(在 tutEvent 推進前先判定,否則 this.tut.i 已跳到⑤)
@@ -12061,11 +12064,12 @@
         if (!opts.orbObj) this.chargeAt(ox, oy, col, 360);   // 敵卡中央花火集氣(🆕v1.5.0 整顆球出手:球本身就是集氣,不另放花火)
         this.labSnd('s_clear15', 0.6);   // 敵集氣音(powerup09)
         this.time.delayedCall(360, () => {
+          if (_a1 && (_efxJ.done || _efxJ.ep !== (this._atkLockEp || 0))) { if (opts.orbObj && opts.orbObj.scene) opts.orbObj.destroy(); return; }   // 🩹2026-11-27 火城 A1(回修 B-3:帶舊集氣球時先收球,重來/換波只換 epoch 不走作廢,不收就會留在畫面上):集氣中這筆已被結清/作廢(先被別的傷害打死、過關、重來)→ 不播發射音、不造彈(舊集氣球已在作廢時收掉,不再補一顆)
           this.labSnd(['s_fire1', 's_fire2', 's_fire3'][Math.floor(Math.random() * 3)], 0.6);   // 敵發射音(隨機 attack1/shoot1/shoot2)
           const tx = BX0 + (W - 2 * BX0) * Math.max(0.05, this.playerHP / this.maxHP), ty = PHP_Y, ctrl = { x: ox + (tx - ox) * 0.35, y: Math.min(oy, ty) - 140 };   // 追蹤彈:先大幅往上、再弧線落到「目前血量的末端」
-          const ob = opts.orbObj;
-          if (ob && ob.scene) { const t = { v: 0 }; this.tweens.add({ targets: t, v: 1, duration: 440, ease: 'Quad.in', onUpdate: () => { if (!ob.scene) return; const p = this._bez({ x: ox, y: oy }, ctrl, { x: tx, y: ty }, t.v); ob.setPosition(p.x, p.y); }, onComplete: () => { if (ob.scene) ob.destroy(); if (_efxJ) this._efxLand(_efxJ, tx, ty); else this._playerImpact(dmg, dodged, tx, ty, col, opts.big, blocked); } }); }   // 🆕v1.5.0 整顆集氣球沿弧線撞血條   // 🆕敵技演出步 2(補修 A1):命中帳開著時改走 _efxLand(已結清就不再扣)
-          else this.flyBall(ox, oy, tx, ty, col, ctrl, 440, () => { if (_efxJ) this._efxLand(_efxJ, tx, ty); else this._playerImpact(dmg, dodged, tx, ty, col, opts.big, blocked); });   // 命中→套用傷害演出   // 🆕敵技演出步 2(補修 A1):同上
+          const ob = opts.orbObj; let _k = null;   // 🩹2026-11-27 火城 A1:_k＝這顆彈道在帳上的收掉把手(只有 _a1 時才有;落地時自己撤銷)
+          if (ob && ob.scene) { const t = { v: 0 }; const _tw = this.tweens.add({ targets: t, v: 1, duration: 440, ease: 'Quad.in', onUpdate: () => { if (!ob.scene) return; const p = this._bez({ x: ox, y: oy }, ctrl, { x: tx, y: ty }, t.v); ob.setPosition(p.x, p.y); }, onComplete: () => { if (_k) _k.off(); if (ob.scene) ob.destroy(); if (_efxJ) this._efxLand(_efxJ, tx, ty); else this._playerImpact(dmg, dodged, tx, ty, col, opts.big, blocked); } }); if (_a1) _k = this._efxOld(_efxJ, () => { try { _tw.stop(); } catch (er) { } if (ob.scene) ob.destroy(); }); }   // 🆕v1.5.0 整顆集氣球沿弧線撞血條   // 🆕敵技演出步 2(補修 A1):命中帳開著時改走 _efxLand(已結清就不再扣)
+          else { const _fb = this.flyBall(ox, oy, tx, ty, col, ctrl, 440, () => { if (_k) _k.off(); if (_efxJ) this._efxLand(_efxJ, tx, ty); else this._playerImpact(dmg, dodged, tx, ty, col, opts.big, blocked); }); if (_a1) _k = this._efxOld(_efxJ, () => _fb.kill()); }   // 命中→套用傷害演出   // 🆕敵技演出步 2(補修 A1):同上
         });
         };
         if (_dly) this.time.delayedCall(_dly, () => { if (!this.sys || !this.sys.isActive()) return; if (_efxJ && (_efxJ.done || _efxJ.ep !== (this._atkLockEp || 0))) { if (opts.orbObj && opts.orbObj.scene) opts.orbObj.destroy(); return; } SFX.enemyHit(); _vis(); }); else _vis();   // 🆕敵技演出步 2(補修 A1):排隊中已被當場結清或中途重來 → 不再演(還留著的彈體收掉)
@@ -12083,7 +12087,8 @@
       }
       _efxJob(j) { if (j.took) this._shJob = j; const ep = this._atkLockEp || 0; if (this._efxQEp !== ep) { this._efxQ = []; this._efxQEp = ep; } j.ep = ep; j.done = false; if (this._clrLock || this._atkStale || this._pDead) { this._efxVoidJ(j); return j; } this._efxQ.push(j); return j; }   // 🩹2026-11-25 舊問題修正三 N1:陣亡後才登記的也當場作廢(不再結清)   // 🩹2026-11-25 舊問題修正二 R3/R2:過關成立後、或死前排定而復活後才到的出手 → 作廢(不扣、不演命中)   // 🩹舊問題修正 5:已陣亡後才登記的(晚到的出手)當場結清,不留到復活之後   // 🆕敵技演出步 2(補修 A1)命中帳:只在 EFX.s2 且火城新演出在跑時登記(enemyAttack 的 _efxJ);重來/換關(epoch)自動作廢
       _efxLand(j, tx, ty) { if (j.done || j.ep !== (this._atkLockEp || 0)) return; j.done = true; if (j.blocked) this._shJob = null; const q = this._efxQ || [], i = q.indexOf(j); if (i >= 0) q.splice(i, 1); this._playerImpact(j.dmg, j.dodged, tx, ty, j.col, j.big, j.blocked, j.efx || undefined); }   // 🆕敵技演出步 2(補修 A1):命中當下扣這一筆(已結清/已作廢就不扣)
-      _efxVoidJ(j) { if (j === this._shJob) this._shieldUndo(); j.done = true; if (j.efx) { try { EnemyFX.mutePlan(this, j.efx); } catch (er) { j.efx.mute = true; } } if (j.orb && j.orb.scene) { try { j.orb.destroy(); } catch (er) { } } }   // 🩹2026-11-25 舊問題修正二 R3:作廢一筆(比照結清收掉彈體與命中演出,但不扣血)
+      _efxVoidJ(j) { if (j === this._shJob) this._shieldUndo(); j.done = true; if (j.efx) { try { EnemyFX.mutePlan(this, j.efx); } catch (er) { j.efx.mute = true; } } if (j.orb && j.orb.scene) { try { j.orb.destroy(); } catch (er) { } } if (j.kill) { try { j.kill(); } catch (er) { } } }   // 🩹2026-11-25 舊問題修正二 R3:作廢一筆(比照結清收掉彈體與命中演出,但不扣血)
+      _efxOld(j, fn) { try { return EnemyFX.oldFx(this, j, () => { if (!(j.done || j.ep !== (this._atkLockEp || 0))) return false; fn(); return true; }); } catch (er) { return null; } }   // 🩹2026-11-27 火城 A1:舊普攻已飛出的彈道登記到帳上(j.kill):這筆被作廢/結清(_efxVoidJ)時當場收掉;重來/換波/正式結算(dropScene)時只收已結清或已換局的,還沒落下的照飛照扣
       _shieldUndo() { this._shJob = null; this._shield = true; this._shieldCD = 0; this._shieldHandActive = false; if (!this._shieldReady) { this._shieldReady = true; this._syncShieldFx(); } this.updLeadBadge && this.updLeadBadge(); }   // 🩹2026-11-25 舊問題修正四 P9:耗掉盾的那一擊還沒落下就被作廢(先被別的傷害擊殺/過關成立)、本手也還沒有擋下的命中落地 → 盾還原成就緒(冷卻歸零、本手全擋解除;血條維持藍色就緒)
       _efxVoid() { const q = this._efxQ || []; let n = 0; while (q.length) { const j = q.shift(); if (j.done || j.ep !== (this._atkLockEp || 0)) continue; this._efxVoidJ(j); n++; } if (n) { try { EnemyFX.settle(this); } catch (er) { } } }   // 🩹2026-11-25 舊問題修正二 R3:過關成立 → 帳上還沒落下的全部作廢;有作廢才放出手時間軸的鎖(沒有待命中時什麼都不做)
       _winLock() { if (this._clrLock) return; this._clrLock = true; this._efxVoid(); this._stuckShut(); }   // 🩹2026-11-25 舊問題修正二 R3:過關成立(_clrLock 到換波 startStage/重來/換場才清)   // 🩹2026-11-25 舊問題修正四 P1:過關成立時救援窗開著且沒在等付費 → 關掉(勝利/換波照常)

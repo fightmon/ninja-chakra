@@ -14,20 +14,21 @@
   const STEPS = ['s1', 's2', 's3', 's4', 's5', 's6', 's7', 's8', 's9'];
   function allOff() { const o = {}; STEPS.forEach(k => { o[k] = false; }); return o; }
 
-  // 解析網址開關。預設全關。
+  // 解析網址開關。預設＝DEFAULT_ON(2026-11-27 大毛「火城打開,讓所有玩家可以看見」:沒帶 ?efx= 時等同 ?efx=2,只開火城 s2＋地基 s1;其他步仍預設關)。
+  //   退路:?efx=0(或 ?efx= 空值)→ 全關＝舊演出(等於改動前沒帶參數);?efx_off=2 也可只關火城(沒帶 ?efx= 時同樣套在預設上)。
   //   ?efx=1 或 ?efx=all → 全開;?efx=1,2,7 → 只開列出的步(數字＝步號;注意 ?efx=1 是「全開」,只開步 1 請寫 ?efx=s1);
   //   ?efx_off=7 → 從已開的步再關掉(可多個,逗號分隔);開任一步自動帶 s1(地基)。
   //   env.enc / env.newmech / env.feel2 任一為假 → 全部強制關(五城新機制沒開就沒有 core 事件;feel2 關＝整套新演出都不跑)。
   //   不讀不寫 ?lonely(水城孤身只靠 core 事件,lonely 沒開就沒事件、自然不演)。
+  const DEFAULT_ON = '2';   // 沒帶 ?efx= 時的預設值(寫法同 ?efx=);改回 '0' ＝ 回到預設全關
   function parseFlags(search, env) {
     const o = allOff();
     try {
       env = env || {};
       if (!env.enc || !env.newmech || !env.feel2) return o;
       const q = String(search || '');
-      const m = /[?&]efx=([^&#]*)/.exec(q);
-      if (!m) return o;
-      const v = decodeURIComponent(m[1]).trim().toLowerCase();
+      const m = /[?&]efx=([^&#]*)/i.exec(q);   // 參數名不分大小寫(2026-11-27 回修:?EFX=0 也能退回舊演出)
+      const v = m ? decodeURIComponent(m[1]).trim().toLowerCase() : DEFAULT_ON;   // 沒帶 → 照預設值走同一條解析(＝帶 ?efx=2)
       if (v === '' || v === '0') return o;
       const on = (v === '1' || v === 'all') ? STEPS.slice() : v.split(',').map(t => t.trim()).filter(Boolean).map(t => (t[0] === 's' ? t : 's' + t));
       on.forEach(k => { if (Object.prototype.hasOwnProperty.call(o, k)) o[k] = true; });
@@ -240,13 +241,13 @@
   function rt(scene) {
     let R = scene._efxRt;
     if (R && R.alive && R.scene === scene) return R;
-    R = scene._efxRt = { scene, alive: true, parts: new Set(), fx: new Set(), tms: [], locks: new Set(), flags: null, step: null, dim: null, cam: null, camBack: null, ember: null, seqEnd: 0, oldLand: 0, burnHitAt: 0, emberHitAt: 0 };
+    R = scene._efxRt = { scene, alive: true, parts: new Set(), fx: new Set(), tms: [], locks: new Set(), flags: null, step: null, dim: null, cam: null, camBack: null, ember: null, seqEnd: 0, oldLand: 0, burnHitAt: 0, emberHitAt: 0, olds: new Set() };   // olds:舊普攻已飛出彈道的收掉把手(火城 A1,oldFx)
     const upd = (time, delta) => {
       if (!R.alive) return; const dt = Math.max(0, Math.min(100, delta || 16.7));
       R.parts.forEach(p => { try { p.update(dt); } catch (err) { fail(R, err); } });
     };
     scene.events.on('update', upd);
-    scene.events.once('shutdown', () => { R.alive = false; scene.events.off('update', upd); R.parts.clear(); R.fx.clear(); R.tms = []; R.locks.clear(); R.dim = null; R.cam = null; R.camBack = null; R.ember = null; });
+    scene.events.once('shutdown', () => { R.alive = false; scene.events.off('update', upd); R.parts.clear(); R.fx.clear(); R.tms = []; R.locks.clear(); R.olds.clear(); R.dim = null; R.cam = null; R.camBack = null; R.ember = null; });
     return R;
   }
   function bind(scene, flags) { const R = rt(scene); if (flags) { R.flags = flags; R.step = 's2'; } return R; }
@@ -861,7 +862,9 @@
     const em = keepEmber ? R.ember : null;
     try { [...R.parts].forEach(p => { if (p !== em) { try { p.kill(); } catch (er) { } } }); } catch (er) { }
     R.parts.clear(); if (em && !em.dead) R.parts.add(em); else R.ember = null;
-    R.seqEnd = 0; R.oldLand = 0; R.burnHitAt = 0;
+    if (!keepLocks) { try { [...R.olds].forEach(k => { try { k(); } catch (er) { } }); } catch (er) { } }   // 火城 A1(2026-11-27):重來/換波/正式結算 → 已結清或已換局的舊普攻彈道收掉(還沒落下的 k() 自己不收)
+    if (!keepLocks) { R.seqEnd = 0; R.oldLand = 0; }   // 火城 A2(2026-11-27):出錯關步(keepLocks)不清出手時間軸——這一批已排好的落點不變,之後才出手的照樣排在後面(lateSlot);時間軸是絕對時刻,走完自然失效
+    R.burnHitAt = 0;
   }
   // 出錯關步時:全收,並把舊演出立刻補回(審查 B6:舊球、舊骷髏光暈、酋長立繪,不等下一次同步才出現)
   function dropAll(scene) {
@@ -905,13 +908,21 @@
     if (X.holdUntil > now) X.holdUntil = now; X.waiting = false; if (e._tmHold != null) { e._tmHold = null; e._tmHoldUntil = now; }
     try { fireSync(scene, e, rt(scene).flags); } catch (er) { fail(rt(scene), er); }
   }
+  // 火城 A2(2026-11-27):s2 已關(這一批出手中途出錯)但已排的新出手時間軸還沒走完 → 照 oldSlot 排到它後面;沒有時間軸(或已走完)回 null＝照關閉時的原延遲。只讀不建 runtime。
+  function lateSlot(scene, dl) { const R = scene._efxRt; if (!R || !R.alive || R.scene !== scene || !((R.seqEnd || 0) > (scene.time.now || 0))) return null; return oldSlot(scene, dl); }
+  // 火城 A1(2026-11-27):舊普攻已飛出的彈道登記到帳上 j.kill。kill() 回 false＝這筆還沒結清(不收、留著);收掉或落地(k.off)就撤銷登記。
+  function oldFx(scene, j, kill) {
+    const R = rt(scene), k = () => { let gone = true; try { gone = kill() !== false; } catch (er) { } if (gone) k.off(); };
+    k.off = () => { R.olds.delete(k); if (j.kill === k) j.kill = null; };
+    R.olds.add(k); j.kill = k; return k;
+  }
   /*EFX-RT-END*/
 
   return {
     STEPS, allOff, parseFlags, anyOn, guard, ASSETS, assetsFor, preload,
     FIRE, fireMove, fireTop, fireCool, fireArt, fireRingSegs, lerpCol, ringCol, ringT, ringRadius,
     rt, rnd, cb, frameCtr, makeThreat, makeRing, makeLine, makeBadge, fireReady, ready, fireGeom, fireSync, fireMarker, fireLaunch, fireAttackVis, impactFx, atkPlan, fireTier, ATK,
-    emberStart, emberTick, emberHit, emberOff, fireDefuse, fireHit, fireJolts, chiefShift, burnSparks, drop, dropScene, dropAll, fireTurn, oldSlot, settle, mutePlan, xfx, OLD_TOTAL, OLD_HIT,
+    emberStart, emberTick, emberHit, emberOff, fireDefuse, fireHit, fireJolts, chiefShift, burnSparks, drop, dropScene, dropAll, fireTurn, oldSlot, settle, mutePlan, xfx, lateSlot, oldFx, OLD_TOTAL, OLD_HIT,
     CHIN, CHIN_DEF, CHIN_TOP, SIZE_OF, KING_SIZE, COL_W, COL_SZC, RING_RESERVE, ART_K, ART_FIT, CITY, RING_COL, BADGE, EMOTE, BUB,
     fullArtBaseH, fitMirror, headUp, anchor, readGame, chinId, chinIdFromArt, chinIdOf, chinOf, colW, nearestDist, ballMax, threatSize, artBox, charge, bubW, bubbleCtr,
   };
