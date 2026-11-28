@@ -81,16 +81,16 @@
 
 <body>
   <div id="game"></div>
-  <!-- 2026-11-19 快取版本號(大毛拍板):自家 js 一律帶 ?v=;js 線上 max-age=4 小時且 Cloudflare 邊緣快取,換查詢字串才會拿新檔。【上線時:只要任何程式檔有變,把本檔所有「v=20261127b」與下一行 NB_ASSET_V 一起換新】格式 YYYYMMDD+英文小寫序號(同日第二次上線 b、c…);phaser.min.js 等第三方檔不加 -->
-  <script>window.NB_ASSET_V = '20261127b';</script>
-  <script src="i18n.js?v=20261127b"></script><!-- 多語(tr()/getLang/setLang):中文原文=key,查無回原文;要在所有遊戲腳本之前載 -->
-<script src="battle-core.js?v=20261127b"></script>
-<script src="battle-vfx.js?v=20261127b"></script>
-  <script src="round-core.js?v=20261127b"></script><!-- 🆕2026-11-06 三輪(階段(a)前端):塊池/怪倍率共用核心;只定義全域 RoundCore、無副作用;接線全在 ROUNDS 開關(?rounds=1 / localStorage nb_rounds=1)後,預設關 -->
-  <script src="enemy-core.js?v=20261127b"></script><!-- 🆕2026-11-06 P2:敵人機制核心(遊戲與 sim 共用);只定義全域 EnemyCore、無副作用;接線全在 NEWMECH 開關(?newmech=1 / localStorage nb_newmech=1)後,預設關 -->
-  <script src="enemy-fx.js?v=20261127b"></script><!-- 🆕2026-11-24 敵技演出 EFX:開關解析＋定位純計算(只定義全域 EnemyFX、無副作用);火城(步 2)預設開、其他步預設關,?efx=0 全關＝舊演出(2026-11-27;規格 spec-enemy-skill-fx.md) -->
-  <script src="fx-art.js?v=20261127b"></script><!-- 🆕2026-11-24 我方招式能量圖換無邊框版:貼圖 key→檔名對照表(全域 FxArt);?fxart=old 整批退回舊檔,刪表上一列=單張退回 -->
-  <script src="data-stages.js?v=20261127b"></script>
+  <!-- 2026-11-19 快取版本號(大毛拍板):自家 js 一律帶 ?v=;js 線上 max-age=4 小時且 Cloudflare 邊緣快取,換查詢字串才會拿新檔。【上線時:只要任何程式檔有變,把本檔所有「v=20261128a」與下一行 NB_ASSET_V 一起換新】格式 YYYYMMDD+英文小寫序號(同日第二次上線 b、c…);phaser.min.js 等第三方檔不加 -->
+  <script>window.NB_ASSET_V = '20261128a';</script>
+  <script src="i18n.js?v=20261128a"></script><!-- 多語(tr()/getLang/setLang):中文原文=key,查無回原文;要在所有遊戲腳本之前載 -->
+<script src="battle-core.js?v=20261128a"></script>
+<script src="battle-vfx.js?v=20261128a"></script>
+  <script src="round-core.js?v=20261128a"></script><!-- 🆕2026-11-06 三輪(階段(a)前端):塊池/怪倍率共用核心;只定義全域 RoundCore、無副作用;接線全在 ROUNDS 開關(?rounds=1 / localStorage nb_rounds=1)後,預設關 -->
+  <script src="enemy-core.js?v=20261128a"></script><!-- 🆕2026-11-06 P2:敵人機制核心(遊戲與 sim 共用);只定義全域 EnemyCore、無副作用;接線全在 NEWMECH 開關(?newmech=1 / localStorage nb_newmech=1)後,預設關 -->
+  <script src="enemy-fx.js?v=20261128a"></script><!-- 🆕2026-11-24 敵技演出 EFX:開關解析＋定位純計算(只定義全域 EnemyFX、無副作用);火城(步 2)預設開、其他步預設關,?efx=0 全關＝舊演出(2026-11-27;規格 spec-enemy-skill-fx.md) -->
+  <script src="fx-art.js?v=20261128a"></script><!-- 🆕2026-11-24 我方招式能量圖換無邊框版:貼圖 key→檔名對照表(全域 FxArt);?fxart=old 整批退回舊檔,刪表上一列=單張退回 -->
+  <script src="data-stages.js?v=20261128a"></script>
   <script>
     /* ===== 純邏輯(N/EL/SHAPES/CONFIG/computeClears/種子亂數 等戰鬥核心已抽到 battle-core.js,瀏覽器當共用全域)===== */
     const KEYS = ['fire', 'wind', 'thunder', 'earth', 'water'];
@@ -5985,9 +5985,9 @@
       }
       aliveCount() { return this.enemies.filter(e => !e.dead).length; }
       targetEnemy() {   // 🔒2026-10-09 瀕死(hp<=0 但 killEnemy 還沒設 e.dead,倒地動畫窗 ~0.8-1.9s)=判定層視同陣亡,不可為目標:快速連清兩宮時第二宮自動轉向下一隻活敵(同 battle-core BattleSim.targetEnemy)。fallback:場上全員瀕死→維持舊行為(回 !dead 的敵,不回 null,免得 resolve 早退整手不結算;此窗由 resolve 尾端致命鎖 camCine 擋輸入)
-        let e = this.enemies[this.target]; if (e && !e.dead && e.hp > 0) return e;
-        let i = this.enemies.findIndex(x => !x.dead && x.hp > 0);
-        if (i < 0) i = (e && !e.dead) ? this.target : this.enemies.findIndex(x => !x.dead);
+        let e = this.enemies[this.target]; if (e && !e.dead && e.hp > 0 && (!EFX.s4 || !e._revPend)) return e;
+        let i = this.enemies.findIndex(x => !x.dead && x.hp > 0 && (!EFX.s4 || !x._revPend));
+        if (i < 0) i = (e && !e.dead && (!EFX.s4 || !e._revPend)) ? this.target : this.enemies.findIndex(x => !x.dead && (!EFX.s4 || !x._revPend));
         this.target = i; return i < 0 ? null : this.enemies[i];
       }
       // ── 🆕2026-11-11 長按敵人重看機制字卡(大毛拍板;docs/spec-mechanic-cards.md「長按重看與長按教學字卡」)──
@@ -6027,6 +6027,7 @@
       _enemyDown(i, p) {   // 敵人 pointerdown 入口(card/sprite/hitZone 共用):新機制關閉=舊行為;開啟且此刻可長按=延到放開才指定目標,同時起長按計時
         if (!this._nm) { this.selectTarget(i); return; }
         const e = this.enemies[i], old = this._lp;
+        if (EFX.s4 && e && e._revPend) return;
         if (old && old.pid === p.id && old.dt === p.downTime) return;   // 同一次按下被多個物件重複觸發
         if (old) this._lpAbort(false);
         if (!e || e.dead || e.hp <= 0 || !e.sprite || !e.sprite.active || !this._mechSafe() || this._mechKeysFor(e) === null) { this.selectTarget(i); return; }
@@ -6085,7 +6086,7 @@
       }
       selectTarget(i) {   // 點瀕死敵=與點已死敵同(忽略,維持現目標;現目標若也瀕死,下次 targetEnemy 自動跳活敵)
         if (this.tut) { const d = TUT_STEPS[this.tut.i]; if (!d || d.on !== 'target' || i !== this._tutTapIdx) return; }   // 🆕2026-11-03 教學閘門:只有「指定目標」步可點敵,且只放行指定那隻——其餘時機一律忽略,保護血量編排(教學傷害帳是逐步算死的,亂切目標會把單體傷害引到別隻身上)
-        if (this.enemies[i] && !this.enemies[i].dead && this.enemies[i].hp > 0) {
+        if (this.enemies[i] && !this.enemies[i].dead && this.enemies[i].hp > 0 && (!EFX.s4 || !this.enemies[i]._revPend)) {
           this.target = i; this.updateEnemies();
           if (this.tut) this.tutEvent('target');   // 🆕指定目標步:點到指定敵→金箭頭跳過去(updateEnemies)+推進(tutEvent 內建 pending 鎖防連點)
         }
@@ -6120,6 +6121,11 @@
         for (let r = 0; r < N; r++)for (let c = 0; c < N; c++) {
           const cell = this.board[r][c]; if (!cell || cell._pend) continue; const x = BX0 + c * CS, y = BY0 + r * CS, s = RECT;   // 🆕P2:_pend 尚未落地的鐵塊不畫
           if (cell.el === 'core') { this._drawCoreCell(cell, x, y, s, g); continue; }   // 🆕寶玉核心格
+          if (EFX.s5 && cell.el === 'iron' && cell.lock && cell.owner != null) {
+            const ow = this.enemies && this.enemies[cell.owner];
+            if (ow && ow._i && ow._thunderFx && ow._thunderFx.iron &&
+              ow._i.cells.some(q => q.r === r && q.c === c && q.obj === cell)) continue;
+          }
           if (cell.el === 'iron' && cell.lock) { this._drawLockIron(g, x, y, s, cell._vis != null ? cell._vis : cell.lock); if (cell.owner != null && this._ec) { const ow = this.enemies && this.enemies[cell.owner]; if (ow && ow._i && ow._i.rule >= 3 && !ow.dead && ow.hp > 0) this._drawShockMark(g, x, y, s); } continue; }   // 🆕P2:_vis=鍛造/加厚演出中的顯示層(真 lock 不動)   // 🔒分層鐵塊(閘門=cell.lock 有值):換成金屬框+層數斜鋼條畫法,不進舊 junk/iron 畫法;沒有 lock 的塊(含所有現有塊)完全不受影響
           if (cell.el === 'junk' || cell.el === 'iron') {
             const p = 2, t = 3;
@@ -6357,6 +6363,7 @@
         this.tweens.add({ targets: core, scale: 1.8, alpha: 0, duration: 260, ease: 'Quad.out', onComplete: () => core.destroy() });
       }
       _enemyKi(e, level, colArg) {   // 🔩🔒鐵機人鬥氣(僅敵技實驗室「分層鐵塊」demo 用):強度依牠當前 lock 鐵塊的最大 lock 值——3=強/2=中/1=小/0=收;比照 _cardAura 改寫成敵人版(黃鋼色光暈+上竄鬥氣粒子)
+        if (level && EFX.s8 && e && e._g && EnemyFX.auraTakes(this, EFX, e)) { this._enemyKi(e, 0); return; }
         if (!e) return;
         if (!level) { if (e._ki) { if (e._ki.pulse) e._ki.pulse.stop(); if (e._ki.wisp) e._ki.wisp.remove(); if (e._ki.glow) e._ki.glow.destroy(); e._ki = null; } return; }
         if (!e.sprite) return;
@@ -6420,7 +6427,7 @@
           if (this.towerCubes) { for (const c of this.towerCubes) { if (c.img && c.img.active) c.img.y = c.baseY + Math.sin(time * 0.0016 + c.ph) * c.amp; } }   // 塔中景元素方塊:各自上下飄浮(相位錯開)
           if (this.drag && this.drag.prev && this.drag._shown && this.drag.tx != null) { const pr = this.drag.prev; pr.x += (this.drag.tx - pr.x) * 0.4; pr.y += (this.drag.ty - pr.y) * 0.4; }   // 拖曳方塊 lerp 滑順跟隨目標格(取代瞬間跳格)
           if (this.poison && this.poison.turns > 0) { this._poiT = (this._poiT || 0) + 1; if (this._poiT % 14 === 0) { const fx = BX0 + (W - 2 * BX0) * Math.max(0.04, this.playerHP / this.maxHP); const d = this.add.circle(fx - 12 + Math.random() * 24, PHP_Y + 4, 2.2 + Math.random() * 1.6, 0xc060e8, 1).setBlendMode(Phaser.BlendModes.ADD).setDepth(DEPTH.fx); this.tweens.add({ targets: d, y: PHP_Y - 18 - Math.random() * 18, alpha: 0, scale: 0.3, duration: 520 + Math.random() * 220, ease: 'Quad.out', onComplete: () => d.destroy() }); } }   // 中毒:HP 末端持續冒紫氣泡
-          if (this.enemies) for (const e of this.enemies) { if (e.labShield && e.labShield.active && e.sprite) { e.labShield.x = e.sprite.x; e.labShield.y = e.sprite.y; } if (e._absorbFx && e._absorbFx.active && e.sprite) { e._absorbFx.x = e.sprite.x; e._absorbFx.y = e.sprite.y; } if (e._finOrb && e._finOrb.active && e.sprite) { if (e._finShake) { const t = this.time.now; e._finOrb.x = e.sprite.x + Math.sin(t * 0.045) * 3.2; e._finOrb.y = e.sprite.y + (e._finOY || 0) + Math.cos(t * 0.037) * 3.2; } else { e._finOrb.y = e.sprite.y + (e._finOY || 0); } } if (e._ioOrb && e._ioOrb.c.active && e.sprite && e.sprite.active) { e._ioOrb.c.x = e.sprite.x; e._ioOrb.c.y = e.sprite.y + e._ioOrb.oy; } if (e._paraRings && e._paraRings.active && e.sprite) { e._paraRings.x = e.sprite.x; e._paraRings.y = e.sprite.y; } if (e._dAbs) this._ecDuckAbsFollow(e); }   // 盾/吸收光環/元氣玉/麻痺閃電環貼合敵人浮動;將滿(_finShake)→跟隨時疊 sin 波 x/y 雙軸快速微顫(不被 y 跟隨蓋掉)
+          if (this.enemies) for (const e of this.enemies) { if (!(EFX.s3 && e.labShield && e.labShield._earth) && e.labShield && e.labShield.active && e.sprite) { e.labShield.x = e.sprite.x; e.labShield.y = e.sprite.y; } if (e._absorbFx && e._absorbFx.active && e.sprite) { e._absorbFx.x = e.sprite.x; e._absorbFx.y = e.sprite.y; } if (e._finOrb && e._finOrb.active && e.sprite) { if (e._finShake) { const t = this.time.now; e._finOrb.x = e.sprite.x + Math.sin(t * 0.045) * 3.2; e._finOrb.y = e.sprite.y + (e._finOY || 0) + Math.cos(t * 0.037) * 3.2; } else { e._finOrb.y = e.sprite.y + (e._finOY || 0); } } if (e._ioOrb && e._ioOrb.c.active && e.sprite && e.sprite.active) { e._ioOrb.c.x = e.sprite.x; e._ioOrb.c.y = e.sprite.y + e._ioOrb.oy; } if (e._paraRings && e._paraRings.active && e.sprite) { e._paraRings.x = e.sprite.x; e._paraRings.y = e.sprite.y; } if (e._dAbs) this._ecDuckAbsFollow(e); }   // 盾/吸收光環/元氣玉/麻痺閃電環貼合敵人浮動;將滿(_finShake)→跟隨時疊 sin 波 x/y 雙軸快速微顫(不被 y 跟隨蓋掉)
         } catch (e) { }
       }
       // === 主動技 / 敵攻 共用特效 ===
@@ -7347,6 +7354,7 @@
       }
       _hexPts(r) { const p = []; for (let i = 0; i < 6; i++) { const a = Math.PI / 180 * 60 * i; p.push({ x: r * Math.cos(a), y: r * Math.sin(a) }); } return p; }
       _buildATField(e, kind) {   // 六角 AT 力場:bloom + 本體 + 內 2 圈 + 輻射接縫 + 頂點火花;慢轉+呼吸,另用 timer 一直冒擴散波紋
+        if (EFX.s3 && e._r) { const sh = EnemyFX.earthRun(this, EFX, e, 'build'); if (sh || e.labShield) return sh || e.labShield; }
         const ADD = Phaser.BlendModes.ADD, col = kind === 'hit' ? 0xff6a52 : 0x46d18a, spark = kind === 'hit' ? 0xffd0a0 : 0xcaffe0, rk = !!(e._r && kind !== 'hit'), txt = kind === 'hit' ? ((e.hitGate || 15) + ' HIT') : (rk ? String((e._r.gate && e._r.gate.n) || e.comboGate || 2) : ((e.comboGate || 3) + ' COMBO')), R = Math.max(26, (e.cardW || 64) * 0.44);   // 盾上寫實際門檻(S1盾兵=2連段);罩住自己那張卡即可
         const sh = this.add.container(e.sprite.x, e.sprite.y, []).setDepth(DEPTH.fx); sh._col = col; sh._R = R;
         const rot = this.add.container(0, 0, []);
@@ -7368,6 +7376,7 @@
         return sh;
       }
       _breakATField(e, quiet) {   // 破盾:白閃 + 六片三角碎片飛散 + 震屏;quiet=true(土城核心版)不浮「破盾!」字,由 _ecRockBreakFx 自己浮「破盾! +50%」
+        if (EFX.s3 && e._r && e.labShield && e.labShield._earth && EnemyFX.earthRun(this, EFX, e, 'break', {kind:e.shieldKind})) return;
         const sh = e.labShield; if (!sh) return; e.labShield = null; const ADD = Phaser.BlendModes.ADD, col = sh._col, R = sh._R, x = sh.x, y = sh.y; if (sh._rip) sh._rip.remove(); if (sh._tick) sh._tick.remove();
         const fl = this.add.circle(x, y, R, 0xffffff, 0.9).setBlendMode(ADD).setDepth(DEPTH.fx); this.tweens.add({ targets: fl, scale: 1.6, alpha: 0, duration: 280, onComplete: () => fl.destroy() });
         for (let i = 0; i < 6; i++) {
@@ -7418,9 +7427,11 @@
         if (!s.length) { const by = (boss.restY != null ? boss.restY : boss.sprite.y); s = [{ x: boss.sprite.x - 95, y: by }, { x: boss.sprite.x + 95, y: by }]; }
         return s;
       }
-      _buildReviveCast(boss, num) {   // num!=null → 核心補師模式:十字架疊剩餘次數數字、存進 boss._ecCast(不佔舊 _reviveCast 槽)
+      _buildReviveCast(boss, num, restore) {   // num!=null → 核心補師模式:十字架疊剩餘次數數字、存進 boss._ecCast(不佔舊 _reviveCast 槽)
         const ADD = Phaser.BlendModes.ADD, bx = boss.sprite.x, by = boss.sprite.y + (boss.cardH || 80) * 0.06, teal = 0x5ad0ff;   // 詠唱:魔王身前浮「醫療十字」(補師帽上的十字)+ 藍粒子往中心集中 + 每個小兵位召喚法陣
+        if (!restore) {
         this._eneCast(boss); this.labSnd && this.labSnd('s_clear15', 0.5); if (num != null) this._ecBigText(bx, by - 52, tr('詠唱復活…'), '#bfefff', 26, '#08304a'); else this.floatText(bx, by - 42, tr('✚ 詠唱復活…'), '#bfefff');
+        }
         const cross = this.add.container(bx, by, []).setDepth(DEPTH.fx), glow = this.add.circle(0, 0, 34, teal, 0.22).setBlendMode(ADD), vBar = this.add.rectangle(0, 0, 9, 46, 0xeaffff, 0.95).setBlendMode(ADD), hBar = this.add.rectangle(0, 0, 46, 9, 0xeaffff, 0.95).setBlendMode(ADD);
         if (num != null) { const dk = 0x08304a, disc = this.add.circle(0, 0, 36, dk, 0.5), tc = (b) => b.setBlendMode(Phaser.BlendModes.NORMAL).setStrokeStyle(3, dk, 1); tc(vBar); tc(hBar); vBar.setSize(11, 66); hBar.setSize(66, 11);   /* 臂長>數字圓盤(半徑21),十字才看得到 */ cross.add([disc, glow, vBar, hBar]); } else cross.add([glow, vBar, hBar]);   // 🩹2026-11-07 fixpass:核心模式(新機制)十字改一般混色+深色描邊+深色底盤 → 白色魔王身上也看得見(ADD 白在白身上會消失);舊路徑不變
         const numTx = (num != null) ? this._ecCastNum(cross, num, '#08304a') : null; cross.setScale(0.35); this.tweens.add({ targets: cross, scaleX: 1, scaleY: 1, duration: 300, ease: 'Back.out' });
@@ -7466,9 +7477,11 @@
           if (label) this._ecBigText(bx, by - 30, label, '#fff0c0', 30, '#3a2400'); else this.floatText(bx, by - 10, tr('⚡ 打斷復活!'), '#fff0c0');
         });
       }
-      _buildHealCast(boss, num) {   // num!=null → 核心補師模式:十字架疊剩餘次數數字、存進 boss._ecCast(不佔舊 _healCast 槽)
+      _buildHealCast(boss, num, restore) {   // num!=null → 核心補師模式:十字架疊剩餘次數數字、存進 boss._ecCast(不佔舊 _healCast 槽)
         const ADD = Phaser.BlendModes.ADD, bx = boss.sprite.x, by = boss.sprite.y + (boss.cardH || 80) * 0.06, grn = 0x74e0a0;   // 💚詠唱補血:魔王身前綠色醫療十字 + 綠粒子往中心集中(1CD,下手完成;可被土打斷)。這手不攻擊
+        if (!restore) {
         this._eneCast(boss); this.labSnd && this.labSnd('s_clear15', 0.5); if (num != null) this._ecBigText(bx, by - 52, tr('詠唱補血…'), '#bfffd0', 26, '#0b4a22'); else this.floatText(bx, by - 42, tr('💚 詠唱補血…'), '#bfffd0');
+        }
         const cross = this.add.container(bx, by, []).setDepth(DEPTH.fx), glow = this.add.circle(0, 0, 30, grn, 0.22).setBlendMode(ADD), vBar = this.add.rectangle(0, 0, 8, 40, 0xd6ffe4, 0.95).setBlendMode(ADD), hBar = this.add.rectangle(0, 0, 40, 8, 0xd6ffe4, 0.95).setBlendMode(ADD);
         if (num != null) { const dk = 0x0b4a22, disc = this.add.circle(0, 0, 34, dk, 0.5), tc = (b) => b.setBlendMode(Phaser.BlendModes.NORMAL).setStrokeStyle(3, dk, 1); tc(vBar); tc(hBar); vBar.setSize(10, 62); hBar.setSize(62, 10); cross.add([disc, glow, vBar, hBar]); } else cross.add([glow, vBar, hBar]);   // 🩹2026-11-07 fixpass:同上(補血綠)
         const numTx = (num != null) ? this._ecCastNum(cross, num, '#0b4a22') : null; cross.setScale(0.35); this.tweens.add({ targets: cross, scaleX: 1, scaleY: 1, duration: 280, ease: 'Back.out' });
@@ -7495,7 +7508,11 @@
       }
       _labBoss() { return this.enemies && (this.enemies.find(e => e.boss && !e.dead) || this.enemies.find(e => !e.dead)); }   // 魔王技目標=王(沒王就第一隻)
       _syncIronKi(e) {   // 🆕2026-11-11 走核心的鐵機人(有 e._i)不再有黃色鬥氣→改電光球(_ecIronOrbSync);沒有 e._i(敵技實驗室 demo / 舊路徑)維持原鬥氣(原本體=_syncIronKiOld,內容未改)
-        if (e && e._i) { if (e._ki) this._enemyKi(e, 0); this._ecIronOrbSync(e); return; }
+        if (e && e._i) {
+          if (e._ki) this._enemyKi(e, 0);
+          if (EFX.s5 && EnemyFX.thunderRun(this, EFX, e, 'sync')) return;
+          this._ecIronOrbSync(e); return;
+        }
         return this._syncIronKiOld(e);
       }
       _syncIronKiOld(e) {   // 🔩通用:依「e 自己放的鐵塊(e._ironCells)」現存格的最大 lock 值同步牠的鬥氣(3強/2中/1小/0收);lab demo 與真關卡(_ironAct)共用同一份,多隻鐵機人各自算各自的 _ironCells,互不影響;只認 el==='iron'&&lock>0 的格→非鐵機人(沒有 _ironCells)、無 lock 的舊塊(cell.lock 為 undefined)都不會觸發
@@ -8910,16 +8927,21 @@
         if (FX2.s7) { if (!this.textures.exists('fx_heal_heart')) this.load.image('fx_heal_heart', FXA('fx_heal_heart')); if (!this.textures.exists('fx_heal_bloom16')) this.load.spritesheet('fx_heal_bloom16', FXA('fx_heal_bloom16'), { frameWidth: 256, frameHeight: 256 }); }   // 步 7:補血圖(缺圖=綠環替代/程式畫的愛心)
         if (FX2.s3 || FX2.s5) this.events.once('create', () => this._f5Load());   // 步 3 中級手繪+步 5 大招素材:進戰鬥後背景載(第 2 批;貼圖載完當下就上傳 GPU,不必另外預熱)。2026-11-22 大毛:中級手繪 5 張由第 1 批改到這裡(混屬隊進戰鬥前少載約 660KB;還沒到=不播手繪,子彈與共用收尾照常,到了下一次就用真圖)
       }
+      _f2MakeGraphics() {
+        this._f2TrailG = this.add.graphics().setDepth(59); this._f2WaterG = this.add.graphics().setDepth(59.5); this._f2BoltG = this.add.graphics().setDepth(62);
+        if (this._f2GraphicsPending) this._f2GraphicsPending = false;
+      }
       _f2Ensure() {
         if (this._f2On) return; this._f2On = true;
         this._f2Trails = []; this._f2Bolts = []; this._f2Streams = []; this._f2Fly = 0; this._f2Pool = { cube: [], num: [] }; this._f2Hide = this._f2Hide || {};
-        this._f2TrailG = this.add.graphics().setDepth(59); this._f2WaterG = this.add.graphics().setDepth(59.5); this._f2BoltG = this.add.graphics().setDepth(62);
+        if (EFX.s4) this._f2GraphicsPending = true; else this._f2MakeGraphics();
         const pre = () => this._f2Pre(), post = () => this._f2Post(), upd = (t, dt) => this._f2Update(dt);
         this.game.events.on('prerender', pre); this.game.events.on('postrender', post); this.events.on('update', upd);
         this.events.once('shutdown', () => { this.game.events.off('prerender', pre); this.game.events.off('postrender', post); this.events.off('update', upd); this._f2On = false; this._f2Pool = null; this._f2Live = null; this._f2Trails = []; this._f2Bolts = []; this._f2Streams = []; this._f2Hide = {}; this._f2H = null; this._f2Pend = {}; });
       }
       _f2Kick(e, f) { if (!e || (e._fxSt && e._fxSt.kind === 'death')) return; const o = e._f2o || (e._f2o = { jx: 0, jsq: 0, pbx: 0, pby: 0 }); f(o, this.time.now || 0); }
       _f2Update(dt) {
+        if (this._f2GraphicsPending && (this._f2Trails.length || this._f2Bolts.length || this._f2Streams.length)) this._f2MakeGraphics();
         const k = Math.max(0, dt || 16.67) / 16.67, now = this.time.now || 0;
         if (this._f2Live && this._f2Live.size) this._f2Live.forEach(o => { if (!o.scene) { this._f2Live.delete(o); return; } if (now - (o._f2born || 0) > 3500) this._f2Free(o); });   // 保險:子彈方塊正常最長約 2 秒,超過 3.5 秒還在就強制回收(防殘留在畫面上)
         (this.enemies || []).forEach(e => { const o = e._f2o; if (!o || o._ap) return; o.jx *= Math.pow(0.78, k); o.jsq *= Math.pow(0.72, k); o.pbx *= Math.pow(0.9, k); o.pby *= Math.pow(0.9, k); if (Math.abs(o.jx) < 0.05 && Math.abs(o.jsq) < 0.002 && Math.abs(o.pbx) < 0.05 && Math.abs(o.pby) < 0.05 && now > (o.zapUntil || 0) && now > (o.rotEnd || 0)) e._f2o = null; });
@@ -9095,7 +9117,7 @@
         vic.forEach(v => {
           const s = (snap && snap.get(v)) || { ecR: v._ecR, blk: v._blocked, sb: v._shieldBreak, bb: v._breakBonus, nm: v._nearMiss }, raw = dmgOf(i, v), shown = s.ecR ? Math.round(raw * s.ecR.ratio) : raw, a = Math.round(shown * (k + 1) / m) - Math.round(shown * k / m);
           if (this._f8 && this._f8.e === v) this._f8.sum += a;   // 步 8:特寫那隻的總數(只給畫面)
-          if (v.sprite) { this._f2Num(st, v, a, last, lane, crowd, multi, el); this._stkAdd(a); }   // 數字與連擊榜累計:同值、逐發(總和=現行 chakraImpact 的 _pv)
+          if (v.sprite) { this._f2Num(st, v, a, last, lane, crowd, multi, el); if (EFX.s3 && v._r && s.ecR) EnemyFX.earthRun(this, EFX, v, 'number', st.get(v).t, s.ecR, st.get(v).sum, last); this._stkAdd(a); }   // 數字與連擊榜累計:同值、逐發(總和=現行 chakraImpact 的 _pv)
           if (s.ecR) { const _er = s.ecR; if (_er.blocked) anyBlock = true; else anyHit = true; if (v.dispHp != null) { v.dispHp = Math.max(0, v.dispHp - a); if (last && _er.broke && !_er.bonusShown) { _er.bonusShown = true; v.dispHp = Math.max(0, v.dispHp - _er.bonus); } } }
           else if (s.blk) { anyBlock = true; if (last) { const lk = v.shieldLeak || 0; if (lk > 0 && v.dispHp != null) v.dispHp = Math.max(0, v.dispHp - Math.round(raw * lk)); if (v.sprite && !v.dead) { if (lk > 0) this.floatText(v.sprite.x, v.sprite.y - 18, '🛡 −' + Math.round(raw * lk), '#a9c4e8'); else if (s.nm) { this._shieldNearMiss(v, s.nm); s.nm = null; v._nearMiss = null; } else this.floatText(v.sprite.x, v.sprite.y - 18, tr('🛡 擋下'), '#cfe0ff'); } } }
           else { anyHit = true; if (v.dispHp != null) v.dispHp = Math.max(0, v.dispHp - a); if (last && s.sb) { s.sb = false; v._shieldBreak = false; this._breakEnemyShield(v); if (s.bb > 0) { if (v.dispHp != null) v.dispHp = Math.max(0, v.dispHp - s.bb); if (v.sprite) { this.floatText(v.sprite.x, v.sprite.y - 42, tr('破盾 +{n}', { n: s.bb }), '#ffe08a'); this._stkAdd(s.bb); } } } }
@@ -9938,12 +9960,33 @@
         const _ironCleared = data.cells.filter(([r, c]) => this.board[r][c] && this.board[r][c].el === 'iron');   // 🔩本次清到(會被移除)的鐵塊格→收集(清空前),溶解時播金屬碎裂
         const _lockCleared = _ironCleared.filter(([r, c]) => this.board[r][c].lock != null);   // 🔒其中「有 lock 且這次真的見底被移除」的→額外播 _ironLockSpark(大爆碎,壓軸)
         const _lockDec = (data.lockDec || []).map(([r, c]) => [r, c, this.board[r][c] ? (this.board[r][c].lock || 1) : 1]);   // 🔒這次扣層但不移除的 iron 格(cell.lock>1,見 battle-core computeClears);先記扣層前的舊 lock 值(目前 _ironLockChip 未用到,保留給未來擴充)
+        const _thunderHits = EFX.s5 && EnemyFX.guard(EFX, 's5', () => {
+          if (!EnemyFX.thunderReady(this)) return null;
+          const hits = [];
+          const capture = (r, c, kind) => {
+            const obj = this.board[r][c], owner = obj && obj.owner;
+            const en = owner == null ? null : this.enemies[owner];
+            if (en && en._i && en._i.cells.some(q => q.r === r && q.c === c && q.obj === obj)) {
+              hits.push([{ r, c, owner, kind, oldLock: obj.lock || 1, wasLit: !!(en._thunderFx && en._thunderFx.orb && en._thunderFx.orb.alive) }, en, obj]);
+            }
+          };
+          _lockCleared.forEach(([r, c]) => capture(r, c, 'break'));
+          _lockDec.forEach(([r, c]) => capture(r, c, 'strip'));
+          return hits;
+        }, null, () => EnemyFX.thunderFail(this));
         const _f2cells = FX2.s2 ? data.cells.map(([r, c]) => [r, c, this.board[r][c] ? this.board[r][c].el : null]) : null;   // 步 2:清空前記下每格的方塊屬性(飛出去的方塊用)
         data.cells.forEach(([r, c]) => { this.board[r][c] = null; });  // 立即從模型移除,避免重複觸發
         _lockDec.forEach(([r, c]) => { const cell = this.board[r][c]; if (cell) cell.lock = Math.max(1, (cell.lock || 1) - 1); });   // 🔒分層鐵塊:扣層不移除(cell 還在盤上,下次 refreshBoard 換圖層)
+        const _thunderPlayed = _thunderHits && new Set();
+        if (_thunderHits) for (const [hit, en, obj] of _thunderHits) {
+          if (EFX.s5 && en._i && EnemyFX.thunderRun(this, EFX, en, 'clear', hit, obj)) _thunderPlayed.add(hit.r * N + hit.c);
+        }
+        const _legacyIron = _thunderPlayed && _thunderPlayed.size ? ([r, c]) => !_thunderPlayed.has(r * N + c) : null;
+        if (EFX.s5 && _legacyIron && _ironCleared.length && !_ironCleared.some(_legacyIron) && this.labSnd)
+          EnemyFX.guard(EFX, 's5', () => this.labSnd('s_block', EnemyFX.THUNDER.clear.volume), null, () => EnemyFX.thunderFail(this));
         if (this._syncIronKi) this.enemies.forEach(en => { if (en._ironCells && en._ironCells.length) this._syncIronKi(en); });   // 🔩鐵機人鬥氣:對「每隻有放過鐵塊(_ironCells)」的敵人各自同步(試驗室與真關卡雷城共用同一條路;沒放過鐵塊的敵人完全不觸發)
-        if (_ironCleared.length) this.time.delayedCall(420, () => { _ironCleared.forEach(([r, c]) => this._junkShatter && this._junkShatter(BX0 + c * CS + RECT / 2, BY0 + r * CS + RECT / 2, 0x9aa8bd, 'break')); _lockCleared.forEach(([r, c]) => this._ironLockSpark && this._ironLockSpark(BX0 + c * CS + RECT / 2, BY0 + r * CS + RECT / 2)); this.labSnd && this.labSnd('s_block', 0.55); });   // 🔩清宮/清線連鐵塊一起清→金屬碎裂演出(同溶解時機);有 lock 的額外播壓軸大爆碎(_ironLockSpark)
-        if (_lockDec.length) this.time.delayedCall(420, () => { _lockDec.forEach(([r, c, oldLock]) => this._ironLockChip && this._ironLockChip(BX0 + c * CS + RECT / 2, BY0 + r * CS + RECT / 2, oldLock)); });   // 🔒扣層但沒移除→砸碎版回饋(_ironLockChip,小砸碎):碎片四濺+電花+白閃+震屏+撞擊音,提示「剝了一層」
+        if (_ironCleared.length && (!_legacyIron || _ironCleared.some(_legacyIron))) this.time.delayedCall(420, () => { (_legacyIron ? _ironCleared.filter(_legacyIron) : _ironCleared).forEach(([r, c]) => this._junkShatter && this._junkShatter(BX0 + c * CS + RECT / 2, BY0 + r * CS + RECT / 2, 0x9aa8bd, 'break')); (_legacyIron ? _lockCleared.filter(_legacyIron) : _lockCleared).forEach(([r, c]) => this._ironLockSpark && this._ironLockSpark(BX0 + c * CS + RECT / 2, BY0 + r * CS + RECT / 2)); this.labSnd && this.labSnd('s_block', 0.55); });   // 🔩清宮/清線連鐵塊一起清→金屬碎裂演出(同溶解時機);有 lock 的額外播壓軸大爆碎(_ironLockSpark)
+        if (_lockDec.length && (!_legacyIron || _lockDec.some(_legacyIron))) this.time.delayedCall(420, () => { (_legacyIron ? _lockDec.filter(_legacyIron) : _lockDec).forEach(([r, c, oldLock]) => this._ironLockChip && this._ironLockChip(BX0 + c * CS + RECT / 2, BY0 + r * CS + RECT / 2, oldLock)); });   // 🔒扣層但沒移除→砸碎版回饋(_ironLockChip,小砸碎):碎片四濺+電花+白閃+震屏+撞擊音,提示「剝了一層」
         const n = data.cells.length;
         this._placeCleared = true; this._handCleared = true;   // 這塊有清到→combo +1;並標記「本手有清」(2026-10-31 手制:整手都沒清才由 afterAction 歸零 combo)
         if (!FX2.s2) this._comboStageAfterHit(n); this.renderCombo(true);   // combo 已在頂端 +1(每塊有清才+1);🆕顯示改接棒制:HIT 數完才在同位置彈「x COMBO」(showCombo 即時版留給風技等無 HIT 的路徑)
@@ -10269,16 +10312,26 @@
         ctx = ctx || {}; const E = this.enemies, dl = ctx.delay || 0;
         // 🆕風城賊鴨:同一批事件在這條時間軸上依序排隊(dT=相對 dl+dB 累計 ms;dB=afterBlock 內先讓清除展演走一下);有演出就鎖輸入(攻擊鎖)到時間軸結束
         let dT = 0, dUsed = false; const dB = ctx.ab ? (FX2.s1 ? Math.max(380, Math.round((this._atkLandAt || 0) - (this.time.now || 0)) + 60) : 380) : 0, dAbs = () => dl + dB + dT;   // 2026-11-22 新演出:放塊後的敵人反應(賊鴨當下反擊/鐵機人電擊/餘火…)等本手我方最後一發落地 +60 再演(舊演出照舊 380)
-        const dLock = evs.some(x => x.t === 'duck_eat' || x.t === 'duck_counter' || x.t === 'duck_fat' || (x.t === 'player_damage' && x.kind === 'hungry')) ? this._atkLockOn(dl + dB + 2600 + evs.length * 220) : null;
+        const windBatch = EFX.s6 && this._ecDuckOn &&
+          EnemyFX.guard(EFX, 's6', () => EnemyFX.windReady(this), false, () => EnemyFX.windFail(this)) &&
+          this._ecWindBatch(evs, E);
+        const dLock = (!windBatch || evs.some(x => x.t === 'duck_fat' && x.fat < x.from)) && evs.some(x => x.t === 'duck_eat' || x.t === 'duck_counter' || x.t === 'duck_fat' || (x.t === 'player_damage' && x.kind === 'hungry')) ? this._atkLockOn(dl + dB + 2600 + evs.length * 220) : null;
+        const windMarks = EFX.s6 && EnemyFX.guard(EFX, 's6', () => EnemyFX.windReady(this), false, () => EnemyFX.windFail(this)) &&
+          evs.some(x => x.t === 'duck_mark' || (x.t === 'duck_round' && x.store));
         const lnBig = evs.some(x => x.t === 'healer_attack' && x.lonely), lnIn = evs.some(x => x.t === 'heal_rage' && x.lonely), lnRev = evs.some(x => x.t === 'revive_done' && x.lonely);   // 水城孤身:同批有大攻擊/進入/復活 → 後續水球與解除演出要等
         const at = fn => { const _dg = this._atkStale ? -1 : (this._deadG || 0); const run = () => { if (this.resultOpen && this._resultTerminal) return; this._lifeRun(_dg, () => { try { fn(); } catch (err) { console.error('ecPlay', err); } }); }; if (dl > 0) this.time.delayedCall(dl, run); else run(); };   // 🩹2026-11-25 舊問題修正二 R6:終局後排定的事件不再演(不重建光圈等常駐物件);R2:陣亡前排的、復活後才到 → 這一段出手作廢
         let jwT = 0; const jwX = ctx.ab ? Math.max(0, (this._jwLandAt || 0) - (this.time.now || 0) + 140) : 0;   // 🆕寶玉:afterBlock 來的敲碎/盾破/補放要等本手「擋下」彈著之後再演;jwT=同批核心登場的逐顆錯開
         const atJ = (fn, extra) => at(() => { if (extra > 0) this.time.delayedCall(extra, () => { try { fn(); } catch (err) { console.error('ecPlay', err); } }); else fn(); });
+        let thunderShockBatch, waterPlan, waterRevCount, waterEnter;
         evs.forEach(ev => {
           const e = (ev.e != null && ev.e >= 0) ? E[ev.e] : null;
+          if (windBatch && e && e._d) {
+            const duration = this._ecWindEvent(windBatch, e, ev, dAbs());
+            if (duration != null) { dUsed = true; dT += duration; return; }
+          }
           switch (ev.t) {
-            case 'cd_roll': if (e) at(() => { if (e.dead) return; this._tmRelease(e); if (e._y) this._ecRareGlass(e); if (e._g && e._g.rule === 4) this._ecChiefArt(e, !!ev.skull); this._ecGlass(e, dl > 0); this._ecOrbSync(e); this.updateEnemies(); if (ev.lonely && !lnIn) this._lnAt(lnBig ? LN_T.ATK + 150 : 0, () => this._lnBallSync(e)); }); break;   // 🆕2026-11-09 酋長抽到骷髏→燃起版立繪
-            case 'cd_tick': if (e && e._h && e._h.lonely) at(() => this._lnBallSync(e)); if (e && e._m) { const _left = (e._m.flee != null) ? e._m.flee : ev.timer; if (_left <= 3) at(() => { if (!e.dead && !this._ecTauntSet(e, true)) this._ecSweat(e, _left); }); else if (e._taunt) at(() => { if (!e.dead) this._ecTauntSet(e, false); }); } if (e && e._g) at(() => { if (!e.dead) { const had = !!e._finOrb; this._ecOrbSync(e); if (!had && e._finOrb) this._mechCheck(450); } }); break;   // 🆕v1.5.0 球剛出現→排字卡檢查(①②④ 改球出現才跳)   // 🆕2026-11-08 哥布林球階段隨 CD 剩餘手數更新(1★~4★ 全開)
+            case 'cd_roll': if (e) at(() => { if (e.dead || (EFX.s4 && ev.lonely && waterEnter === e)) return; this._tmRelease(e); if (e._y) this._ecRareGlass(e); if (e._g && e._g.rule === 4) this._ecChiefArt(e, !!ev.skull); if (EFX.s4 && e._h) EnemyFX.waterRun(this, EFX, e, 'castHands', ev); this._ecGlass(e, dl > 0); this._ecOrbSync(e); this.updateEnemies(); if (ev.lonely && !lnIn && !(EFX.s4 && waterPlan && EnemyFX.waterRun(this, EFX, e, 'afterAttack', waterPlan, () => this._lnBallSync(e)))) this._lnAt(lnBig ? LN_T.ATK + 150 : 0, () => this._lnBallSync(e)); }); break;   // 🆕2026-11-09 酋長抽到骷髏→燃起版立繪
+            case 'cd_tick': if (EFX.s4 && e && e._h) at(() => { if (EFX.s4) EnemyFX.waterRun(this, EFX, e, 'castHands', ev); this._ecWaterBadge(e); }); if (EFX.s3 && e && e._r) at(() => this._ecRockBadge(e, !this.resultOpen && !this.dive)); if (EFX.s6 && e && e._d) at(() => this._ecWindBadge(e, !this.resultOpen && !this.dive)); if (EFX.s3 && e && e._r && e._r.rebuilding && ev.timer === 1) at(() => EnemyFX.earthRun(this, EFX, e, 'gather', 'first')); if (e && e._h && e._h.lonely) at(() => this._lnBallSync(e)); if (e && e._m) { const _left = (e._m.flee != null) ? e._m.flee : ev.timer; if (_left <= 3) at(() => { if (!e.dead && !this._ecTauntSet(e, true)) this._ecSweat(e, _left); }); else if (e._taunt) at(() => { if (!e.dead) this._ecTauntSet(e, false); }); } if (e && e._g) at(() => { if (!e.dead) { const had = !!e._finOrb; this._ecOrbSync(e); if (!had && e._finOrb) this._mechCheck(450); } }); break;   // 🆕v1.5.0 球剛出現→排字卡檢查(①②④ 改球出現才跳)   // 🆕2026-11-08 哥布林球階段隨 CD 剩餘手數更新(1★~4★ 全開)
             case 'cd_extend': if (e) at(() => { if (e.dead) return; this._tmRelease(e); if (e._g) this._ecOrbSync(e); this._ecGlass(e, true); if (e.turnG) this.floatText(e.turnG.x + 10, e.turnG.y - 16, '+1', '#ffd34d'); this.updateEnemies(); }); break;
             case 'enemy_hit': if (e && e._g && e._g.rule === 4) at(() => { if (!e.dead && ev.left - 1 > 0) { this._enemyKi(e, Math.max(1, Math.min(3, ev.left - 1)), 0xff5a2a); this._ecSkullAura(e, null, true); this._ecCoolFx(e, ev.left - 1); } }); break;   // 降溫:光圈收一階+煙+浮字、鬥氣降級(球只看時間,不動);left−1=0 是第 3 下→交給 defuse   // left−1=0 是第 3 下:交給下面 defuse 演出(數字歸 0 再碎)   // ev.left=打這下「之前」的剩餘次數 → 打完剩 left-1
             case 'interrupt': if (e) at(() => { if (!e.dead) this._ecInterruptFx(e); }); break;
@@ -10298,17 +10351,19 @@
             case 'burn_cancel': this._ecBurnBadge(0); break;
             case 'iron_place': if (e) { if (dl > 0) { (ev.cells || []).forEach(([r, c]) => { const o = this.board[r] && this.board[r][c]; if (o && o.el === 'iron') o._pend = true; }); at(() => { if (!e.dead) this._ecIronPlace(e, ev); }); } else this._ecIronPlace(e, ev); } break;   // dl>0(排在賊鴨之後演):模型已寫盤面 → 先標 _pend 避免畫面提早出現鐵塊   // 🆕P2 雷城:鐵機人放鐵塊(模型已寫入盤面,這裡只演出)
             case 'iron_harden': if (e) this._ecIronHarden(e, ev, dl); break;   // 4★ 越放越硬:每格 +1 層
-            case 'rock_attack': if (e) at(() => { if (e.dead) return; this._ecImpactAt = Math.max(this._ecImpactAt || 0, (this.time.now || 0) + 360 + 440 + 120); this.enemyAttack(e, { dmg: e.atk * (ev.mult > 1 ? ev.mult : 1), col: ev.guard ? 0xff3a2a : null }); if (ev.guard) this._ecRageSwing(e, { stage: 1 }); if (ev.mult > 1) { const sh = e.labShield; if (sh && sh.active) this.tweens.add({ targets: sh, scaleX: 1.45, scaleY: 1.45, duration: 140, yoyo: true, repeat: 1, ease: 'Sine.inOut', onComplete: () => { if (sh.active) sh.setScale(1); } }); this.shakeCam(240, 0.009); } }); break;   // 🆕P2 土城:有盾時 CD 歸 0 = 普攻(2026-11-11 press2:核心帶 mult>1 → 傷害乘上、盾罩放大縮小兩下+多震屏;2026-11-11 大毛:不浮字)(走遊戲 enemyAttack:護甲/迴避/黑熊/鮭魚)
+            case 'rock_attack': if (e) at(() => { if (e.dead) return;
+              if (EFX.s3 && e._r) { const opts = EnemyFX.guard(EFX, 's3', () => EnemyFX.earthLaunch(this, e, ev, EFX), null, () => EnemyFX.earthFail(this)); if (opts) { this.enemyAttack(e, opts); if (ev.guard) EnemyFX.earthRun(this, EFX, e, 'rageSwing'); return; } }
+              this._ecImpactAt = Math.max(this._ecImpactAt || 0, (this.time.now || 0) + 360 + 440 + 120); this.enemyAttack(e, { dmg: e.atk * (ev.mult > 1 ? ev.mult : 1), col: ev.guard ? 0xff3a2a : null }); if (ev.guard) this._ecRageSwing(e, { stage: 1 }); if (ev.mult > 1) { const sh = e.labShield; if (sh && sh.active) this.tweens.add({ targets: sh, scaleX: 1.45, scaleY: 1.45, duration: 140, yoyo: true, repeat: 1, ease: 'Sine.inOut', onComplete: () => { if (sh.active) sh.setScale(1); } }); this.shakeCam(240, 0.009); } }); break;   // 🆕P2 土城:有盾時 CD 歸 0 = 普攻(2026-11-11 press2:核心帶 mult>1 → 傷害乘上、盾罩放大縮小兩下+多震屏;2026-11-11 大毛:不浮字)(走遊戲 enemyAttack:護甲/迴避/黑熊/鮭魚)
             case 'rock_sk': if (e) at(() => this._ecRockSkPop(e)); break;   // 主動技打中 combo 盾:盾上不倒數;扣血數字消失後才浮「+N COMBO」(2026-11-10 拍板)
-            case 'break_bonus': if (e) at(() => { if (!e.dead && e.sprite) { this.floatText(e.sprite.x, Math.max(e.sprite.y - 42, 62), tr('破盾 +{n}', { n: ev.bonus }), '#ffe08a'); if (!ev._inPop) this._stkAdd(ev.bonus); } }); break;   // 🆕主動技破盾後的下一擊:全額 +50%
+            case 'break_bonus': if (e) at(() => { if (!e.dead && e.sprite) { if (!(EFX.s3 && e._r && EnemyFX.earthRun(this, EFX, e, 'ready'))) this.floatText(e.sprite.x, Math.max(e.sprite.y - 42, 62), tr('破盾 +{n}', { n: ev.bonus }), '#ffe08a'); if (!ev._inPop) this._stkAdd(ev.bonus); } }); break;   // 🆕主動技破盾後的下一擊:全額 +50%
             case 'shield_block': if (e) at(() => this._ecRockBlockFx(e, ev)); break;       // 被擋(盾閃+「擋下 N%」+漏傷;3★↑ 另有反震彈射)
             case 'shield_break': if (e) at(() => this._ecRockBreakFx(e, ev)); break;       // 破盾(大演出+「破盾! +50%」);盾罩碎裂→守護光帶同步消失
             case 'shield_rebuild': if (e) at(() => this._ecRockRebuildFx(e, ev)); break;   // 重建盾(集氣→成形;隨機盾每次重抽,門檻直接寫在盾上)
             case 'rebuild_reset': if (e) at(() => this._ecRockResetFx(e, ev)); break;      // 雷屬打中重建中 → 倒數重設
             case 'guard': if (e) at(() => this._ecRockGuardHitFx(e, ev)); break;           // 受守護:浮字「守護 ½」+光帶一閃
-            case 'player_damage': if (ev.kind === 'recoil') { at(() => this._ecRockRecoilFx(ev)); break; }   // 🆕反震:核心把各隻反彈量加總成一筆直接傷害(不吃護甲/迴避、黑熊不擋)
+            case 'player_damage': if (ev.kind === 'recoil') { at(() => this._ecRockRecoilFx(ev, EFX.s3 && evs.find(x => x.recoil > 0 && E[x.e]))); break; }   // 🆕反震:核心把各隻反彈量加總成一筆直接傷害(不吃護甲/迴避、黑熊不擋)
               if (e && (ev.kind === 'iron' || ev.kind === 'punish')) { if (dl > 0) at(() => { if (!e.dead) this._ecIronAttack(e, ev); }); else this._ecIronAttack(e, ev); } else if (e && e._d && ev.kind === 'hungry') { dUsed = true; dT += this._ecDuckHungry(e, ev, dAbs()); } break;   // 🆕風城:餓肚子大打(反擊由 duck_counter 一併處理,這裡不重複)   // 鐵機人普攻/懲罰(其他 kind 由各自事件處理或忽略)
-            case 'shock': if (e) this._ecShock(e, ev); break;   // 電擊(afterBlock ③)
+            case 'shock': if (e) this._ecShock(e, ev, EFX.s5 && e._i ? (thunderShockBatch = thunderShockBatch || { events: evs }) : null); break;   // 電擊(afterBlock ③)
             case 'duck_round': if (e && e._d) { dUsed = true; dT += this._ecDuckRound(e, ev, dAbs()); } break;      // 🆕風城賊鴨:新一輪(舊標記收掉;屬塊食物 → 盯上屬塊)
             case 'duck_mark': if (e && e._d) { dUsed = true; dT += this._ecDuckMark(e, ev, dAbs()); } break;        // 標記食物:瞄一眼+格子亮標記
             case 'duck_empty': if (e && e._d) { dUsed = true; dT += this._ecDuckEmpty(e, ev, dAbs()); } break;      // 標記格變空 → 生氣符號 +1
@@ -10318,22 +10373,45 @@
             case 'duck_resolve': if (e && e._d) { dUsed = true; dT += this._ecDuckResolve(e, ev, dAbs()); } break;  // 結算:吃屬塊/吃飽(綠光環)/餓了(生氣符號+大打),皆無浮字
             case 'duck_counter': if (e && e._d) { dUsed = true; dT += this._ecDuckCounter(e, ev, dAbs()); } break;  // 當下反擊(3★↑):立刻小啄一下
             case 'duck_fat': if (e && e._d) { dUsed = true; dT += this._ecDuckFat(e, ev, dAbs()); } break;          // 4★ 越吃越壯 +層 / 歸零洩氣
-            case 'heal': if (e) at(() => { this._ecHealFx(e, ev, ctx.hpBefore); if (e._h) this._ecGlass(e, false); }); break;                                // 🆕水城:補全體(一般補師立即/魔王位詠唱成功)
-            case 'healer_attack': if (e) at(() => { if (e.dead) return; if (ev.lonely) { this._lnAttack(e, ev); return; } this._ecImpactAt = Math.max(this._ecImpactAt || 0, (this.time.now || 0) + 360 + 440 + 120); this.enemyAttack(e, { dmg: ev.raw, col: ev.rage ? 0xff3a2a : null, big: ev.mult > 1 || !!ev.fury }); if (ev.rage) this._ecRageSwing(e, ev); }); break;   // 補師普攻(憤怒/暴怒倍率由核心算好進 ev.raw,遊戲端直接扣 ev.raw;彈道改紅;憤怒態 big=震屏略強)
-            case 'heal_rage': if (e && ev.stage === 2 && ev.fury) this._mechFuryNow(); if (e && ev.lonely) { at(() => this._lnAt(LN_T.IN, () => this._lnOn(e, ev))); break; } if (e) at(() => { this.time.delayedCall(ev.stage === 2 ? 220 : 520, () => { if (this.resultOpen && this._resultTerminal) return; this._ecHealRageOn(e, ev); if (ev.stage === 2 && !e.dead) this._ecGlass(e, true); }); }); break;   // 2026-11-18 暴怒:下一擊會打死 → 沙漏換骷髏+光暈(同火城)   // 2026-11-11 補師新憤怒(stage 1=補過血;2=隊友死亡暴怒):不浮字,生氣符號+縮放彈;等補血/急救/死亡演出先走一小段
-            case 'rescue': at(() => this._ecRescueFx(e, E[ev.by], ev)); break;                                      // 急救(e=被救者, by=補師)
+            case 'heal': if (e) { const waterBoss = EFX.s4 && e._h && ev.boss, wave = waterBoss && this._ecDGen; if (waterBoss && dl > 0) EnemyFX.waterRun(this, EFX, e, 'healPending', dl); at(() => { if (EFX.s4 && waterBoss && (this._atkStale || wave !== this._ecDGen)) EnemyFX.waterRun(this, EFX, e, 'castLegacy'); if (!(EFX.s4 && e._h && !(waterBoss && (this._atkStale || wave !== this._ecDGen)) && EnemyFX.waterRun(this, EFX, e, 'heal', ctx.hpBefore, ev))) this._ecHealFx(e, ev, ctx.hpBefore); if (e._h) this._ecGlass(e, false); }); } break;                                // 🆕水城:補全體(一般補師立即/魔王位詠唱成功)
+            case 'healer_attack': if (e) at(() => { if (e.dead || (EFX.s4 && e._h && !this.enemies.includes(e))) return; if (ev.lonely) { waterPlan = this._lnAttack(e, ev); return; } if (EFX.s4 && this._ecWaterAttack(e, ev)) return; this._ecImpactAt = Math.max(this._ecImpactAt || 0, (this.time.now || 0) + 360 + 440 + 120); this.enemyAttack(e, { dmg: ev.raw, col: ev.rage ? 0xff3a2a : null, big: ev.mult > 1 || !!ev.fury }); if (ev.rage) this._ecRageSwing(e, ev); }); break;   // 補師普攻(憤怒/暴怒倍率由核心算好進 ev.raw,遊戲端直接扣 ev.raw;彈道改紅;憤怒態 big=震屏略強)
+            case 'heal_rage': if (e && ev.stage === 2 && ev.fury) this._mechFuryNow(); if (e && ev.lonely) { at(() => { if (EFX.s4 && this._ecWaterLonelySchedule(e, ev, ctx.lnPre)) waterEnter = e; else this._lnAt(LN_T.IN, () => this._lnOn(e, ev)); }); break; } if (e) at(() => { const waterEpoch = EFX.s4 && e._h ? { life: this._deadG, wave: this._ecDGen, stale: this._atkStale } : null; this.time.delayedCall(EFX.s4 && !ev.lonely ? EnemyFX.guard(EFX, 's4', () => EnemyFX.waterRageDelay(this, e, ev, evs), ev.stage === 2 ? 220 : 520, () => EnemyFX.waterFail(this)) : ev.stage === 2 ? 220 : 520, () => { if (this.resultOpen && this._resultTerminal) return; this._ecHealRageOn(e, ev, waterEpoch && (waterEpoch.stale || this._atkStale || waterEpoch.life !== this._deadG || waterEpoch.wave !== this._ecDGen)); if (ev.stage === 2 && !e.dead) this._ecGlass(e, true); }); }); break;   // 2026-11-18 暴怒:下一擊會打死 → 沙漏換骷髏+光暈(同火城)   // 2026-11-11 補師新憤怒(stage 1=補過血;2=隊友死亡暴怒):不浮字,生氣符號+縮放彈;等補血/急救/死亡演出先走一小段
+            case 'rescue': at(() => { if (!(EFX.s4 && e && EnemyFX.waterRun(this, EFX, e, 'rescue', E[ev.by]))) this._ecRescueFx(e, E[ev.by], ev); }); break;                                      // 急救(e=被救者, by=補師)
             case 'rage': if (e) { const lag = ev.by === 'rescue' ? 650 : (ev.by === 'revive' ? 900 : 0); at(() => { if (lag > 0) this.time.delayedCall(lag, () => this._ecRageOn(e, ev)); else this._ecRageOn(e, ev); }); } break;   // 憤怒(等急救/復活演出先走一段)
-            case 'cast_start': if (e) at(() => { this._ecCastStart(e, ev); if (e._h) this._ecGlass(e, false); }); break;                                    // 魔王位起手詠唱:十字架+數字
-            case 'cast_hit': if (e) at(() => this._ecCastHit(e, ev)); break;                                        // 詠唱中被打中:數字 −1
-            case 'cast_interrupt': if (e) at(() => { this._ecCastBreak(e, tr('詠唱中止!')); if (e._h) this._ecGlass(e, false); }); break;                   // 數字歸 0:十字碎裂
-            case 'lonely_off': if (e) at(() => this._lnAt(lnRev ? LN_T.ATK + LN_T.SPLASH : 0, () => this._lnOff(e, ev))); break;   // 2026-11-23 孤身解除(魔王復活小兵後):等水花飛到才收氣場
-            case 'revive_done': if (e && ev.lonely) { this._lnRevive(e, ev, dl); break; } if (e) at(() => { this._ecReviveFx(e, ev, ctx.deadBefore); if (e._h) this._ecGlass(e, false); }); break;                    // 詠唱復活完成
+            case 'cast_start': if (e) at(() => { this._ecCastStart(e, ev); if (e._h) this._ecGlass(e, false); if (EFX.s4 && ev.type === 'revive') this._lnDropSync(e); }); break;                                    // 魔王位起手詠唱:十字架+數字
+            case 'cast_hit': if (e) {
+              const cast = EFX.s4 && e._waterFx && e._waterFx.cast;
+              at(() => { if (!(cast && EFX.s4 && EnemyFX.waterRun(this, EFX, e, 'lateCastHit', cast, ev))) this._ecCastHit(e, ev); });
+            } break;                                        // 詠唱中被打中:數字 −1
+            case 'cast_interrupt': if (e) {
+              const cast = EFX.s4 && e._waterFx && e._waterFx.cast;
+              at(() => {
+                if (EFX.s4 && ev.type === 'revive') this._lnDropSync(e);
+                if (!(cast && EFX.s4 && EnemyFX.waterRun(this, EFX, e, 'lateCastBreak', cast, ev))) this._ecCastBreak(e, tr('詠唱中止!'));
+                if (e._h) this._ecGlass(e, false);
+              });
+            } break;                   // 數字歸 0:十字碎裂
+            case 'lonely_off': if (e) at(() => { if (!(EFX.s4 && waterPlan && waterRevCount != null && EnemyFX.waterRun(this, EFX, e, 'afterAttack', waterPlan, () => this._lnOff(e, ev), waterRevCount))) this._lnAt(lnRev ? LN_T.ATK + LN_T.SPLASH : 0, () => this._lnOff(e, ev)); }); break;   // 2026-11-23 孤身解除(魔王復活小兵後):等水花飛到才收氣場
+            case 'revive_done': if (e && ev.lonely) { if (EFX.s4) this._ecWaterLonelyRevive(e, ev, dl, () => waterPlan, n => { waterRevCount = n; }); else this._lnRevive(e, ev, dl); break; } if (e) at(() => { this._ecReviveFx(e, ev, ctx.deadBefore); if (e._h) this._ecGlass(e, false); }); break;                    // 詠唱復活完成
             default: break;
           }
         });
+        if (EFX.s6 && windBatch && windBatch.active && dT > 0) {
+          let owner = null;
+          if (windBatch.ducks.size === 1) for (const [duck] of windBatch.ducks) owner = duck;
+          EnemyFX.guard(EFX, 's6', () => EnemyFX.windLock(this, dAbs(), owner), null, () => EnemyFX.windFail(this));
+        } else if (EFX.s6 && windMarks && dUsed && dT > 0) EnemyFX.guard(EFX, 's6', () => EnemyFX.windLock(this, dAbs()), null, () => EnemyFX.windFail(this));
         if (dUsed && ctx.tick) this._ecVT = Math.max(this._ecVT || 0, dAbs());   // 賊鴨時間軸終點 → 後面怪(鐵機人/普攻)的演出等到這裡
         if (dUsed) {   // 時間軸結束:放鎖、依最終視覺狀態重畫一次、排字卡檢查(⑨ 發生當下版要放掉 endHand 代扣的鎖)
-          this._ecDq(dAbs() + 80, () => { if (dLock) dLock(); this._ecDuckSync(); if (this._ecFatPend) { this._ecFatPend = false; this._mechPump(true); } else this._mechCheck(250); });
+          if (windBatch) this._ecDq(dAbs() + 80, () => {
+            if (dLock) dLock();
+            try { this._ecDuckSync(); }
+            finally {
+              if (this._ecFatPend) { this._ecFatPend = false; this._mechPump(true); }
+              else this._mechCheck(250);
+            }
+          });
+          else this._ecDq(dAbs() + 80, () => { if (dLock) dLock(); this._ecDuckSync(); if (this._ecFatPend) { this._ecFatPend = false; this._mechPump(true); } else this._mechCheck(250); });
           if (dLock) this.time.delayedCall(dAbs() + 2600, () => { dLock(); if (this._mechHold && !this._mechOpen) { this._ecFatPend = false; this._mechPump(true); } });   // 保險:例外/場景切換也必放鎖
         } else if (dLock) dLock();
       }
@@ -10590,6 +10668,7 @@
       //   e._ironCells 鏡射核心 d.cells 座標(見 _ecAct)→ 沿用舊的鬥氣同步(_syncIronKi)與死亡清塊(_clearEnemyIron:鐵機人死=牠的鐵塊一起碎,自然不再電擊)。
       //   賊鴨已接核心(2026-11-07):endHand 以 _ecActOrder()(核心 actOrder:賊鴨先於鐵機人)派工,賊鴨/鐵機人同場時出手序不再看陣列序。
       _ecIronPlace(e, ev) {   // 放鐵塊:集氣→逐格丟鐵→落地鍛造疊層(沿用舊 _ironAct 的演出);模型此刻已寫進盤面
+        if (EFX.s5 && e._i && EnemyFX.thunderRun(this, EFX, e, 'place', ev)) return;
         const cells = ev.cells || [], lockV = ev.lock || 1, ex = e.sprite ? e.sprite.x : CX, ey = e.sprite ? e.sprite.y : 60, fy = Math.max(ey - 34, 62);   // fy:浮字夾在可見處(敵人貼頂緣時 ey-34 會被裁)
         const objs = cells.map(([r, c]) => (this.board[r] && this.board[r][c]) || null);
         objs.forEach(o => { if (o && o.el === 'iron') o._pend = true; });
@@ -10629,6 +10708,8 @@
         this._mechPump(); this._mechCheck(250);
       }
       _ecIronAttack(e, ev) {   // 鐵機人普攻/懲罰:核心算好 raw,遊戲 enemyAttack 套護甲/迴避/黑熊;懲罰=big 演出+電光球放電(🆕2026-11-11 不浮字、不爆鬥氣);出手後電光球依規則 4 重新同步
+        const thunder = EFX.s5 && EnemyFX.guard(EFX, 's5', () => EnemyFX.thunderLaunch(this, e, ev, EFX), null, () => EnemyFX.thunderFail(this));
+        if (thunder) { this.enemyAttack(e, thunder); return; }
         const punish = ev.kind === 'punish', ex = e.sprite ? e.sprite.x : CX, ey = e.sprite ? e.sprite.y : 60;
         if (punish) {   // 懲罰:金色集氣+音效+電光球膨脹放電(閃電劈向血條,格數越多越粗越多道、震屏越重)
           const n = Math.max(1, Math.min(3, (e._i && e._i.cells.length) || Math.round((ev.raw / Math.max(1, e.atk) - 1) / 0.5) || 1));
@@ -10724,6 +10805,7 @@
         this.time.delayedCall(860, () => { if (e._ioGen !== gen) return; e._ioBusy = false; this._ecIronOrbSync(e); });   // 放電演完:依規則 4 重新同步(Clear 已讓 gen 改變就不會跑到這)
       }
       _ecIronHarden(e, ev, dl) {   // dl:排在賊鴨之後演時的延遲(顯示層先停舊值,等 dl 後才開始算「等攻擊彈著」)   // 4★ 越放越硬:核心已把各格 lock+1(真值),這裡讓顯示層停在舊值、等攻擊彈著後再「鍛造」疊上去
+        if (EFX.s5 && e._i && EnemyFX.thunderRun(this, EFX, e, 'harden', ev, dl)) return;
         const snap = e._ecLockSnap, d = e._i; if (!d) return;
         const todo = [];
         d.cells.forEach(x => { const old = snap ? snap.get(x.obj) : null; if (old != null && x.obj.lock > old && this.board[x.r] && this.board[x.r][x.c] === x.obj) { x.obj._vis = old; todo.push([x, old]); } });
@@ -10815,6 +10897,10 @@
         if (!this.enemies) return;
         this.enemies.forEach(e => {
           if (!e || !e._d) return;
+          if (EFX.s6 && EnemyFX.guard(EFX, 's6', () => !EnemyFX.WIND.ABS_BALL && EnemyFX.windReady(this), false, () => EnemyFX.windFail(this))) {
+            if (e._dAbs) this._ecDuckAbsRemove(e, false);
+            return;
+          }
           const live = !!(e._ecVis && !e.dead && e.hp > 0 && e.sprite && e.sprite.active && this._ecDuckOn && !this.dive && !this.resultOpen && this.sys && this.sys.isActive());
           const w = live ? this._ecDuckAbsWant(e) : null, r = e._dAbs;
           if (r && (!w || w.m !== r.m)) this._ecDuckAbsRemove(e, live ? 'dispel' : false);
@@ -10880,6 +10966,12 @@
       _ecDuckReveal() {   // 上場演出結束後才把標記/待標/圓點畫出(進場期間 this.dive 擋住);畫出後再排字卡檢查
         const gen = this._ecDGen = (this._ecDGen || 0) + 1; this._ecDuckOn = false;
         const poll = () => { if (gen !== this._ecDGen || !this.sys || !this.sys.isActive()) return; if (this.dive) { this.time.delayedCall(250, poll); return; }
+          if (EFX.s6) {
+            this.time.delayedCall(350, () => { if (gen !== this._ecDGen || !this.sys || !this.sys.isActive()) return; this._ecDuckOn = true;
+              if (EFX.s6) this.enemies.forEach(e => { if (e._d) EnemyFX.windRun(this, EFX, e, 'reveal'); });
+              this._ecDuckSync(); this.enemies.forEach(e => { if (e._d && e._ecVis && !e.dead && !(EFX.s6 && e._windFx)) Object.keys(e._ecVis.marks).forEach(k => { const m = e._ecVis.marks[k]; if (!m.store) this._ecDuckPing(m.r, m.c); }); }); this._mechCheck(300); });
+            return;
+          }
           this.time.delayedCall(350, () => { if (gen !== this._ecDGen || !this.sys || !this.sys.isActive()) return; this._ecDuckOn = true; this._ecDuckSync(); this.enemies.forEach(e => { if (e._d && e._ecVis && !e.dead) Object.keys(e._ecVis.marks).forEach(k => { const m = e._ecVis.marks[k]; if (!m.store) this._ecDuckPing(m.r, m.c); }); }); this._mechCheck(300); }); };
         this.time.delayedCall(this.dive ? 250 : 700, poll);
       }
@@ -10899,30 +10991,32 @@
       }
       _ecDuckSync() {   // 依各賊鴨的「視覺狀態」整批重畫:標記框(盤面格/卡上屬塊)、頭上生氣符號/待標字、4★ 血條下三顆飽足圓點
         if (!this._nm || !this._ec || !this._ecDuckOn || !this.sys || !this.sys.isActive()) { this._ecDuckAbsClearAll(); return; }   // 🆕進場期間/場景停→吸收球不存在
+        if (EFX.s6) this.enemies.forEach(e => { if (e._d) EnemyFX.windRun(this, EFX, e, 'sync'); });
         this._ecDuckClear(); const objs = this._duckObjs, keep = o => { objs.push(o); return o; };
         this.enemies.forEach(e => {
           const d = e._d, v = e._ecVis; if (!d || !v || e.dead || e.hp <= 0 || !e.sprite || !e.card) return;
           const ks = Object.keys(v.marks);
-          ks.forEach(k => {
+          const wind = EFX.s6 && e._windFx && this._ecDuckOn && !this.dive;
+          if (!wind) ks.forEach(k => {
             const m = v.marks[k];
             if (m.store) return;   // 🆕2026-11-11 卡上屬塊不再畫虛線框+爪印:改由「吸收球+卡上屬塊抖動」表示(_ecDuckAbsSync,球不跟著這裡整批重畫)
             else { const cen = this.cellCenter(m.r, m.c); keep(this._ecDuckMarkObj(cen.x, cen.y, RECT + 3, !!m.empty)); }
           });
           const rx = e.card.x + Math.round((e.cardW || 80) * 0.2), ty = e.cy - Math.round((e.cardH || 80) / 2) + 8, nA = v.anger | 0, pend = Math.max(0, (v.n || 0) - ks.length);
-          for (let k = 0; k < nA; k++) {   // 生氣符號(標記格變空)疊在頭上右側;新出現的彈出+微顫(icon_anger 占位,TODO 製作人驗收)
+          if (!wind) for (let k = 0; k < nA; k++) {   // 生氣符號(標記格變空)疊在頭上右側;新出現的彈出+微顫(icon_anger 占位,TODO 製作人驗收)
             const x = rx + k * 26;
             let ic; if (this.textures.exists('icon_anger')) ic = this.add.image(x, ty, 'icon_anger').setDisplaySize(30, 30); else ic = this.add.text(x, ty, '#', { fontFamily: EMOJIFONT, fontSize: '22px', color: '#ff2a1a', fontStyle: 'bold', stroke: '#3a0000', strokeThickness: 4 }).setOrigin(0.5);
             ic.setDepth(14); keep(ic);
             if (k >= (e._ecAngerShown | 0)) { const sc = ic.scaleX; ic.setScale(0.2 * sc); this.tweens.add({ targets: ic, scaleX: sc, scaleY: sc, duration: 300, ease: 'Back.out' }); }
             this.tweens.add({ targets: ic, angle: { from: -8, to: 8 }, duration: 110, yoyo: true, repeat: -1 });
           }
-          e._ecAngerShown = nA;
+          if (!wind) e._ecAngerShown = nA;
           if (pend > 0) {   // 待標(盤面標不到):頭上圖示,沒有標記格所以不生氣;🆕2026-11-11 文字「待標」改圖(旗標開+貼圖在=icon_duck_seek,否則程式畫閃爍空虛線框);物件進 _duckObjs,隨 _ecDuckClear 一起 destroy+killTweensOf
-            const sx = e.card.x + Math.round((e.cardW || 80) / 2) - 18, sy = ty + (nA > 0 ? 24 : 0);
+            const sx = e.card.x + Math.round((e.cardW || 80) / 2) - 18, sy = ty + (nA > 0 ? (wind ? EnemyFX.WIND.seekDy : 24) : 0);
             if (DUCK_SEEK_ART_READY && this.textures.exists('icon_duck_seek')) { const ic = keep(this.add.image(sx, sy, 'icon_duck_seek').setDisplaySize(26, 26).setDepth(14).setAlpha(0.35)); this.tweens.add({ targets: ic, alpha: 1, duration: 800, yoyo: true, repeat: -1, ease: 'Sine.inOut' }); }
             else keep(this._ecDuckMarkObj(sx, sy, 24, true, true)).setDepth(14);
           }
-          if (d.rule === 4) {   // 越吃越壯:血條下 3 顆程式繪製小圓點(亮=已疊層)
+          if (d.rule === 4 && !wind) {   // 越吃越壯:血條下 3 顆程式繪製小圓點(亮=已疊層)
             const cx0 = e.hpx + e.hpW / 2, cy0 = (e.hpGfx ? e.hpGfx.y : e.cy + (e.cardH || 80) * 0.4) + 13, fat = e._ecFat | 0;
             for (let k = 0; k < 3; k++) {
               const lit = k < fat, dot = keep(this.add.circle(cx0 + (k - 1) * 13, cy0, 4.6, lit ? 0xffb02e : 0x180b08, lit ? 1 : 0.75).setStrokeStyle(1.8, lit ? 0x5a2e00 : 0x8a7a60, 1).setDepth(14));
@@ -10957,48 +11051,212 @@
       _ecDuckIronSync() { this.enemies.forEach(en => { if (en._i && !en.dead && en.hp > 0 && this._syncIronKi) this._syncIronKi(en); }); }   // 鐵塊被吃/剝層 → 鐵機人鬥氣依現存層數同步
       // ── 事件處理(皆回傳「這個事件佔用的時間軸 ms」;t=相對現在的延遲)──
       _ecDuckRound(e, ev, t) {   // 新一輪:舊標記收掉;屬塊食物 → 盯上卡上屬塊(視線+亮標)
+        const wind = EFX.s6 && this._ecDuckOn && EnemyFX.guard(EFX, 's6', () => EnemyFX.windReady(this), false, () => EnemyFX.windFail(this)) && ev.store && e._ecStoreIdx >= 0;
         this._ecDq(t, () => {
           const v = e._ecVis; if (!v || e.dead) return; v.marks = {}; v.anger = 0; v.n = ev.n | 0; e._ecAbsSnap = null;
+          if (EFX.s6) EnemyFX.windRun(this, EFX, e, 'round');
           if (ev.store && e._ecStoreIdx >= 0) {
             v.marks[0] = { store: true, idx: e._ecStoreIdx, empty: false };
+            if (!(EFX.s6 && EnemyFX.windRun(this, EFX, e, 'mark', 0, false, 0))) {
             const card = this.teamCards && this.teamCards[e._ecStoreIdx], so = card && card.storeObj; if (so && e.sprite) { this._ecDuckGaze(e, so.x, so.y); this.labSnd && this.labSnd('s_clear15', 0.35); }
+            }
           }
           this._ecDuckSync();
         });
-        return 0;
+        return wind ? EnemyFX.WIND.markMs : 0;
       }
       _ecDuckMark(e, ev, t) {   // 標記食物:賊鴨瞄一眼 + 格子亮起標記
+        const wind = EFX.s6 && this._ecDuckOn && EnemyFX.guard(EFX, 's6', () => EnemyFX.windReady(this), false, () => EnemyFX.windFail(this));
         this._ecDq(t, () => {
           const v = e._ecVis; if (!v || e.dead) return; v.marks[ev.slot] = { r: ev.r, c: ev.c, empty: false };
-          if (this._ecDuckOn) { const cen = this.cellCenter(ev.r, ev.c); this._ecDuckGaze(e, cen.x, cen.y); this._ecDuckPing(ev.r, ev.c); this.labSnd && this.labSnd('s_clear15', 0.3); }
+          const wind = EFX.s6 && EnemyFX.windRun(this, EFX, e, 'mark', ev.slot, false, 0);
+          if (this._ecDuckOn && !wind) { const cen = this.cellCenter(ev.r, ev.c); this._ecDuckGaze(e, cen.x, cen.y); this._ecDuckPing(ev.r, ev.c); this.labSnd && this.labSnd('s_clear15', 0.3); }
           this._ecDuckSync();
         });
-        return 220;
+        return wind ? EnemyFX.WIND.markMs : 220;
       }
-      _ecDuckEmpty(e, ev, t) {   // 標記格變空(或屬塊被用掉):頭上跳出生氣符號(疊加)
+      _ecWindBatch(evs, enemies) {
+        const ducks = new Map();
+        evs.forEach(ev => {
+          const e = enemies[ev.e];
+          if (!e || !e._d || !(/^duck_/.test(ev.t) || (ev.t === 'player_damage' && ev.kind === 'hungry'))) return;
+          let x = ducks.get(e);
+          if (!x) {
+            x = { anger: (e._ecVis && e._ecVis.anger) | 0, eats: 0, hungry: 0, raw: 0 };
+            ducks.set(e, x);
+          }
+          if (ev.t === 'duck_counter') x.counter = ev;
+          if (ev.t === 'duck_resolve') {
+            x.resolve = ev;
+            x.store = !!(ev.store && e._ecStoreEat);
+          }
+          if (ev.t === 'player_damage') x.raw += ev.raw;
+        });
+        return { ducks, active: false };
+      }
+      _ecWindEvent(batch, e, ev, t) {
+        const x = batch.ducks.get(e), W = EnemyFX.WIND;
+        if (!x) return null;
+        switch (ev.t) {
+          case 'duck_empty': {
+            const counter = !ev.quiet && !x.pecked && x.counter;
+            const second = x.anger > 0;
+            if (!ev.quiet) x.anger++;
+            let wait = 0;
+            if (counter) {
+              x.pecked = true;
+              const start = t + (second ? W.empty.fastPeckAt : W.empty.peckAt);
+              const slot = this._ecWindReserve(e, start, true, second);
+              wait = slot ? slot.start - start : 0;
+              this._ecWindStrike(e, counter, start + wait, true, second, true, counter.raw, null, slot);
+            }
+            this._ecDuckEmpty(e, ev, t + wait, { second, counter });
+            if (ev.quiet) return 0;
+            batch.active = true;
+            return wait + (second ? W.empty.secondTime : counter ? W.empty.counterTime : W.empty.time);
+          }
+          case 'duck_counter': {
+            if (x.pecked) return 0;
+            batch.active = true;
+            const slot = this._ecWindReserve(e, t, true, false);
+            this._ecWindStrike(e, ev, slot ? slot.start : t, true, false, true, ev.raw, null, slot);
+            return (slot ? slot.start - t : 0) + W.peck.total[0];
+          }
+          case 'duck_refed':
+            if (!ev.quiet) x.anger = Math.max(0, x.anger - 1);
+            this._ecDuckRefed(e, ev, t, { last: !x.anger });
+            if (ev.quiet) return 0;
+            batch.active = true;
+            return x.anger ? W.refed.partial : W.refed.last;
+          case 'duck_eat':
+            if (x.foodAt == null) x.foodAt = t;
+            this._ecDuckEat(e, ev, t + ((x.store ? 1 : 0) + x.eats++) * (e._d.rule === 4 ? W.food.bossGap : W.food.gap), true);
+            return 0;
+          case 'duck_resolve': {
+            const boss = ev.rule === 4, gap = boss ? W.food.bossGap : W.food.gap;
+            if (x.foodAt == null) x.foodAt = t;
+            if (x.store) {
+              const st = e._ecStoreEat;
+              e._ecStoreEat = null;
+              this._ecDuckEatStored(e, st, t, true);
+            }
+            if (ev.fed > 0 && ev.hungry === 0) {
+              const happyAt = t + (ev.fed - 1) * gap + (boss ? W.food.bossHappyAt : W.food.happyAt);
+              this._ecDuckResolve(e, ev, happyAt);
+              this._ecDq(happyAt, () => {
+                if (EFX.s6 && !e.dead) EnemyFX.windRun(this, EFX, e, 'happy');
+              });
+            }
+            if (ev.hungry > 0) this._ecDuckResolve(e, ev, t);
+            batch.active = true;
+            return ev.fed > 0 ? (ev.fed - 1) * gap + W.food.fly + (boss ? W.food.bossTail : W.food.tail) : 0;
+          }
+          case 'player_damage':
+            if (ev.kind !== 'hungry') return null;
+            if (!x.hungry++) {
+              x.slot = this._ecWindReserve(e, t, false, false);
+              x.strikeAt = x.slot ? x.slot.start : t;
+            }
+            this._ecWindStrike(e, ev, x.strikeAt, false, false, x.hungry === 1, x.raw, x, x.slot);
+            batch.active = true;
+            return x.hungry === 1 ? x.strikeAt - t + W.hungry.total : 0;
+          case 'duck_fat':
+            if (ev.fat <= ev.from) return null;
+            this._ecDuckFat(e, ev, x.foodAt == null ? t : x.foodAt, true);
+            return 0;
+          case 'cd_roll':
+            if (x.resolve) {
+              if (t > 0) {
+                e._ecWindRollUntil = (this.time.now || 0) + t;
+                this._tmHoldSet(e, 0, t);
+              }
+              this._ecDq(t, () => {
+                if (e.dead) return;
+                e._ecWindRollUntil = 0;
+                this._tmRelease(e);
+                this._ecGlass(e, true);
+                this._ecOrbSync(e);
+                this.updateEnemies();
+              });
+              return 0;
+            }
+            return null;
+          default: return null;
+        }
+      }
+      _ecWindReserve(e, t, peck, fast) {
+        return EFX.s6 && EnemyFX.guard(EFX, 's6', () => EnemyFX.windReserve(this, e, {
+          base: t, peck, fast
+        }), null, () => EnemyFX.windFail(this));
+      }
+      _ecWindStrike(e, ev, t, peck, fast, visual, totalRaw, batch, slot) {
+        this._ecDq(t, () => {
+          if (e.dead || !e.sprite || (this.resultOpen && (!peck || this._resultTerminal))) return;
+          let plan = EFX.s6 && EnemyFX.guard(EFX, 's6', () => EnemyFX.windLaunch(this, EFX, e, {
+            peck, fast, visual, totalRaw, maxHP: this.maxHP, slot
+          }), null, () => EnemyFX.windFail(this));
+          if (!plan && !visual && batch && batch.plan) plan = { ...batch.plan, visual: false };
+          if (!plan) {
+            const delay = (batch && batch.fallback) || 0;
+            const span = peck ? this._ecDuckCounter(e, ev, delay) : this._ecDuckHungry(e, ev, delay);
+            if (batch) batch.fallback = delay + span;
+            const release = this._atkLockOn(delay + span);
+            this._ecDq(delay + span, release);
+            return;
+          }
+          if (batch && visual) batch.plan = plan;
+          if (peck && EFX.s6 && this.labSnd) EnemyFX.guard(EFX, 's6',
+            () => this.labSnd('s_clear15', 0.45), null, () => EnemyFX.windFail(this));
+          this._ecImpactAt = Math.max(this._ecImpactAt || 0, (this.time.now || 0) + plan.impact);
+          this.enemyAttack(e, { dmg: ev.raw, big: !peck, efx: plan });
+        });
+      }
+      _ecDuckEmpty(e, ev, t, batch) {   // 標記格變空(或屬塊被用掉):頭上跳出生氣符號(疊加)
         this._ecDq(t, () => {
           const v = e._ecVis; if (!v || e.dead) return; const m = v.marks[ev.slot]; if (m) m.empty = true; if (!ev.quiet) v.anger = (v.anger | 0) + 1;   // 2026-11-20 quiet=藍鵲時間靜止中變空:不亮生氣符號(牠不會反咬),只把標記框改虛線
+          if (EFX.s6 && batch && EnemyFX.windRun(this, EFX, e, 'empty', ev.slot, !!ev.quiet, batch.second, !!batch.counter)) { this._ecDuckSync(); return; }
+          if (EFX.s6 && ev.store) EnemyFX.windRun(this, EFX, e, 'emptyStore', ev.slot);
           this._ecDuckSync(); if (!ev.quiet && this.labSnd) this.labSnd('s_block', 0.35);
         });
         return 0;
       }
-      _ecDuckRefed(e, ev, t) {   // 餵回去(標記格又有方塊):消一個生氣符號
+      _ecDuckRefed(e, ev, t, batch) {   // 餵回去(標記格又有方塊):消一個生氣符號
         this._ecDq(t, () => {
           const v = e._ecVis; if (!v || e.dead) return; const m = v.marks[ev.slot]; if (m) m.empty = false; if (!ev.quiet) v.anger = Math.max(0, (v.anger | 0) - 1);   // quiet=那份是時間靜止中變空的(本來就沒亮)→不扣別份的生氣
+          if (EFX.s6 && batch) EnemyFX.windRun(this, EFX, e, 'refed', ev.slot, !!ev.quiet, batch.last);
           this._ecDuckSync();
         });
         return 0;
       }
-      _ecDuckEat(e, ev, t) {   // 啄食:賊鴨撲向標記格 → 命中時方塊被叼走(殘影飛向鳥嘴);鐵塊 → 剝 1 層(_ironLockChip)或整塊吃光(_ironLockSpark)
+      _ecDuckEat(e, ev, t, batch) {   // 啄食:賊鴨撲向標記格 → 命中時方塊被叼走(殘影飛向鳥嘴);鐵塊 → 剝 1 層(_ironLockChip)或整塊吃光(_ironLockSpark)
         const key = ev.r * N + ev.c, snap = e._ecEatSnap && e._ecEatSnap[key], cen = this.cellCenter(ev.r, ev.c), bx = BX0 + ev.c * CS, by = BY0 + ev.r * CS;
         const old = ev.iron ? (ev.stripped ? (ev.lock | 0) + 1 : (snap ? Math.max(1, snap.lock) : 1)) : 0;
         const fc = (snap && EL[snap.el]) ? EL[snap.el].color : NEUTRAL_FILL;
         let ghost = null;   // 殘影:模型已先改(格子 null / 鐵塊少 1 層),真 sprite 可能被別處 refreshBoard 提前收掉 → 殘影保證「被吃的那顆」演出看得到
-        if (!ev.iron) ghost = this.add.image(cen.x, cen.y, this._ensureBlockTex(fc)).setScale(RECT / 96).setDepth(DEPTH.board + 1.8);
+        if (EFX.s6 && batch && !ev.iron) {
+          EnemyFX.guard(EFX, 's6', () => {
+            ghost = this.add.image(cen.x, cen.y, this._ensureBlockTex(fc));
+            ghost.setScale(RECT / 96).setDepth(DEPTH.board + 1.8);
+          }, null, () => {
+            try { if (ghost && ghost.scene) ghost.destroy(); }
+            finally { ghost = null; EnemyFX.windFail(this); }
+          });
+        }
+        else if (!ev.iron) ghost = this.add.image(cen.x, cen.y, this._ensureBlockTex(fc)).setScale(RECT / 96).setDepth(DEPTH.board + 1.8);
         else if (!ev.stripped) { ghost = this.add.graphics().setDepth(DEPTH.board + 1.8); this._drawLockIron(ghost, bx, by, RECT, old); }
         if (ev.iron && ev.stripped && snap && snap.obj) snap.obj._vis = old;   // 剝層:顯示層先停在舊層數(真 lock 已 −1),啄到那刻才更新
         this._ecDq(t, () => {
           if (e.dead || !e.sprite) { if (ghost) ghost.destroy(); if (snap && snap.obj) snap.obj._vis = null; this.refreshBoard(); return; }
+          if (EFX.s6 && batch && !ev.iron) {
+            let landed = false;
+            const onLand = () => {
+              if (landed) return;
+              landed = true;
+              this.refreshBoard();
+            };
+            if (EnemyFX.windRun(this, EFX, e, 'food', { x: cen.x, y: cen.y, ghost, onLand, r: ev.r, c: ev.c }) || landed) return;
+          }
+          if (EFX.s6 && (!ev.iron || !ev.stripped)) EnemyFX.windRun(this, EFX, e, 'eat', ev.r, ev.c, false);
           this._ecDuckGaze(e, cen.x, cen.y);
           this._ecDuckPeck(e, cen.x, cen.y, () => {
             this.labSnd && this.labSnd('s_boom', 0.4);
@@ -11016,13 +11274,24 @@
         });
         return 400;
       }
-      _ecDuckEatStored(e, st, t) {   // 屬塊食物被吃:賊鴨射一發到卡上 → 屬塊碎散消失(沿用 _shatterBurst;不封卡)
+      _ecDuckEatStored(e, st, t, batch) {   // 屬塊食物被吃:賊鴨射一發到卡上 → 屬塊碎散消失(沿用 _shatterBurst;不封卡)
         const card = this.teamCards && this.teamCards[st.idx], so = card && card.storeObj, tx = so ? so.x : CX, ty = so ? so.y : CARDS_Y, col = EL[st.el] ? EL[st.el].color : 0xb05ab0;
         this._ecDq(t, () => {
           if (e.dead || !e.sprite) { this.renderStored(); this._ecDuckAbsEat(e, true); return; }
+          if (EFX.s6 && batch) {
+            let landed = false;
+            const onLand = () => {
+              if (landed) return;
+              landed = true;
+              this.renderStored();
+              this._ecDuckAbsEat(e);
+            };
+            if (EnemyFX.windRun(this, EFX, e, 'food', { x: tx, y: ty, onLand, store: true, card, col }) || landed) return;
+          }
           if (e._dAbs && e._dAbs.c.active) this.tweens.add({ targets: e._dAbs.c, scaleX: 1.2, scaleY: 1.2, duration: 140, yoyo: true, ease: 'Sine.out' });   // 🆕發射瞬間球鼓一下
           const ex = e.sprite.x, ey = e.sprite.y; this._ecDuckGaze(e, tx, ty); this._eneCast && this._eneCast(e); this.labSnd && this.labSnd('s_boom', 0.5);
           this.flyBall(ex, ey, tx, ty, EL.wind.color, { x: (ex + tx) / 2, y: Math.min(ey, ty) - 70 }, 420, () => {
+            if (EFX.s6) EnemyFX.windRun(this, EFX, e, 'eat', null, null, true);
             this.renderStored(); this._shatterBurst(tx, ty, col, true); this.labSnd && this.labSnd('s_block', 0.5); this._ecDuckAbsEat(e);   // 🆕屬塊碎散的同一刻:卡片停抖、球把屬塊吸進去後收起(不另做毀塊效果)
           });
         });
@@ -11067,7 +11336,19 @@
         Object.defineProperty(sp, 'scaleX', { configurable: true, enumerable: true, get() { return d.get.call(this) / (this._fatF || 1); }, set(v) { d.set.call(this, v * (this._fatF || 1)); } });
       }
       _ecFatSet(e, f) { const sp = e.sprite; if (!sp || !sp._fatHook) return; const raw = sp.scaleX; sp._fatF = f; sp.scaleX = raw; }   // 換乘數並依目前基準值重寫
-      _ecDuckFat(e, ev, t) {   // 越吃越壯:+層=橫向 +8%/層(彈性放大)+彈跳+圓點點亮+金橘光環;歸零=縮回+洩氣(壓扁/灰煙/圓點熄滅)
+      _ecDuckFat(e, ev, t, batch) {   // 越吃越壯:+層=橫向 +8%/層(彈性放大)+彈跳+圓點點亮+金橘光環;歸零=縮回+洩氣(壓扁/灰煙/圓點熄滅)
+        if (EFX.s6 && batch && ev.fat > ev.from) {
+          const W = EnemyFX.WIND;
+          for (let layer = ev.from + 1; layer <= ev.fat; layer++) {
+            this._ecDq(t + (layer - ev.from - 1) * W.food.bossGap + W.fat.at, () => {
+              if (e.dead || !e.sprite) return;
+              if (EFX.s6 && EnemyFX.windRun(this, EFX, e, 'fat', layer)) return;
+              this._ecDuckFat(e, { from: layer - 1, fat: layer }, 0);
+            });
+          }
+        if (!this._mechDone('wind_fat') && this._mechQ.indexOf('wind_fat') < 0) { this._mechQ.unshift('wind_fat'); this._mechHold = true; this._ecFatPend = true; }   // ⑨ 發生當下版:同餘火,鎖盤面到時間軸結束再跳字卡
+          return 0;
+        }
         if (e && e._fxSt) this._fxStateCut(e);   // 步 4 共用鉤子
         const up = ev.fat > ev.from;
         this._ecDq(t, () => {
@@ -11107,7 +11388,7 @@
         evs.forEach(ev => { if (ev.e != null && ev.e >= 0) ev.e = order[ev.e]; if (ev.t === 'rescue' && ev.by != null) ev.by = order[ev.by]; });
         t._rkBroke = evs.some(ev => ev.t === 'shield_break');   // 這一下剛破盾 → _activeCounter 的剋屬 CD+1 跳過(核心已設重建倒數 2)
         real.forEach(x => { if (x._r) this._ecRockMirror(x); });
-        this._lnHold(lnPre, landMs); this._ecPlay(evs, { delay: landMs || 0 });
+        this._lnHold(lnPre, landMs); this._ecPlay(evs, { delay: landMs || 0, lnPre });
         this._mechCheck((landMs || 0) + 250);
       }
       _ecRockMirror(e) {   // 核心 e._r → 舊盾視覺旗標(核心為真相,這些只供盾罩繪製/門檻顯示讀)
@@ -11149,7 +11430,7 @@
         });
         rk.forEach(v => { const o = info.get(v) || { ratio: 1, bonus: 0, blocked: false, broke: false }; v._ecR = o; v._blocked = o.blocked; v._shieldBreak = o.broke; v._breakBonus = o.bonus; });
         real.forEach(x => { if (x._r) this._ecRockMirror(x); });
-        this._lnHold(lnPre, landMs); this._ecPlay(evs, { delay: landMs || 0 });
+        this._lnHold(lnPre, landMs); this._ecPlay(evs, { delay: landMs || 0, lnPre });
         this._mechCheck((landMs || 0) + 250);
       }
       _ecRubble(x, y, cnt, spread, up) {   // 土色碎石迸射(石頭怪破盾/反震共用):小方塊先上拋再落下淡出
@@ -11160,6 +11441,7 @@
         }
       }
       _ecRockSkPop(e) {   // 🆕2026-11-10 主動技打中石頭怪 combo 盾 → 等扣血數字(dmgPop ~940ms)淡出後浮「+N COMBO」;貓連擊多段合併成一個(每段重設計時,最後一段後才浮);已破盾就不浮(破盾演出自己有字)
+        if (EFX.s3 && EnemyFX.earthRun(this, EFX, e, 'ready')) return;
         e._skPend = (e._skPend | 0) + 1; if (e._skPopT) e._skPopT.remove();
         e._skPopT = this.time.delayedCall(700, () => {
           const k = e._skPend | 0; e._skPend = 0; e._skPopT = null;
@@ -11169,6 +11451,7 @@
       }
       _ecRockBlockFx(e, ev) {   // 被擋:盾面漣漪+差 N(沿用 _shieldNearMiss)+「擋下 N%」+漏傷小字;3★↑(recoil>0)另有反震彈射
         if (e.dead || !e.sprite) return;
+        if (EFX.s3 && EnemyFX.earthRun(this, EFX, e, 'block', ev)) return;
         const x = e.sprite.x, y = e.sprite.y, ADD = Phaser.BlendModes.ADD, pct = Math.round((1 - (EnemyCore.TUNING.ROCK_LEAK[(ev.rule | 0) - 1] || 0)) * 100);
         this._shieldNearMiss(e, ev.kind === 'hit' ? tr('差 {n} HIT', { n: ev.diff }) : tr('{n} COMBO', { n: ev.need }), 62);   // 🩹2026-11-07 fixpass:「差 N」留在怪上方(夾 y≥62);「擋下 N%」改放怪下方 → 一上一下不再疊
         this.floatText(x, Math.max(y + Math.round((e.cardH || 80) * 0.42), 62), tr('擋下 {p}%', { p: pct }), '#cfe0ff');
@@ -11185,20 +11468,26 @@
         this.labSnd && this.labSnd('s_boom', 0.45);
         this.flyBall(x, y, tx, ty, 0xd9a441, { x: (x + tx) / 2, y: Math.min(y, ty) - 80 }, 400, () => { });
       }
-      _ecRockRecoilFx(ev) {   // 反震彈著:血條旁「反震 −N」+血條抖動+走 _playerImpact(血條/鮭魚迴生/gameOver);不經 _calcPlayerDmg(不吃護甲/迴避、黑熊不擋不消耗)
+      _ecRockRecoilFx(ev, source) {   // 反震彈著:血條旁「反震 −N」+血條抖動+走 _playerImpact(血條/鮭魚迴生/gameOver);不經 _calcPlayerDmg(不吃護甲/迴避、黑熊不擋不消耗)
         const raw = Math.max(0, ((ev.dealt != null) ? ev.dealt : ev.raw) | 0); if (raw <= 0) return;
-        const _ht = this._hpTok(); this.time.delayedCall(420, () => {
+        const owner = EFX.s3 && source && (this.enemies[source.e].dead ? this.enemies.find(x => !x.dead && x.sprite) : this.enemies[source.e]);
+        const earth = EFX.s3 && owner && EnemyFX.earthRun(this, EFX, owner, 'bolt', BX0 + (W - 2 * BX0) * Math.max(.05, this.playerHP / this.maxHP), PHP_Y, this.enemies[source.e]);
+        const _ht = this._hpTok(); this.time.delayedCall(earth ? 660 : 420, () => {
           if (!this._hpLive(_ht) || !this.sys || !this.sys.isActive()) return;   // 🩹2026-11-25 舊問題修正二 R4:選單等非終局視窗開著照扣;R2/R3:陣亡後、過關後、終局、換場、死前排定 → 作廢
           const tx = BX0 + (W - 2 * BX0) * Math.max(0.05, this.playerHP / this.maxHP), ty = PHP_Y;
+          if (!(EFX.s3 && earth)) {
           this._ecBarText(tx, PHP_Y + 24, tr('反震 −{n}', { n: raw }), '#ffb347', 24);
           if (this.lead && this.lead.type === 'shield' && (this._shield || this._shieldHandActive)) this._ecBarText(tx, PHP_Y + 50, tr('無法防禦'), '#ffe9a0', 19);   // 黑熊護盾擋不了反震:提示一閃,盾不消耗
           [this.pHpGfx, this.pHpFrame, this.pHpTxt].forEach(o => { if (!o) return; const x0 = o.x; this.tweens.killTweensOf(o); this.tweens.add({ targets: o, x: x0 + 4, duration: 45, yoyo: true, repeat: 3, onComplete: () => o.setX(x0) }); });   // 血條抖動
-          this._playerImpact(raw, false, tx, ty, 0xd9a441, false, false);
+          }
+          const visual = EFX.s3 && earth && EnemyFX.earthRun(this, EFX, owner, 'recoilHit', tx, ty);
+          this._playerImpact(raw, false, tx, ty, 0xd9a441, false, false, visual ? { mute: true } : undefined);
         });
       }
       _ecRockBreakFx(e, ev) {   // 破盾:沿用盾罩碎裂(白閃+六片碎片+震屏)+土色碎石+大字「破盾! +50%」;守護光帶隨盾消失
         if (!e.sprite) return;
         const x = e.sprite.x, y = e.sprite.y;
+        if (EFX.s3 && EnemyFX.earthRun(this, EFX, e, 'break', ev)) return;
         this._breakATField(e, true); if (e.gateTx) e.gateTx.setVisible(false);
         this._ecRubble(x, y, 16, 90, true);
         if (!ev.active) this.floatText(x, Math.max(y - 44, 62), tr('破盾! +{p}%', { p: Math.round(EnemyCore.TUNING.ROCK_BREAK_BONUS * 100) }), '#ffe08a');   // 2026-11-10 大毛:主動技破盾不浮「破盾! 下一擊 +50%」(太亂),只留碎盾演出
@@ -11207,8 +11496,10 @@
         this.updateEnemies(); this._ecGuardSync();
       }
       _ecRockRebuildFx(e, ev) {   // 重建盾:集氣→成形(之後才出現門檻與守護);隨機盾每次重抽,新門檻直接寫在盾上
+        if (EFX.s3 && e._earthFx) EnemyFX.guard(EFX, 's3', () => EnemyFX.earthRestore(this, e), null, () => EnemyFX.earthFail(this));
         this._ecRockMirror(e);
         if (e.dead || !e.sprite || e.labShield) return;
+        if (EFX.s3 && EnemyFX.earthRun(this, EFX, e, 'gather', 'merge')) return;
         const col = ev.kind === 'hit' ? 0xff6a52 : 0x46d18a;
         this._eneCast && this._eneCast(e); this.chargeAt(e.sprite.x, e.sprite.y, col, 320); this.labSnd && this.labSnd('s_clear15', 0.45);
         this.floatText(e.sprite.x, Math.max(e.sprite.y - 44, 62), tr('盾重建!'), '#cfe0ff');
@@ -11216,12 +11507,14 @@
       }
       _ecRockResetFx(e, ev) {   // 雷屬打中重建中的石頭怪:重建倒數重設
         if (e.dead || !e.sprite) return; const x = e.sprite.x, y = e.sprite.y, ADD = Phaser.BlendModes.ADD;
+        if (EFX.s3 && EnemyFX.earthRun(this, EFX, e, 'gather', 'reset')) { this.updateEnemies(); return; }
         this.floatText(x, Math.max(y - 36, 62), tr('重建延後'), '#8fd8ff');
         const ring = this.add.circle(x, y, 22, 0x8fd8ff, 0).setStrokeStyle(4, 0x8fd8ff, 0.9).setBlendMode(ADD).setDepth(DEPTH.fx); this.tweens.add({ targets: ring, scale: 2.6, alpha: 0, duration: 420, ease: 'Quad.out', onComplete: () => ring.destroy() });
         this.animTurnGlass(e); this.updateEnemies();
       }
       _ecRockGuardHitFx(e, ev) {   // 受守護的一下:浮字「守護 ½」+金圈+光帶一閃
         if (e.dead || !e.sprite) return; const x = e.sprite.x, y = e.sprite.y, ADD = Phaser.BlendModes.ADD;
+        if (EFX.s3 && EnemyFX.earthRun(this, EFX, e, 'guardHit')) return;
         this.floatText(x, Math.max(y - 36, 62), tr('守護 ½'), '#ffd24a');
         const ring = this.add.circle(x, y, 24, 0xffd24a, 0).setStrokeStyle(4, 0xffd24a, 0.95).setBlendMode(ADD).setDepth(DEPTH.fx); this.tweens.add({ targets: ring, scale: 2.2, alpha: 0, duration: 380, ease: 'Quad.out', onComplete: () => ring.destroy() });
         if (this._guardMap) this._guardMap.forEach(o => { if (o.n === e && o.band) { this.tweens.killTweensOf(o.band); o.band.setAlpha(1); this.tweens.add({ targets: o.band, alpha: 0.55, duration: 420 }); } });
@@ -11246,6 +11539,7 @@
       }
       _ecGuardSync() {
         if (!this._ec || !this._nm || !this.sys || !this.sys.isActive()) return;
+        if (EFX.s3 && EnemyFX.earthGuardSync(this, EFX)) return;
         if (!this._guardMap) this._guardMap = new Map();
         const E = this.enemies, want = new Map();
         if (!this.dive && E.some(x => x._r && x._r.rule === 4)) this._ecGuardPairs(true).forEach(p => { want.set(E.indexOf(p.g) + '>' + E.indexOf(p.n), p); });
@@ -11309,11 +11603,13 @@
       }
       _healTrack(fn) { if (!this._healObjs) this._healObjs = []; this._healObjs.push(fn); return fn; }
       _ecHealClear() { (this._healObjs || []).forEach(fn => { try { fn(); } catch (err) { } }); this._healObjs = []; }   // 換關/重生:收掉上一批的憤怒氣場/生氣符號
-      _ecBigText(x, y, str, color, fs, stroke, hold) {   // 大字浮現:彈出→停一下(hold ms,預設 820)→上飄淡出;y 夾 ≥62、x 夾在畫面內(水城新機制共用)
-        const t = this.add.text(x, Math.max(y, 62), str, { fontFamily: EMOJIFONT, fontSize: (fs || 30) + 'px', color, fontStyle: 'bold', stroke: stroke || '#2a1c00', strokeThickness: 7 }).setOrigin(0.5).setDepth(DEPTH.fx + 3).setResolution(2).setScale(0.3);
+      _ecBigText(x, y, str, color, fs, stroke, hold, fx) {   // 大字浮現:彈出→停一下(hold ms,預設 820)→上飄淡出;y 夾 ≥62、x 夾在畫面內(水城新機制共用)
+        const t = this.add.text(x, Math.max(y, 62), str, { fontFamily: EMOJIFONT, fontSize: (fs || 30) + 'px', color, fontStyle: 'bold', stroke: stroke || '#2a1c00', strokeThickness: 7 });
+        if (fx) fx.own(t);
+        t.setOrigin(0.5).setDepth(DEPTH.fx + 3).setResolution(2).setScale(0.3);
         const bw = t.width; t.x = Math.max(bw / 2 + 8, Math.min(W - bw / 2 - 8, x));
-        this.tweens.add({ targets: t, scale: 1.1, duration: 190, ease: 'Back.out' });
-        this.tweens.add({ targets: t, y: t.y - 30, alpha: 0, duration: 520, delay: hold != null ? hold : 820, ease: 'Quad.in', onComplete: () => t.destroy() });
+        (fx ? fx.animate : cfg => this.tweens.add(cfg))({ targets: t, scale: 1.1, duration: 190, ease: 'Back.out' });
+        (fx ? fx.animate : cfg => this.tweens.add(cfg))({ targets: t, y: t.y - 30, alpha: 0, duration: 520, delay: hold != null ? hold : 820, ease: 'Quad.in', onComplete: () => t.destroy() });
         return t;
       }
       _ecRescueLive() {   // 場上有「可急救補師」或「本手已被救者」→ 敵人受傷要經核心 damageEnemy/applyClear(才攔得到致死那一下)
@@ -11331,7 +11627,7 @@
         st.enemies = real;
         real.forEach(x => { if (x.dead && !dead0.has(x)) x.dead = false; });   // 核心 _settle 會順手設 dead;遊戲等 killEnemy 才演死亡 → 還原(hp<=0 已足以被當瀕死)
         evs.forEach(ev => { if (ev.e != null && ev.e >= 0) ev.e = order[ev.e]; if (ev.t === 'rescue' && ev.by != null) ev.by = order[ev.by]; });
-        this._lnHold(lnPre, landMs); this._ecPlay(evs, { delay: landMs || 0 });
+        this._lnHold(lnPre, landMs); this._ecPlay(evs, { delay: landMs || 0, lnPre });
       }
       _ecHealFx(m, ev, before) {   // 補全體活著友軍:魔王位=十字收束;集氣 360ms → 愛心+各隻「+N」,血條先留舊值(dispHp)到這刻才爬升
         if (m.dead || !m.sprite) return;
@@ -11398,9 +11694,10 @@
         this._ecBigText(x, y - Math.round((e.cardH || 80) * 0.62), tr('憤怒! +{p}%', { p: pct }), '#ff7a6a', 32, '#3a0000');
         this._mechAdd('water_rage'); this._mechCheck(900);   // ⑳ 發生當下版(與 ⑲ 同時 → 排隊 ⑲→⑳)
       }
-      _ecHealRageOn(e, ev) {   // 2026-11-11 新憤怒(核心 heal_rage):不浮字;補師圖放大縮小彈一下(暴怒彈兩下更大)+ 紅色閃光環 + 常駐生氣符號(暴怒:符號更大、氣場更濃)
+      _ecHealRageOn(e, ev, legacy) {   // 2026-11-11 新憤怒(核心 heal_rage):不浮字;補師圖放大縮小彈一下(暴怒彈兩下更大)+ 紅色閃光環 + 常駐生氣符號(暴怒:符號更大、氣場更濃)
         if (e && e._fxSt) this._fxStateCut(e);   // 步 4 共用鉤子
         if (!e || e.dead || !e.sprite || !this.sys || !this.sys.isActive() || (this.resultOpen && this._resultTerminal)) return;   // 🩹2026-11-25 舊問題修正三 N6:終局後不重建
+        if (EFX.s4 && !legacy && e._h && EnemyFX.waterRun(this, EFX, e, 'rageStart', ev)) return;
         const ADD = Phaser.BlendModes.ADD, st = ev.stage === 2 ? 2 : 1, x = e.sprite.x, y = e.sprite.y, R = Math.max(40, (e.cardW || 70) * 0.7);
         e._ecRage = st; this._ecRageSync(e);
         const fl = this.add.circle(x, y, R, 0xff3a2a, st === 2 ? 0.8 : 0.6).setBlendMode(ADD).setDepth(DEPTH.fx); this.tweens.add({ targets: fl, scale: st === 2 ? 2.8 : 2.2, alpha: 0, duration: 440, ease: 'Quad.out', onComplete: () => fl.destroy() });
@@ -11413,6 +11710,7 @@
         this._mechAdd('water_rage'); this._mechCheck(900);   // ⑳ 第一次進入憤怒(任一段)
       }
       _ecRageSync(e) {   // 常駐憤怒標示:頭上右側 icon_anger(抖動)+ 身後紅色呼吸氣場 + 往上飄的紅色火星;死亡/換關時收掉
+        if (EFX.s4 && e && e._h && EnemyFX.waterRun(this, EFX, e, 'rageSync')) return;
         this._ecRageClear(e); if (!e._ecRage || e.dead || !e.sprite || !e.card || (this.resultOpen && this._resultTerminal)) return;   // 🩹2026-11-25 舊問題修正三 N6:終局後不重建
         const ADD = Phaser.BlendModes.ADD, sx = e.card.x, sy = (e.restY != null ? e.restY : e.sprite.y), cw = e.cardW || 80, ch = e.cardH || 80, R = Math.max(40, cw * 0.68), st3 = e._ecRage === 3, st2 = st3 || e._ecRage === 2;   // st2=暴怒(新規則第二段):符號放大、氣場更濃
         const aura = this.add.circle(sx, sy, R * (st3 ? 1.46 : st2 ? 1.28 : 1.12), 0xff2a1a, st3 ? 0.62 : st2 ? 0.5 : 0.34).setBlendMode(ADD).setDepth(DEPTH.enemy - 0.5);
@@ -11426,11 +11724,18 @@
         e._ecRageObjs = clean; this._healTrack(clean);
       }
       _ecRageClear(e) { if (e && e._ecRageObjs) { const f = e._ecRageObjs; e._ecRageObjs = null; f(); } }
-      _ecRageSwing(e, ev) {   // 憤怒中每次攻擊:身體泛紅一閃 + 「憤怒 ×1.5」浮字(彈道本身由 enemyAttack 的 col 改紅)
+      _ecRageSwing(e, ev, fx) {   // 憤怒中每次攻擊:身體泛紅一閃 + 「憤怒 ×1.5」浮字(彈道本身由 enemyAttack 的 col 改紅)
         if (!e || e.dead || !e.sprite) return;
         const ADD = Phaser.BlendModes.ADD, x = e.sprite.x, y = e.sprite.y, R = Math.max(34, (e.cardW || 70) * 0.55);
-        const fl = this.add.circle(x, y, R, 0xff3a2a, 0.55).setBlendMode(ADD).setDepth(DEPTH.fx); this.tweens.add({ targets: fl, scale: 1.9, alpha: 0, duration: 380, ease: 'Quad.out', onComplete: () => fl.destroy() });
-        e.sprite.setTint(0xff7a6a); this.time.delayedCall(260, () => { if (e.sprite && !e.dead) { if (e.sealed > 0) e.sprite.setTint(0xaad8ff); else e.sprite.clearTint(); } });
+        const fl = this.add.circle(x, y, R, 0xff3a2a, 0.55);
+        if (fx) fx.own(fl);
+        fl.setBlendMode(ADD).setDepth(DEPTH.fx);
+        const tween = { targets: fl, scale: 1.9, alpha: 0, duration: 380, ease: 'Quad.out', onComplete: () => fl.destroy() };
+        if (fx) fx.tween(tween); else this.tweens.add(tween);
+        e.sprite.setTint(0xff7a6a);
+        const restore = () => { if (e.sprite && !e.dead) { if (e.sealed > 0) e.sprite.setTint(0xaad8ff); else e.sprite.clearTint(); } };
+        if (fx) fx.later(260, () => { if (!e.sprite || e.sprite.tintTopLeft === 0xff7a6a) restore(); });
+        else this.time.delayedCall(260, restore);
         if (ev && ev.stage != null) return;   // 新憤怒(2026-11-11):不浮字,只留紅光閃;舊「急救/復活後憤怒」(ev 無 stage)才顯示浮字
         this._ecBigText(x, y - Math.round((e.cardH || 80) * 0.6), tr('憤怒 ×{m}', { m: +EnemyCore.TUNING.RAGE_MULT.toFixed(2) }), '#ff7a6a', 26, '#3a0000');
       }
@@ -11439,6 +11744,7 @@
         cross.add([disc, tx]); return tx;
       }
       _ecCastStart(e, ev) {   // 魔王位補師起手詠唱:怪前十字架(綠=補血/藍=復活)+ 數字 = 還要被打幾下才中止
+        if (EFX.s4 && e._h && EnemyFX.waterRun(this, EFX, e, 'castStart', ev)) return;
         if (e.dead || !e.sprite) return;
         const rev = ev.type === 'revive', n = EnemyCore.TUNING.CAST_HITS | 0;
         if (e._ecCast) { e._ecCast._breaking = true; try { if (e._ecCast.cross) e._ecCast.cross.destroy(); } catch (err) { } e._ecCast = null; }   // 殘留保險
@@ -11446,6 +11752,7 @@
         this._mechCheck(500);   // ㉑ 任何魔王詠唱起手 → 下個安全點(輪到玩家前)
       }
       _ecCastHit(e, ev) {   // 詠唱中被打中一下:數字減 1 + 十字白閃/抖動
+        if (EFX.s4 && e._h && EnemyFX.waterRun(this, EFX, e, 'castHit', ev)) return;
         const c = e._ecCast; if (!c || !c.tx || !c.cross || !c.cross.active) return;
         c.tx.setText(String(Math.max(0, ev.left | 0)));
         this.tweens.add({ targets: c.tx, scaleX: 1.7, scaleY: 1.7, duration: 110, yoyo: true, ease: 'Quad.out' });
@@ -11454,6 +11761,7 @@
         this.labSnd && this.labSnd('s_block', 0.5);
       }
       _ecCastBreak(e, label) {   // 詠唱中止(數字歸 0 / 魔王被打死):先讓玩家看到 0,再沿用舊「彈著命中→十字碎裂」演出 + 「詠唱中止!」
+        if (EFX.s4 && e._h && !e.dead && EnemyFX.waterRun(this, EFX, e, 'castInterrupt')) return;
         const c = e._ecCast; if (!c || c._breaking) return; e._ecCast = null;
         if (c.tx) c.tx.setText('0');
         this.time.delayedCall(170, () => {
@@ -11463,6 +11771,12 @@
         });
       }
       _ecReviveFx(e, ev, deadBefore) {   // 詠唱復活完成:十字收束 → 各小兵位水波+氣泡上浮 → 小兵回來(模型已先復活:顯示物件立刻還原、入場動畫錯開);稀有怪核心不復活故不在 list
+        if (EFX.s4 && e._h) {
+          EnemyFX.waterRun(this, EFX, e, 'castRevive');
+          const revived = (deadBefore || []).filter(m => !m.dead && m.sprite);
+          if (!e._ecCast && EnemyFX.waterRun(this, EFX, e, 'revive', revived, false, 0, null)) return;
+          this._lnDropSync(e);
+        }
         const c = e._ecCast; e._ecCast = null; const ADD = Phaser.BlendModes.ADD;
         const list = (deadBefore || []).filter(m => !m.dead && m.sprite);
         if (c) { if (c.pulse) c.pulse.stop(); if (c.gather) c.gather.remove(); if (c.cross) this.tweens.add({ targets: c.cross, scaleX: 1.5, scaleY: 1.5, alpha: 0, duration: 320, ease: 'Quad.out', onComplete: () => c.cross.destroy() }); }
@@ -11500,7 +11814,7 @@
         try { this._ecSync(); evs = EnemyCore.lonelyScan(this._ec, opts); } catch (err) { console.error('lnScan', err); }
         if (!evs.length) return evs;
         if (opts && opts.open) return evs;   // 開場:立繪還沒建好 → 由 _lnAfterSpawn 補演
-        this._lnHold(pre, landMs); this._ecPlay(evs, { delay: landMs || 0 });
+        this._lnHold(pre, landMs); this._ecPlay(evs, { delay: landMs || 0, lnPre: pre });
         return evs;
       }
       _lnAfterSpawn() {   // 進場演出完:魔王的復活水珠;LONELY_SOLO=1 開場就孤身的補師補演水球/氣場(+字卡)
@@ -11509,7 +11823,7 @@
         const go = () => {
           if (gen !== this._lnGen) return;
           if (this.dive) { this._lnAt(250, go); return; }
-          this.enemies.forEach(e => { if (!e._h || e.dead) return; this._lnDropSync(e); if (e._h.lonely) { this._lnOn(e, {}); const ev = open.find(x => x.t === 'heal_rage' && this.enemies[x.e] === e); if (ev && ev.fury) this._mechFuryNow(); } });
+          this.enemies.forEach(e => { if (!e._h || e.dead) return; this._lnDropSync(e); if (e._h.lonely) { this._lnOn(e, {}, true); const ev = open.find(x => x.t === 'heal_rage' && this.enemies[x.e] === e); if (ev && ev.fury) this._mechFuryNow(); } });
         };
         this._lnAt(this.dive ? 250 : 1000, go);
       }
@@ -11528,10 +11842,12 @@
         const rg = this.add.circle(x, y, r, EL.water.color, 0).setStrokeStyle(4, 0x8fd0ff, 0.85).setBlendMode(Phaser.BlendModes.ADD).setDepth(DEPTH.fx).setScale(from);
         this.tweens.add({ targets: rg, scale: to, alpha: 0, duration: ms || 520, ease: 'Quad.out', onComplete: () => rg.destroy() });
       }
-      _lnOn(e, ev) {   // 進入孤身
+      _lnOn(e, ev, open) {   // 進入孤身
         if (this._lnDead(e) || !e._h || !e._h.lonely) return;
+        if (EFX.s4 && open && EnemyFX.waterRun(this, EFX, e, 'lonelyOn', { ...ev, open }, EnemyCore.TUNING.LONELY_CD)) return;
         e._lnShown = true;
         const c = e._ecCast; if (c) { e._ecCast = null; c._breaking = true; if (c.pulse) c.pulse.stop(); if (c.gather) c.gather.remove(); if (c.cross) this.tweens.add({ targets: c.cross, alpha: 0, duration: 420, onComplete: () => c.cross.destroy() }); }   // 詠唱補血被取消:綠十字安靜淡掉
+        if (EFX.s4 && e._h) EnemyFX.waterRun(this, EFX, e, 'castQuiet');
         e._ecRage = this._lnRageLv(e); this._ecRageSync(e);
         this._lnPop(e); this._lnRing(e.card.x, (e.restY != null ? e.restY : e.sprite.y), Math.max(40, (e.cardW || 70) * 0.5), 0.6, 1.8);
         this.labSnd && this.labSnd('s_boom', 0.45);
@@ -11539,6 +11855,7 @@
       }
       _lnOff(e, ev) {   // 解除孤身(小兵回來):水球消散、氣場收掉,補過血的回到第一段憤怒標示
         if (!e) return; if (e._h && e._h.lonely) return;   // 又孤身了(理論上演出期間鎖輸入不會發生)→ 不收
+        if (EFX.s4 && EnemyFX.waterRun(this, EFX, e, 'lonelyOff')) return;
         e._lnShown = false; this._lnBallClear(e, true);
         const st = (e._h && (e._h.rageStage | 0)) === 1 ? 1 : 0; e._ecRage = st || false;
         if (this._lnDead(e)) { this._ecRageClear(e); return; }
@@ -11548,6 +11865,7 @@
       _lnBallPos(e, R) { return { x: e.card.x, y: Math.max(44 + R, this._turnY(e) - 24 - R) }; }   // 頭頂正上方(沙漏/目標箭頭之上,不擋臉)
       _lnBallSync(e) {   // 水球:級數=LONELY_CD(不寫死),倒數每走一格大一級;被延遲到比 LONELY_CD 還多=維持最小級
         const d = e && e._h; if (!e) return;
+        if (EFX.s4 && d && EnemyFX.waterRun(this, EFX, e, 'ballSync', e._tmHold == null ? e.timer : e._tmHold, EnemyCore.TUNING.LONELY_CD)) return;
         if (!d || !d.lonely || this._lnDead(e)) { this._lnBallClear(e); return; }
         if (!e._lnShown || this.dive || (this.resultOpen && this._resultTerminal)) return;   // 🩹2026-11-25 舊問題修正三 N6:孤身水球終局後不重建
         const N = Math.max(1, EnemyCore.TUNING.LONELY_CD | 0), lv = Math.max(1, Math.min(N, N - (e.timer | 0) + 1)), f = N > 1 ? (lv - 1) / (N - 1) : 1, cw = Math.min(150, e.cardW || 80), R = Math.max(10, cw * (0.13 + 0.11 * f));
@@ -11573,6 +11891,7 @@
       }
       _lnAttack(e, ev) {   // 孤身大攻擊:頭上的水球脹一下 → 沿弧線砸向我方血條 → 水花
         if (!e || e.dead) return;
+        if (EFX.s4) { const plan = this._ecWaterAttack(e, ev); if (plan) return plan; }
         this._ecImpactAt = Math.max(this._ecImpactAt || 0, (this.time.now || 0) + LN_T.ATK + 120);
         const b = e._lnBall; let orbObj = null, fromOrb = null;
         if (b && b.cont && b.cont.scene) { e._lnBall = null; this._lnBallStop(b); orbObj = b.cont; fromOrb = { x: orbObj.x, y: orbObj.y }; this.tweens.add({ targets: orbObj, scaleX: orbObj.scaleX * 1.35, scaleY: orbObj.scaleY * 1.35, duration: 320, ease: 'Sine.inOut' }); }
@@ -11602,18 +11921,20 @@
           // 鉤子:字卡「魔王當場復活」(文案與要不要新增待大毛定)→ 定案後在這裡 this._mechAdd('water_revive'); this._mechCheck(LN_T.SPLASH + LN_T.RISE + LN_T.HP);
         });
       }
-      _lnRise(m) {   // 一隻小兵站起來(可重複呼叫;_revPend 已清=略過)
+      _lnRise(m, column) {   // 一隻小兵站起來(可重複呼叫;_revPend 已清=略過)
         if (!m || !m._revPend) return; m._revPend = false; if (m.dead || m.hp <= 0 || !m.sprite || !m.sprite.active || !this.sys || !this.sys.isActive()) { m.dispHp = null; return; }
         try {
           this._f6Reset(m);   // 通用復活入口:強制收掉死亡狀態(舊演出沒有死亡狀態也可呼叫)
-          const sp = m.sprite; this.tweens.killTweensOf(sp); sp.setVisible(true); if (!(m.sealed > 0) && sp.clearTint) sp.clearTint();
-          [m.turnG, m.hpGfx, m.shadow, m.weakBadge].forEach(o => { if (o && o.scene) { this.tweens.killTweensOf(o); o.setVisible(true).setAlpha(1); } }); if (m.card) m.card.setInteractive();
+          const sp = m.sprite; if (!column) this.tweens.killTweensOf(sp); sp.setVisible(true); if (!(m.sealed > 0) && sp.clearTint) sp.clearTint();
+          [m.turnG, m.hpGfx, m.shadow, m.weakBadge].forEach(o => { if (o && o.scene) { if (!column) this.tweens.killTweensOf(o); o.setVisible(true); if (!column) o.setAlpha(1); } }); if (m.card) m.card.setInteractive();
           if (m.hpTw) { m.hpTw.stop(); m.hpTw = null; } if (m.hpLagTw) { m.hpLagTw.stop(); m.hpLagTw = null; } m.hpRatio = 0; m.hpLag = 0; m.dispHp = 0;
           if (m._r && m._r.up) { this._ecRockMirror(m); if (!m.labShield) m._shieldPending = true; }   // 串場石頭怪:盾還在 → 落地時把盾罩畫回來(死亡時盾罩已銷毀)
           this.enemyEnter(m, 0); this.drawHpBar(m);
           this.labSnd && this.labSnd('s_heal', 0.45);
+          if (!column) {
           const mx = m.card ? m.card.x : sp.x, my = (m.restY != null ? m.restY : sp.y), rp = this.add.circle(mx, my + 16, 14, EL.water.color, 0).setStrokeStyle(2.5, 0x8fd0ff, 0.8).setBlendMode(Phaser.BlendModes.ADD).setDepth(DEPTH.board + 1).setScale(1, 0.45); this.tweens.add({ targets: rp, scaleX: 3, alpha: 0, duration: 560, ease: 'Quad.out', onComplete: () => rp.destroy() });
           for (let k = 0; k < 14; k++) this._lnAt(k * 26, () => { const px = mx - 24 + Math.random() * 48, q = this.add.circle(px, my + 16, 2 + Math.random() * 4, 0x8fd0ff, 0.9).setDepth(DEPTH.fx); this.tweens.add({ targets: q, y: my - 40 - Math.random() * 36, alpha: 0, scale: 0.3, duration: 620 + Math.random() * 300, ease: 'Quad.out', onComplete: () => q.destroy() }); });   // 氣泡湧起
+          }
         } catch (err) { console.error('lnRise', err); try { this._f6Reset(m); m.sprite.setVisible(true).setAlpha(1).setScale(m.baseScale || 1); } catch (er) { } }
         this._lnAt(LN_T.RISE, () => {   // 站定 → 血條 0 長到現在的血量(= REVIVE_HP)+ 各怪自己的機制標示補回來
           m.dispHp = null; if (m.dead || !m.sprite || !m.sprite.active || !this.sys || !this.sys.isActive()) return;
@@ -11623,6 +11944,7 @@
         });
       }
       _lnDropSync(e) {   // 剩餘復活次數水珠(魔王身旁,一顆一次;沒有小兵可復活的單魔王不畫)
+        if (EFX.s4 && e && e._h && EnemyFX.waterRun(this, EFX, e, 'dropSync', (this.teamCards || []).map(c => c.abtn ? c.abtn.x : c.rect.x), this._efxGeo().CARDS_Y)) return;
         const d = e && e._h; if (!d) return; let n = (EnemyCore.TUNING.HEAL_LONELY > 0 && d.boss && !this._lnDead(e) && this.enemies.some(x => x !== e && !x.boss && !x._m && !x._y && !x._j)) ? Math.max(0, d.charges | 0) : 0;
         const L = e._lnDrops || (e._lnDrops = []);
         while (L.length > n) { const o = L.pop(); o.tw.stop(); if (o.c.scene) this.tweens.add({ targets: o.c, alpha: 0, scaleX: 2, scaleY: 2, duration: 380, ease: 'Quad.out', onComplete: () => o.c.destroy() }); }
@@ -11682,7 +12004,7 @@
         draw(9, 0xffe14a, 0.32); draw(3.5, 0xfff6c0, 0.95);
         this.tweens.add({ targets: g, alpha: 0, duration: 340, delay: 90, onComplete: () => g.destroy() });
       }
-      _ecShock(e, ev) {   // 電擊(每放一塊、清除結算之後):不經 _calcPlayerDmg(不吃護甲/迴避、黑熊不擋),走 _playerImpact(血條/鮭魚迴生/gameOver);演出=鐵塊 → 剛放的塊 → 血條 各一道電弧
+      _ecShock(e, ev, batch) {   // 電擊(每放一塊、清除結算之後):不經 _calcPlayerDmg(不吃護甲/迴避、黑熊不擋),走 _playerImpact(血條/鮭魚迴生/gameOver);演出=鐵塊 → 剛放的塊 → 血條 各一道電弧
         const raw = Math.max(1, ev.raw | 0), d = e._i;
         const src = ((d && d.cells) || []).filter(x => this.board[x.r] && this.board[x.r][x.c] === x.obj).map(x => this.cellCenter(x.r, x.c));
         const lp = (this._lastPlaceCells && this._lastPlaceCells.length) ? this._lastPlaceCells : null; let dst = { x: CX, y: BOARD_CY };
@@ -11691,15 +12013,43 @@
         const _ht = this._hpTok(); this.time.delayedCall(wait, () => {
           if (!this._hpLive(_ht) || !this.sys || !this.sys.isActive()) return;   // 🩹2026-11-25 舊問題修正二 R4:同反震
           const tx = BX0 + (W - 2 * BX0) * Math.max(0.05, this.playerHP / this.maxHP), ty = PHP_Y;
-          src.forEach(p => this._ecArc(p.x, p.y, dst.x, dst.y));
-          this.labSnd && this.labSnd('s_boom', 0.35);
+          if (batch && EFX.s5) {
+            if (batch.play === undefined) batch.play = EnemyFX.guard(EFX, 's5',
+              () => EnemyFX.thunderShock(this, EFX, batch.events, { x: tx, y: ty }), false, () => EnemyFX.thunderFail(this));
+            if (batch.play) {
+              this.time.delayedCall(batch.play.ms, () => {
+                if (!this._hpLive(_ht) || !this.sys || !this.sys.isActive()) return;
+                const first = !batch.hit;
+                batch.hit = true;
+                const handled = EFX.s5 && EnemyFX.guard(EFX, 's5',
+                  () => EnemyFX.thunderShockText(this, batch.play.X, tx, ty, raw, first), false, () => EnemyFX.thunderFail(this));
+                if (!handled) {
+                  try {
+                    src.forEach(p => this._ecArc(p.x, p.y, dst.x, dst.y));
+                    this._ecArc(dst.x, dst.y, tx, ty);
+                    this._ecBarText(tx, PHP_Y + 24, tr('電擊 −{n}', { n: raw }), '#ffe14a', 24);
+                  } catch (err) { }
+                }
+                this._playerImpact(raw, false, tx, ty, 0xffe14a, false, false,
+                  { kind: 'thunderShock', shockOwner: batch.play.X, mute: handled && !first });
+              });
+              return;
+            }
+          }
+          try {
+            src.forEach(p => this._ecArc(p.x, p.y, dst.x, dst.y));
+            this.labSnd && this.labSnd('s_boom', 0.35);
+          } catch (err) { if (!batch) throw err; }
           this.time.delayedCall(170, () => {
             if (!this._hpLive(_ht) || !this.sys || !this.sys.isActive()) return;
+            try {
             this._ecArc(dst.x, dst.y, tx, ty);
             this._ecBarText(tx, PHP_Y + 24, tr('電擊 −{n}', { n: raw }), '#ffe14a', 24);   // 血條下方、深色描邊(不疊在立繪上)
             if (this.lead && this.lead.type === 'shield' && (this._shield || this._shieldHandActive)) this._ecBarText(tx, PHP_Y + 50, tr('無法防禦'), '#ffe9a0', 19);   // 黑熊護盾擋不了電擊:提示一閃,盾不消耗
             [this.pHpGfx, this.pHpFrame, this.pHpTxt].forEach(o => { if (!o) return; const x0 = o.x; this.tweens.killTweensOf(o); this.tweens.add({ targets: o, x: x0 + 4, duration: 45, yoyo: true, repeat: 3, onComplete: () => o.setX(x0) }); });   // 血條抖動
-            this._playerImpact(raw, false, tx, ty, 0xffe14a, false, false);
+            } catch (err) { if (!batch) throw err; }
+            if (batch) this._playerImpact(raw, false, tx, ty, 0xffe14a, false, false, { kind: 'thunderShock' });
+            else this._playerImpact(raw, false, tx, ty, 0xffe14a, false, false);
           });
         });
         if (!this._mechDone('thunder_shock')) {   // 保險:⑫ 本應在「第一次放鐵塊後、玩家放第一塊之前」跳;若玩家搶在字卡前放了塊(第一次被電當下)→ 這裡補跳(發生當下版,同餘火:鎖盤面)
@@ -11749,7 +12099,25 @@
         const nowT = this.time.now, stack = (e._coolTxAt && nowT - e._coolTxAt < 900) ? 34 : 0; e._coolTxAt = nowT;   // 🩹驗收:同一手兩次降溫(清除+猴偷襲)第二個浮字上移一行,不疊在同一點
         // 🆕v1.5.0(2026-11-09 製作人):降溫/拆除不浮字(青白閃/冷卻環/蒸氣/骷髏換圖保留;酋長拆除有立繪換回)
       }
+      _ecWaterBadge(e) {
+        if (!EFX.s4 || !e || !e._h) return false;
+        return EnemyFX.guard(EFX, 's4', () => EnemyFX.waterRun(this, EFX, e, 'badge',
+          !this.dive && this._ecSk(e)), false, () => EnemyFX.waterFail(this));
+      }
+      _ecWindBadge(e, active) {
+        if (EFX.s6 && e._ecWindRollUntil > (this.time.now || 0)) return true;
+        return EFX.s6 && this._ec && EnemyFX.windRun(this, EFX, e, 'badge',
+          () => active && EnemyCore.countdownLethal(this._ec, e, this.playerHP));
+      }
+      _ecRockBadge(e, active) {
+        return EFX.s3 && EnemyFX.earthRun(this, EFX, e, 'badge',
+          () => active && EnemyCore.countdownLethal(this._ec, e, this.playerHP));
+      }
       _ecGlass(e, bounce) {   // 沙漏:骷髏(終結猛擊)換骷髏圖示,否則沙漏;bounce=翻轉/跳動演出
+        if (EFX.s4 && e && e._h && this._ecWaterBadge(e)) return;
+        if (EFX.s6 && e && e._d && this._ecWindBadge(e, !this.resultOpen && !this.dive)) return;
+        if (EFX.s5 && e && e._i && EnemyFX.guard(EFX, 's5', () => EnemyFX.thunderBadge(this, e, EFX), false, () => EnemyFX.thunderFail(this))) return;
+        if (EFX.s3 && e && e._r && this._ecRockBadge(e, !this.resultOpen && !this.dive)) return;
         const g = e && e._g;
         if (!g) { if (e && (e._h || e._i)) { this._ecHealGlass(e, bounce); return; } if (bounce && e && e._r && !e.dead && e.glass && e.turnG) this.animTurnGlass(e); return; }   // 🆕土城石頭怪(_r)沒有骷髏圖示,只要沙漏翻轉演出(剋屬 CD+1 等)
         if (!e.glass || !e.turnG) return;
@@ -11765,10 +12133,13 @@
         let set = [];
         if (!this.resultOpen && !this.dive) { try { this._ecSync(); set = (EnemyCore.punishLethal(this._ec, this.playerHP) || []).map(i => this.enemies[i]); } catch (err) { console.error('ironSk', err); } }
         this.enemies.forEach(e => { if (!e || !e._i) return; const want = !e.dead && set.indexOf(e) >= 0; if (want !== !!e._ironSk) { e._ironSk = want; if (!e.dead) this._ecGlass(e, want); } });
-        if (!SK2 || this._resultTerminal) return;
+        if (!(SK2 || EFX.s3 || EFX.s6) || this._resultTerminal) return;
         const active = !this.resultOpen && !this.dive;
         this.enemies.forEach(e => {
           if (!e || !(e._r || e._d)) return;
+          if (EFX.s6 && e._d && this._ecWindBadge(e, active)) return;
+          if (EFX.s3 && e._r && this._ecRockBadge(e, active)) return;
+          if (!SK2) return;
           let want = false;
           if (active && !e.dead && e.hp > 0) {
             try { want = EnemyCore.countdownLethal(this._ec, e, this.playerHP); }
@@ -11803,8 +12174,8 @@
       _ecAfterSpawn() {   // 新一關敵人建好後:沙漏圖示;酋長的集氣球要等進場演出完才現身(_ecOrbSync 擋 this.dive)
         if (!this._nm || !this._ec) return;
         if (this._ironSkLoop) { this._ironSkLoop.remove(false); this._ironSkLoop = null; }   // 2026-11-19 鐵機人懲罰致死預警:本關有會懲罰的鐵機人(2★↑)才輪詢(每 300ms)
-        if (this.enemies.some(e => (e._i && e._i.rule >= 2) || (SK2 && (e._r || e._d)))) this._ironSkLoop = this.time.addEvent({ delay: 300, loop: true, callback: () => this._ecIronSkTick() });
-        this.enemies.forEach(e => { if (e._g) this._ecGlass(e, false); if (e._g && e._g.rule === 4) this._ecChiefArt(e, !!e._g.skull); });   // 🆕2026-11-09 開場首次 rollCD 的事件不經 _ecPlay(initMech 回傳被丟),酋長燃起版在這裡依核心狀態補換(驗收員抓到:第一輪蓄力顯示平氣版)
+        if (this.enemies.some(e => (e._i && e._i.rule >= 2) || (SK2 && (e._r || e._d)) || (EFX.s3 && e._r) || (EFX.s6 && e._d))) this._ironSkLoop = this.time.addEvent({ delay: 300, loop: true, callback: () => this._ecIronSkTick() });
+        this.enemies.forEach(e => { if (e._g || (EFX.s3 && e._r) || (EFX.s5 && e._i) || (EFX.s6 && e._d) || (EFX.s4 && e._h)) this._ecGlass(e, false); if (e._g && e._g.rule === 4) this._ecChiefArt(e, !!e._g.skull); });   // 🆕2026-11-09 開場首次 rollCD 的事件不經 _ecPlay(initMech 回傳被丟),酋長燃起版在這裡依核心狀態補換(驗收員抓到:第一輪蓄力顯示平氣版)
         this._lnAfterSpawn();   // 2026-11-23 水城:復活水珠、開場孤身的水球
         if (this.enemies.some(e => e._d)) this._ecDuckReveal();   // 🆕風城賊鴨:進場演出結束後才畫標記/待標/圓點
         if (!this.enemies.some(e => e._g)) return;   // 任何哥布林都有球(1★~4★)
@@ -11831,10 +12202,10 @@
         try { if (A.wisp) A.wisp.remove(); if (A.pulse) A.pulse.stop(); if (A.upd) this.events.off('postupdate', A.upd); if (A.cont && A.cont.scene) A.cont.destroy(); } catch (er) { }
         const objs = (A.objs || []).filter(o => o && o.scene); if (objs.length) this.tweens.add({ targets: objs, alpha: 0, duration: 200, onComplete: () => objs.forEach(o => { try { o.destroy(); } catch (er) { } }) });
       }
-      _ecSkullAura(e, g, hit) {   // 🆕2026-11-08 骷髏頭光圈=熱度:酋長 left 3/2/1=大/中/小(骷髏隨階變灰);2★/3★ 骷髏固定滿階;非骷髏(沙漏/拆除/中止)熄滅。hit=降溫打中:噴白煙火星+浮字
+      _ecSkullAura(e, g, hit, forceOff) {   // 🆕2026-11-08 骷髏頭光圈=熱度:酋長 left 3/2/1=大/中/小(骷髏隨階變灰);2★/3★ 骷髏固定滿階;非骷髏(沙漏/拆除/中止)熄滅。hit=降溫打中:噴白煙火星+浮字
         if (EFX.s2 && e && e._g && EnemyFX.fireReady(this)) return;   // 🆕敵技演出步 2:火城骷髏光暈與身後火焰不顯示(規格 3.12 B3;致死改由倒數圖示骷髏＋骷髏火球表示);火球圖沒載到 → 新球不接手,舊光暈照舊(審查 B4)
         g = g || (e && e._g); if (!e || !g || !e.turnG || !e.glass || e.dead || (this.resultOpen && this._resultTerminal)) return;   // 🩹2026-11-25 舊問題修正二 R6:終局後不再長出光圈
-        const chief = g.rule === 4, lvl = this._ecLethal(e) ? ((chief && g.skull && !g.defused) ? Math.max(0, Math.min(3, g.left | 0)) : 3) : 0, A = e._skAura;   // 🆕2026-11-09 打不死 → lvl 0 → 三層光暈熄滅
+        const chief = g.rule === 4, lvl = !forceOff && this._ecLethal(e) ? ((chief && g.skull && !g.defused) ? Math.max(0, Math.min(3, g.left | 0)) : 3) : 0, A = e._skAura;   // 🆕2026-11-09 打不死 → lvl 0 → 三層光暈熄滅
         const ADD = Phaser.BlendModes.ADD, tg = e.turnG;
         if (e._skTint && e.glass.clearTint) { e.glass.clearTint(); e._skTint = false; }   // 灰階取消(橘底看不出,改三階換圖)
         if (hit && lvl > 0 && tg.scene) {   // 降溫演出:白煙(普通混色上飄)+橘火星(ADD 外噴)+浮字
@@ -12030,12 +12401,48 @@
         for (let k = 0; k < 32; k++) { const ang = Math.random() * Math.PI * 2, r0 = RR * (1 + Math.random() * 1.4), sq = this.add.rectangle(x, y, 7 + Math.random() * 9, 7 + Math.random() * 9, k % 2 ? col : 0xffffff, 1).setBlendMode(ADD).setDepth(DEPTH.fx); this.tweens.add({ targets: sq, x: x + Math.cos(ang) * r0, y: y + Math.sin(ang) * r0, alpha: 0, scale: 0.28, duration: 1000 + Math.random() * 600, ease: 'Quad.out', onComplete: () => sq.destroy() }); }   // 32 片碎片飛更遠、慢飄
         this.floatText(x, y - 8, tr('⚡ 打斷!'), '#fff0c0');
       }
+      _ecWaterLonelySchedule(e, ev, pre) {
+        const previous = pre && pre.find(pair => pair[0] === e);
+        return EnemyFX.waterRun(this, EFX, e, 'lonelySchedule', ev, EnemyCore.TUNING.LONELY_CD, previous && previous[1]);
+      }
+      _ecWaterLonelyRevive(e, ev, dl, getPlan, setCount) {
+        const list = (ev.list || []).map(i => this.enemies[i]).filter(m => m && m.sprite && !m.dead);
+        list.forEach(m => { m._revPend = true; m.dispHp = 0; });
+        const run = () => {
+          if (!this.enemies.includes(e) || (this.resultOpen && this._resultTerminal)) { list.forEach(m => { m._revPend = false; m.dispHp = null; }); return; }
+          const plan = getPlan();
+          if (EFX.s4 && plan && EnemyFX.waterRun(this, EFX, e, 'revive', list, true, 0, plan)) setCount(list.length);
+          else {
+            const pending = (ev.list || []).filter(i => this.enemies[i] && this.enemies[i]._revPend);
+            this._lnRevive(e, { ...ev, list: pending }, 0);
+          }
+        };
+        if (dl > 0) this._lnAt(dl, run); else run();
+      }
+      _ecWaterAttack(e, ev) {
+        const plan = EnemyFX.waterLaunch(this, EFX, e, ev);
+        if (!plan) return false;
+        this._ecImpactAt = Math.max(this._ecImpactAt || 0, (this.time.now || 0) + plan.total);
+        this.enemyAttack(e, { dmg: ev.raw, col: ev.lonely ? EL.water.color : ev.rage ? 0xff3a2a : null, big: ev.lonely || ev.mult > 1 || !!ev.fury, efx: plan });
+        if (ev.rage && (!EFX.s4 || !e._h)) this._ecRageSwing(e, ev);
+        return plan;
+      }
       enemyAttack(e, opts) {
         if (this._atkVoid()) { this._efxVoidJ({ efx: (opts && opts.efx) || null, orb: (opts && opts.orbObj) || null }); return { dmg: 0, dodged: false, blocked: false }; }   // 🩹2026-11-25 舊問題修正四 P9:會被作廢的敵攻(已陣亡/過關成立/死前排定)一開始就返回(🩹2026-11-25 舊問題修正五 N3:移到 _fxStateCut 之前＝第一行):不判盾/迴避/減傷、不 resetWave、不演(彈體收掉)
         if (e && e._fxSt) this._fxStateCut(e);   // 步 4 共用鉤子
         opts = opts || {};
         const _efxT = EFX.s2 && EnemyFX.guard(EFX, 's2', () => EnemyFX.fireTurn(this), false, () => EnemyFX.dropAll(this)); if (_efxT && !opts.efx) opts = Object.assign({}, opts, { delay: EnemyFX.guard(EFX, 's2', () => EnemyFX.oldSlot(this, opts.delay), opts.delay, () => EnemyFX.dropAll(this)) });   // 🆕敵技演出步 2(補修 A1):火城新演出在跑時,這一擊記進命中帳(下面 _efxJ);舊普攻也排進同一條出手時間軸(前面的新出手演完才出手)→ 命中順序＝呼叫順序,與 f 版同時落下的順序相同。關閉時 _efxT=false,opts 不動
-        if (EFX.s1 && !EFX.s2 && !opts.efx) { let _efxL = null; try { _efxL = EnemyFX.lateSlot(this, opts.delay); } catch (er) { } if (_efxL != null) opts = Object.assign({}, opts, { delay: _efxL }); }   // 🩹2026-11-27 火城 A2:s2 剛在這一批出錯關掉、已排好的新出手時間軸還沒走完 → 後面的出手(舊普攻、退回舊演出的火城怪)照樣排到它後面,扣血順序＝呼叫順序;時間軸走完(下一次敵方行動)起就跟關閉時一樣。沒開 ?efx 時 EFX.s1=false,整行不做事
+        const earthSlot = EFX.s3 && !_efxT && !opts.efx && EnemyFX.guard(EFX, 's3', () => EnemyFX.earthTurn(this), false, () => EnemyFX.earthFail(this));
+        if (earthSlot) opts = Object.assign({}, opts, { delay: EnemyFX.guard(EFX, 's3', () => EnemyFX.oldSlot(this, opts.delay), opts.delay, () => EnemyFX.earthFail(this)) });
+        const thunderSlot = EFX.s5 && !_efxT && !earthSlot && !opts.efx && EnemyFX.guard(EFX, 's5', () => EnemyFX.thunderTurn(this), false, () => EnemyFX.thunderFail(this));
+        if (thunderSlot) opts = Object.assign({}, opts, { delay: EnemyFX.guard(EFX, 's5', () => EnemyFX.oldSlot(this, opts.delay), opts.delay, () => EnemyFX.thunderFail(this)) });
+        const windSlot = EFX.s6 && !_efxT && !earthSlot && !thunderSlot && !opts.efx &&
+          EnemyFX.guard(EFX, 's6', () => EnemyFX.windSlotActive(this), false, () => EnemyFX.windFail(this));
+        if (windSlot) opts = Object.assign({}, opts, { delay: EnemyFX.guard(EFX, 's6', () => EnemyFX.oldSlot(this, opts.delay), opts.delay, () => EnemyFX.windFail(this)) });
+        const waterSlot = EFX.s4 && !_efxT && !earthSlot && !thunderSlot && !windSlot && !opts.efx &&
+          EnemyFX.guard(EFX, 's4', () => EnemyFX.waterTurn(this), false, () => EnemyFX.waterFail(this));
+        if (waterSlot) opts = Object.assign({}, opts, { delay: EnemyFX.guard(EFX, 's4', () => EnemyFX.oldSlot(this, opts.delay), opts.delay, () => EnemyFX.waterFail(this)) });
+        if (EFX.s1 && (!EFX.s2 || (this._efxRt && (this._efxRt.earthFailedUntil > this.time.now || this._efxRt.thunderFailedUntil > this.time.now || this._efxRt.windFailedUntil > this.time.now || this._efxRt.waterFailedUntil > this.time.now))) && !_efxT && !earthSlot && !thunderSlot && !windSlot && !waterSlot && !opts.efx) { let _efxL = null; try { _efxL = EnemyFX.lateSlot(this, opts.delay); } catch (er) { } if (_efxL != null) opts = Object.assign({}, opts, { delay: _efxL }); }   // 🩹2026-11-27 火城 A2:s2 剛在這一批出錯關掉、已排好的新出手時間軸還沒走完 → 後面的出手(舊普攻、退回舊演出的火城怪)照樣排到它後面,扣血順序＝呼叫順序;時間軸走完(下一次敵方行動)起就跟關閉時一樣。沒開 ?efx 時 EFX.s1=false,整行不做事
         const _a1 = !!EFX.s1;   // 🩹2026-11-27 火城 A1:有開敵技演出時,舊普攻的發射回呼先看帳、已飛出的彈道登記到帳上(結清/作廢時一起收);沒開時 false,以下逐值照舊
         const _dly = opts.delay > 0 ? opts.delay : 0;   // 🩹2026-11-07 fixpass:opts.delay=只延後「演出」(蓄力/俯衝/彈道/彈著扣血顯示),傷害/擋下/迴避的結算(_calcPlayerDmg)仍在呼叫當下 → 模型順序不變;不傳=原行為
         if (!_dly) SFX.enemyHit();   // 敵攻音
@@ -12047,7 +12454,25 @@
         const ox = opts.fromOrb ? opts.fromOrb.x : (e.sprite ? e.sprite.x : CX), oy = opts.fromOrb ? opts.fromOrb.y : (e.sprite ? e.sprite.y : 60), col = (opts.col != null ? opts.col : EL[e.el].color);   // 🆕opts.col:水城憤怒補師的彈道改紅(其餘呼叫端不傳=原屬色)
         const _efxJ = this._efxJob({ dmg, dodged, blocked, took, col, big: opts.big, efx: opts.efx || null, orb: opts.orbObj || null });   // 🩹2026-11-24 舊問題修正 5:命中帳擴到所有敵攻(開關關也登記;登記不改時機、順序,命中時 _efxLand 照原參數扣)→ 開/關同一套:玩家歸零時同回合沒落下的在 gameOver 當場結清,面板出來後血量不再變   // 🆕敵技演出步 2(補修 A1):命中帳一筆(傷害/迴避/黑熊已在上面當下算好;命中時 _efxLand 才扣,玩家歸零時 _efxFlush 當場結清)
         const _vis = () => {
-        if (opts.efx) { const P = opts.efx; if (P.ep !== (this._atkLockEp || 0)) return; this.time.delayedCall(P.impact, () => { if (P.ep === (this._atkLockEp || 0)) { if (_efxJ) this._efxLand(_efxJ, P.tx, P.ty); else this._playerImpact(dmg, dodged, P.tx, P.ty, col, opts.big, blocked, P); } }); EnemyFX.guard(EFX, 's2', () => EnemyFX.fireAttackVis(this, e, P), null, () => EnemyFX.dropAll(this)); return; }   // 🆕敵技演出步 2:火城新出手——命中(扣血/gameOver)由這裡的計時器在 P.impact 觸發,不依賴特效模組;後仰前撲、暗幕、鏡頭、彈道交給 enemy-fx.js。依序出手會排到好幾秒後:中途重來/離開(startStage 換 epoch)就作廢,不打到新的一局
+        if (EFX.s4 && opts.efx && opts.efx.kind === 'water') {
+          const P = opts.efx;
+          if (!P.mute && P.ep === (this._atkLockEp || 0)) EnemyFX.guard(EFX, 's4',
+            () => EnemyFX.waterAttackVis(this, e, P, () => this._efxLand(_efxJ, P.tx, P.ty)),
+            null, () => EnemyFX.waterFail(this));
+          return;
+        }
+        if (opts.efx && opts.efx.kind === 'wind') {
+          const P = opts.efx;
+          if (P.ep !== (this._atkLockEp || 0)) return;
+          this.time.delayedCall(P.impact, () => {
+            if (P.ep !== (this._atkLockEp || 0)) return;
+            try { this._efxLand(_efxJ, P.tx, P.ty); }
+            catch (err) { if (EFX.s6) EnemyFX.guard(EFX, 's6', () => { throw err; }, null, () => EnemyFX.windFail(this)); }
+          });
+          if (EFX.s6 && P.visual !== false) EnemyFX.guard(EFX, 's6', () => EnemyFX.windAttackVis(this, e, P), null, () => EnemyFX.windFail(this));
+          return;
+        }
+        if (opts.efx) { const P = opts.efx; if (P.ep !== (this._atkLockEp || 0)) return; this.time.delayedCall(P.impact, () => { if (P.ep === (this._atkLockEp || 0)) { if (_efxJ) this._efxLand(_efxJ, P.tx, P.ty); else this._playerImpact(dmg, dodged, P.tx, P.ty, col, opts.big, blocked, P); } }); if (EFX.s3 && P.kind === 'earth') EnemyFX.guard(EFX, 's3', () => EnemyFX.earthAttackVis(this, e, P), null, () => EnemyFX.earthFail(this)); else if (P.kind === 'thunder') { if (EFX.s5) EnemyFX.guard(EFX, 's5', () => EnemyFX.thunderAttackVis(this, e, P), null, () => EnemyFX.thunderFail(this)); } else if (P.kind !== 'earth') EnemyFX.guard(EFX, 's2', () => EnemyFX.fireAttackVis(this, e, P), null, () => EnemyFX.dropAll(this)); return; }   // 🆕敵技演出步 2:火城新出手——命中(扣血/gameOver)由這裡的計時器在 P.impact 觸發,不依賴特效模組;後仰前撲、暗幕、鏡頭、彈道交給 enemy-fx.js。依序出手會排到好幾秒後:中途重來/離開(startStage 換 epoch)就作廢,不打到新的一局
         if (e.sprite && (!opts.fromOrb || opts.lunge) && (!_dly || e.sprite.active)) {
           const sp = e.sprite, ry = (e.restY != null ? e.restY : sp.y), sc = e.baseScale || sp.scaleX || 1;   // 敵攻:蓄力→俯衝→彈回
           if (e.bob) { e.bob.stop(); e.bob = null; } if (e.knockTw) { e.knockTw.stop(); e.knockTw = null; } this._breathStop(e); this.tweens.killTweensOf(sp); sp.setY(ry); sp.setScale(sc);   // ★重置到基準比例:若正被擊退(縮小中)時施法/俯衝,killTweensOf 砍掉回位後,tween 必須從基準出發,否則 yoyo 會卡在縮小比例;呼吸也一併停
@@ -12095,7 +12520,18 @@
       _stuckShut() { const sg = this._stuckG; if (sg && sg.scene && !this._busyReshuffle) { sg.destroy(); this._stuckG = null; this.resultOpen = false; return true; } return false; }   // 🩹2026-11-25 舊問題修正四 P1:卡盤救援窗開著且沒在等付費 → 關掉
       _playerImpact(dmg, dodged, tx, ty, col, big, blocked, efx) {   // 彈著命中玩家→套用傷害演出(閃光/震屏/火花/扣血/迴生/護盾碎裂/gameOver),敵攻與終結技共用
         const ADD = Phaser.BlendModes.ADD, B = big ? 1.6 : 1;
-        if (!(efx && (efx.mute || (EFX.s2 && EnemyFX.guard(EFX, 's2', () => EnemyFX.impactFx(this, tx, ty, dmg, dodged, efx), false, () => EnemyFX.dropAll(this)))))) {   // 🆕敵技演出步 2(補修 A1/A2:當場結清的 mute 不演;命中圖出錯 → 回傳 false 改演舊的):火城命中改命中圖＋柔光＋碎片＋依 tier 震屏(規格 3.9 impactFx;餘火每塊=小火花＋餘火圖縮回),不演舊白光圈/衝擊環/屬色火花;扣血以下照舊
+        const waterHit = efx && efx.kind === 'water';
+        const waterVis = EFX.s4 && waterHit && !efx.mute &&
+          EnemyFX.guard(EFX, 's4', () => EnemyFX.impactFx(this, tx, ty, dmg, dodged, efx), false, () => EnemyFX.waterFail(this));
+        const windHit = efx && efx.kind === 'wind';
+        const windVis = windHit && (efx.visual === false || (!efx.mute && EFX.s6 &&
+          EnemyFX.guard(EFX, 's6', () => EnemyFX.windImpact(this, tx, ty, dmg, dodged, efx), false, () => EnemyFX.windFail(this))));
+        const thunderShockHit = efx && efx.kind === 'thunderShock';
+        const thunderDamage = thunderShockHit || (efx && efx.kind === 'thunder');
+        const thunderShockVis = EFX.s5 && thunderShockHit && !efx.mute &&
+          EnemyFX.guard(EFX, 's5', () => EnemyFX.impactFx(this, tx, ty, dmg, dodged, efx), false, () => EnemyFX.thunderFail(this));
+        if (!waterVis && !windVis && !(efx && (efx.mute || (EFX.s3 && efx.kind === 'earth' && EnemyFX.guard(EFX, 's3', () => EnemyFX.impactFx(this, tx, ty, dmg, dodged, efx), false, () => EnemyFX.earthFail(this))) || (EFX.s5 && efx.kind === 'thunder' && EnemyFX.guard(EFX, 's5', () => EnemyFX.impactFx(this, tx, ty, dmg, dodged, efx), false, () => EnemyFX.thunderFail(this))) || (EFX.s2 && efx.kind !== 'earth' && efx.kind !== 'thunder' && efx.kind !== 'thunderShock' && !windHit && !waterHit && EnemyFX.guard(EFX, 's2', () => EnemyFX.impactFx(this, tx, ty, dmg, dodged, efx), false, () => EnemyFX.dropAll(this)))))) {   // 🆕敵技演出步 2(補修 A1/A2:當場結清的 mute 不演;命中圖出錯 → 回傳 false 改演舊的):火城命中改命中圖＋柔光＋碎片＋依 tier 震屏(規格 3.9 impactFx;餘火每塊=小火花＋餘火圖縮回),不演舊白光圈/衝擊環/屬色火花;扣血以下照舊
+        if (!thunderShockVis) try {
         const fl = this.add.circle(tx, ty, 18 * B, 0xffffff, 1).setBlendMode(ADD).setDepth(DEPTH.fx); this.tweens.add({ targets: fl, scale: big ? 3.8 : 2.6, alpha: 0, duration: big ? 440 : 260, onComplete: () => fl.destroy() });
         this.shakeCam(big ? 340 : 220, big ? 0.016 : 0.01);
         if (big) { const rg = this.add.circle(tx, ty, 22, col, 0).setStrokeStyle(4, col, 0.9).setBlendMode(ADD).setDepth(DEPTH.fx); this.tweens.add({ targets: rg, scale: 4.2, alpha: 0, duration: 580, ease: 'Quad.out', onComplete: () => rg.destroy() }); }   // 終結命中衝擊環(同實驗室)
@@ -12104,6 +12540,7 @@
           const fl2 = this.add.circle(tx, ty, 16 * B, col, 0.9).setBlendMode(ADD).setDepth(DEPTH.fx); this.tweens.add({ targets: fl2, scale: 3.2, alpha: 0, duration: 300, ease: 'Quad.out', onComplete: () => fl2.destroy() });   // 屬色閃光
           for (let k = 0; k < (big ? 26 : 18); k++) { const ang = Math.random() * Math.PI * 2, r0 = (34 + Math.random() * 52) * B, sq = this.add.rectangle(tx, ty, (9 + Math.random() * 7) * B, (9 + Math.random() * 7) * B, col, 1).setAngle(Math.random() * 90).setBlendMode(ADD).setDepth(DEPTH.fx); this.tweens.add({ targets: sq, x: tx + Math.cos(ang) * r0, y: ty + Math.sin(ang) * r0, angle: '+=200', alpha: 0, scale: 0.25, duration: big ? (720 + Math.random() * 480) : (400 + Math.random() * 260), ease: 'Quad.out', onComplete: () => sq.destroy() }); }
         }   // 彈著火花(big=終結技:更多、慢飄)
+        } catch (err) { if (!thunderDamage && !windHit) throw err; }
         }   // 🆕EFX 敵技演出步 2:上面 if 的結尾(開關關閉或非火城新出手:舊的白光圈/震屏/衝擊環/音效/火花原樣)
         this.playerHP = Math.max(0, this.playerHP - dmg);
         if (dmg > 0 && !this._pDead && this.lead && this.lead.type === 'revive' && this._reviveReady && this.playerHP <= Math.ceil(this.maxHP * 0.1)) { this.playerHP = Math.round(this.maxHP * 0.5); this._reviveReady = false; this._reviveCD = (this.lead.v || 5); this.pHpRatio = 0.04; this.pHpLag = 0.04; this._reviveTick = true; this._reviveFx(); this.updLeadBadge && this.updLeadBadge(); this.floatText(CX, PHP_Y - 40, tr('💗 冰河迴生!回50%'), '#ff9ecb'); }   // 🐟血歸0→血條先近空→愛心上浮、慢慢回50%、徽章特效、進冷卻   // 🩹2026-11-24 舊問題修正 5:進入 gameOver 之後(_pDead:結清中、復活詢問/結算面板開著)的命中不觸發迴生、冷卻不動
@@ -12156,6 +12593,7 @@
       killEnemy(e) {
         if (e.dead) return; e._revPend = false;
         if (SK2 && e._countdownSk) this._ecCountdownGlass(e, false);
+        if (EFX.s3 && e._earthFx) EnemyFX.earthDrop(this, e);
         if (EFX.s1 && e._efx) EnemyFX.drop(this, e, 180, true);   // 🆕敵技演出:新火球淡出、靶環收掉;佔位 _finOrb 照舊碎球的狀態部分收(倒數重設),但不演碎球與「打斷!」字
         if (e._finOrb) this._breakEnemyOrb(e);   // 🔥終結蓄力中被打死→搶殺打斷(元氣玉碎散、不放招)
         if (this._reviveCast && this._reviveCast.boss === e) this._breakReviveCast();   // 🌊魔王詠唱復活中被打死→打斷(搶殺)
@@ -12179,8 +12617,19 @@
         if (e._j) this._ecCoreWipeUi(e);   // 🆕寶玉怪倒下:徽章/盾罩/殘核心收掉
         e.dead = true; if (e.bob) { e.bob.stop(); e.bob = null; } if (e.knockTw) { e.knockTw.stop(); e.knockTw = null; } this._breathStop(e);   // ★ bob 在受擊擊退時會被設 null,務必判空(否則每次擊殺都丟例外→鎖死);呼吸也永久停(死亡)
         if (this._ec && e._d) this._ecDuckSync();   // 🆕風城賊鴨倒下→牠的標記/生氣符號/圓點一併收掉
+        if (EFX.s4 && e._h && e._waterFx) EnemyFX.waterRun(this, EFX, e, 'castDeath');
         if (e._h) { if (e._ecCast) this._ecCastBreak(e, tr('詠唱中止!')); this._ecRageClear(e); this._lnClear(e); } if (e._r && e._rkRage) { e._rkRage = false; e._ecRage = false; this._ecRageClear(e); }   // 2026-11-20 石頭王倒下:守護加攻的憤怒圖示收掉   // 🆕水城補師倒下:詠唱中被打死→十字碎裂(搶殺);憤怒氣場/生氣符號收掉
+        if (EFX.s4 && e._waterFx) EnemyFX.guard(EFX, 's4', () => EnemyFX.waterDrop(this, e), null, () => EnemyFX.waterFail(this));
+        if (EFX.s4 && e._h) e._ecRage = false;
+        if (EFX.s6 && e._windFx) EnemyFX.guard(EFX, 's6', () => EnemyFX.windDrop(this, e), null, () => EnemyFX.windFail(this));
+        const thunderDeath = EFX.s5 && e._i && EnemyFX.guard(EFX, 's5', () => {
+          if (!EnemyFX.thunderReady(this)) return false;
+          EnemyFX.thunderDrop(this, e);
+          return true;
+        }, false, () => EnemyFX.thunderFail(this));
+        if (!thunderDeath) {
         if (this._ec && e._i && e._i.rule >= 3 && e._ironCells && e._ironCells.length && e.sprite) this.floatText(e.sprite.x, Math.max(e.sprite.y - 40, 62), tr('電擊解除'), '#ffe14a');   // 🆕P2:電擊鐵機人倒下→鐵塊(帶電擊標記的)跟著碎,浮字告訴玩家不會再被電
+        }
         this._clearEnemyIron(e);   // 🔩鐵機人被打倒→清掉牠放的鐵塊(逐隻歸屬,不動別隻的;玩家已清的略過)→不再賴到下一關
         this._enemyKi && this._enemyKi(e, 0); this._ecIronOrbClear(e);   // 死了→立刻收掉牠的鬥氣光暈(+電光球)(免殘留飄在陣亡處)
         if (e._skAura) this._skAuraDrop(e);   // 🩹2026-11-24 骷髏警示光圈殘留修補(不綁開關,所有玩家):死亡時停掉光圈的無限脈動補間、火星計時器、跟隨監聽,光圈 200ms 淡掉(原本留到下次換關或場景關閉才清;比照 _atfDrop/_castDrop)
@@ -12342,6 +12791,8 @@
           if (!g.scene) return;   // 場景已關
           if (res.st !== 'ok') { g.destroy(); this.showRevive(reason, true); this.tonFloat(res.st === '402' ? tr('魔法石不足') : tr('需要連線,請稍後再試'), '#ff9a7a'); return; }   // 原地重畫:「剩幾顆」照重查後的餘額
           g.destroy(); this._pDead = false; this._goPend = null; this.resultOpen = false;   // 復活成功 → 解除已陣亡(上一回合沒落下的命中已在陣亡時結清)
+          if (typeof EFX !== 'undefined' && EFX.s4) this.enemies.forEach(e => { if (e._h) EnemyFX.waterRun(this, EFX, e, 'resume'); });
+          if (typeof EFX !== 'undefined' && EFX.s8) EnemyFX.auraResume(this, EFX);
           this.playerHP = this.maxHP; try { this.animPlayerHP(true); try { SFX.heal(); } catch (e) { } this.cameras.main.flash(240, 120, 220, 150, false); this.tonFloat(tr('✨ 復活!HP 回滿'), '#74e09a'); } catch (e) { console.error('revive fx', e); } try { if (this._ec) this._ecBurnClear(); } catch (e) { console.error('revive burn', e); }   // 🩹2026-11-25 舊問題修正五 N1:演出丟例外也一定走到 _clrResume(等這筆付費的過關照樣成立)
           this._clrResume();   // 🩹2026-11-25 舊問題修正二:陣亡期間敵人全倒 → 過關在復活這一刻才成立
         }, _no ? null : T.ok, 'ui_gem');   // 🆕2026-10-28b 💎→ui_gem
@@ -12418,7 +12869,7 @@
       updateEnemies() {
         if (this.enemies && this.enemies.length) this.targetEnemy();   // 🔒2026-10-09 致命傷害套用後立刻重選目標→目標標記(e.mark)跟著跳到下一隻活敵(瀕死敵 hp<=0 不再當目標;死亡動畫照播)
         this.enemies.forEach((e, i) => {
-          if (e.gateTx) e.gateTx.setVisible(!e.dead);   // 死了藏下方行為文字
+          if (e.gateTx) e.gateTx.setVisible(!e.dead && !(EFX.s3 && e._r && e._earthFx && e._earthFx.pos));   // 死了藏下方行為文字
           if (e.dead || e._revPend) return;   // 2026-11-23 _revPend=剛被魔王復活、水花還沒飛到(模型已活、畫面還沒站起來)
           const hpShown = (e.dispHp != null ? e.dispHp : e.hp);   // 演出窗內(dispHp 有值)血條/變身用顯示血量,彈著逐宮下降;窗外=真 hp
           if (e.phases && hpShown > 0) { const idx = Math.min(e.phases.length - 1, Math.max(0, Math.floor((1 - hpShown / e.max) * e.phases.length))); if (idx > e.phaseIdx) { e.phaseIdx = idx; this.bossTransform(e); } }   // 👑 魔王:血量過門檻→變身下一屬(hp>0 才變,致命一擊不再噴變身)
@@ -12432,7 +12883,7 @@
           if (e.turnTx) {
             if (e._tmHold != null && this.time.now >= e._tmHoldUntil) e._tmHold = null;
             const tm = Math.max(0, e._tmHold != null ? e._tmHold : e.timer);   // 沙漏右邊的數字=剩餘出手手數;越少越紅(1手內紅、2手黃、≥3白藍);🆕_tmHold=重抽還沒「打中」前先顯示舊值
-            e.turnTx.setText(String(tm)).setColor(tm <= 1 ? '#ff5a4a' : tm === 2 ? '#ffc24a' : '#eaf3ff');
+            e.turnTx.setText(String(tm)).setColor(EFX.s4 && e._waterFx && e._waterFx.badgeState ? EnemyFX.WATER.badge.color : EFX.s6 && e._windFx && e._windFx.badgeState ? '#eaf3ff' : EFX.s5 && e._thunderFx && e._thunderFx.badgeState ? '#eaf3ff' : tm <= 1 ? '#ff5a4a' : tm === 2 ? '#ffc24a' : '#eaf3ff');
           }
           if (i === this.target) { e.mark.setVisible(true); if (!e._markTw) { e._markBaseY = e.mark.y; e._markTw = this.tweens.add({ targets: e.mark, y: e._markBaseY + 5, duration: 460, yoyo: true, repeat: -1, ease: 'Sine.inOut' }); } }
           else { if (e._markTw) { e._markTw.stop(); e._markTw = null; if (e._markBaseY != null) e.mark.setY(e._markBaseY); } e.mark.setVisible(false); }
@@ -12441,6 +12892,9 @@
       }
       // 每回合:沙漏跳一下 + 翻轉到下一個 90°(累積),數字隨 updateEnemies 更新
       animTurnGlass(e) {
+        if (EFX.s4 && e && e._h && this._ecWaterBadge(e)) return;
+        if (EFX.s6 && e && e._d && this._ecWindBadge(e, !this.resultOpen && !this.dive)) return;
+        if (EFX.s5 && e && e._i && EnemyFX.guard(EFX, 's5', () => EnemyFX.thunderBadge(this, e, EFX), false, () => EnemyFX.thunderFail(this))) return;
         if (!e.glass || !e.turnG) return;
         const countdownSk = SK2 && e._countdownSk;
         if (countdownSk && (this.resultOpen || this.dive || (typeof BattleVFX !== 'undefined' && BattleVFX.reduced && BattleVFX.reduced()))) return;
@@ -12504,6 +12958,7 @@
         const t = this.add.text(x, y - 16, '-' + n, { fontFamily: HITFONT, fontSize: '27px', color: '#ffffff', fontStyle: 'bold', stroke: '#d02a1a', strokeThickness: 6 }).setOrigin(0.5).setDepth(DEPTH.fx).setScale(0.4);
         this.tweens.add({ targets: t, scale: 1.15, duration: 150, ease: 'Back.out' });
         this.tweens.add({ targets: t, y: y - 58, alpha: 0, duration: 720, delay: 220, ease: 'Quad.out', onComplete: () => t.destroy() });
+        if (EFX.s3) return t;
       }
       // 打擊頓格:命中瞬間凍住整個場景 ~ms(tween+計時器 timeScale=0,真實時間後復原)→ 打到肉的份量
       hitStop(ms) {
@@ -12641,7 +13096,7 @@
           emS.explode(Math.round(14 + pw * 6));   // 亮點火花補閃
           this.time.delayedCall(840, () => { if (emB && emB.active) emB.destroy(); if (emS && emS.active) emS.destroy(); });
         }
-        if (tgt && tgt.sprite) { const _pv = tgt._ecR ? Math.round(dmg * tgt._ecR.ratio) : dmg; this.dmgPop(tgt.sprite.x, tgt.sprite.y, _pv); this._stkAdd(_pv); }   // 2026-11-20 連擊輸出:跳出的數字原值累加(清除攻擊/猴偷襲/主動技都走這裡)   // 🆕土城石頭怪:彈著數字=核心實扣(擋傷/守護後),不是名目傷害(破盾追加另有浮字)
+        if (tgt && tgt.sprite) { const _pv = tgt._ecR ? Math.round(dmg * tgt._ecR.ratio) : dmg; const pop = this.dmgPop(tgt.sprite.x, tgt.sprite.y, _pv); if (EFX.s3 && tgt._r && tgt._ecR) EnemyFX.earthRun(this, EFX, tgt, 'number', pop, tgt._ecR, _pv, true); this._stkAdd(_pv); }   // 2026-11-20 連擊輸出:跳出的數字原值累加(清除攻擊/猴偷襲/主動技都走這裡)   // 🆕土城石頭怪:彈著數字=核心實扣(擋傷/守護後),不是名目傷害(破盾追加另有浮字)
         this.shakeCam(200 + pw * 40, 0.009 + pw * 0.003);                  // 震幅隨 HIT 加重(不做 hitstop:凍格會被誤認成 lag)
       }
       tonFloat(str, color) {
@@ -12987,12 +13442,12 @@
         if (!redraw && this.enemies) this.enemies.forEach(o => { if (o && o._skAura) this._skAuraDrop(o); });   // 🩹2026-11-24 舊問題修正 3(不綁開關):正式結算(勝/敗/放棄復活)→ 存活敵人的骷髏警示光圈一併收掉(停脈動補間/火星計時器/跟隨監聽,光圈淡出)
         if (FX2.s4) this._fxStClearAll(true);   // 步 4:戰鬥結束——狀態與覆蓋圖立刻清掉、還原待機
           // 🆕redraw=true:run/complete 回應晚到、面板已開→原地重畫更新戰利品,略過勝利音效/成就/教學畢業等一次性副作用
-        if (SK2 && this.enemies) {
+        if ((SK2 || EFX.s3) && this.enemies) {
           if (this._ironSkLoop && !this.enemies.some(e => e && e._i && e._i.rule >= 2)) {
             this._ironSkLoop.remove(false);
             this._ironSkLoop = null;
           }
-          this.enemies.forEach(e => { if (e && e._countdownSk) this._ecCountdownGlass(e, false); });
+          if (SK2) this.enemies.forEach(e => { if (e && e._countdownSk) this._ecCountdownGlass(e, false); });
         }
         if (this.lesson) { this.showLessonComplete(this.overlay(), win); return; }   // 練習課程:專屬完成/再試畫面,短路在 tutDone 之前,不呼叫 tutDone/showTutComplete
         if (redraw && this._resultG) { if (this._stkNbFx) { this._stkNbFx.forEach(o => { try { this.tweens.killTweensOf(o); } catch (e) { } }); this._stkNbFx = null; } this._resultG.destroy(); this._resultG = null; }   // 補畫:先清掉舊面板再重建
